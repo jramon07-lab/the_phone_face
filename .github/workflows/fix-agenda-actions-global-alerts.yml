@@ -1,0 +1,162 @@
+name: Corregir Agenda y avisos globales
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar corrección
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='TPF AGENDA GLOBAL ALERTS V1'
+          if marker in s:
+              raise SystemExit(0)
+          js=r'''
+<script id="tpf-agenda-global-alerts-v1">
+/* TPF AGENDA GLOBAL ALERTS V1 */
+(function(){
+  const DEFAULTS={reminder_minutes:[10],notify_in_app:true,notify_email:false,sync_google_calendar:false};
+  let agendaGlobalDefaults={...DEFAULTS};
+
+  async function loadAgendaGlobalDefaults(){
+    try{
+      const {data,error}=await sb.from('app_settings').select('value').eq('key','agenda_global_defaults').maybeSingle();
+      if(error) throw error;
+      if(data?.value && typeof data.value==='object') agendaGlobalDefaults={...DEFAULTS,...data.value};
+    }catch(e){
+      try{agendaGlobalDefaults={...DEFAULTS,...JSON.parse(localStorage.getItem('tpf_agenda_global_defaults')||'{}')}}catch(_){}
+    }
+    applyAgendaGlobalDefaults();
+    fillAgendaSettingsCard();
+    return agendaGlobalDefaults;
+  }
+
+  function applyAgendaGlobalDefaults(){
+    const mins=(agendaGlobalDefaults.reminder_minutes||[]).map(Number);
+    document.querySelectorAll('.agendaReminderPreset').forEach(x=>x.checked=mins.includes(Number(x.value)));
+    const a=document.getElementById('agendaNotifyApp'); if(a)a.checked=!!agendaGlobalDefaults.notify_in_app;
+    const e=document.getElementById('agendaNotifyEmail'); if(e)e.checked=!!agendaGlobalDefaults.notify_email;
+    const g=document.getElementById('agendaSyncGoogle'); if(g)g.checked=!!agendaGlobalDefaults.sync_google_calendar;
+  }
+
+  function hideAgendaAvisos(){
+    const card=[...document.querySelectorAll('#agendaCreateCard > .card')].find(c=>/avisos/i.test(c.textContent||''));
+    if(card){
+      card.style.display='none';
+      if(!document.getElementById('agendaGlobalInfo')){
+        const n=document.createElement('div');
+        n.id='agendaGlobalInfo';n.className='small';
+        n.style.cssText='margin:10px 0 14px;padding:10px 12px;border:1px solid #dfe7f3;border-radius:8px;background:#f8fbff;color:#536070';
+        n.innerHTML='🔔 Los avisos se aplican automáticamente según <b>Ajustes → Avisos de Agenda</b>.';
+        card.parentNode.insertBefore(n,card);
+      }
+    }
+  }
+
+  function ensureAgendaSettingsCard(){
+    const view=document.getElementById('view-settings');
+    if(!view||document.getElementById('agendaGlobalSettingsCard'))return;
+    const card=document.createElement('div');
+    card.id='agendaGlobalSettingsCard';card.className='card';
+    card.innerHTML=`
+      <h3 style="margin-bottom:6px">Avisos de Agenda</h3>
+      <div class="small" style="margin-bottom:14px">Configuración general para todos los usuarios. Se aplicará automáticamente a cada nuevo recordatorio.</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">Avisarme antes</div>
+      <div class="row" id="agendaGlobalMinutes" style="margin-bottom:12px">
+        <label><input type="checkbox" value="10" style="width:auto"> 10 min antes</label>
+        <label><input type="checkbox" value="30" style="width:auto"> 30 min antes</label>
+        <label><input type="checkbox" value="60" style="width:auto"> 1 hora antes</label>
+        <label><input type="checkbox" value="120" style="width:auto"> 2 horas antes</label>
+        <label><input type="checkbox" value="1440" style="width:auto"> 1 día antes</label>
+      </div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px">Canales</div>
+      <div class="row" style="margin-bottom:14px">
+        <label><input id="agendaGlobalApp" type="checkbox" style="width:auto"> Aviso en The Phone Face</label>
+        <label><input id="agendaGlobalEmail" type="checkbox" style="width:auto"> Email</label>
+        <label><input id="agendaGlobalGoogle" type="checkbox" style="width:auto"> Añadir a Google Calendar</label>
+      </div>
+      <button id="agendaGlobalSave" class="primary">Guardar avisos para todos</button>
+      <span id="agendaGlobalMsg" class="small" style="margin-left:10px"></span>`;
+    const first=view.querySelector('.card');
+    if(first&&first.nextSibling)view.insertBefore(card,first.nextSibling); else view.appendChild(card);
+    document.getElementById('agendaGlobalSave').onclick=saveAgendaGlobalDefaults;
+    fillAgendaSettingsCard();
+  }
+
+  function fillAgendaSettingsCard(){
+    if(!document.getElementById('agendaGlobalSettingsCard'))return;
+    const mins=(agendaGlobalDefaults.reminder_minutes||[]).map(Number);
+    document.querySelectorAll('#agendaGlobalMinutes input').forEach(x=>x.checked=mins.includes(Number(x.value)));
+    document.getElementById('agendaGlobalApp').checked=!!agendaGlobalDefaults.notify_in_app;
+    document.getElementById('agendaGlobalEmail').checked=!!agendaGlobalDefaults.notify_email;
+    document.getElementById('agendaGlobalGoogle').checked=!!agendaGlobalDefaults.sync_google_calendar;
+  }
+
+  async function saveAgendaGlobalDefaults(){
+    const msg=document.getElementById('agendaGlobalMsg');
+    const value={
+      reminder_minutes:[...document.querySelectorAll('#agendaGlobalMinutes input:checked')].map(x=>Number(x.value)),
+      notify_in_app:!!document.getElementById('agendaGlobalApp')?.checked,
+      notify_email:!!document.getElementById('agendaGlobalEmail')?.checked,
+      sync_google_calendar:!!document.getElementById('agendaGlobalGoogle')?.checked
+    };
+    if(msg)msg.textContent='Guardando...';
+    localStorage.setItem('tpf_agenda_global_defaults',JSON.stringify(value));
+    try{
+      const {error}=await sb.from('app_settings').upsert({key:'agenda_global_defaults',value},{onConflict:'key'});
+      if(error)throw error;
+      agendaGlobalDefaults=value;applyAgendaGlobalDefaults();
+      if(msg)msg.textContent='Guardado para todos ✓';
+    }catch(e){if(msg)msg.textContent='No se pudo guardar para todos: '+(e?.message||e)}
+  }
+
+  async function openAgendaFixed(id){
+    try{
+      if(typeof tpfRememberScreen==='function')tpfRememberScreen();
+      document.getElementById('contactModal')?.classList.remove('hidden');
+      document.getElementById('cpTaskPage')?.classList.remove('hidden');
+      const columns=document.querySelector('#contactModal .cpColumns'); if(columns)columns.style.display='none';
+      const top=document.querySelector('#contactModal .cpTop'); if(top)top.style.display='none';
+      if(typeof openContactTaskDetail!=='function')throw new Error('No está disponible la ficha de tarea.');
+      await openContactTaskDetail(id);
+      document.getElementById('cpTaskDetailPage')?.classList.remove('hidden');
+    }catch(e){alert(e?.message||String(e))}
+  }
+  window.openAgendaItem=openAgendaFixed;
+  window.editAgendaItem=openAgendaFixed;
+
+  function bootAgendaPatch(){
+    ensureAgendaSettingsCard();
+    hideAgendaAvisos();
+    loadAgendaGlobalDefaults();
+    document.querySelectorAll('[data-view="agenda"],[data-view="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>{
+      ensureAgendaSettingsCard();hideAgendaAvisos();applyAgendaGlobalDefaults();
+    },80)));
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootAgendaPatch);else bootAgendaPatch();
+})();
+</script>
+'''
+          if '</body>' not in s: raise SystemExit('No se encontró </body>')
+          s=s.replace('</body>',js+'\n</body>',1)
+          p.write_text(s,encoding='utf-8')
+      - name: Guardar en main
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Corrige Abrir/Editar y mueve avisos de Agenda a Ajustes"
+          git push
