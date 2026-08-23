@@ -1,0 +1,39 @@
+name: Añadir marca Agenda v2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-agenda-v2:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Añadir marca visible
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          if 'Agenda v2' in text:
+              print('Marca ya presente')
+              raise SystemExit(0)
+          old = 'Agenda y recordatorios'
+          new = 'Agenda y recordatorios <span style="display:inline-block;margin-left:8px;padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#1267ed;font-size:11px;font-weight:800;vertical-align:middle">Agenda v2</span>'
+          if old not in text:
+              raise SystemExit('No se encontró el título de Agenda')
+          text = text.replace(old, new, 1)
+          p.write_text(text, encoding='utf-8')
+      - name: Publicar cambio
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Muestra marca Agenda v2"
+          git push
