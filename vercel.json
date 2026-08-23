@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/telegram",
+      "destination": "/api/telegram"
+    },
+    {
+      "source": "/api/green",
+      "destination": "/api/green"
+    }
+  ]
+}
