@@ -2103,6 +2103,82 @@ body{
 }
 </style>
 
+
+<style id="tpf-v33-agenda-compact-css">
+/* TPF V33 AGENDA COMPACTA */
+#view-agenda{max-width:1180px;margin:0 auto;padding-bottom:24px}
+#view-agenda>.card{border-radius:12px;border-color:#e3e8ef;box-shadow:0 4px 16px rgba(15,31,52,.035)}
+#view-agenda>.card:first-child{padding:18px 20px!important;margin-bottom:16px}
+#view-agenda>.card:first-child>.row{display:flex;align-items:center!important;justify-content:space-between;gap:18px;flex-wrap:nowrap}
+#view-agenda>.card:first-child>.row>div{min-width:0;flex:1}
+#view-agenda>.card:first-child h2{font-size:27px;line-height:1.1;margin:0 0 5px}
+#view-agenda #agendaFilter{flex:0 0 190px;max-width:190px!important;height:42px;margin:0;padding:0 11px}
+
+#agendaCreateCard{max-width:980px;margin:0 auto 16px!important;padding:22px 24px!important}
+#agendaCreateCard h3{font-size:18px;margin:0 0 16px;color:#22304a}
+#agendaCreateCard> .row:first-of-type{display:grid!important;grid-template-columns:1.25fr 1fr .78fr;gap:12px!important;align-items:center}
+#agendaCreateCard> .row:first-of-type>*{min-width:0!important;flex:none!important}
+#agendaCreateCard> .row:first-of-type input{height:44px;margin:0;padding:0 12px}
+
+#agendaCreateCard> .row:nth-of-type(2){display:grid!important;grid-template-columns:1fr 1fr;gap:18px!important;align-items:start;margin-top:14px}
+#agendaCreateCard> .row:nth-of-type(2)>div{min-width:0!important;flex:none!important}
+#agendaCreateCard> .row:nth-of-type(2)>div>label.small{display:none!important}
+#agendaCreateCard .tpfPickerGrid{display:grid!important;grid-template-columns:minmax(170px,1fr) 78px 78px!important;gap:8px!important;align-items:end;width:100%}
+#agendaCreateCard .tpfPickerGrid>div{min-width:0!important}
+#agendaCreateCard .tpfPickerLabel{font-size:11px!important;margin:0 0 6px!important;min-height:16px;white-space:nowrap}
+#agendaCreateCard .tpfPickerDateBtn,#agendaCreateCard .tpfPickerGrid select{height:44px!important;min-height:44px!important;margin:0!important;border-radius:8px}
+#agendaCreateCard .tpfPickerDateBtn{padding:0 11px;font-size:13px}
+#agendaCreateCard .tpfPickerGrid select{padding:0 8px;font-size:13px}
+#agendaCreateCard .tpfCalendar{width:300px!important;max-width:min(300px,calc(100vw - 40px))!important}
+
+#agendaDescription{min-height:94px;max-height:160px;resize:vertical;margin:14px 0 0;padding:11px 12px}
+#agendaCreateCard>.card{margin:14px 0 16px!important;padding:14px 15px!important;background:#f8fafc;border-color:#e4e9f0;box-shadow:none}
+#agendaCreateCard>.card>b{display:block;font-size:13px;color:#344054;margin-bottom:2px}
+#agendaCreateCard>.card .row{gap:8px 10px!important}
+#agendaCreateCard>.card .row:first-of-type{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important}
+#agendaCreateCard>.card .row:nth-of-type(2){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#agendaCreateCard>.card .row>label{min-width:0!important;flex:none!important;display:flex;align-items:center;gap:7px;padding:8px 9px;border:1px solid #e2e7ee;border-radius:8px;background:#fff;color:#475467;font-size:12px;line-height:1.2;white-space:nowrap}
+#agendaCreateCard>.card .row>label input{width:15px!important;height:15px;margin:0!important;flex:0 0 auto;accent-color:#1267ed}
+#agendaSave{min-width:190px;height:42px;padding:0 16px}
+#agendaMsg{margin-left:10px}
+
+#view-agenda>.card:last-child{max-width:1180px;margin:0 auto;padding:18px 20px}
+#view-agenda>.card:last-child>.row{align-items:center!important;flex-wrap:nowrap}
+#view-agenda>.card:last-child h3{font-size:17px}
+#agendaRefresh{flex:0 0 auto!important;width:auto!important;min-width:108px!important;margin-left:auto;padding:9px 13px}
+#view-agenda>.card:last-child .scroll{border:1px solid #edf0f4;border-radius:9px;overflow:auto}
+#view-agenda>.card:last-child table{min-width:850px}
+#view-agenda>.card:last-child th{font-size:11px;text-transform:uppercase;letter-spacing:.25px;background:#f8fafc;color:#667085}
+#view-agenda>.card:last-child td{font-size:12px}
+
+@media(max-width:1050px){
+  #agendaCreateCard{max-width:100%}
+  #agendaCreateCard .tpfPickerGrid{grid-template-columns:minmax(150px,1fr) 74px 74px!important}
+  #agendaCreateCard>.card .row:first-of-type{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+  #view-agenda{max-width:none}
+  #view-agenda>.card:first-child>.row{align-items:flex-start!important;flex-wrap:wrap}
+  #view-agenda #agendaFilter{flex:1 1 180px;max-width:none!important}
+  #agendaCreateCard{padding:18px 16px!important}
+  #agendaCreateCard> .row:first-of-type{grid-template-columns:1fr 1fr!important}
+  #agendaCreateCard> .row:first-of-type #agendaPhone{grid-column:1/-1}
+  #agendaCreateCard> .row:nth-of-type(2){grid-template-columns:1fr!important;gap:14px!important}
+  #agendaCreateCard .tpfPickerGrid{grid-template-columns:minmax(0,1fr) 78px 78px!important}
+  #agendaCreateCard>.card .row:first-of-type{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #agendaCreateCard>.card .row:nth-of-type(2){grid-template-columns:1fr!important}
+  #agendaCreateCard>.card .row>label{white-space:normal}
+}
+@media(max-width:520px){
+  #agendaCreateCard> .row:first-of-type{grid-template-columns:1fr!important}
+  #agendaCreateCard> .row:first-of-type #agendaPhone{grid-column:auto}
+  #agendaCreateCard .tpfPickerGrid{grid-template-columns:minmax(0,1fr) 70px 70px!important;gap:6px!important}
+  #agendaCreateCard>.card .row:first-of-type{grid-template-columns:1fr!important}
+  #agendaSave{width:100%}
+  #agendaMsg{display:block;margin:8px 0 0}
+}
+</style>
+
 </head>
 <body>
 
