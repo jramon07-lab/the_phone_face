@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/api/ui"
+      "destination": "/api/index"
     },
     {
       "source": "/api/telegram",
