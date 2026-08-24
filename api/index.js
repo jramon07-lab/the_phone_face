@@ -15,8 +15,8 @@ function getText(url){
   });
 }
 
-const PATCH = String.raw`<script id="tpf-agenda-global-v3">
-/* TPF AGENDA GLOBAL V3 - 2026-08-24 */
+const PATCH = String.raw`<script id="tpf-agenda-global-v4">
+/* TPF AGENDA GLOBAL V4 + LABELS FIX - 2026-08-24 */
 (function(){
 const D={reminder_minutes:[10],notify_in_app:true,notify_email:false,sync_google_calendar:false};let c={...D};const $=id=>document.getElementById(id);
 const localDateTime=v=>{if(!v)return '';const d=new Date(v);if(Number.isNaN(d.getTime()))return '';const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+'T'+z(d.getHours())+':'+z(d.getMinutes())};
@@ -37,11 +37,9 @@ async function openFixed(id){
     const top=document.querySelector('#contactModal .cpTop');if(top)top.style.display='none';
     $('cpTaskPage')?.classList.add('hidden');
     $('cpTaskDetailPage')?.classList.remove('hidden');
-
     if(typeof openContactTaskDetail==='function'){
-      try{await openContactTaskDetail(id);return}catch(_){/* fallback directo */}
+      try{await openContactTaskDetail(id);return}catch(_){ }
     }
-
     const {data,error}=await sb.from('agenda_items').select('*').eq('id',id).single();
     if(error)throw error;
     if(!data)throw new Error('No se encontró la tarea.');
@@ -72,9 +70,65 @@ function bindAgendaActions(){
     e.preventDefault();e.stopImmediatePropagation();openFixed(id);
   },true);
 }
-function init(){window.openAgendaItem=openFixed;window.editAgendaItem=openFixed;ensure();hideAvisos();load();bindAgendaActions();document.querySelectorAll('[data-view="agenda"],[data-view="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>{ensure();hideAvisos();apply()},100)));new MutationObserver(()=>{ensure();hideAvisos()}).observe(document.body,{childList:true,subtree:true})}
+
+let tpfLabels=[];
+function escLabel(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function renderLabels(){
+  const box=$('labelsGlobalList');if(!box)return;
+  const q=($('labelSearch')?.value||'').trim().toLowerCase();
+  const rows=tpfLabels.filter(x=>!q||String(x.name||'').toLowerCase().includes(q));
+  box.innerHTML=rows.length?rows.map(x=>'<div class="labelManagerRow" data-label-id="'+escLabel(x.id)+'"><span>'+escLabel(x.name)+'</span><div><button type="button" class="secondary tpfLabelRename">Renombrar</button> <button type="button" class="danger tpfLabelDelete">Eliminar</button></div></div>').join(''):'';
+  if($('labelsEmpty'))$('labelsEmpty').style.display=rows.length?'none':'';
+}
+async function loadLabelsFixed(){
+  const {data,error}=await sb.rpc('crm_list_labels');
+  if(error)throw error;
+  tpfLabels=Array.isArray(data)?data:[];
+  renderLabels();
+  return tpfLabels;
+}
+async function createLabelFixed(){
+  const input=$('labelNewName'),btn=$('labelCreate'),msg=$('labelCreateMsg');
+  const name=(input?.value||'').trim();
+  if(!name){if(msg)msg.textContent='Escribe un nombre para la etiqueta.';return;}
+  if(btn)btn.disabled=true;if(msg)msg.textContent='Creando...';
+  try{
+    const {error}=await sb.rpc('crm_create_label',{p_name:name});
+    if(error)throw error;
+    if(input)input.value='';
+    await loadLabelsFixed();
+    if(msg)msg.textContent='Etiqueta creada ✓';
+  }catch(e){if(msg)msg.textContent='Error: '+(e?.message||e)}finally{if(btn)btn.disabled=false}
+}
+async function renameLabelFixed(id){
+  const item=tpfLabels.find(x=>String(x.id)===String(id));if(!item)return;
+  const name=prompt('Nuevo nombre de la etiqueta',item.name||'');if(name===null)return;
+  const clean=name.trim();if(!clean)return;
+  const {error}=await sb.rpc('crm_rename_label',{p_id:id,p_name:clean});if(error){alert(error.message);return;}await loadLabelsFixed();
+}
+async function deleteLabelFixed(id){
+  const item=tpfLabels.find(x=>String(x.id)===String(id));
+  if(!confirm('¿Eliminar la etiqueta "'+(item?.name||'')+'"?'))return;
+  const {error}=await sb.rpc('crm_delete_label',{p_id:id});if(error){alert(error.message);return;}await loadLabelsFixed();
+}
+function bindLabelsFixed(){
+  document.addEventListener('click',e=>{
+    const create=e.target.closest('#labelCreate');
+    if(create){e.preventDefault();e.stopImmediatePropagation();createLabelFixed();return;}
+    const reload=e.target.closest('#labelsReload');
+    if(reload){e.preventDefault();e.stopImmediatePropagation();loadLabelsFixed().catch(err=>alert(err.message));return;}
+    const ren=e.target.closest('.tpfLabelRename');
+    if(ren){e.preventDefault();e.stopImmediatePropagation();renameLabelFixed(ren.closest('[data-label-id]')?.dataset.labelId);return;}
+    const del=e.target.closest('.tpfLabelDelete');
+    if(del){e.preventDefault();e.stopImmediatePropagation();deleteLabelFixed(del.closest('[data-label-id]')?.dataset.labelId);return;}
+  },true);
+  document.addEventListener('input',e=>{if(e.target?.id==='labelSearch')renderLabels()});
+  document.querySelectorAll('[data-view="labels"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>loadLabelsFixed().catch(err=>{if($('labelCreateMsg'))$('labelCreateMsg').textContent='Error: '+err.message}),100)));
+}
+
+function init(){window.openAgendaItem=openFixed;window.editAgendaItem=openFixed;ensure();hideAvisos();load();bindAgendaActions();bindLabelsFixed();document.querySelectorAll('[data-view="agenda"],[data-view="settings"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>{ensure();hideAvisos();apply()},100)));new MutationObserver(()=>{ensure();hideAvisos()}).observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>`;
 
-module.exports=async function(req,res){try{const html=await getText(RAW_INDEX+'?v='+Date.now());const out=html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Patch','agenda-global-v3');res.status(200).send(out)}catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}};
+module.exports=async function(req,res){try{const html=await getText(RAW_INDEX+'?v='+Date.now());const out=html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Patch','agenda-v4-labels-fix');res.status(200).send(out)}catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}};
