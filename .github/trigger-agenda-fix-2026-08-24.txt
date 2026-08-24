@@ -1,0 +1,2 @@
+Trigger manual para ejecutar el workflow de corrección de Agenda y avisos globales.
+Fecha: 2026-08-24
