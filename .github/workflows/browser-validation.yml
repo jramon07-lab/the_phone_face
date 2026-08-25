@@ -1,5 +1,6 @@
 name: CRM Browser Validation
 
+# Revalidation trigger: credentials configured and verified 2026-08-25
 on:
   workflow_dispatch:
   deployment_status:
