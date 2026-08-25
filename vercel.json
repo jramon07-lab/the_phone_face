@@ -1,17 +1,12 @@
 {
   "version": 2,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/",
-      "destination": "/api/index-clean"
+      "src": "^/$",
+      "dest": "/api/index-clean"
     },
     {
-      "source": "/api/telegram",
-      "destination": "/api/telegram"
-    },
-    {
-      "source": "/api/green",
-      "destination": "/api/green"
+      "handle": "filesystem"
     }
   ]
 }
