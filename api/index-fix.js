@@ -62,6 +62,39 @@ const NAV_STABILIZER=`<script id="tpf-nav-stabilizer-p0">
 })();
 </script>`;
 
+const ACTION_STABILIZER=`<script id="tpf-action-stabilizer-p0">
+(function(){
+  // La última implementación de oppUnifiedDelete contiene el flujo más completo:
+  // copia a Papelera, borrado verificado y refresco. Todas las llamadas antiguas
+  // a deleteOpp pasan por esa única ruta final.
+  const canonicalDelete=typeof window.oppUnifiedDelete==='function' ? window.oppUnifiedDelete : null;
+  if(canonicalDelete){
+    window.__tpfCanonicalOpportunityDelete=canonicalDelete;
+    window.deleteOpp=async function(id){
+      let title='Oportunidad';
+      try{
+        const rows=(typeof salesCache!=='undefined'&&salesCache&&salesCache.opportunities)||[];
+        const row=rows.find(function(x){return String(x.id)===String(id)});
+        if(row&&row.title)title=row.title;
+      }catch(_){}
+      return window.__tpfCanonicalOpportunityDelete(id,title);
+    };
+  }
+
+  // Registrar la implementación final de selección de chat después de todos los
+  // wrappers históricos. No la volvemos a envolver para no duplicar efectos.
+  if(typeof window.selectWhatsAppChat==='function'){
+    window.__tpfCanonicalSelectWhatsAppChat=window.selectWhatsAppChat;
+  }
+
+  window.__TPF_CANONICAL_ACTIONS={
+    version:'p0-1',
+    opportunityDelete:!!window.__tpfCanonicalOpportunityDelete,
+    whatsappSelect:!!window.__tpfCanonicalSelectWhatsAppChat
+  };
+})();
+</script>`;
+
 module.exports=async function(req,res){
   try{
     const host=req.headers['x-forwarded-host']||req.headers.host;
@@ -80,13 +113,17 @@ module.exports=async function(req,res){
       html=html.includes('</head>')?html.replace('</head>',AUTH_PATCH+'\n</head>'):AUTH_PATCH+html;
     }
 
-    if(!html.includes('tpf-nav-stabilizer-p0')){
-      html=html.includes('</body>')?html.replace('</body>',NAV_STABILIZER+'\n</body>'):html+NAV_STABILIZER;
+    const tail=[];
+    if(!html.includes('tpf-nav-stabilizer-p0'))tail.push(NAV_STABILIZER);
+    if(!html.includes('tpf-action-stabilizer-p0'))tail.push(ACTION_STABILIZER);
+    if(tail.length){
+      const patch=tail.join('\n');
+      html=html.includes('</body>')?html.replace('</body>',patch+'\n</body>'):html+patch;
     }
 
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
-    res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth+nav-stabilizer');
+    res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth+nav-stabilizer+action-stabilizer');
     res.status(200).send(html);
   }catch(e){
     res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));
