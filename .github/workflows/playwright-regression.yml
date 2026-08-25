@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 20
     env:
       PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,8 +23,10 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npx playwright install --with-deps chromium webkit
-      - name: Verify preview URL secret exists
-        run: test -n "$PLAYWRIGHT_BASE_URL"
+      - name: Verify test secrets exist
+        run: |
+          test -n "$PLAYWRIGHT_BASE_URL"
+          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET"
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
