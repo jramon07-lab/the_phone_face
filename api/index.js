@@ -1,6 +1,10 @@
 const https = require('https');
 
-const RAW_INDEX = 'https://raw.githubusercontent.com/jramon07-lab/the_phone_face/main/index.html';
+// Serve the exact repository snapshot that created this Vercel deployment.
+// This prevents a Preview (or Production deployment) from silently changing
+// when the GitHub main branch moves after the deployment was built.
+const DEPLOY_REF = process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_REF || 'main';
+const RAW_INDEX = `https://raw.githubusercontent.com/jramon07-lab/the_phone_face/${encodeURIComponent(DEPLOY_REF)}/index.html`;
 
 function getText(url){
   return new Promise((resolve,reject)=>{
@@ -131,4 +135,4 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>`;
 
-module.exports=async function(req,res){try{const html=await getText(RAW_INDEX+'?v='+Date.now());const out=html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Patch','agenda-v4-labels-fix');res.status(200).send(out)}catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}};
+module.exports=async function(req,res){try{const html=await getText(RAW_INDEX+'?v='+Date.now());const out=html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Patch','agenda-v4-labels-fix');res.setHeader('X-TPF-Source-Ref',DEPLOY_REF);res.status(200).send(out)}catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}};
