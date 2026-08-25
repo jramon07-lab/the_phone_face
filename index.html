@@ -9674,6 +9674,14 @@ window.selectWhatsAppChat=async(chatId)=>{
 </div>
 
 
+<div id="contactLabelsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
+    <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
+    <div class="waTemplateActions"><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
+  </div>
+</div>
+
 <script id="wa-fullscreen-web-js">
 (function(){
  function textOf(el){return (el&&el.textContent||"").trim().toLowerCase()}
@@ -11303,13 +11311,7 @@ renderSales=function(){
 
 </script>
 
-<div id="contactLabelsModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard">
-    <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
-    <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
-    <div class="waTemplateActions"><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
-  </div>
-</div>
+
 
 <div id="goalModal" class="waTemplateBack hidden">
   <div class="waTemplateCard">
