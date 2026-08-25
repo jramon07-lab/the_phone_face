@@ -1,0 +1,56 @@
+name: Apply Codex security fixes
+
+on:
+  push:
+    branches:
+      - candidato-final-validado-20260825
+    paths:
+      - .github/workflows/fix-codex-security.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: candidato-final-validado-20260825
+          fetch-depth: 0
+
+      - name: Separate live WhatsApp from scheduling permission
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('api/green.js')
+          s = p.read_text(encoding='utf-8')
+          old = '''  const allowed = adminOnly\n    ? Boolean(perms?.is_admin)\n    : Boolean(perms?.is_admin || perms?.can_use_whatsapp || perms?.can_schedule_whatsapp);\n\n  if (!allowed) {\n    const err = new Error(adminOnly ? "Solo un administrador puede cambiar la configuración de WhatsApp." : "Sin permiso para usar WhatsApp.");'''
+          new = '''  // Live GREEN-API access is intentionally separate from scheduling.\n  // can_schedule_whatsapp only allows scheduled-item management in the CRM.\n  const allowed = adminOnly\n    ? Boolean(perms?.is_admin)\n    : Boolean(perms?.is_admin || perms?.can_use_whatsapp);\n\n  if (!allowed) {\n    const err = new Error(adminOnly ? "Solo un administrador puede cambiar la configuración de WhatsApp." : "Sin permiso para usar WhatsApp en vivo.");'''
+          if old not in s:
+              raise SystemExit('Expected WhatsApp permission block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Verify scheduling permission cannot unlock live API
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s = Path('api/green.js').read_text(encoding='utf-8')
+          assert 'perms?.is_admin || perms?.can_use_whatsapp || perms?.can_schedule_whatsapp' not in s
+          assert ': Boolean(perms?.is_admin || perms?.can_use_whatsapp);' in s
+          print('Live WhatsApp permission is isolated from scheduling')
+          PY
+
+      - name: Commit security fix
+        run: |
+          if git diff --quiet -- api/green.js; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/green.js
+          git commit -m "security: isolate live WhatsApp permission"
+          git push origin HEAD:candidato-final-validado-20260825
