@@ -19,7 +19,7 @@ jobs:
           ref: candidato-final-validado-20260825
           fetch-depth: 0
 
-      - name: Move contact labels modal before its binding script
+      - name: Move remaining late modal block before binding script
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -27,49 +27,52 @@ jobs:
           path = Path('index.html')
           html = path.read_text(encoding='utf-8')
 
-          modal = '''<div id="contactLabelsModal" class="waTemplateBack hidden">
-            <div class="waTemplateCard">
-              <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
-              <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
-              <div class="waTemplateActions"><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
-            </div>
-          </div>'''
+          bind = '$("goalModalClose").onclick=()=>$("goalModal").classList.add("hidden");'
+          start_marker = '<div id="goalModal"'
+          end_marker = '<script id="tpf-v15-back-audit">'
 
-          bind = '$("contactLabelsClose").onclick=()=>$("contactLabelsModal").classList.add("hidden");'
-
-          if html.count(modal) != 1:
-              raise SystemExit(f'Se esperaba 1 modal de etiquetas; encontrados: {html.count(modal)}')
           if bind not in html:
-              raise SystemExit('No se encontró el binding de contactLabelsClose')
+              raise SystemExit('No se encontró el binding de goalModalClose')
+          if start_marker not in html:
+              raise SystemExit('No se encontró goalModal')
+          if end_marker not in html:
+              raise SystemExit('No se encontró tpf-v15-back-audit')
 
           bind_pos = html.index(bind)
           script_pos = html.rfind('<script', 0, bind_pos)
-          modal_pos = html.index(modal)
+          start = html.index(start_marker)
+          end = html.index(end_marker, start)
 
           if script_pos < 0:
-              raise SystemExit('No se encontró el script que enlaza el modal')
+              raise SystemExit('No se encontró el script de bindings')
 
-          if modal_pos > script_pos:
-              html = html.replace(modal, '', 1)
+          if start > script_pos:
+              block = html[start:end]
+              html = html[:start] + html[end:]
               bind_pos = html.index(bind)
               script_pos = html.rfind('<script', 0, bind_pos)
-              html = html[:script_pos] + modal + '\n\n' + html[script_pos:]
+              html = html[:script_pos] + block + '\n' + html[script_pos:]
 
           path.write_text(html, encoding='utf-8')
           PY
 
-      - name: Verify contact labels modal order
+      - name: Verify late modal order
         run: |
           python3 - <<'PY'
           from pathlib import Path
           h = Path('index.html').read_text(encoding='utf-8')
-          modal_pos = h.index('<div id="contactLabelsModal"')
-          bind_pos = h.index('$("contactLabelsClose").onclick=()=>$("contactLabelsModal").classList.add("hidden");')
-          assert modal_pos < bind_pos
-          assert h.count('id="contactLabelsModal"') == 1
-          assert h.count('id="contactLabelsClose"') == 1
-          assert h.count('id="contactLabelsSave"') == 1
-          print('Contact labels modal is available before bindings execute')
+          checks = [
+            ('goalModal', 'goalModalClose'),
+            ('contactLabelsModal', 'contactLabelsClose')
+          ]
+          for modal_id, close_id in checks:
+              modal_pos = h.index(f'id="{modal_id}"')
+              bind_token = f'$("{close_id}").onclick'
+              bind_pos = h.index(bind_token)
+              assert modal_pos < bind_pos, (modal_id, modal_pos, bind_pos)
+              assert h.count(f'id="{modal_id}"') == 1
+              assert h.count(f'id="{close_id}"') == 1
+          print('Late modal blocks are available before bindings execute')
           PY
 
       - name: Commit source fix
@@ -81,5 +84,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "fix: bind contact labels after modal exists"
+          git commit -m "fix: place late modals before their bindings"
           git push origin HEAD:candidato-final-validado-20260825
