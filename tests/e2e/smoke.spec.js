@@ -20,3 +20,37 @@ test('no aparecen errores JavaScript no controlados al cargar', async ({ page })
   await page.waitForTimeout(1500);
   expect(errors).toEqual([]);
 });
+
+test('el contrato estructural de las pantallas principales sigue presente', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+  const requiredViews = [
+    'dashboard',
+    'alerts',
+    'database',
+    'sales',
+    'agenda',
+    'whatsapplive',
+    'whatsapp',
+    'labels',
+    'automations',
+    'settings',
+    'users'
+  ];
+
+  for (const view of requiredViews) {
+    await expect(page.locator(`[data-view="${view}"]`).first(), `Falta la vista ${view}`).toHaveCount(1);
+  }
+
+  const criticalIds = [
+    'contactLabelsModal',
+    'contactLabelsClose',
+    'contactLabelsSave',
+    'goalModal',
+    'goalModalClose'
+  ];
+
+  for (const id of criticalIds) {
+    await expect(page.locator(`#${id}`), `Falta el elemento crítico #${id}`).toHaveCount(1);
+  }
+});
