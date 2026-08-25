@@ -72,7 +72,7 @@ function bindAgendaActions(){
 }
 
 let tpfLabels=[];
-function escLabel(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function escLabel(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[m]))}
 function renderLabels(){
   const box=$('labelsGlobalList');if(!box)return;
   const q=($('labelSearch')?.value||'').trim().toLowerCase();
@@ -131,4 +131,22 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>`;
 
-module.exports=async function(req,res){try{const html=await getText(RAW_INDEX+'?v='+Date.now());const out=html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Patch','agenda-v4-labels-fix');res.status(200).send(out)}catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}};
+async function buildHtml(){
+  const html=await getText(RAW_INDEX+'?v='+Date.now());
+  return html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;
+}
+
+async function handler(req,res){
+  try{
+    const out=await buildHtml();
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.setHeader('Cache-Control','no-store, max-age=0');
+    res.setHeader('X-TPF-Patch','agenda-v4-labels-fix');
+    res.status(200).send(out);
+  }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}
+}
+
+handler.buildHtml=buildHtml;
+handler.PATCH=PATCH;
+handler.RAW_INDEX=RAW_INDEX;
+module.exports=handler;
