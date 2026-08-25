@@ -1479,77 +1479,6 @@ body.sidebarCollapsed .referenceWorkspace{
 .waMediaAudio{width:min(360px,100%)}
 .waDownloadBtn{margin-top:7px;border:0;border-radius:8px;padding:7px 10px;cursor:pointer;font-weight:700}
 </style>
-
-
-<style id="wa-fullscreen-web-layout">
-/* WhatsApp ocupa toda el área útil del CRM, estilo WhatsApp Web */
-body.wa-fullscreen-mode{overflow:hidden}
-body.wa-fullscreen-mode .sidebar{display:none!important}
-body.wa-fullscreen-mode .main-content,
-body.wa-fullscreen-mode main,
-body.wa-fullscreen-mode .content,
-body.wa-fullscreen-mode #mainContent{
-  margin-left:0!important; padding:0!important; width:100vw!important;
-  max-width:none!important; height:100vh!important;
-}
-body.wa-fullscreen-mode .topbar,
-body.wa-fullscreen-mode .top-bar,
-body.wa-fullscreen-mode header:not(.waChatHeader){display:none!important}
-
-/* El contenedor de WhatsApp llena la ventana */
-body.wa-fullscreen-mode #whatsappSection,
-body.wa-fullscreen-mode .whatsapp-section,
-body.wa-fullscreen-mode [data-section="whatsapp"]{
-  position:fixed!important; inset:0!important; z-index:9999!important;
-  width:100vw!important; height:100vh!important; max-width:none!important;
-  margin:0!important; padding:0!important; background:#f0f2f5!important;
-}
-
-/* Aprovechar toda la altura y anchura de los paneles existentes */
-body.wa-fullscreen-mode .waLayout,
-body.wa-fullscreen-mode .wa-layout,
-body.wa-fullscreen-mode .whatsapp-container,
-body.wa-fullscreen-mode .waContainer{
-  width:100%!important; max-width:none!important; height:100vh!important;
-  min-height:100vh!important; margin:0!important; border-radius:0!important;
-  display:grid!important; grid-template-columns:minmax(300px,30%) 1fr minmax(260px,24%)!important;
-}
-body.wa-fullscreen-mode .waChats,
-body.wa-fullscreen-mode .wa-chat-list,
-body.wa-fullscreen-mode .waSidebar{
-  height:100vh!important; max-height:none!important; overflow-y:auto!important;
-}
-body.wa-fullscreen-mode .waConversation,
-body.wa-fullscreen-mode .wa-conversation,
-body.wa-fullscreen-mode .waChat{
-  height:100vh!important; min-height:0!important; display:flex!important;
-  flex-direction:column!important;
-}
-body.wa-fullscreen-mode .waMessages,
-body.wa-fullscreen-mode .wa-messages,
-body.wa-fullscreen-mode .waMessagesList{
-  flex:1 1 auto!important; min-height:0!important; overflow-y:auto!important;
-}
-body.wa-fullscreen-mode .waComposer,
-body.wa-fullscreen-mode .wa-composer{
-  position:sticky!important; bottom:0!important; flex:0 0 auto!important;
-}
-body.wa-fullscreen-mode .waContactPanel,
-body.wa-fullscreen-mode .wa-contact-panel{
-  height:100vh!important; overflow-y:auto!important;
-}
-@media(max-width:1000px){
- body.wa-fullscreen-mode .waLayout,
- body.wa-fullscreen-mode .wa-layout,
- body.wa-fullscreen-mode .whatsapp-container,
- body.wa-fullscreen-mode .waContainer{
-   grid-template-columns:300px 1fr!important;
- }
- body.wa-fullscreen-mode .waContactPanel,
- body.wa-fullscreen-mode .wa-contact-panel{display:none!important}
-}
-</style>
-
 <style id="wa-right-crm-panel">
 body.wa-fullscreen-mode .waContactPane{
   min-width:300px!important;
@@ -10072,23 +10001,6 @@ window.selectWhatsAppChat=async(chatId)=>{
   }
 })();
 </script>
-
-
-
-<script id="wa-fullscreen-web-js">
-(function(){
-  function disableWhatsAppFullscreen(){
-    document.body.classList.remove("wa-fullscreen-mode");
-  }
-  disableWhatsAppFullscreen();
-  document.addEventListener("DOMContentLoaded", disableWhatsAppFullscreen);
-  document.addEventListener("click", function(){ setTimeout(disableWhatsAppFullscreen, 0); }, true);
-  window.addEventListener("pageshow", disableWhatsAppFullscreen);
-})();
-</script>
-
-
-
 <script id="tpf-v15-back-audit">
 (function(){
   const BACK_MAP={"contactClose": "contactModal", "cpTaskBack": "cpTaskPage", "cpTaskDetailBack": "cpTaskDetailPage", "oppFullBack": "opportunityFullPage", "waQuickClose": "waQuickModal", "waQuickCancel": "waQuickModal", "salesFullBackBtn": "view-sales", "waTemplateClose": "waTemplateModal", "waMediaClose": "waMediaModal", "waMsgActionClose": "waMsgActionModal", "waFilePreviewClose": "waFilePreviewModal", "waAnalyticsClose": "waAnalyticsModal", "oppModalCloseX": "oppDetailModal", "oppModalClose": "oppDetailModal", "contactLabelsClose": "contactLabelsModal", "goalModalClose": "goalModal", "customFieldsClose": "customFieldsModal", "multiSearchClose": "multiSearchModal", "crossSearchClose": "crossSearchModal"};
