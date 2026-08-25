@@ -37,16 +37,16 @@ Deno.serve(async (req: Request) => {
   let body: any = {};
   try { body = await req.json(); } catch { body = {}; }
 
-  // One-off/admin configuration path, protected by the same backend secret used by the worker.
   if (body?.action === "configure") {
     const supplied = req.headers.get("x-tpf-worker-secret") || "";
     if (!supplied || supplied !== workerSecret) return json({ ok: false, error: "Unauthorized" }, 401);
     if (!greenId || !greenToken) return json({ ok: false, error: "GREEN credentials unavailable" }, 500);
 
-    const webhookUrl = `${supabaseUrl}/functions/v1/green-webhook?secret=${encodeURIComponent(workerSecret)}`;
+    const webhookUrl = `${supabaseUrl}/functions/v1/green-webhook`;
     const endpoint = `${greenBase}/waInstance${greenId}/setSettings/${greenToken}`;
     const payload = {
       webhookUrl,
+      webhookAuthorizationHeader: workerSecret,
       incomingWebhook: "yes",
       outgoingMessageWebhook: "yes",
       outgoingAPIMessageWebhook: "yes"
@@ -61,8 +61,9 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, configured: true });
   }
 
-  // GREEN webhook authentication: secret is embedded in the webhook URL configured above.
-  if ((url.searchParams.get("secret") || "") !== workerSecret) {
+  const authHeader = req.headers.get("authorization") || req.headers.get("webhook-authorization") || req.headers.get("x-tpf-worker-secret") || "";
+  const urlSecret = url.searchParams.get("secret") || "";
+  if (authHeader !== workerSecret && urlSecret !== workerSecret) {
     return json({ ok: false, error: "Unauthorized" }, 401);
   }
 
@@ -82,7 +83,6 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false }
   });
 
-  // Idempotency before insert: GREEN can retry a webhook.
   const { data: existing, error: existingError } = await sb
     .from("wa_messages")
     .select("id")
