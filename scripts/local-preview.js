@@ -1,6 +1,6 @@
 const http = require('http');
 const { URL } = require('url');
-const clean = require('../api/index-clean');
+const finalFix = require('../api/final-fix');
 
 function adaptResponse(res) {
   let statusCode = 200;
@@ -24,7 +24,7 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://127.0.0.1:3000');
     if (url.pathname === '/' || url.pathname === '/index.html') {
       req.headers.host = req.headers.host || '127.0.0.1:3000';
-      await clean(req, adaptResponse(res));
+      await finalFix(req, adaptResponse(res));
       return;
     }
     if (url.pathname === '/healthz') {
