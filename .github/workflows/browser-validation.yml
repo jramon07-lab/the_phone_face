@@ -1,0 +1,36 @@
+name: CRM Browser Validation
+
+on:
+  workflow_dispatch:
+  deployment_status:
+
+jobs:
+  e2e:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/crm-unica-20260825
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Run real browser validation
+        env:
+          VERCEL_PREVIEW_URL: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.target_url || secrets.VERCEL_PREVIEW_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npm run test:e2e
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-browser-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
