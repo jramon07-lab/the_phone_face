@@ -40,6 +40,28 @@ const AUTH_PATCH=`<script id="tpf-protected-api-auth-v1">
 })();
 </script>`;
 
+const NAV_STABILIZER=`<script id="tpf-nav-stabilizer-p0">
+(function(){
+  const mainViews=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","labels","settings","automations","users","trash"];
+  function visibleMainView(){
+    return mainViews.find(function(v){
+      const el=document.getElementById("view-"+v);
+      return el && !el.classList.contains("hidden");
+    }) || window.__tpfCurrentView || "dashboard";
+  }
+  window.tpfVisibleMainView=visibleMainView;
+  window.tpfMainViewNow=visibleMainView;
+  window.tpfMainViewId=visibleMainView;
+
+  // Compatibilidad con llamadas antiguas: Volver delega en el router único.
+  window.tpfGoBack=function(){
+    if(typeof window.tpfBackExactly!=="function")return false;
+    Promise.resolve(window.tpfBackExactly()).catch(function(e){console.error("TPF back error",e)});
+    return true;
+  };
+})();
+</script>`;
+
 module.exports=async function(req,res){
   try{
     const host=req.headers['x-forwarded-host']||req.headers.host;
@@ -58,9 +80,13 @@ module.exports=async function(req,res){
       html=html.includes('</head>')?html.replace('</head>',AUTH_PATCH+'\n</head>'):AUTH_PATCH+html;
     }
 
+    if(!html.includes('tpf-nav-stabilizer-p0')){
+      html=html.includes('</body>')?html.replace('</body>',NAV_STABILIZER+'\n</body>'):html+NAV_STABILIZER;
+    }
+
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
-    res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth');
+    res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth+nav-stabilizer');
     res.status(200).send(html);
   }catch(e){
     res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));
