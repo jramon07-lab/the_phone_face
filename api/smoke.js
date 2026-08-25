@@ -36,8 +36,9 @@ module.exports = async function(req,res){
       root_single_entry: vercel.includes('"source": "/"') && vercel.includes('"destination": "/api/index-clean"'),
       templates_nav: indexClean.includes('id="tpfWaTemplatesNav"'),
       automation_advanced: indexClean.includes('id="tpfAutomationAdvancedBar"'),
-      menu_clean_css: indexClean.includes('tpf-menu-clean-v2'),
-      entry_unique: indexClean.includes('tpf-entry-unique-v2'),
+      menu_clean_css: indexClean.includes('tpf-menu-clean-v3'),
+      entry_unique: indexClean.includes('tpf-entry-unique-v3'),
+      build_badge: indexClean.includes('id="tpfBuildBadge"') && indexClean.includes('X-TPF-Commit'),
       no_default_templates: indexClean.includes('function waDefaultTemplates(){return []}'),
       whatsapp_patch_preserved: indexFix.includes('tpf-fix-3-points-v1') || indexFix.includes('waIsUnanswered')
     };
