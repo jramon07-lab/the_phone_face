@@ -1,8 +1,18 @@
 const https = require('https');
 
+function requestHeaders(userAgent){
+  const headers={'User-Agent':userAgent};
+  const bypass=process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if(bypass){
+    headers['x-vercel-protection-bypass']=bypass;
+    headers['x-vercel-set-bypass-cookie']='true';
+  }
+  return headers;
+}
+
 function getText(url){
   return new Promise((resolve,reject)=>{
-    https.get(url,{headers:{'User-Agent':'The-Phone-Face-Menu-Clean'}},r=>{
+    https.get(url,{headers:requestHeaders('The-Phone-Face-Menu-Clean')},r=>{
       if(r.statusCode>=300 && r.statusCode<400 && r.headers.location){r.resume();return getText(r.headers.location).then(resolve,reject)}
       if(r.statusCode!==200){r.resume();return reject(new Error('HTTP '+r.statusCode))}
       let body='';r.setEncoding('utf8');r.on('data',c=>body+=c);r.on('end',()=>resolve(body));
@@ -28,44 +38,12 @@ const FINAL_BINDINGS = `
 <script id="tpf-entry-unique-v3">
 (function(){
   function byId(id){return document.getElementById(id)}
-
-  async function openTemplates(){
-    try{
-      const waNav=document.querySelector('.nav[data-view="whatsapplive"]');
-      if(waNav && byId('view-whatsapplive')?.classList.contains('hidden'))waNav.click();
-      if(typeof waSyncTemplatesFromSupabase==='function')await waSyncTemplatesFromSupabase();
-      if(typeof waRenderTemplates==='function')waRenderTemplates();
-      byId('waTemplateModal')?.classList.remove('hidden');
-    }catch(e){console.warn('Plantillas WhatsApp',e)}
-  }
-
-  function bindTemplatesNav(){
-    const n=byId('tpfWaTemplatesNav');
-    if(!n||n.dataset.bound==='1')return;
-    n.dataset.bound='1';
-    n.onclick=function(e){e.preventDefault();e.stopPropagation();openTemplates()};
-  }
-
-  async function showAdvancedAutomation(){
-    try{
-      if(typeof auto2PrepareOptions==='function')await auto2PrepareOptions();
-      if(typeof auto2RenderTriggerConfig==='function')auto2RenderTriggerConfig();
-      if(typeof auto2RenderActionConfig==='function')auto2RenderActionConfig();
-      if(typeof loadAutomations==='function')await loadAutomations();
-    }catch(e){console.warn('Automatizaciones avanzadas',e)}
-  }
-
-  function bindAutomations(){
-    document.querySelectorAll('.nav[data-view="automations"]').forEach(function(n){
-      if(n.dataset.advancedEntry==='1')return;
-      n.dataset.advancedEntry='1';
-      n.addEventListener('click',function(){setTimeout(showAdvancedAutomation,40)});
-    });
-  }
-
+  async function openTemplates(){try{const waNav=document.querySelector('.nav[data-view="whatsapplive"]');if(waNav && byId('view-whatsapplive')?.classList.contains('hidden'))waNav.click();if(typeof waSyncTemplatesFromSupabase==='function')await waSyncTemplatesFromSupabase();if(typeof waRenderTemplates==='function')waRenderTemplates();byId('waTemplateModal')?.classList.remove('hidden')}catch(e){console.warn('Plantillas WhatsApp',e)}}
+  function bindTemplatesNav(){const n=byId('tpfWaTemplatesNav');if(!n||n.dataset.bound==='1')return;n.dataset.bound='1';n.onclick=function(e){e.preventDefault();e.stopPropagation();openTemplates()}}
+  async function showAdvancedAutomation(){try{if(typeof auto2PrepareOptions==='function')await auto2PrepareOptions();if(typeof auto2RenderTriggerConfig==='function')auto2RenderTriggerConfig();if(typeof auto2RenderActionConfig==='function')auto2RenderActionConfig();if(typeof loadAutomations==='function')await loadAutomations()}catch(e){console.warn('Automatizaciones avanzadas',e)}}
+  function bindAutomations(){document.querySelectorAll('.nav[data-view="automations"]').forEach(function(n){if(n.dataset.advancedEntry==='1')return;n.dataset.advancedEntry='1';n.addEventListener('click',function(){setTimeout(showAdvancedAutomation,40)})})}
   function boot(){bindTemplatesNav();bindAutomations()}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  setTimeout(boot,250);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();setTimeout(boot,250);
 })();
 </script>`;
 
@@ -74,40 +52,20 @@ module.exports=async function(req,res){
     const host=req.headers['x-forwarded-host']||req.headers.host;
     if(!host)throw new Error('Host no disponible');
     let html=await getText(`https://${host}/api/index-fix?_clean=${Date.now()}`);
-
     const commit=String(process.env.VERCEL_GIT_COMMIT_SHA||'local');
     const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
     const shortCommit=commit.slice(0,8);
-
     html=html.replace(/\blet\s+waTemplatesCache\s*=/,'waTemplatesCache=');
     html=html.replace(/\blet\s+waTemplatesRemoteReady\s*=/,'waTemplatesRemoteReady=');
     const waTdzFix='<script id="tpf-wa-templates-tdz-fix">var waTemplatesCache=[];var waTemplatesRemoteReady=false;</script>';
-    if(!html.includes('id="tpf-wa-templates-tdz-fix"')){
-      html=html.includes('</head>')?html.replace('</head>',waTdzFix+'\n</head>'):waTdzFix+html;
-    }
-
+    if(!html.includes('id="tpf-wa-templates-tdz-fix"'))html=html.includes('</head>')?html.replace('</head>',waTdzFix+'\n</head>'):waTdzFix+html;
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
-
-    if(!html.includes('id="tpfWaTemplatesNav"')){
-      const waNav='<div class="nav secondaryNav" data-view="whatsapplive"><b>◉</b><span>WhatsApp</span></div>';
-      const tplNav=waNav+'\n      <div id="tpfWaTemplatesNav" class="nav secondaryNav"><b>▤</b><span>Plantillas WhatsApp</span></div>';
-      html=html.replace(waNav,tplNav);
-    }
-
-    if(!html.includes('id="tpfAutomationAdvancedBar"')){
-      const grid='<div class="automation2Grid">';
-      const bar=`<div id="tpfAutomationAdvancedBar"><h3>⚡ Constructor avanzado</h3><div class="small">Motor completo activo: configura disparadores, condiciones y acciones.</div><div class="tpfAutoCaps"><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta</span><span>Sin respuesta</span><span>Tarea</span><span>Oportunidad</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span></div></div>`;
-      html=html.replace(grid,bar+'\n    '+grid);
-    }
-
+    if(!html.includes('id="tpfWaTemplatesNav"')){const waNav='<div class="nav secondaryNav" data-view="whatsapplive"><b>◉</b><span>WhatsApp</span></div>';const tplNav=waNav+'\n      <div id="tpfWaTemplatesNav" class="nav secondaryNav"><b>▤</b><span>Plantillas WhatsApp</span></div>';html=html.replace(waNav,tplNav)}
+    if(!html.includes('id="tpfAutomationAdvancedBar"')){const grid='<div class="automation2Grid">';const bar=`<div id="tpfAutomationAdvancedBar"><h3>⚡ Constructor avanzado</h3><div class="small">Motor completo activo: configura disparadores, condiciones y acciones.</div><div class="tpfAutoCaps"><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta</span><span>Sin respuesta</span><span>Tarea</span><span>Oportunidad</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span></div></div>`;html=html.replace(grid,bar+'\n    '+grid)}
     const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">PRUEBAS · ${branch} · ${shortCommit}</div>`;
-    if(!html.includes('id="tpfBuildBadge"')){
-      html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
-    }
-
+    if(!html.includes('id="tpfBuildBadge"'))html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
     html=html.includes('</head>')?html.replace('</head>',MENU_CLEAN+'\n</head>'):MENU_CLEAN+html;
     html=html.includes('</body>')?html.replace('</body>',FINAL_BINDINGS+'\n</body>'):html+FINAL_BINDINGS;
-
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
     res.setHeader('X-TPF-Menu','clean-v3');
