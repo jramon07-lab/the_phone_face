@@ -71,7 +71,7 @@ begin
 end;
 $function$;
 
-revoke all on function public.update_records_by_dni(text,text,text,text,text,text) from public, anon;
+revoke all on function public.update_records_by_dni(text,text,text,text,text,text) from public, anon, authenticated;
 grant execute on function public.update_records_by_dni(text,text,text,text,text,text) to authenticated;
 
 -- ---------------------------------------------------------------------------
@@ -81,7 +81,57 @@ revoke all on function public.crm_process_automation_jobs() from public, anon, a
 grant execute on function public.crm_process_automation_jobs() to service_role;
 
 -- ---------------------------------------------------------------------------
--- 3) Sales automation trigger: signed-in user with sales edit permission.
+-- 3) Automation enqueue: authenticated user + automation permission.
+-- This closes the gap where any signed-in user could enqueue jobs.
+-- ---------------------------------------------------------------------------
+create or replace function public.crm_enqueue_automation_job(
+  p_automation_id uuid,
+  p_contact_id uuid,
+  p_opportunity_id uuid,
+  p_job_type text,
+  p_run_at timestamptz,
+  p_payload jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'Sesion requerida';
+  end if;
+
+  if not exists (
+    select 1 from public.user_permissions p
+    where p.user_id = auth.uid()
+      and (p.is_admin or p.can_manage_automations)
+  ) then
+    raise exception 'Sin permiso para gestionar automatizaciones';
+  end if;
+
+  if p_job_type not in ('update_opportunity','add_label','remove_label') then
+    raise exception 'Tipo de trabajo no soportado';
+  end if;
+
+  insert into public.crm_automation_jobs(
+    automation_id, contact_id, opportunity_id, job_type, run_at, payload, created_by
+  ) values (
+    p_automation_id, p_contact_id, p_opportunity_id, p_job_type,
+    coalesce(p_run_at, now()), coalesce(p_payload,'{}'::jsonb), auth.uid()
+  ) returning id into v_id;
+
+  return v_id;
+end;
+$function$;
+
+revoke all on function public.crm_enqueue_automation_job(uuid,uuid,uuid,text,timestamptz,jsonb) from public, anon, authenticated;
+grant execute on function public.crm_enqueue_automation_job(uuid,uuid,uuid,text,timestamptz,jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 4) Sales automation trigger: signed-in user with sales edit permission.
 -- ---------------------------------------------------------------------------
 create or replace function public.run_sales_automations_for_opportunity(target_opportunity uuid)
 returns jsonb
@@ -136,23 +186,29 @@ begin
 end;
 $function$;
 
-revoke all on function public.run_sales_automations_for_opportunity(uuid) from public, anon;
+revoke all on function public.run_sales_automations_for_opportunity(uuid) from public, anon, authenticated;
 grant execute on function public.run_sales_automations_for_opportunity(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- 4) Admin helpers should never be callable as anon.
--- Internal auth.uid()/permission checks remain in place.
+-- 5) Admin/import helpers: remove inherited PUBLIC/anon execution.
+-- Important: revoking only anon is insufficient while PUBLIC retains EXECUTE.
 -- ---------------------------------------------------------------------------
-revoke execute on function public.admin_list_users_permissions() from anon;
-revoke execute on function public.admin_set_user_permission(uuid,text,boolean) from anon;
-revoke execute on function public.admin_set_field_permission(uuid,text,text,boolean) from anon;
-revoke execute on function public.bulk_import_records(text,jsonb,text) from anon;
-revoke execute on function public.import_records_batch(text,jsonb,text) from anon;
-revoke execute on function public.crm_delete_sales_opportunity_v2(uuid) from anon;
-revoke execute on function public.crm_enqueue_automation_job(uuid,uuid,uuid,text,timestamptz,jsonb) from anon;
+revoke all on function public.admin_list_users_permissions() from public, anon;
+revoke all on function public.admin_set_user_permission(uuid,text,boolean) from public, anon;
+revoke all on function public.admin_set_field_permission(uuid,text,text,boolean) from public, anon;
+revoke all on function public.bulk_import_records(text,jsonb,text) from public, anon;
+revoke all on function public.import_records_batch(text,jsonb,text) from public, anon;
+revoke all on function public.crm_delete_sales_opportunity_v2(uuid) from public, anon;
+
+grant execute on function public.admin_list_users_permissions() to authenticated;
+grant execute on function public.admin_set_user_permission(uuid,text,boolean) to authenticated;
+grant execute on function public.admin_set_field_permission(uuid,text,text,boolean) to authenticated;
+grant execute on function public.bulk_import_records(text,jsonb,text) to authenticated;
+grant execute on function public.import_records_batch(text,jsonb,text) to authenticated;
+grant execute on function public.crm_delete_sales_opportunity_v2(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- 5) crm_trash: admin or users with delete permission only.
+-- 6) crm_trash: admin or users with delete permission only.
 -- ---------------------------------------------------------------------------
 drop policy if exists crm_trash_authenticated_all on public.crm_trash;
 
@@ -187,9 +243,7 @@ using (
 );
 
 -- ---------------------------------------------------------------------------
--- 6) app_settings: all signed-in users may read; only admin/settings managers write.
--- The current permission model has can_view_settings but no separate write permission,
--- so writes are restricted to admins to avoid global-setting escalation.
+-- 7) app_settings: all signed-in users may read; only admins write global values.
 -- ---------------------------------------------------------------------------
 drop policy if exists "authenticated can insert app settings" on public.app_settings;
 drop policy if exists "authenticated can update app settings" on public.app_settings;
@@ -206,7 +260,7 @@ with check (public.current_user_is_admin());
 -- Existing authenticated read policy remains intentionally.
 
 -- ---------------------------------------------------------------------------
--- 7) wa_messages: require WhatsApp permission instead of any authenticated user.
+-- 8) wa_messages: require WhatsApp permission instead of any authenticated user.
 -- ---------------------------------------------------------------------------
 drop policy if exists wa_messages_authenticated_select on public.wa_messages;
 drop policy if exists wa_messages_authenticated_insert on public.wa_messages;
