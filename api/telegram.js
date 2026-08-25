@@ -1,3 +1,55 @@
+const SB_URL = process.env.SUPABASE_URL || "https://overfzbjtpjqxzbujezg.supabase.co";
+const SB_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_o6_eM5v04EBInhfiSnyFLA_5yRHlB4j";
+
+async function requireAuthorizedUser(req) {
+  const auth = String(req.headers?.authorization || "").trim();
+  if (!auth.toLowerCase().startsWith("bearer ")) {
+    const err = new Error("Sesión requerida.");
+    err.status = 401;
+    throw err;
+  }
+
+  const token = auth.slice(7).trim();
+  if (!token) {
+    const err = new Error("Sesión requerida.");
+    err.status = 401;
+    throw err;
+  }
+
+  const userRes = await fetch(`${SB_URL}/auth/v1/user`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${token}` }
+  });
+  if (!userRes.ok) {
+    const err = new Error("Sesión no válida.");
+    err.status = 401;
+    throw err;
+  }
+
+  const permsRes = await fetch(`${SB_URL}/rest/v1/rpc/current_user_permissions`, {
+    method: "POST",
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: "{}"
+  });
+  if (!permsRes.ok) {
+    const err = new Error("No se pudieron comprobar los permisos.");
+    err.status = 403;
+    throw err;
+  }
+
+  const perms = await permsRes.json();
+  if (!perms || (!perms.is_admin && !perms.can_view_alerts)) {
+    const err = new Error("Sin permiso para usar Telegram.");
+    err.status = 403;
+    throw err;
+  }
+
+  return { token, perms };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -8,6 +60,8 @@ export default async function handler(req, res) {
   const tg = (method) => `https://api.telegram.org/bot${token}/${method}`;
 
   try {
+    await requireAuthorizedUser(req);
+
     if (req.method === "GET" && req.query.action === "chat-id") {
       const r = await fetch(tg("getUpdates"));
       const j = await r.json();
@@ -33,9 +87,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         chat_id: last.chat.id,
-        chat_type: last.chat.type,
-        first_name: last.chat.first_name || "",
-        username: last.chat.username || ""
+        chat_type: last.chat.type
       });
     }
 
@@ -71,6 +123,6 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ ok: false, error: "Método no permitido." });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e?.message || String(e) });
+    return res.status(e?.status || 500).json({ ok: false, error: e?.message || String(e) });
   }
 }
