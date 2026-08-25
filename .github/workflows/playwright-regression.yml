@@ -37,3 +37,5 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 14
+
+# validation trigger after contact-label DOM order fix
