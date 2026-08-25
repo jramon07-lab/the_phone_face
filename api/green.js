@@ -1,5 +1,73 @@
+const SB_URL = process.env.SUPABASE_URL || "https://overfzbjtpjqxzbujezg.supabase.co";
+const SB_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_o6_eM5v04EBInhfiSnyFLA_5yRHlB4j";
+
+async function requireAuthorizedUser(req, action) {
+  if (action === "webhook") return { webhook: true };
+
+  const auth = String(req.headers?.authorization || "").trim();
+  if (!auth.toLowerCase().startsWith("bearer ")) {
+    const err = new Error("Sesión requerida.");
+    err.status = 401;
+    throw err;
+  }
+
+  const accessToken = auth.slice(7).trim();
+  if (!accessToken) {
+    const err = new Error("Sesión requerida.");
+    err.status = 401;
+    throw err;
+  }
+
+  const userRes = await fetch(`${SB_URL}/auth/v1/user`, {
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${accessToken}` }
+  });
+  if (!userRes.ok) {
+    const err = new Error("Sesión no válida.");
+    err.status = 401;
+    throw err;
+  }
+
+  const permsRes = await fetch(`${SB_URL}/rest/v1/rpc/current_user_permissions`, {
+    method: "POST",
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: "{}"
+  });
+  if (!permsRes.ok) {
+    const err = new Error("No se pudieron comprobar los permisos de WhatsApp.");
+    err.status = 403;
+    throw err;
+  }
+
+  const rawPerms = await permsRes.json();
+  const perms = Array.isArray(rawPerms) ? rawPerms[0] : rawPerms;
+  const adminOnly = action === "ensure";
+  const allowed = adminOnly
+    ? Boolean(perms?.is_admin)
+    : Boolean(perms?.is_admin || perms?.can_use_whatsapp || perms?.can_schedule_whatsapp);
+
+  if (!allowed) {
+    const err = new Error(adminOnly ? "Solo un administrador puede cambiar la configuración de WhatsApp." : "Sin permiso para usar WhatsApp.");
+    err.status = 403;
+    throw err;
+  }
+
+  return { accessToken, perms };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
+
+  const action = String(req.query.action || "").toLowerCase();
+
+  try {
+    await requireAuthorizedUser(req, action);
+  } catch (e) {
+    return res.status(e?.status || 500).json({ ok: false, error: e?.message || String(e) });
+  }
 
   const id =
     process.env.GREEN_API_INSTANCE_ID ||
@@ -17,16 +85,11 @@ export default async function handler(req, res) {
   const mediaBase = String(process.env.GREEN_API_MEDIA_URL || "https://media.green-api.com").replace(/\/$/, "");
 
   if (!id || !token) {
-    const visibleNames = Object.keys(process.env)
-      .filter((k) => k.startsWith("GREEN_API"))
-      .sort();
-
     return res.status(500).json({
       ok: false,
       error: "GREEN-API no está disponible en esta función de Vercel.",
       hasInstanceId: Boolean(id),
-      hasToken: Boolean(token),
-      greenApiEnvNames: visibleNames
+      hasToken: Boolean(token)
     });
   }
 
@@ -94,12 +157,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const action = String(req.query.action || "").toLowerCase();
-
-
     if (req.method === "POST" && action === "webhook") {
-      // Endpoint listo para recibir notificaciones GREEN-API desde servidor.
-      // La persistencia principal se realiza desde el cliente vía Supabase RPC.
       return res.status(200).json({ ok:true });
     }
 
@@ -113,8 +171,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, settings: data || {} });
     }
 
-    // Comprueba y activa, solo si hace falta, las notificaciones necesarias
-    // para recibir mensajes nuevos por la cola HTTP de GREEN-API.
     if (req.method === "POST" && action === "ensure") {
       const current = await greenFetch("getSettings");
       const needIncoming = String(current?.incomingWebhook || "").toLowerCase() !== "yes";
@@ -144,8 +200,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, changed: false, settings: current || {} });
     }
 
-    // Lista híbrida: getChats da contactos/orden base; los diarios aportan
-    // el último mensaje; receiveNotification mantiene las novedades en tiempo real.
     if (req.method === "GET" && action === "summary") {
       const minutes = Math.max(60, Math.min(43200, Number(req.query.minutes || 10080)));
       const chatsData = await greenFetch("getChats");
@@ -168,8 +222,6 @@ export default async function handler(req, res) {
         if (!prev || ts >= Number(prev?.timestamp || 0)) latest.set(chatId,msg);
       }
 
-      // Para chats visibles sin entrada reciente en los diarios, usa un único
-      // mensaje de historial como respaldo (solo en carga/reconciliación).
       for (const chat of chats.slice(0,15)) {
         const chatId=normalizeChatId(chat?.id);
         if (!chatId || latest.has(chatId)) continue;
@@ -195,8 +247,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, chats });
     }
 
-    // Foto de perfil del contacto o grupo. GREEN-API devuelve una URL
-    // visible cuando la privacidad del interlocutor lo permite.
     if (req.method === "POST" && action === "avatar") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
@@ -216,8 +266,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Recupera el enlace de un archivo del historial cuando getChatHistory
-    // no incluye downloadUrl (fotos/documentos antiguos).
     if (req.method === "POST" && action === "file") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
@@ -238,9 +286,6 @@ export default async function handler(req, res) {
       });
     }
 
-
-    // Descarga real desde el mismo dominio de la app. Se responde como
-    // "attachment" para que Safari respete "Consultar al iniciar la descarga".
     if (req.method === "GET" && action === "download") {
       const chatId = normalizeChatId(req.query.chatId);
       const idMessage = String(req.query.idMessage || "").trim();
@@ -272,8 +317,6 @@ export default async function handler(req, res) {
       return res.status(200).send(bytes);
     }
 
-    // Último mensaje real de varios chats. Las llamadas se hacen de forma
-    // secuencial para evitar que GREEN-API rechace/rate-limitée una ráfaga.
     if (req.method === "POST" && action === "previews") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const rawIds = Array.isArray(body.chatIds) ? body.chatIds : [];
@@ -335,7 +378,6 @@ export default async function handler(req, res) {
       });
     }
 
-
     if (req.method === "POST" && action === "read") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
@@ -371,10 +413,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, idMessage: data?.idMessage || null, urlFile: data?.urlFile || "", data });
     }
 
-    // Lee varias notificaciones de la cola en una sola petición.
-    // GREEN-API mezcla mensajes, estados de entrega/lectura y otros eventos;
-    // si leyéramos solo uno cada pocos segundos, un mensaje nuevo podría
-    // quedar detrás de muchos eventos de estado y tardar en aparecer.
     if (req.method === "GET" && (action === "notification" || action === "notifications")) {
       const notifications = [];
       const receipts = [];
