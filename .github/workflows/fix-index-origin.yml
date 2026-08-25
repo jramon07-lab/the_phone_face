@@ -19,7 +19,7 @@ jobs:
           ref: candidato-final-validado-20260825
           fetch-depth: 0
 
-      - name: Patch index.html at source
+      - name: Move contact labels modal before its binding script
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -27,75 +27,49 @@ jobs:
           path = Path('index.html')
           html = path.read_text(encoding='utf-8')
 
-          guard = '''<script id="tpf-browser-compat-origin-v1">
-          (function () {
-            try {
-              var storage = navigator.storage;
-              if (!storage) {
-                Object.defineProperty(navigator, "storage", {
-                  configurable: true,
-                  value: {}
-                });
-                storage = navigator.storage;
-              }
-              if (typeof storage.persisted !== "function") {
-                Object.defineProperty(storage, "persisted", {
-                  configurable: true,
-                  value: function () { return Promise.resolve(false); }
-                });
-              }
-              if (typeof storage.persist !== "function") {
-                Object.defineProperty(storage, "persist", {
-                  configurable: true,
-                  value: function () { return Promise.resolve(false); }
-                });
-              }
-            } catch (_) {}
-          })();
-          </script>'''
+          modal = '''<div id="contactLabelsModal" class="waTemplateBack hidden">
+            <div class="waTemplateCard">
+              <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
+              <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
+              <div class="waTemplateActions"><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
+            </div>
+          </div>'''
 
-          if 'tpf-browser-compat-origin-v1' not in html:
-              needle = '<head>'
-              if needle not in html:
-                  raise SystemExit('No se encontró <head>')
-              html = html.replace(needle, needle + '\n' + guard, 1)
+          bind = '$("contactLabelsClose").onclick=()=>$("contactLabelsModal").classList.add("hidden");'
 
-          duplicate = '''function waLoadTemplates(){
-            return Array.isArray(waTemplatesCache) && waTemplatesCache.length
-              ? waTemplatesCache
-              : waDefaultTemplates();
-          }'''
+          if html.count(modal) != 1:
+              raise SystemExit(f'Se esperaba 1 modal de etiquetas; encontrados: {html.count(modal)}')
+          if bind not in html:
+              raise SystemExit('No se encontró el binding de contactLabelsClose')
 
-          count = html.count(duplicate)
-          if count != 1:
-              raise SystemExit(f'Se esperaba exactamente 1 bloque waLoadTemplates duplicado; encontrados: {count}')
-          html = html.replace(duplicate, '/* TPF: eliminado waLoadTemplates duplicado que provocaba TDZ */', 1)
+          bind_pos = html.index(bind)
+          script_pos = html.rfind('<script', 0, bind_pos)
+          modal_pos = html.index(modal)
 
-          if 'let waTemplatesCache = waLoadTemplates();' not in html:
-              raise SystemExit('No se encontró el inicializador esperado de waTemplatesCache')
-          if 'tpf-browser-compat-origin-v1' not in html:
-              raise SystemExit('No se insertó el guard de compatibilidad')
-          if duplicate in html:
-              raise SystemExit('El bloque duplicado sigue presente')
+          if script_pos < 0:
+              raise SystemExit('No se encontró el script que enlaza el modal')
+
+          if modal_pos > script_pos:
+              html = html.replace(modal, '', 1)
+              bind_pos = html.index(bind)
+              script_pos = html.rfind('<script', 0, bind_pos)
+              html = html[:script_pos] + modal + '\n\n' + html[script_pos:]
 
           path.write_text(html, encoding='utf-8')
           PY
 
-      - name: Verify direct fixes
+      - name: Verify contact labels modal order
         run: |
           python3 - <<'PY'
           from pathlib import Path
           h = Path('index.html').read_text(encoding='utf-8')
-          assert 'tpf-browser-compat-origin-v1' in h
-          assert h.index('tpf-browser-compat-origin-v1') < h.index('cdn.jsdelivr.net/npm/@supabase/supabase-js@2')
-          assert 'let waTemplatesCache = waLoadTemplates();' in h
-          bad = '''function waLoadTemplates(){
-            return Array.isArray(waTemplatesCache) && waTemplatesCache.length
-              ? waTemplatesCache
-              : waDefaultTemplates();
-          }'''
-          assert bad not in h
-          print('Direct index fixes verified')
+          modal_pos = h.index('<div id="contactLabelsModal"')
+          bind_pos = h.index('$("contactLabelsClose").onclick=()=>$("contactLabelsModal").classList.add("hidden");')
+          assert modal_pos < bind_pos
+          assert h.count('id="contactLabelsModal"') == 1
+          assert h.count('id="contactLabelsClose"') == 1
+          assert h.count('id="contactLabelsSave"') == 1
+          print('Contact labels modal is available before bindings execute')
           PY
 
       - name: Commit source fix
@@ -107,5 +81,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "fix: resolve template TDZ and iPhone storage at source"
+          git commit -m "fix: bind contact labels after modal exists"
           git push origin HEAD:candidato-final-validado-20260825
