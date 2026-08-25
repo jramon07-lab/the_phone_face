@@ -1,24 +1,5 @@
-const https = require('https');
-
-function requestHeaders(userAgent){
-  const headers={'User-Agent':userAgent};
-  const bypass=process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
-  if(bypass){
-    headers['x-vercel-protection-bypass']=bypass;
-    headers['x-vercel-set-bypass-cookie']='true';
-  }
-  return headers;
-}
-
-function getText(url){
-  return new Promise((resolve,reject)=>{
-    https.get(url,{headers:requestHeaders('The-Phone-Face-Menu-Clean')},r=>{
-      if(r.statusCode>=300 && r.statusCode<400 && r.headers.location){r.resume();return getText(r.headers.location).then(resolve,reject)}
-      if(r.statusCode!==200){r.resume();return reject(new Error('HTTP '+r.statusCode))}
-      let body='';r.setEncoding('utf8');r.on('data',c=>body+=c);r.on('end',()=>resolve(body));
-    }).on('error',reject)
-  })
-}
+const base = require('./index');
+const fix = require('./index-fix');
 
 const MENU_CLEAN = `
 <style id="tpf-menu-clean-v3">
@@ -49,27 +30,45 @@ const FINAL_BINDINGS = `
 
 module.exports=async function(req,res){
   try{
-    const host=req.headers['x-forwarded-host']||req.headers.host;
-    if(!host)throw new Error('Host no disponible');
-    let html=await getText(`https://${host}/api/index-fix?_clean=${Date.now()}`);
+    if(typeof base.buildHtml!=='function')throw new Error('buildHtml no disponible');
+    if(typeof fix.applyFix!=='function')throw new Error('applyFix no disponible');
+
+    let html=await base.buildHtml();
+    html=fix.applyFix(html);
+
     const commit=String(process.env.VERCEL_GIT_COMMIT_SHA||'local');
     const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
     const shortCommit=commit.slice(0,8);
+
     html=html.replace(/\blet\s+waTemplatesCache\s*=/,'waTemplatesCache=');
     html=html.replace(/\blet\s+waTemplatesRemoteReady\s*=/,'waTemplatesRemoteReady=');
     const waTdzFix='<script id="tpf-wa-templates-tdz-fix">var waTemplatesCache=[];var waTemplatesRemoteReady=false;</script>';
     if(!html.includes('id="tpf-wa-templates-tdz-fix"'))html=html.includes('</head>')?html.replace('</head>',waTdzFix+'\n</head>'):waTdzFix+html;
+
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
-    if(!html.includes('id="tpfWaTemplatesNav"')){const waNav='<div class="nav secondaryNav" data-view="whatsapplive"><b>◉</b><span>WhatsApp</span></div>';const tplNav=waNav+'\n      <div id="tpfWaTemplatesNav" class="nav secondaryNav"><b>▤</b><span>Plantillas WhatsApp</span></div>';html=html.replace(waNav,tplNav)}
-    if(!html.includes('id="tpfAutomationAdvancedBar"')){const grid='<div class="automation2Grid">';const bar=`<div id="tpfAutomationAdvancedBar"><h3>⚡ Constructor avanzado</h3><div class="small">Motor completo activo: configura disparadores, condiciones y acciones.</div><div class="tpfAutoCaps"><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta</span><span>Sin respuesta</span><span>Tarea</span><span>Oportunidad</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span></div></div>`;html=html.replace(grid,bar+'\n    '+grid)}
+
+    if(!html.includes('id="tpfWaTemplatesNav"')){
+      const waNav='<div class="nav secondaryNav" data-view="whatsapplive"><b>◉</b><span>WhatsApp</span></div>';
+      const tplNav=waNav+'\n      <div id="tpfWaTemplatesNav" class="nav secondaryNav"><b>▤</b><span>Plantillas WhatsApp</span></div>';
+      html=html.replace(waNav,tplNav);
+    }
+
+    if(!html.includes('id="tpfAutomationAdvancedBar"')){
+      const grid='<div class="automation2Grid">';
+      const bar=`<div id="tpfAutomationAdvancedBar"><h3>⚡ Constructor avanzado</h3><div class="small">Motor completo activo: configura disparadores, condiciones y acciones.</div><div class="tpfAutoCaps"><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta</span><span>Sin respuesta</span><span>Tarea</span><span>Oportunidad</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span></div></div>`;
+      html=html.replace(grid,bar+'\n    '+grid);
+    }
+
     const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">PRUEBAS · ${branch} · ${shortCommit}</div>`;
     if(!html.includes('id="tpfBuildBadge"'))html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
+
     html=html.includes('</head>')?html.replace('</head>',MENU_CLEAN+'\n</head>'):MENU_CLEAN+html;
     html=html.includes('</body>')?html.replace('</body>',FINAL_BINDINGS+'\n</body>'):html+FINAL_BINDINGS;
+
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
     res.setHeader('X-TPF-Menu','clean-v3');
-    res.setHeader('X-TPF-Entry','single-work-branch');
+    res.setHeader('X-TPF-Entry','single-endpoint-no-http-chain');
     res.setHeader('X-TPF-Commit',commit);
     res.setHeader('X-TPF-Branch',branch);
     res.status(200).send(html);
