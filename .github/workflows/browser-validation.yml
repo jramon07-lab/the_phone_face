@@ -18,9 +18,19 @@ jobs:
           cache: npm
       - run: npm install
       - run: npx playwright install --with-deps chromium
+      - name: Validate required browser-test secrets
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: |
+          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET" || (echo "Missing VERCEL_AUTOMATION_BYPASS_SECRET" && exit 1)
+          test -n "$CRM_TEST_EMAIL" || (echo "Missing CRM_TEST_EMAIL" && exit 1)
+          test -n "$CRM_TEST_PASSWORD" || (echo "Missing CRM_TEST_PASSWORD" && exit 1)
       - name: Run real browser validation
         env:
-          VERCEL_PREVIEW_URL: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.target_url || secrets.VERCEL_PREVIEW_URL }}
+          VERCEL_PREVIEW_URL: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.target_url || '' }}
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
