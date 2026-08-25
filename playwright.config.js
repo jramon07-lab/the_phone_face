@@ -1,9 +1,9 @@
 const { defineConfig } = require('@playwright/test');
 
-const baseURL = process.env.VERCEL_PREVIEW_URL;
+const baseURL = process.env.VERCEL_PREVIEW_URL || process.env.PLAYWRIGHT_BASE_URL;
 const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 
-if (!baseURL) throw new Error('VERCEL_PREVIEW_URL is required');
+if (!baseURL) throw new Error('VERCEL_PREVIEW_URL or PLAYWRIGHT_BASE_URL is required');
 if (!bypass) throw new Error('VERCEL_AUTOMATION_BYPASS_SECRET is required');
 
 module.exports = defineConfig({
