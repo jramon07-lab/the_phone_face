@@ -11,7 +11,7 @@ function getText(url){
 }
 
 const MENU_CLEAN = `
-<style id="tpf-menu-clean-v2">
+<style id="tpf-menu-clean-v3">
 /* Ocultar del menú principal sin borrar datos ni lógica interna */
 .nav[data-view="search"][data-sheet="LIQUIDACION"],
 .nav[data-view="search"][data-sheet="DATA"],
@@ -23,10 +23,11 @@ const MENU_CLEAN = `
 #tpfAutomationAdvancedBar h3{margin:0 0 5px;font-size:15px}
 .tpfAutoCaps{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
 .tpfAutoCaps span{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef4ff;color:#315fa7;font-size:9px;font-weight:700}
+#tpfBuildBadge{position:fixed;right:8px;bottom:8px;z-index:30000;padding:5px 8px;border-radius:7px;background:#101828e8;color:#fff;font:10px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;box-shadow:0 3px 10px #0002;opacity:.78;pointer-events:none;max-width:min(460px,calc(100vw - 16px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>`;
 
 const FINAL_BINDINGS = `
-<script id="tpf-entry-unique-v2">
+<script id="tpf-entry-unique-v3">
 (function(){
   function byId(id){return document.getElementById(id)}
 
@@ -76,6 +77,10 @@ module.exports=async function(req,res){
     if(!host)throw new Error('Host no disponible');
     let html=await getText(`https://${host}/api/index-fix?_clean=${Date.now()}`);
 
+    const commit=String(process.env.VERCEL_GIT_COMMIT_SHA||'local');
+    const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
+    const shortCommit=commit.slice(0,8);
+
     /* Plantillas: nunca crear ni mostrar plantillas predeterminadas ajenas al usuario. */
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
 
@@ -93,13 +98,21 @@ module.exports=async function(req,res){
       html=html.replace(grid,bar+'\n    '+grid);
     }
 
+    /* Identificación inequívoca de la versión servida. */
+    const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">PRUEBAS · ${branch} · ${shortCommit}</div>`;
+    if(!html.includes('id="tpfBuildBadge"')){
+      html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
+    }
+
     html=html.includes('</head>')?html.replace('</head>',MENU_CLEAN+'\n</head>'):MENU_CLEAN+html;
     html=html.includes('</body>')?html.replace('</body>',FINAL_BINDINGS+'\n</body>'):html+FINAL_BINDINGS;
 
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
-    res.setHeader('X-TPF-Menu','clean-v2');
+    res.setHeader('X-TPF-Menu','clean-v3');
     res.setHeader('X-TPF-Entry','single-work-branch');
+    res.setHeader('X-TPF-Commit',commit);
+    res.setHeader('X-TPF-Branch',branch);
     res.status(200).send(html);
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}
 };
