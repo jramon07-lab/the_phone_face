@@ -75,8 +75,14 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: "Unauthorized" }, 401);
   }
 
-  if (body?.typeWebhook !== "incomingMessageReceived") {
-    return json({ ok: true, ignored: true, typeWebhook: body?.typeWebhook || null });
+  const typeWebhook = String(body?.typeWebhook || "");
+  const supportedTypes = new Set([
+    "incomingMessageReceived",
+    "outgoingMessageReceived",
+    "outgoingAPIMessageReceived"
+  ]);
+  if (!supportedTypes.has(typeWebhook)) {
+    return json({ ok: true, ignored: true, typeWebhook: typeWebhook || null });
   }
 
   if (greenId && String(body?.instanceData?.idInstance || "") !== String(greenId)) {
@@ -102,7 +108,7 @@ Deno.serve(async (req: Request) => {
   const row = {
     chat_id: chatId,
     id_message: idMessage,
-    direction: "in",
+    direction: typeWebhook === "incomingMessageReceived" ? "in" : "out",
     ts: Number(body?.timestamp || Math.floor(Date.now() / 1000)),
     text_content: extractText(body?.messageData),
     type_message: String(body?.messageData?.typeMessage || ""),
@@ -112,5 +118,5 @@ Deno.serve(async (req: Request) => {
   const { error } = await sb.from("wa_messages").insert(row);
   if (error) return json({ ok: false, error: error.message }, 500);
 
-  return json({ ok: true, persisted: true });
+  return json({ ok: true, persisted: true, direction: row.direction, typeWebhook });
 });
