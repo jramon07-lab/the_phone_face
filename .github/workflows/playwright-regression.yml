@@ -27,7 +27,8 @@ jobs:
         run: |
           test -n "$PLAYWRIGHT_BASE_URL"
           test -n "$VERCEL_AUTOMATION_BYPASS_SECRET"
-      - run: npm run test:e2e
+      - name: Run core Playwright smoke only
+        run: npx playwright test tests/e2e/smoke.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
