@@ -12,12 +12,10 @@ function getText(url){
 
 const MENU_CLEAN = `
 <style id="tpf-menu-clean-v3">
-/* Ocultar del menú principal sin borrar datos ni lógica interna */
 .nav[data-view="search"][data-sheet="LIQUIDACION"],
 .nav[data-view="search"][data-sheet="DATA"],
 .nav[data-view="search"][data-sheet="CLAWBACK"],
 .nav[data-view="search"][data-sheet="AJUSTES"]{display:none!important}
-
 #tpfWaTemplatesNav{user-select:none}
 #tpfAutomationAdvancedBar{margin:0 0 14px;padding:14px 16px;border:1px solid #b9d3fb;border-radius:12px;background:#f7fbff}
 #tpfAutomationAdvancedBar h3{margin:0 0 5px;font-size:15px}
@@ -81,24 +79,27 @@ module.exports=async function(req,res){
     const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
     const shortCommit=commit.slice(0,8);
 
-    /* Plantillas: nunca crear ni mostrar plantillas predeterminadas ajenas al usuario. */
+    html=html.replace(/\blet\s+waTemplatesCache\s*=/,'waTemplatesCache=');
+    html=html.replace(/\blet\s+waTemplatesRemoteReady\s*=/,'waTemplatesRemoteReady=');
+    const waTdzFix='<script id="tpf-wa-templates-tdz-fix">var waTemplatesCache=[];var waTemplatesRemoteReady=false;</script>';
+    if(!html.includes('id="tpf-wa-templates-tdz-fix"')){
+      html=html.includes('</head>')?html.replace('</head>',waTdzFix+'\n</head>'):waTdzFix+html;
+    }
+
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
 
-    /* Acceso visible y fijo en la barra izquierda, justo debajo de WhatsApp. */
     if(!html.includes('id="tpfWaTemplatesNav"')){
       const waNav='<div class="nav secondaryNav" data-view="whatsapplive"><b>◉</b><span>WhatsApp</span></div>';
       const tplNav=waNav+'\n      <div id="tpfWaTemplatesNav" class="nav secondaryNav"><b>▤</b><span>Plantillas WhatsApp</span></div>';
       html=html.replace(waNav,tplNav);
     }
 
-    /* Hacer explícito el motor avanzado ya existente en el CRM. */
     if(!html.includes('id="tpfAutomationAdvancedBar"')){
       const grid='<div class="automation2Grid">';
       const bar=`<div id="tpfAutomationAdvancedBar"><h3>⚡ Constructor avanzado</h3><div class="small">Motor completo activo: configura disparadores, condiciones y acciones.</div><div class="tpfAutoCaps"><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta</span><span>Sin respuesta</span><span>Tarea</span><span>Oportunidad</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span></div></div>`;
       html=html.replace(grid,bar+'\n    '+grid);
     }
 
-    /* Identificación inequívoca de la versión servida. */
     const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">PRUEBAS · ${branch} · ${shortCommit}</div>`;
     if(!html.includes('id="tpfBuildBadge"')){
       html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
