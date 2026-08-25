@@ -9682,6 +9682,399 @@ window.selectWhatsAppChat=async(chatId)=>{
   </div>
 </div>
 
+<div id="goalModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Objetivo comercial del mes</h3><button id="goalModalClose" class="secondary">← Volver</button></div>
+    <label>Objetivo de facturación (€)<input id="goalAmountInput" type="number" min="0" step="0.01"></label>
+    <label>Objetivo de oportunidades ganadas<input id="goalOppInput" type="number" min="0" step="1"></label>
+    <div class="waTemplateActions"><button id="goalSave" class="primary">Guardar objetivo</button></div>
+    <div id="goalMsg" class="small"></div>
+  </div>
+</div>
+
+<div id="customFieldsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Campos personalizados de Contactos</h3><button id="customFieldsClose" class="secondary">← Volver</button></div>
+    <div class="customFieldsManagerGrid">
+      <div class="card">
+        <h4>Nuevo campo</h4>
+        <label>Nombre<input id="customFieldName" placeholder="Ej.: Compañía, Fecha renovación, Nº contrato"></label>
+        <label>Tipo<select id="customFieldType">
+          <option value="text">Texto</option>
+          <option value="number">Número</option>
+          <option value="date">Fecha</option>
+          <option value="phone">Teléfono</option>
+          <option value="email">Email</option>
+          <option value="select">Desplegable</option>
+          <option value="boolean">Sí / No</option>
+          <option value="textarea">Texto largo</option>
+        </select></label>
+        <label id="customFieldOptionsWrap" class="hidden">Opciones (una por línea)<textarea id="customFieldOptions" rows="5"></textarea></label>
+        <button id="customFieldCreate" class="primary">Crear campo</button>
+        <div id="customFieldMsg" class="small"></div>
+      </div>
+      <div class="card">
+        <h4>Campos creados</h4>
+        <div id="customFieldsList" class="customFieldsList"></div>
+        <div id="customFieldsEmpty" class="small">No hay campos personalizados.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="multiSearchModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Búsqueda múltiple</h3><button id="multiSearchClose" class="secondary">← Volver</button></div>
+    <p class="small">Pega DNI, transacciones u otros identificadores. Puedes poner uno por línea, separados por comas, punto y coma o tabulaciones. También puedes pegar directamente una columna de Excel.</p>
+    <textarea id="multiSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
+    <div class="multiSearchSheets">
+      <label><input type="checkbox" value="LIQUIDACION" checked> Liquidación</label>
+      <label><input type="checkbox" value="DATA" checked> Data</label>
+      <label><input type="checkbox" value="CLAWBACK" checked> Clawback</label>
+      <label><input type="checkbox" value="AJUSTES" checked> Ajustes</label>
+      <label><input type="checkbox" value="VENTAS" checked> Ventas</label>
+      <label><input type="checkbox" value="BASE DE DATOS"> Contactos</label>
+    </div>
+    <div class="row">
+      <button id="multiSearchRun" class="primary">Buscar todos</button>
+      <button id="multiSearchClear" class="secondary">Limpiar</button>
+    </div>
+    <div id="multiSearchMsg" class="small"></div>
+  </div>
+</div>
+
+<div id="crossSearchModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Cruzar DNI / transacciones</h3><button id="crossSearchClose" class="secondary">← Volver</button></div>
+    <p class="small">Pega una lista de DNI, NIF o números de transacción. El CRM comprobará cada valor en todas las secciones y te mostrará una matriz de coincidencias.</p>
+    <textarea id="crossSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
+    <div class="row">
+      <button id="crossSearchRun" class="primary">Cruzar datos</button>
+      <button id="crossSearchClear" class="secondary">Limpiar</button>
+    </div>
+    <div id="crossSearchMsg" class="small"></div>
+  </div>
+</div>
+
+<script id="tpf-v13-final-bindings">
+(function(){
+  const byId=(id)=>document.getElementById(id);
+  let finalOrigin={type:"generic",chatId:null,contactId:null};
+
+  function captureFinalOrigin(){
+    try{
+      if(!byId("view-whatsapplive")?.classList.contains("hidden")){
+        finalOrigin={
+          type:"whatsapp",
+          chatId:(typeof waLiveState!=="undefined" ? waLiveState?.selected?.id : null)||null,
+          contactId:(typeof waLiveState!=="undefined" ? waLiveState?.contact?.id : null)||null
+        };
+      }else if(!byId("contactModal")?.classList.contains("hidden")){
+        finalOrigin={
+          type:"contact",
+          chatId:null,
+          contactId:(typeof currentContact!=="undefined" ? currentContact?.id : null)||null
+        };
+      }else if(finalOrigin.type!=="whatsapp" && finalOrigin.type!=="contact"){
+        finalOrigin={type:"generic",chatId:null,contactId:null};
+      }
+    }catch(_){}
+  }
+
+  const oldOpenFull=window.openOpportunityFull;
+  if(typeof oldOpenFull==="function"){
+    window.openOpportunityFull=async function(id){
+      captureFinalOrigin();
+      return oldOpenFull.call(this,id);
+    };
+  }
+
+  const oldOpenCard=window.openOpportunityCard;
+  if(typeof oldOpenCard==="function"){
+    window.openOpportunityCard=function(id){
+      if(finalOrigin.type==="generic")captureFinalOrigin();
+      return oldOpenCard.call(this,id);
+    };
+  }
+
+  async function finalReturn(){
+    byId("opportunityFullPage")?.classList.add("hidden");
+    byId("oppDetailModal")?.classList.add("hidden");
+
+    if(finalOrigin.type==="whatsapp"){
+      if(byId("view-whatsapplive")?.classList.contains("hidden")){
+        document.querySelector('.nav[data-view="whatsapplive"]')?.click();
+        await new Promise(r=>setTimeout(r,120));
+      }
+      if(finalOrigin.chatId && typeof selectWhatsAppChat==="function"){
+        if(String((typeof waLiveState!=="undefined" ? waLiveState?.selected?.id : "")||"")!==String(finalOrigin.chatId)){
+          try{await selectWhatsAppChat(finalOrigin.chatId)}catch(_){}
+        }
+      }
+      return;
+    }
+
+    if(finalOrigin.type==="contact" && finalOrigin.contactId && typeof openContact==="function"){
+      try{await openContact(finalOrigin.contactId)}catch(_){}
+      return;
+    }
+
+    try{
+      if(typeof tpfBackExactly==="function")await tpfBackExactly();
+    }catch(_){}
+  }
+
+  async function finalRefreshEverywhere(){
+    try{if(typeof loadSales==="function")await loadSales()}catch(_){}
+    try{
+      if(typeof waLiveState!=="undefined" && waLiveState?.contact && typeof loadWaContactSideData==="function"){
+        const phone=typeof waNormalizePhone==="function" ? waNormalizePhone(waLiveState.selected?.id||"") : "";
+        await loadWaContactSideData(waLiveState.contact,phone);
+      }
+    }catch(_){}
+    try{
+      if(typeof currentContact!=="undefined" && currentContact && typeof renderContactProfile==="function"){
+        await renderContactProfile();
+      }
+    }catch(_){}
+  }
+
+  async function finalDelete(id,title){
+    if(!id)return false;
+    if(!confirm(`¿Eliminar definitivamente "${title||"Oportunidad"}"?`))return false;
+
+    if(typeof sb==="undefined" || !sb)throw new Error("No hay conexión con la base de datos.");
+
+    const {error}=await sb.rpc("delete_sales_opportunity",{opportunity_id:id});
+    if(error)throw error;
+
+    const check=await sb.from("sales_opportunities").select("id").eq("id",id).maybeSingle();
+    if(check?.error)throw check.error;
+    if(check?.data)throw new Error("La oportunidad sigue existiendo después del borrado.");
+
+    if(typeof salesCache!=="undefined" && salesCache?.opportunities){
+      salesCache.opportunities=salesCache.opportunities.filter(o=>String(o.id)!==String(id));
+    }
+
+    await finalRefreshEverywhere();
+    return true;
+  }
+
+  const back=byId("oppFullBack");
+  if(back){
+    back.onclick=async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      await finalReturn();
+    };
+  }
+
+  const fullDelete=byId("oppFullDelete");
+  if(fullDelete){
+    fullDelete.onclick=async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof currentFullOpportunity==="undefined" || !currentFullOpportunity)return;
+      fullDelete.disabled=true;
+      try{
+        const ok=await finalDelete(currentFullOpportunity.id,currentFullOpportunity.title||"Oportunidad");
+        if(ok){
+          currentFullOpportunity=null;
+          await finalReturn();
+        }
+      }catch(err){
+        alert(err?.message||"No se pudo eliminar la oportunidad.");
+      }finally{
+        fullDelete.disabled=false;
+      }
+    };
+  }
+
+  const modalBack=byId("oppModalClose");
+  if(modalBack){
+    modalBack.onclick=async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      await finalReturn();
+    };
+  }
+
+  const modalDelete=byId("oppModalDelete");
+  if(modalDelete){
+    modalDelete.onclick=async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      const id=byId("oppModalId")?.value||"";
+      const title=byId("oppModalTitle")?.value?.trim()||"Oportunidad";
+      if(!id)return;
+      modalDelete.disabled=true;
+      try{
+        const ok=await finalDelete(id,title);
+        if(ok)await finalReturn();
+      }catch(err){
+        alert(err?.message||"No se pudo eliminar la oportunidad.");
+      }finally{
+        modalDelete.disabled=false;
+      }
+    };
+  }
+})();
+</script>
+
+
+<script id="tpf-v14-delete-unified">
+(function(){
+  const byId=(id)=>document.getElementById(id);
+
+  async function refreshAllOpportunityViews(){
+    try{if(typeof loadSales==="function")await loadSales()}catch(_){}
+    try{
+      if(typeof waLiveState!=="undefined" && waLiveState?.contact && typeof loadWaContactSideData==="function"){
+        const phone=typeof waNormalizePhone==="function"
+          ? waNormalizePhone(waLiveState.selected?.id||"")
+          : "";
+        await loadWaContactSideData(waLiveState.contact,phone);
+      }
+    }catch(_){}
+    try{
+      if(typeof currentContact!=="undefined" && currentContact && typeof renderContactProfile==="function"){
+        await renderContactProfile();
+      }
+    }catch(_){}
+  }
+
+  async function deleteOpportunityOneWay(id,title){
+    if(!id)throw new Error("No se ha encontrado el ID de la oportunidad.");
+    if(typeof sb==="undefined" || !sb)throw new Error("No hay conexión con Supabase.");
+
+    const label=String(title||"Oportunidad");
+    if(!confirm(`¿Eliminar definitivamente "${label}"?`))return false;
+
+    // 1) Borrado DIRECTO. Pedimos que devuelva la fila eliminada.
+    const direct=await sb
+      .from("sales_opportunities")
+      .delete()
+      .eq("id",id)
+      .select("id");
+
+    if(direct?.error)throw direct.error;
+
+    let deleted=Array.isArray(direct?.data) && direct.data.some(x=>String(x.id)===String(id));
+
+    // 2) Si por cualquier motivo el DELETE directo no devolvió fila,
+    // usamos el RPC existente y volvemos a verificar.
+    if(!deleted){
+      const rpc=await sb.rpc("delete_sales_opportunity",{opportunity_id:id});
+      if(rpc?.error)throw rpc.error;
+
+      const check=await sb
+        .from("sales_opportunities")
+        .select("id")
+        .eq("id",id)
+        .maybeSingle();
+
+      if(check?.error)throw check.error;
+      deleted=!check?.data;
+    }
+
+    if(!deleted){
+      throw new Error("Supabase no ha eliminado la oportunidad.");
+    }
+
+    // Quitar de la caché inmediatamente.
+    if(typeof salesCache!=="undefined" && salesCache?.opportunities){
+      salesCache.opportunities=salesCache.opportunities.filter(
+        o=>String(o.id)!==String(id)
+      );
+    }
+
+    await refreshAllOpportunityViews();
+    return true;
+  }
+
+  // TARJETAS WhatsApp / ficha cliente / otros listados.
+  window.oppUnifiedDelete=async function(id,title){
+    try{
+      return await deleteOpportunityOneWay(id,title);
+    }catch(err){
+      alert(err?.message||"No se pudo eliminar la oportunidad.");
+      return false;
+    }
+  };
+
+  // Panel de ventas antiguo.
+  window.deleteOpp=async function(id){
+    const o=(typeof salesCache!=="undefined" && salesCache?.opportunities||[])
+      .find(x=>String(x.id)===String(id));
+    try{
+      return await deleteOpportunityOneWay(id,o?.title||"Oportunidad");
+    }catch(err){
+      alert(err?.message||"No se pudo eliminar la oportunidad.");
+      return false;
+    }
+  };
+
+  // MODAL de editar oportunidad.
+  const modalDelete=byId("oppModalDelete");
+  if(modalDelete){
+    modalDelete.onclick=async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+
+      const id=byId("oppModalId")?.value||"";
+      const title=byId("oppModalTitle")?.value?.trim()||"Oportunidad";
+      if(!id)return;
+
+      modalDelete.disabled=true;
+      try{
+        const ok=await deleteOpportunityOneWay(id,title);
+        if(ok){
+          byId("oppDetailModal")?.classList.add("hidden");
+          // El origen queda debajo; no tocamos Volver de v13.
+        }
+      }catch(err){
+        alert(err?.message||"No se pudo eliminar la oportunidad.");
+      }finally{
+        modalDelete.disabled=false;
+      }
+    };
+  }
+
+  // FICHA COMPLETA de oportunidad.
+  const fullDelete=byId("oppFullDelete");
+  if(fullDelete){
+    fullDelete.onclick=async function(e){
+      e.preventDefault();
+      e.stopPropagation();
+
+      if(typeof currentFullOpportunity==="undefined" || !currentFullOpportunity)return;
+      const id=currentFullOpportunity.id;
+      const title=currentFullOpportunity.title||"Oportunidad";
+
+      fullDelete.disabled=true;
+      try{
+        const ok=await deleteOpportunityOneWay(id,title);
+        if(ok){
+          currentFullOpportunity=null;
+          byId("opportunityFullPage")?.classList.add("hidden");
+          // Pulsamos el mismo Volver que YA funciona en v13.
+          const back=byId("oppFullBack");
+          if(back && typeof back.onclick==="function"){
+            await back.onclick(new Event("click"));
+          }
+        }
+      }catch(err){
+        alert(err?.message||"No se pudo eliminar la oportunidad.");
+      }finally{
+        fullDelete.disabled=false;
+      }
+    };
+  }
+})();
+</script>
+
+
+
 <script id="wa-fullscreen-web-js">
 (function(){
  function textOf(el){return (el&&el.textContent||"").trim().toLowerCase()}
@@ -11311,398 +11704,6 @@ renderSales=function(){
 
 </script>
 
-
-
-<div id="goalModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard">
-    <div class="waTemplateHead"><h3>Objetivo comercial del mes</h3><button id="goalModalClose" class="secondary">← Volver</button></div>
-    <label>Objetivo de facturación (€)<input id="goalAmountInput" type="number" min="0" step="0.01"></label>
-    <label>Objetivo de oportunidades ganadas<input id="goalOppInput" type="number" min="0" step="1"></label>
-    <div class="waTemplateActions"><button id="goalSave" class="primary">Guardar objetivo</button></div>
-    <div id="goalMsg" class="small"></div>
-  </div>
-</div>
-
-<div id="customFieldsModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard waWideModal">
-    <div class="waTemplateHead"><h3>Campos personalizados de Contactos</h3><button id="customFieldsClose" class="secondary">← Volver</button></div>
-    <div class="customFieldsManagerGrid">
-      <div class="card">
-        <h4>Nuevo campo</h4>
-        <label>Nombre<input id="customFieldName" placeholder="Ej.: Compañía, Fecha renovación, Nº contrato"></label>
-        <label>Tipo<select id="customFieldType">
-          <option value="text">Texto</option>
-          <option value="number">Número</option>
-          <option value="date">Fecha</option>
-          <option value="phone">Teléfono</option>
-          <option value="email">Email</option>
-          <option value="select">Desplegable</option>
-          <option value="boolean">Sí / No</option>
-          <option value="textarea">Texto largo</option>
-        </select></label>
-        <label id="customFieldOptionsWrap" class="hidden">Opciones (una por línea)<textarea id="customFieldOptions" rows="5"></textarea></label>
-        <button id="customFieldCreate" class="primary">Crear campo</button>
-        <div id="customFieldMsg" class="small"></div>
-      </div>
-      <div class="card">
-        <h4>Campos creados</h4>
-        <div id="customFieldsList" class="customFieldsList"></div>
-        <div id="customFieldsEmpty" class="small">No hay campos personalizados.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="multiSearchModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard waWideModal">
-    <div class="waTemplateHead"><h3>Búsqueda múltiple</h3><button id="multiSearchClose" class="secondary">← Volver</button></div>
-    <p class="small">Pega DNI, transacciones u otros identificadores. Puedes poner uno por línea, separados por comas, punto y coma o tabulaciones. También puedes pegar directamente una columna de Excel.</p>
-    <textarea id="multiSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
-    <div class="multiSearchSheets">
-      <label><input type="checkbox" value="LIQUIDACION" checked> Liquidación</label>
-      <label><input type="checkbox" value="DATA" checked> Data</label>
-      <label><input type="checkbox" value="CLAWBACK" checked> Clawback</label>
-      <label><input type="checkbox" value="AJUSTES" checked> Ajustes</label>
-      <label><input type="checkbox" value="VENTAS" checked> Ventas</label>
-      <label><input type="checkbox" value="BASE DE DATOS"> Contactos</label>
-    </div>
-    <div class="row">
-      <button id="multiSearchRun" class="primary">Buscar todos</button>
-      <button id="multiSearchClear" class="secondary">Limpiar</button>
-    </div>
-    <div id="multiSearchMsg" class="small"></div>
-  </div>
-</div>
-
-<div id="crossSearchModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard waWideModal">
-    <div class="waTemplateHead"><h3>Cruzar DNI / transacciones</h3><button id="crossSearchClose" class="secondary">← Volver</button></div>
-    <p class="small">Pega una lista de DNI, NIF o números de transacción. El CRM comprobará cada valor en todas las secciones y te mostrará una matriz de coincidencias.</p>
-    <textarea id="crossSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
-    <div class="row">
-      <button id="crossSearchRun" class="primary">Cruzar datos</button>
-      <button id="crossSearchClear" class="secondary">Limpiar</button>
-    </div>
-    <div id="crossSearchMsg" class="small"></div>
-  </div>
-</div>
-
-<script id="tpf-v13-final-bindings">
-(function(){
-  const byId=(id)=>document.getElementById(id);
-  let finalOrigin={type:"generic",chatId:null,contactId:null};
-
-  function captureFinalOrigin(){
-    try{
-      if(!byId("view-whatsapplive")?.classList.contains("hidden")){
-        finalOrigin={
-          type:"whatsapp",
-          chatId:(typeof waLiveState!=="undefined" ? waLiveState?.selected?.id : null)||null,
-          contactId:(typeof waLiveState!=="undefined" ? waLiveState?.contact?.id : null)||null
-        };
-      }else if(!byId("contactModal")?.classList.contains("hidden")){
-        finalOrigin={
-          type:"contact",
-          chatId:null,
-          contactId:(typeof currentContact!=="undefined" ? currentContact?.id : null)||null
-        };
-      }else if(finalOrigin.type!=="whatsapp" && finalOrigin.type!=="contact"){
-        finalOrigin={type:"generic",chatId:null,contactId:null};
-      }
-    }catch(_){}
-  }
-
-  const oldOpenFull=window.openOpportunityFull;
-  if(typeof oldOpenFull==="function"){
-    window.openOpportunityFull=async function(id){
-      captureFinalOrigin();
-      return oldOpenFull.call(this,id);
-    };
-  }
-
-  const oldOpenCard=window.openOpportunityCard;
-  if(typeof oldOpenCard==="function"){
-    window.openOpportunityCard=function(id){
-      if(finalOrigin.type==="generic")captureFinalOrigin();
-      return oldOpenCard.call(this,id);
-    };
-  }
-
-  async function finalReturn(){
-    byId("opportunityFullPage")?.classList.add("hidden");
-    byId("oppDetailModal")?.classList.add("hidden");
-
-    if(finalOrigin.type==="whatsapp"){
-      if(byId("view-whatsapplive")?.classList.contains("hidden")){
-        document.querySelector('.nav[data-view="whatsapplive"]')?.click();
-        await new Promise(r=>setTimeout(r,120));
-      }
-      if(finalOrigin.chatId && typeof selectWhatsAppChat==="function"){
-        if(String((typeof waLiveState!=="undefined" ? waLiveState?.selected?.id : "")||"")!==String(finalOrigin.chatId)){
-          try{await selectWhatsAppChat(finalOrigin.chatId)}catch(_){}
-        }
-      }
-      return;
-    }
-
-    if(finalOrigin.type==="contact" && finalOrigin.contactId && typeof openContact==="function"){
-      try{await openContact(finalOrigin.contactId)}catch(_){}
-      return;
-    }
-
-    try{
-      if(typeof tpfBackExactly==="function")await tpfBackExactly();
-    }catch(_){}
-  }
-
-  async function finalRefreshEverywhere(){
-    try{if(typeof loadSales==="function")await loadSales()}catch(_){}
-    try{
-      if(typeof waLiveState!=="undefined" && waLiveState?.contact && typeof loadWaContactSideData==="function"){
-        const phone=typeof waNormalizePhone==="function" ? waNormalizePhone(waLiveState.selected?.id||"") : "";
-        await loadWaContactSideData(waLiveState.contact,phone);
-      }
-    }catch(_){}
-    try{
-      if(typeof currentContact!=="undefined" && currentContact && typeof renderContactProfile==="function"){
-        await renderContactProfile();
-      }
-    }catch(_){}
-  }
-
-  async function finalDelete(id,title){
-    if(!id)return false;
-    if(!confirm(`¿Eliminar definitivamente "${title||"Oportunidad"}"?`))return false;
-
-    if(typeof sb==="undefined" || !sb)throw new Error("No hay conexión con la base de datos.");
-
-    const {error}=await sb.rpc("delete_sales_opportunity",{opportunity_id:id});
-    if(error)throw error;
-
-    const check=await sb.from("sales_opportunities").select("id").eq("id",id).maybeSingle();
-    if(check?.error)throw check.error;
-    if(check?.data)throw new Error("La oportunidad sigue existiendo después del borrado.");
-
-    if(typeof salesCache!=="undefined" && salesCache?.opportunities){
-      salesCache.opportunities=salesCache.opportunities.filter(o=>String(o.id)!==String(id));
-    }
-
-    await finalRefreshEverywhere();
-    return true;
-  }
-
-  const back=byId("oppFullBack");
-  if(back){
-    back.onclick=async function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      await finalReturn();
-    };
-  }
-
-  const fullDelete=byId("oppFullDelete");
-  if(fullDelete){
-    fullDelete.onclick=async function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      if(typeof currentFullOpportunity==="undefined" || !currentFullOpportunity)return;
-      fullDelete.disabled=true;
-      try{
-        const ok=await finalDelete(currentFullOpportunity.id,currentFullOpportunity.title||"Oportunidad");
-        if(ok){
-          currentFullOpportunity=null;
-          await finalReturn();
-        }
-      }catch(err){
-        alert(err?.message||"No se pudo eliminar la oportunidad.");
-      }finally{
-        fullDelete.disabled=false;
-      }
-    };
-  }
-
-  const modalBack=byId("oppModalClose");
-  if(modalBack){
-    modalBack.onclick=async function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      await finalReturn();
-    };
-  }
-
-  const modalDelete=byId("oppModalDelete");
-  if(modalDelete){
-    modalDelete.onclick=async function(e){
-      e.preventDefault();
-      e.stopPropagation();
-      const id=byId("oppModalId")?.value||"";
-      const title=byId("oppModalTitle")?.value?.trim()||"Oportunidad";
-      if(!id)return;
-      modalDelete.disabled=true;
-      try{
-        const ok=await finalDelete(id,title);
-        if(ok)await finalReturn();
-      }catch(err){
-        alert(err?.message||"No se pudo eliminar la oportunidad.");
-      }finally{
-        modalDelete.disabled=false;
-      }
-    };
-  }
-})();
-</script>
-
-
-<script id="tpf-v14-delete-unified">
-(function(){
-  const byId=(id)=>document.getElementById(id);
-
-  async function refreshAllOpportunityViews(){
-    try{if(typeof loadSales==="function")await loadSales()}catch(_){}
-    try{
-      if(typeof waLiveState!=="undefined" && waLiveState?.contact && typeof loadWaContactSideData==="function"){
-        const phone=typeof waNormalizePhone==="function"
-          ? waNormalizePhone(waLiveState.selected?.id||"")
-          : "";
-        await loadWaContactSideData(waLiveState.contact,phone);
-      }
-    }catch(_){}
-    try{
-      if(typeof currentContact!=="undefined" && currentContact && typeof renderContactProfile==="function"){
-        await renderContactProfile();
-      }
-    }catch(_){}
-  }
-
-  async function deleteOpportunityOneWay(id,title){
-    if(!id)throw new Error("No se ha encontrado el ID de la oportunidad.");
-    if(typeof sb==="undefined" || !sb)throw new Error("No hay conexión con Supabase.");
-
-    const label=String(title||"Oportunidad");
-    if(!confirm(`¿Eliminar definitivamente "${label}"?`))return false;
-
-    // 1) Borrado DIRECTO. Pedimos que devuelva la fila eliminada.
-    const direct=await sb
-      .from("sales_opportunities")
-      .delete()
-      .eq("id",id)
-      .select("id");
-
-    if(direct?.error)throw direct.error;
-
-    let deleted=Array.isArray(direct?.data) && direct.data.some(x=>String(x.id)===String(id));
-
-    // 2) Si por cualquier motivo el DELETE directo no devolvió fila,
-    // usamos el RPC existente y volvemos a verificar.
-    if(!deleted){
-      const rpc=await sb.rpc("delete_sales_opportunity",{opportunity_id:id});
-      if(rpc?.error)throw rpc.error;
-
-      const check=await sb
-        .from("sales_opportunities")
-        .select("id")
-        .eq("id",id)
-        .maybeSingle();
-
-      if(check?.error)throw check.error;
-      deleted=!check?.data;
-    }
-
-    if(!deleted){
-      throw new Error("Supabase no ha eliminado la oportunidad.");
-    }
-
-    // Quitar de la caché inmediatamente.
-    if(typeof salesCache!=="undefined" && salesCache?.opportunities){
-      salesCache.opportunities=salesCache.opportunities.filter(
-        o=>String(o.id)!==String(id)
-      );
-    }
-
-    await refreshAllOpportunityViews();
-    return true;
-  }
-
-  // TARJETAS WhatsApp / ficha cliente / otros listados.
-  window.oppUnifiedDelete=async function(id,title){
-    try{
-      return await deleteOpportunityOneWay(id,title);
-    }catch(err){
-      alert(err?.message||"No se pudo eliminar la oportunidad.");
-      return false;
-    }
-  };
-
-  // Panel de ventas antiguo.
-  window.deleteOpp=async function(id){
-    const o=(typeof salesCache!=="undefined" && salesCache?.opportunities||[])
-      .find(x=>String(x.id)===String(id));
-    try{
-      return await deleteOpportunityOneWay(id,o?.title||"Oportunidad");
-    }catch(err){
-      alert(err?.message||"No se pudo eliminar la oportunidad.");
-      return false;
-    }
-  };
-
-  // MODAL de editar oportunidad.
-  const modalDelete=byId("oppModalDelete");
-  if(modalDelete){
-    modalDelete.onclick=async function(e){
-      e.preventDefault();
-      e.stopPropagation();
-
-      const id=byId("oppModalId")?.value||"";
-      const title=byId("oppModalTitle")?.value?.trim()||"Oportunidad";
-      if(!id)return;
-
-      modalDelete.disabled=true;
-      try{
-        const ok=await deleteOpportunityOneWay(id,title);
-        if(ok){
-          byId("oppDetailModal")?.classList.add("hidden");
-          // El origen queda debajo; no tocamos Volver de v13.
-        }
-      }catch(err){
-        alert(err?.message||"No se pudo eliminar la oportunidad.");
-      }finally{
-        modalDelete.disabled=false;
-      }
-    };
-  }
-
-  // FICHA COMPLETA de oportunidad.
-  const fullDelete=byId("oppFullDelete");
-  if(fullDelete){
-    fullDelete.onclick=async function(e){
-      e.preventDefault();
-      e.stopPropagation();
-
-      if(typeof currentFullOpportunity==="undefined" || !currentFullOpportunity)return;
-      const id=currentFullOpportunity.id;
-      const title=currentFullOpportunity.title||"Oportunidad";
-
-      fullDelete.disabled=true;
-      try{
-        const ok=await deleteOpportunityOneWay(id,title);
-        if(ok){
-          currentFullOpportunity=null;
-          byId("opportunityFullPage")?.classList.add("hidden");
-          // Pulsamos el mismo Volver que YA funciona en v13.
-          const back=byId("oppFullBack");
-          if(back && typeof back.onclick==="function"){
-            await back.onclick(new Event("click"));
-          }
-        }
-      }catch(err){
-        alert(err?.message||"No se pudo eliminar la oportunidad.");
-      }finally{
-        fullDelete.disabled=false;
-      }
-    };
-  }
-})();
-</script>
 
 
 <script id="tpf-v15-back-audit">
