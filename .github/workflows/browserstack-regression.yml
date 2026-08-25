@@ -1,0 +1,81 @@
+name: BrowserStack regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - candidato-final-validado-20260825
+
+permissions:
+  contents: read
+
+jobs:
+  browserstack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: BrowserStack Env Setup
+        uses: browserstack/github-actions/setup-env@master
+        with:
+          username: ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          project-name: The Phone Face CRM
+          build-name: candidate-BUILD_INFO
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+      - run: npm install --no-save browserstack-node-sdk@latest
+
+      - name: Verify BrowserStack secrets exist
+        run: |
+          test -n "$BROWSERSTACK_USERNAME"
+          test -n "$BROWSERSTACK_ACCESS_KEY"
+          test -n "$PLAYWRIGHT_BASE_URL"
+          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET"
+
+      - name: Create ephemeral BrowserStack config
+        shell: bash
+        run: |
+          cat > browserstack.yml <<EOF
+          userName: "$BROWSERSTACK_USERNAME"
+          accessKey: "$BROWSERSTACK_ACCESS_KEY"
+          framework: playwright
+          projectName: "The Phone Face CRM"
+          buildName: "candidate-${GITHUB_SHA}"
+          platforms:
+            - os: Windows
+              osVersion: 11
+              browserName: chrome
+              browserVersion: latest
+            - os: OS X
+              osVersion: Sequoia
+              browserName: playwright-webkit
+              browserVersion: latest
+          parallelsPerPlatform: 1
+          testObservability: true
+          debug: true
+          video: true
+          networkLogs: true
+          consoleLogs: info
+          EOF
+
+      - name: Run Playwright smoke on BrowserStack
+        run: npx browserstack-node-sdk playwright test tests/e2e/smoke.spec.js
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browserstack-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
