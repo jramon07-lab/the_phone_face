@@ -1,0 +1,34 @@
+name: Percy visual regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - candidato-final-validado-20260825
+
+permissions:
+  contents: read
+
+jobs:
+  percy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+      PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npm install --no-save @percy/cli @percy/playwright
+      - run: npx playwright install --with-deps chromium
+      - name: Verify Percy secrets exist
+        run: |
+          test -n "$PERCY_TOKEN"
+          test -n "$PLAYWRIGHT_BASE_URL"
+          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET"
+      - name: Run Percy visual smoke
+        run: npx percy exec -- npx playwright test tests/e2e/percy.visual.spec.js --project=desktop-1440
