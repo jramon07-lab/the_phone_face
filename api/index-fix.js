@@ -53,7 +53,6 @@ const NAV_STABILIZER=`<script id="tpf-nav-stabilizer-p0">
   window.tpfMainViewNow=visibleMainView;
   window.tpfMainViewId=visibleMainView;
 
-  // Compatibilidad con llamadas antiguas: Volver delega en el router único.
   window.tpfGoBack=function(){
     if(typeof window.tpfBackExactly!=="function")return false;
     Promise.resolve(window.tpfBackExactly()).catch(function(e){console.error("TPF back error",e)});
@@ -64,9 +63,6 @@ const NAV_STABILIZER=`<script id="tpf-nav-stabilizer-p0">
 
 const ACTION_STABILIZER=`<script id="tpf-action-stabilizer-p0">
 (function(){
-  // La última implementación de oppUnifiedDelete contiene el flujo más completo:
-  // copia a Papelera, borrado verificado y refresco. Todas las llamadas antiguas
-  // a deleteOpp pasan por esa única ruta final.
   const canonicalDelete=typeof window.oppUnifiedDelete==='function' ? window.oppUnifiedDelete : null;
   if(canonicalDelete){
     window.__tpfCanonicalOpportunityDelete=canonicalDelete;
@@ -81,16 +77,15 @@ const ACTION_STABILIZER=`<script id="tpf-action-stabilizer-p0">
     };
   }
 
-  // Registrar la implementación final de selección de chat después de todos los
-  // wrappers históricos. No la volvemos a envolver para no duplicar efectos.
   if(typeof window.selectWhatsAppChat==='function'){
     window.__tpfCanonicalSelectWhatsAppChat=window.selectWhatsAppChat;
   }
 
   window.__TPF_CANONICAL_ACTIONS={
-    version:'p0-1',
+    version:'p0-2',
     opportunityDelete:!!window.__tpfCanonicalOpportunityDelete,
-    whatsappSelect:!!window.__tpfCanonicalSelectWhatsAppChat
+    whatsappSelect:!!window.__tpfCanonicalSelectWhatsAppChat,
+    whatsappScheduler:'server'
   };
 })();
 </script>`;
@@ -109,6 +104,14 @@ module.exports=async function(req,res){
       html=html.includes('</head>')?html.replace('</head>',early+'\n</head>'):early+html;
     }
 
+    // El worker de Supabase ya es la ruta autoritativa para WhatsApp programados.
+    // Retiramos únicamente el temporizador legado del navegador para evitar
+    // tráfico duplicado y posibles carreras de doble envío.
+    const legacyWaScheduler='setInterval(waAutoSendDueSchedules,30000); setTimeout(waAutoSendDueSchedules,5000);';
+    if(html.includes(legacyWaScheduler)){
+      html=html.replace(legacyWaScheduler,'/* TPF: scheduler WhatsApp trasladado a Supabase Cron/Edge Worker */');
+    }
+
     if(!html.includes('tpf-protected-api-auth-v1')){
       html=html.includes('</head>')?html.replace('</head>',AUTH_PATCH+'\n</head>'):AUTH_PATCH+html;
     }
@@ -123,7 +126,7 @@ module.exports=async function(req,res){
 
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
-    res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth+nav-stabilizer+action-stabilizer');
+    res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth+nav-stabilizer+action-stabilizer+server-wa-scheduler');
     res.status(200).send(html);
   }catch(e){
     res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));
