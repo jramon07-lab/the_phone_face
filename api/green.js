@@ -45,12 +45,14 @@ async function requireAuthorizedUser(req, action) {
   const rawPerms = await permsRes.json();
   const perms = Array.isArray(rawPerms) ? rawPerms[0] : rawPerms;
   const adminOnly = action === "ensure";
+  // Live GREEN-API access is intentionally separate from scheduling.
+  // can_schedule_whatsapp only allows scheduled-item management in the CRM.
   const allowed = adminOnly
     ? Boolean(perms?.is_admin)
-    : Boolean(perms?.is_admin || perms?.can_use_whatsapp || perms?.can_schedule_whatsapp);
+    : Boolean(perms?.is_admin || perms?.can_use_whatsapp);
 
   if (!allowed) {
-    const err = new Error(adminOnly ? "Solo un administrador puede cambiar la configuración de WhatsApp." : "Sin permiso para usar WhatsApp.");
+    const err = new Error(adminOnly ? "Solo un administrador puede cambiar la configuración de WhatsApp." : "Sin permiso para usar WhatsApp en vivo.");
     err.status = 403;
     throw err;
   }
