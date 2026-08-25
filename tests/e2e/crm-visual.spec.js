@@ -44,8 +44,8 @@ test('Automatizaciones muestra constructor avanzado', async ({ page }) => {
 
 test('Sin errores JavaScript graves al iniciar', async ({ page }) => {
   const errors = [];
-  page.on('pageerror', e => errors.push(String(e.message || e)));
+  page.on('pageerror', e => errors.push(String(e.stack || e.message || e)));
   await login(page);
   await page.waitForTimeout(2500);
-  expect(errors, `Errores JS detectados: ${errors.join(' | ')}`).toEqual([]);
+  expect(errors, `Errores JS detectados:\n${errors.join('\n---\n')}`).toEqual([]);
 });
