@@ -10259,7 +10259,9 @@ async function waRefreshGlobalContactTags(){
     $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
   }catch(e){}
 }
-$("waAddTagSide").onclick=async()=>{
+const waAddTagSideEl=$("waAddTagSide");
+const waTagChatEl=$("waTagChat");
+const waOpenTagHandler=async()=>{
   if(!waLiveState?.contact)return alert("Primero vincula el chat a un contacto.");
   currentContact=waLiveState.contact;
   await crmLoadLabels();
@@ -10267,7 +10269,8 @@ $("waAddTagSide").onclick=async()=>{
   $("contactLabelsChoices").innerHTML=(crmLabelsCache||[]).map(x=>`<label class="contactLabelChoice"><input type="checkbox" value="${x.id}" ${ids.has(x.id)?"checked":""}><span>${esc(x.name)}</span></label>`).join("")||'<div class="small">No hay etiquetas. Créala primero en el menú Etiquetas.</div>';
   $("contactLabelsModal").classList.remove("hidden");
 };
-$("waTagChat").onclick=$("waAddTagSide").onclick;
+if(waAddTagSideEl)waAddTagSideEl.onclick=waOpenTagHandler;
+if(waTagChatEl)waTagChatEl.onclick=waOpenTagHandler;
 
 const _matchWaContactLabels=matchWaContact;
 matchWaContact=async function(){const r=await _matchWaContactLabels();setTimeout(waRefreshGlobalContactTags,40);return r};
