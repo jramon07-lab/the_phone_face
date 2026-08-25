@@ -1,0 +1,46 @@
+name: Parallel restore WhatsApp and sidebar
+
+on:
+  push:
+    branches:
+      - prueba-paralela-whatsapp-etiquetas-backups-20260825
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prueba-paralela-whatsapp-etiquetas-backups-20260825
+      - name: Restore WhatsApp auth and sidebar entries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          old='''async function waApi(action,payload={}){\n  const opts={headers:{"Content-Type":"application/json"}};'''
+          new='''async function waApi(action,payload={}){\n  const {data:{session}}=await sb.auth.getSession();\n  const opts={headers:{"Content-Type":"application/json"}};\n  if(session?.access_token) opts.headers.Authorization="Bearer "+session.access_token;'''
+          if old in s and 'opts.headers.Authorization="Bearer "+session.access_token' not in s:
+              s=s.replace(old,new,1)
+
+          # Ensure Etiquetas remains in the sidebar.
+          if 'data-view="labels"' not in s:
+              marker='<div class="nav secondaryNav" data-view="whatsapp"><b>💬</b><span>WhatsApp programados</span></div>'
+              if marker in s:
+                  s=s.replace(marker, marker+'\n      <div class="nav secondaryNav" data-view="labels"><b>🏷</b><span>Etiquetas</span></div>',1)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit source restoration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: restore WhatsApp session auth on parallel preview"
+          git push origin HEAD:prueba-paralela-whatsapp-etiquetas-backups-20260825
