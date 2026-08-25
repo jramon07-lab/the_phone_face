@@ -52,21 +52,29 @@ const UX_PATCH = String.raw`
 })();
 </script>`;
 
-module.exports=async function(req,res){
+function applyFix(html){
+  const declaration='let crmAutomations=[];';
+  if(html.includes(declaration)){
+    html=html.replace(declaration,'crmAutomations=[];');
+    const early='<script id="tpf-crm-automations-tdz-fix">var crmAutomations=[];</script>';
+    html=html.includes('</head>')?html.replace('</head>',early+'\n</head>'):early+html;
+  }
+  return html.includes('</body>')?html.replace('</body>',UX_PATCH+'\n</body>'):html+UX_PATCH;
+}
+
+async function handler(req,res){
   try{
     const host=req.headers['x-forwarded-host']||req.headers.host;
     if(!host) throw new Error('Host no disponible');
     let html=await getText(`https://${host}/api/index?_tdz=${Date.now()}`);
-    const declaration='let crmAutomations=[];';
-    if(html.includes(declaration)){
-      html=html.replace(declaration,'crmAutomations=[];');
-      const early='<script id="tpf-crm-automations-tdz-fix">var crmAutomations=[];</script>';
-      html=html.includes('</head>')?html.replace('</head>',early+'\n</head>'):early+html;
-    }
-    html=html.includes('</body>')?html.replace('</body>',UX_PATCH+'\n</body>'):html+UX_PATCH;
+    html=applyFix(html);
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
     res.setHeader('X-TPF-Fix','crm-automations-tdz+3-points-v1');
     res.status(200).send(html);
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));}
-};
+}
+
+handler.applyFix=applyFix;
+handler.UX_PATCH=UX_PATCH;
+module.exports=handler;
