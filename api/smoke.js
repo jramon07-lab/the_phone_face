@@ -1,16 +1,35 @@
-const fs = require('fs');
-const path = require('path');
+const https = require('https');
 
-function read(rel){
-  return fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
+const BRANCH = 'work/crm-unica-20260825';
+const RAW_BASE = `https://raw.githubusercontent.com/jramon07-lab/the_phone_face/${BRANCH}`;
+
+function getText(url){
+  return new Promise((resolve,reject)=>{
+    https.get(url,{headers:{'User-Agent':'The-Phone-Face-Smoke'}},r=>{
+      if(r.statusCode>=300 && r.statusCode<400 && r.headers.location){
+        r.resume();
+        return getText(r.headers.location).then(resolve,reject);
+      }
+      if(r.statusCode!==200){
+        r.resume();
+        return reject(new Error(`HTTP ${r.statusCode} ${url}`));
+      }
+      let body='';
+      r.setEncoding('utf8');
+      r.on('data',c=>body+=c);
+      r.on('end',()=>resolve(body));
+    }).on('error',reject);
+  });
 }
 
 module.exports = async function(req,res){
   try{
-    const indexClean = read('api/index-clean.js');
-    const indexFix = read('api/index-fix.js');
-    const indexBase = read('api/index.js');
-    const vercel = read('vercel.json');
+    const [indexClean,indexFix,indexBase,vercel] = await Promise.all([
+      getText(`${RAW_BASE}/api/index-clean.js?v=${Date.now()}`),
+      getText(`${RAW_BASE}/api/index-fix.js?v=${Date.now()}`),
+      getText(`${RAW_BASE}/api/index.js?v=${Date.now()}`),
+      getText(`${RAW_BASE}/vercel.json?v=${Date.now()}`)
+    ]);
 
     const checks={
       official_source: indexBase.includes('the_phone_face/work/crm-unica-20260825/index.html') && !indexBase.includes('the_phone_face/main/index.html'),
@@ -27,10 +46,10 @@ module.exports = async function(req,res){
     const payload={
       ok:pass,
       app:'The Phone Face CRM',
-      branch:process.env.VERCEL_GIT_COMMIT_REF||null,
+      branch:process.env.VERCEL_GIT_COMMIT_REF||BRANCH,
       commit:process.env.VERCEL_GIT_COMMIT_SHA||null,
       deployment_id:process.env.VERCEL_DEPLOYMENT_ID||null,
-      mode:'deployed-source-validation',
+      mode:'official-branch-source-validation',
       checks,
       timestamp:new Date().toISOString()
     };
