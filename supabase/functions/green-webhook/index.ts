@@ -19,6 +19,13 @@ function extractText(messageData: any): string {
   return "";
 }
 
+function normalizeAuthHeader(value: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const m = raw.match(/^(?:Bearer|Basic)\s+(.+)$/i);
+  return (m ? m[1] : raw).trim();
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST required" }, 405);
 
@@ -46,7 +53,7 @@ Deno.serve(async (req: Request) => {
     const endpoint = `${greenBase}/waInstance${greenId}/setSettings/${greenToken}`;
     const payload = {
       webhookUrl,
-      webhookAuthorizationHeader: workerSecret,
+      webhookUrlToken: workerSecret,
       incomingWebhook: "yes",
       outgoingMessageWebhook: "yes",
       outgoingAPIMessageWebhook: "yes"
@@ -61,9 +68,10 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, configured: true });
   }
 
-  const authHeader = req.headers.get("authorization") || req.headers.get("webhook-authorization") || req.headers.get("x-tpf-worker-secret") || "";
+  const rawAuth = req.headers.get("authorization") || req.headers.get("webhook-authorization") || req.headers.get("x-tpf-worker-secret") || "";
+  const authSecret = normalizeAuthHeader(rawAuth);
   const urlSecret = url.searchParams.get("secret") || "";
-  if (authHeader !== workerSecret && urlSecret !== workerSecret) {
+  if (authSecret !== workerSecret && urlSecret !== workerSecret) {
     return json({ ok: false, error: "Unauthorized" }, 401);
   }
 
