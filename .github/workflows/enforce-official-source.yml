@@ -1,0 +1,49 @@
+name: Enforce official CRM source
+
+on:
+  push:
+    branches:
+      - work/crm-unica-20260825
+
+permissions:
+  contents: write
+
+jobs:
+  enforce-source:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/crm-unica-20260825
+          fetch-depth: 0
+      - name: Force api/index.js to official branch source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('api/index.js')
+          s=p.read_text(encoding='utf-8')
+          old='https://raw.githubusercontent.com/jramon07-lab/the_phone_face/main/index.html'
+          new='https://raw.githubusercontent.com/jramon07-lab/the_phone_face/work/crm-unica-20260825/index.html'
+          if old in s:
+              s=s.replace(old,new)
+              p.write_text(s,encoding='utf-8')
+              print('SOURCE_FIXED=1')
+          elif new in s:
+              print('SOURCE_FIXED=0')
+          else:
+              raise SystemExit('RAW_INDEX no coincide con main ni con la rama oficial')
+          PY
+      - name: Commit correction if needed
+        shell: bash
+        run: |
+          if git diff --quiet -- api/index.js; then
+            echo 'Fuente ya correcta.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add api/index.js
+          git commit -m 'fix: fuerza fuente HTML de la rama oficial'
+          git push origin HEAD:work/crm-unica-20260825
