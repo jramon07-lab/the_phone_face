@@ -1,6 +1,6 @@
 name: CRM Browser Validation
 
-# Revalidation trigger: credentials configured and verified 2026-08-25
+# Revalidation trigger: browser validation must run against the real deployment
 on:
   workflow_dispatch:
   deployment_status:
@@ -16,7 +16,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
       - run: npm install
       - run: npx playwright install --with-deps chromium
       - name: Validate required browser-test secrets
