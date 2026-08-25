@@ -37,6 +37,22 @@ const AUTH_PATCH=`<script id="tpf-protected-api-auth-v1">
 })();
 </script>`;
 
+const COMPAT_PATCH=`<script id="tpf-browser-compat-v1">
+(function(){
+  try{
+    if(!navigator.storage){
+      Object.defineProperty(navigator,'storage',{configurable:true,value:{
+        persisted:async function(){return false},
+        persist:async function(){return false}
+      }});
+    }else{
+      if(typeof navigator.storage.persisted!=='function')navigator.storage.persisted=async function(){return false};
+      if(typeof navigator.storage.persist!=='function')navigator.storage.persist=async function(){return false};
+    }
+  }catch(_){ }
+})();
+</script>`;
+
 const NAV_STABILIZER=`<script id="tpf-nav-stabilizer-p0">
 (function(){
   const mainViews=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","labels","settings","automations","users","trash"];
@@ -51,7 +67,7 @@ const ACTION_STABILIZER=`<script id="tpf-action-stabilizer-p0">
   const canonicalDelete=typeof window.oppUnifiedDelete==='function'?window.oppUnifiedDelete:null;
   if(canonicalDelete){window.__tpfCanonicalOpportunityDelete=canonicalDelete;window.deleteOpp=async function(id){let title='Oportunidad';try{const rows=(typeof salesCache!=='undefined'&&salesCache&&salesCache.opportunities)||[];const row=rows.find(function(x){return String(x.id)===String(id)});if(row&&row.title)title=row.title}catch(_){}return window.__tpfCanonicalOpportunityDelete(id,title)}}
   if(typeof window.selectWhatsAppChat==='function')window.__tpfCanonicalSelectWhatsAppChat=window.selectWhatsAppChat;
-  window.__TPF_CANONICAL_ACTIONS={version:'p0-3',opportunityDelete:!!window.__tpfCanonicalOpportunityDelete,whatsappSelect:!!window.__tpfCanonicalSelectWhatsAppChat,whatsappScheduler:'server',automations:'server'};
+  window.__TPF_CANONICAL_ACTIONS={version:'p0-4',opportunityDelete:!!window.__tpfCanonicalOpportunityDelete,whatsappSelect:!!window.__tpfCanonicalSelectWhatsAppChat,whatsappScheduler:'server',automations:'server'};
 })();
 </script>`;
 
@@ -61,6 +77,9 @@ module.exports=async function(req,res){
     let html=await getText(`https://${host}/api/index?_tdz=${Date.now()}`);
     const declaration='let crmAutomations=[];';
     if(html.includes(declaration)){html=html.replace(declaration,'crmAutomations=[];');const early='<script id="tpf-crm-automations-tdz-fix">var crmAutomations=[];</script>';html=html.includes('</head>')?html.replace('</head>',early+'\n</head>'):early+html}
+
+    const templateTdz='let waTemplatesCache = waLoadTemplates();';
+    if(html.includes(templateTdz))html=html.replace(templateTdz,'let waTemplatesCache = [];');
 
     const legacyWaScheduler='setInterval(waAutoSendDueSchedules,30000); setTimeout(waAutoSendDueSchedules,5000);';
     if(html.includes(legacyWaScheduler))html=html.replace(legacyWaScheduler,'/* TPF: scheduler WhatsApp trasladado a Supabase Cron/Edge Worker */');
@@ -76,9 +95,12 @@ module.exports=async function(req,res){
     const unansweredStartup='setTimeout(()=>{loadAutomations().catch(()=>{});auto2CheckUnanswered().catch(()=>{})},1800);';
     if(html.includes(unansweredStartup))html=html.replace(unansweredStartup,'setTimeout(()=>{loadAutomations().catch(()=>{})},1800);');
 
-    if(!html.includes('tpf-protected-api-auth-v1'))html=html.includes('</head>')?html.replace('</head>',AUTH_PATCH+'\n</head>'):AUTH_PATCH+html;
+    const headPatches=[];
+    if(!html.includes('tpf-browser-compat-v1'))headPatches.push(COMPAT_PATCH);
+    if(!html.includes('tpf-protected-api-auth-v1'))headPatches.push(AUTH_PATCH);
+    if(headPatches.length){const patch=headPatches.join('\n');html=html.includes('</head>')?html.replace('</head>',patch+'\n</head>'):patch+html}
     const tail=[];if(!html.includes('tpf-nav-stabilizer-p0'))tail.push(NAV_STABILIZER);if(!html.includes('tpf-action-stabilizer-p0'))tail.push(ACTION_STABILIZER);
     if(tail.length){const patch=tail.join('\n');html=html.includes('</body>')?html.replace('</body>',patch+'\n</body>'):html+patch}
-    res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Fix','crm-automations-tdz+protected-api-auth+nav-stabilizer+action-stabilizer+server-wa-scheduler+server-automations');res.status(200).send(html);
+    res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-TPF-Fix','crm-automations-tdz+wa-templates-tdz+browser-compat+protected-api-auth+nav-stabilizer+action-stabilizer+server-wa-scheduler+server-automations');res.status(200).send(html);
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e))}
 };
