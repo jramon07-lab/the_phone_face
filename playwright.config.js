@@ -1,4 +1,4 @@
-const { defineConfig, devices } = require('@playwright/test');
+const { defineConfig } = require('@playwright/test');
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL;
 const vercelBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
@@ -28,7 +28,6 @@ module.exports = defineConfig({
   projects: [
     { name: 'desktop-1440', use: { viewport: { width: 1440, height: 900 } } },
     { name: 'desktop-1280', use: { viewport: { width: 1280, height: 800 } } },
-    { name: 'desktop-1100', use: { viewport: { width: 1100, height: 800 } } },
-    { name: 'iphone', use: { ...devices['iPhone 15 Pro Max'] } }
+    { name: 'desktop-1100', use: { viewport: { width: 1100, height: 800 } } }
   ]
 });
