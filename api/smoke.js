@@ -1,29 +1,28 @@
-const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-function getText(url){
-  return new Promise((resolve,reject)=>{
-    https.get(url,{headers:{'User-Agent':'The-Phone-Face-Smoke'}},r=>{
-      if(r.statusCode>=300 && r.statusCode<400 && r.headers.location){r.resume();return getText(r.headers.location).then(resolve,reject)}
-      if(r.statusCode!==200){r.resume();return reject(new Error('HTTP '+r.statusCode))}
-      let body='';r.setEncoding('utf8');r.on('data',c=>body+=c);r.on('end',()=>resolve(body));
-    }).on('error',reject)
-  })
+function read(rel){
+  return fs.readFileSync(path.join(process.cwd(), rel), 'utf8');
 }
 
 module.exports = async function(req,res){
   try{
-    const host=req.headers['x-forwarded-host']||req.headers.host;
-    if(!host) throw new Error('Host no disponible');
-    const html=await getText(`https://${host}/api/index-clean?_smoke=${Date.now()}`);
+    const indexClean = read('api/index-clean.js');
+    const indexFix = read('api/index-fix.js');
+    const indexBase = read('api/index.js');
+    const vercel = read('vercel.json');
 
     const checks={
-      templates_nav: html.includes('id="tpfWaTemplatesNav"'),
-      automation_advanced: html.includes('id="tpfAutomationAdvancedBar"'),
-      menu_clean_css: html.includes('id="tpf-menu-clean-v2"'),
-      entry_unique: html.includes('id="tpf-entry-unique-v2"'),
-      no_default_templates: html.includes('function waDefaultTemplates(){return []}'),
-      whatsapp_patch_preserved: html.includes('tpf-fix-3-points-v1') || html.includes('waIsUnanswered')
+      official_source: indexBase.includes('the_phone_face/work/crm-unica-20260825/index.html') && !indexBase.includes('the_phone_face/main/index.html'),
+      root_single_entry: vercel.includes('"source": "/"') && vercel.includes('"destination": "/api/index-clean"'),
+      templates_nav: indexClean.includes('id="tpfWaTemplatesNav"'),
+      automation_advanced: indexClean.includes('id="tpfAutomationAdvancedBar"'),
+      menu_clean_css: indexClean.includes('tpf-menu-clean-v2'),
+      entry_unique: indexClean.includes('tpf-entry-unique-v2'),
+      no_default_templates: indexClean.includes('function waDefaultTemplates(){return []}'),
+      whatsapp_patch_preserved: indexFix.includes('tpf-fix-3-points-v1') || indexFix.includes('waIsUnanswered')
     };
+
     const pass=Object.values(checks).every(Boolean);
     const payload={
       ok:pass,
@@ -31,9 +30,11 @@ module.exports = async function(req,res){
       branch:process.env.VERCEL_GIT_COMMIT_REF||null,
       commit:process.env.VERCEL_GIT_COMMIT_SHA||null,
       deployment_id:process.env.VERCEL_DEPLOYMENT_ID||null,
+      mode:'deployed-source-validation',
       checks,
       timestamp:new Date().toISOString()
     };
+
     res.setHeader('Content-Type','application/json; charset=utf-8');
     res.setHeader('Cache-Control','no-store, max-age=0');
     res.status(pass?200:500).send(JSON.stringify(payload));
