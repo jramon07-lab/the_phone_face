@@ -38,4 +38,4 @@ jobs:
             test-results/
           retention-days: 14
 
-# validation trigger after contact-label DOM order fix
+# validation trigger after complete late-modal DOM order fix
