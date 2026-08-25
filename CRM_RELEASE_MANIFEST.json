@@ -1,0 +1,23 @@
+{
+  "project": "The Phone Face CRM",
+  "official_work_branch": "work/crm-unica-20260825",
+  "staging_policy": {
+    "single_branch_alias": true,
+    "health_endpoint": "/api/health",
+    "smoke_endpoint": "/api/smoke",
+    "production_requires_manual_user_approval": true
+  },
+  "frozen_working_areas": [
+    "WhatsApp composer and unanswered logic"
+  ],
+  "critical_checks": [
+    "Root serves the intended entry route",
+    "Plantillas WhatsApp entry exists",
+    "Advanced Automations UI exists",
+    "Liquidacion/Data/Clawback/Ajustes are hidden from sidebar without deleting data",
+    "Default foreign WhatsApp templates are not injected",
+    "WhatsApp validated fixes remain present",
+    "Build branch and commit match /api/health"
+  ],
+  "release_rule": "A change is not DONE until code, deployment, smoke checks and user-visible validation refer to the exact same commit."
+}
