@@ -1,6 +1,32 @@
 <!doctype html>
 <html lang="es">
 <head>
+<script id="tpf-browser-compat-origin-v1">
+(function () {
+  try {
+    var storage = navigator.storage;
+    if (!storage) {
+      Object.defineProperty(navigator, "storage", {
+        configurable: true,
+        value: {}
+      });
+      storage = navigator.storage;
+    }
+    if (typeof storage.persisted !== "function") {
+      Object.defineProperty(storage, "persisted", {
+        configurable: true,
+        value: function () { return Promise.resolve(false); }
+      });
+    }
+    if (typeof storage.persist !== "function") {
+      Object.defineProperty(storage, "persist", {
+        configurable: true,
+        value: function () { return Promise.resolve(false); }
+      });
+    }
+  } catch (_) {}
+})();
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>The Phone Face</title>
@@ -10034,11 +10060,7 @@ setInterval(waUpdateAdvancedMetrics,60000);
 let waTemplatesCache = waLoadTemplates();
 let waTemplatesRemoteReady = false;
 
-function waLoadTemplates(){
-  return Array.isArray(waTemplatesCache) && waTemplatesCache.length
-    ? waTemplatesCache
-    : waDefaultTemplates();
-}
+/* TPF: eliminado waLoadTemplates duplicado que provocaba TDZ */
 
 function waSaveTemplates(x){
   waTemplatesCache = Array.isArray(x) ? x : [];
