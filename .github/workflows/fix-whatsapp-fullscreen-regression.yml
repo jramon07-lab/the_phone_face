@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: candidato-final-validado-20260825
-      - name: Repair CRM shell and remove debug labels
+      - name: Remove fullscreen takeover and internal labels
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -25,22 +25,30 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # WhatsApp must remain inside the CRM shell. The old helper hid sidebar/topbar.
-          s, n = re.subn(
-              r'<script id="wa-fullscreen-web-js">.*?</script>',
-              '''<script id="wa-fullscreen-web-js">\n(function(){\n  function disableWhatsAppFullscreen(){\n    document.body.classList.remove("wa-fullscreen-mode");\n  }\n  disableWhatsAppFullscreen();\n  document.addEventListener("DOMContentLoaded", disableWhatsAppFullscreen);\n  document.addEventListener("click", function(){ setTimeout(disableWhatsAppFullscreen, 0); }, true);\n  window.addEventListener("pageshow", disableWhatsAppFullscreen);\n})();\n</script>''',
-              s,
-              count=1,
-              flags=re.S,
-          )
-          if n != 1:
-              raise SystemExit('No se encontró el bloque wa-fullscreen-web-js esperado')
+          # Remove the legacy fullscreen CSS/JS completely. WhatsApp already has
+          # its own desktop three-column layout inside the CRM shell.
+          s, css_n = re.subn(r'\s*<style id="wa-fullscreen-web-layout">.*?</style>\s*', '\n', s, count=1, flags=re.S)
+          s, js_n = re.subn(r'\s*<script id="wa-fullscreen-web-js">.*?</script>\s*', '\n', s, count=1, flags=re.S)
 
-          # Remove internal build/debug badges that leaked into the user interface.
-          s = re.sub(r'\s*<span style="font-size:9px;font-weight:900;color:#c62828">· V32 TAREA ESTRUCTURA NUEVA</span>', '', s)
-          s = re.sub(r'\s*<span style="font-size:9px;font-weight:900;color:#c62828">· V22 VOLVER OPORTUNIDADES REBIND</span>', '', s)
-          s = re.sub(r'\s*<span style="font-size:9px;font-weight:900;color:#c62828">· V17 CONSOLIDADA AUDITADA</span>', '', s)
-          s = re.sub(r'\s*<span style="font-size:9px;color:#6b7780;font-weight:800">HÍBRIDA v8 FULLSCREEN · OPORTUNIDADES v6 SIMPLE</span>', '', s)
+          # If the earlier repair already replaced the JS block, this still removes it.
+          if js_n != 1:
+              raise SystemExit('No se encontró wa-fullscreen-web-js para retirar')
+          if css_n != 1:
+              raise SystemExit('No se encontró wa-fullscreen-web-layout para retirar')
+
+          # Remove all leaked internal build/debug text from the user-facing subtitle.
+          debug_patterns = [
+              r'\s*<span[^>]*>\s*·?\s*V32\s+TAREA\s+ESTRUCTURA\s+NUEVA\s*</span>',
+              r'\s*<span[^>]*>\s*·?\s*V22\s+VOLVER\s+OPORTUNIDADES\s+REBIND\s*</span>',
+              r'\s*<span[^>]*>\s*·?\s*V17\s+CONSOLIDADA\s+AUDITADA\s*</span>',
+              r'\s*<span[^>]*>\s*HÍBRIDA\s+v8\s+FULLSCREEN\s+·\s+OPORTUNIDADES\s+v6\s+SIMPLE\s*</span>',
+          ]
+          for pat in debug_patterns:
+              s = re.sub(pat, '', s, flags=re.I)
+
+          # Ensure no runtime path can re-add the fullscreen class.
+          if 'classList.add("wa-fullscreen-mode")' in s or "classList.add('wa-fullscreen-mode')" in s:
+              raise SystemExit('Queda una activación de wa-fullscreen-mode fuera del bloque retirado')
 
           p.write_text(s, encoding='utf-8')
           PY
@@ -50,5 +58,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m "fix: keep WhatsApp inside CRM shell"
+          git commit -m "fix: remove WhatsApp fullscreen takeover"
           git push origin HEAD:candidato-final-validado-20260825
