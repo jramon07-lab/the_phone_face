@@ -1,8 +1,13 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL;
+const vercelBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+
 if (!baseURL) {
   throw new Error('PLAYWRIGHT_BASE_URL is required');
+}
+if (!vercelBypass) {
+  throw new Error('VERCEL_AUTOMATION_BYPASS_SECRET is required');
 }
 
 module.exports = defineConfig({
@@ -13,6 +18,9 @@ module.exports = defineConfig({
   reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
   use: {
     baseURL,
+    extraHTTPHeaders: {
+      'x-vercel-protection-bypass': vercelBypass
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure'
