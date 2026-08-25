@@ -8795,7 +8795,9 @@ async function hydrateWaAvatars(chatIds=[]){
 }
 
 async function waApi(action,payload={}){
+  const {data:{session}}=await sb.auth.getSession();
   const opts={headers:{"Content-Type":"application/json"}};
+  if(session?.access_token) opts.headers.Authorization="Bearer "+session.access_token;
   let url="/api/green?action="+encodeURIComponent(action);
   if(action==="chats"||action==="state"||action==="summary"||action==="notification"||action==="notifications"){
     opts.method="GET";
