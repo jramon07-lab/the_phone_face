@@ -1,0 +1,162 @@
+   150 | COMMENT | // 1. Configuración personal del usuario
+   163 | COMMENT | // 2. Si todavía no tiene configuración propia, hereda la general
+   436 | contacts_sales | logContactActivity | async function logContactActivity(contactId,type,title,description=""){
+   580 | contacts_sales | contactFullNameFromData | function contactFullNameFromData(d){
+   586 | contacts_sales | contactField | function contactField(d,...names){for(const n of names){if(d[n]!==undefined&&d[n]!==null)return d[n]}return ""}
+   675 | COMMENT | // Opportunities linked to this contact
+   687 | COMMENT | // Agenda tasks related to this contact
+   769 | contacts_sales | contactCanUseWhatsapp | function contactCanUseWhatsapp(){
+   838 | contacts_sales | cpRecord | function cpRecord(){return JSON.stringify({id:currentContact?.id,name:$("contactName").value,phone:$("contactPhone").value})}
+  1136 | COMMENT | // Contactos propios: conservar también Nombre y Apellidos separados.
+  1272 | contacts_sales | salesFilteredOpps | function salesFilteredOpps(){
+  1502 | whatsapp | waQuickPad | function waQuickPad(n){return String(n).padStart(2,"0")}
+  1503 | whatsapp | waQuickPretty | function waQuickPretty(d){
+  1507 | whatsapp | waQuickLocalInput | function waQuickLocalInput(d){
+  1510 | whatsapp | waQuickDates | function waQuickDates(){
+  1674 | COMMENT | // MODO PROGRAMAR: guardar/reprogramar en vez de abrir WhatsApp.
+  1728 | automations_settings | notifyPrefsKey | function notifyPrefsKey(){
+  1964 | COMMENT | // WHATSAPP PROGRAMADOS
+  1996 | COMMENT | // AGENDA
+  2035 | whatsapp | waDigits | function waDigits(phone){
+  2041 | whatsapp | waIsDue | function waIsDue(row){
+  2188 | whatsapp | whatsappDigits | function whatsappDigits(phone){
+  2194 | whatsapp | whatsappDue | function whatsappDue(row){
+  2447 | contacts_sales | opportunityCustomEntries | function opportunityCustomEntries(o){
+  2465 | COMMENT | // Load likely contact records. Keep to DATA and CONTACTOS for the CRM contact profile.
+  2568 | COMMENT | // Normalmente basta con quitar el modal: WhatsApp sigue debajo.
+  2569 | COMMENT | // Si se cambió de vista por cualquier motivo, volver a WhatsApp.
+  2946 | automations_settings | googleApi | async function googleApi(path,options={}){
+  3071 | contacts_sales | runOpportunityAutomations | async function runOpportunityAutomations(opportunityId){
+  3146 | whatsapp | waPad2 | function waPad2(n){return String(n).padStart(2,"0")}
+  3147 | whatsapp | waDateISO | function waDateISO(d){return d.getFullYear()+"-"+waPad2(d.getMonth()+1)+"-"+waPad2(d.getDate())}
+  3148 | whatsapp | waPrettyDate | function waPrettyDate(d){return waPad2(d.getDate())+"/"+waPad2(d.getMonth()+1)+"/"+d.getFullYear()}
+  3149 | whatsapp | waFillTimes | function waFillTimes(){const s=$("waQuickTime");if(!s||s.options.length)return;let o=document.createElement("option");o.value="";o.textContent="--:--";s.appendChild(o);for(let h=0;
+  3150 | whatsapp | waSyncCustomWhen | function waSyncCustomWhen(){if(waCalSelected&&$("waQuickTime").value)$("waQuickWhen").value=waDateISO(waCalSelected)+"T"+$("waQuickTime").value}
+  3151 | whatsapp | waRenderCalendar | function waRenderCalendar(){const box=$("waCalDays");if(!box)return;box.innerHTML="";$("waCalMonth").textContent=WA_MONTHS_ES[waCalView.getMonth()].replace(/^./,c=>c.toUpperCase())
+  3225 | COMMENT | // Volver a WhatsApp sin recargar toda la aplicación.
+  3585 | COMMENT | // Find the direct child that contains opportunity cards / add button.
+  3763 | COMMENT | // Fallback: match stage by visible heading text.
+  4098 | COMMENT | // Keep / restore the full contact profile.
+  4102 | COMMENT | // If for any reason the contact profile was left, reload the same contact.
+  4126 | system | oppIsExpired | function oppIsExpired(o){return !!o.expected_date && o.expected_date<localDateKey() && !["won","ganada","ganado","closed","cerrada"].includes(String(o.status||"").toLowerCase())}
+  4127 | system | oppIsOpen | function oppIsOpen(o){return !oppIsExpired(o) && !["won","ganada","ganado","lost","perdida","closed","cerrada"].includes(String(o.status||"").toLowerCase())}
+  4479 | COMMENT | // En la agenda añadimos también Abrir y Editar de forma explícita.
+  4537 | COMMENT | // Opportunity views
+  4541 | COMMENT | // Contact profile
+  4544 | COMMENT | // Contact task subpages / details
+  4548 | COMMENT | // WhatsApp quick modal
+  4583 | COMMENT | // No mostrar la ficha normal del contacto debajo.
+  4644 | COMMENT | // Normal task-detail flow: back to contact task list / contact.
+  4671 | COMMENT | // Safe fallback: Panel de ventas for opportunity, otherwise Inicio.
+  5063 | COMMENT | /* ===== WhatsApp GREEN-API ===== */
+  5080 | whatsapp | waNormalizePhone | function waNormalizePhone(chatId){
+  5083 | whatsapp | waPhoneVariants | function waPhoneVariants(phone){
+  5089 | whatsapp | waInitials | function waInitials(name){
+  5093 | whatsapp | waSaveUnread | function waSaveUnread(){try{localStorage.setItem("tpf_wa_unread",JSON.stringify(waLiveState.unread||{}))}catch(e){}}
+  5094 | whatsapp | waUnreadCount | function waUnreadCount(chatId){return Math.max(0,Number(waLiveState.unread?.[String(chatId||"")]||0))}
+  5095 | whatsapp | waSetUnread | function waSetUnread(chatId,n){const id=String(chatId||"");if(!id)return;waLiveState.unread[id]=Math.max(0,Number(n||0));waSaveUnread()}
+  5096 | whatsapp | waIncUnread | function waIncUnread(chatId){const id=String(chatId||"");if(!id)return;waSetUnread(id,waUnreadCount(id)+1)}
+  5099 | whatsapp | waChatServerPreview | function waChatServerPreview(c){
+  5118 | whatsapp | waChatServerUnread | function waChatServerUnread(c){
+  5133 | whatsapp | waLivePreviewText | function waLivePreviewText(msg){
+  5144 | whatsapp | waRememberLivePreview | function waRememberLivePreview(chatId,msg){
+  5153 | whatsapp | waBrowserNotifyIncoming | function waBrowserNotifyIncoming(chatId,msg,body){
+  5189 | whatsapp | waTime | function waTime(ts){
+  5197 | whatsapp | waMessageText | function waMessageText(m){
+  5208 | COMMENT | // como si fueran mensajes de WhatsApp.
+  5214 | whatsapp | waMessageDirection | function waMessageDirection(m){
+  5222 | whatsapp | waMessageTimestamp | function waMessageTimestamp(m){
+  5225 | whatsapp | waMediaUrl | function waMediaUrl(m){
+  5228 | whatsapp | waMediaInfo | function waMediaInfo(m){
+  5253 | whatsapp | waMediaHtml | function waMediaHtml(info,idMessage){
+  5257 | whatsapp | dl | const dl=(url,name)=>url?`<button class="waDownloadBtn" type="button" onclick="waDownloadFile('${String(url).replaceAll("'","\'")}','${String(name||"archivo").replaceAll("'","\'")}
+  5326 | whatsapp | waApplyAvatar | function waApplyAvatar(el,url,initials){
+  5331 | whatsapp | waLoadAvatar | async function waLoadAvatar(chatId){
+  5360 | whatsapp | waApi | async function waApi(action,payload={}){
+  5376 | whatsapp | waApplySummaryChats | function waApplySummaryChats(chats){
+  5391 | whatsapp | waRefreshHybridSummary | async function waRefreshHybridSummary(){
+  5738 | whatsapp | waPrepareCurrentContactForCrm | function waPrepareCurrentContactForCrm(){
+  5804 | whatsapp | waNotificationToHistory | function waNotificationToHistory(body){
+  5818 | whatsapp | waNotificationChatId | function waNotificationChatId(body){
+  5822 | whatsapp | waPushLiveMessage | function waPushLiveMessage(msg,scrollBottom=true){
+  5859 | whatsapp | waStableSig | function waStableSig(v){try{return JSON.stringify(v||[])}catch(_){return ""}}
+  5868 | whatsapp | waLastReadAt | const waLastReadAt=(()=>{
+  5872 | whatsapp | waSetLastReadAt | function waSetLastReadAt(chatId,ts=Math.floor(Date.now()/1000)){
+  5877 | whatsapp | waShouldCountIncoming | function waShouldCountIncoming(chatId,msg){
+  5901 | whatsapp | waRefreshRecentPreviews | async function waRefreshRecentPreviews(){
+  5905 | COMMENT | // Prioriza los chats visibles/recientes. GREEN-API Business permite consultar
+  5957 | whatsapp | waPollOnce | async function waPollOnce(){
+  5994 | COMMENT | // Mensaje saliente desde teléfono o API: waTrackDirection ya registra
+  6011 | COMMENT | // getChats sirve para nombres/orden/base de chats, pero GREEN-API avisa
+  6048 | whatsapp | waDownloadFile | async function waDownloadFile(url,name="archivo",idMessage=""){
+  6077 | whatsapp | waTemplatesKey | function waTemplatesKey(){return "tpf_wa_templates_v1"}
+  6078 | whatsapp | waDefaultTemplates | function waDefaultTemplates(){return [
+  6083 | whatsapp | waLoadTemplates | function waLoadTemplates(){try{const x=JSON.parse(localStorage.getItem(waTemplatesKey())||"null");return Array.isArray(x)?x:waDefaultTemplates()}catch(e){return waDefaultTemplates(
+  6084 | whatsapp | waSaveTemplates | function waSaveTemplates(x){localStorage.setItem(waTemplatesKey(),JSON.stringify(x))}
+  6085 | whatsapp | waRenderTemplates | function waRenderTemplates(){
+  6120 | whatsapp | waAutoSendDueSchedules | async function waAutoSendDueSchedules(){
+  6153 | COMMENT | // Navegación móvil WhatsApp: lista <-> conversación sin perder estado.
+  6183 | COMMENT | // Si se recarga estando en WhatsApp, detectar por contenido.
+  6190 | COMMENT | /* ===== WhatsApp CRM Total ===== */
+  6193 | whatsapp | waMetaAll | function waMetaAll(){try{return JSON.parse(localStorage.getItem(WA_META_KEY)||"{}")}catch(e){return {}}}
+  6194 | whatsapp | waMeta | function waMeta(chatId){const a=waMetaAll();return a[chatId]||{pinned:false,archived:false,tags:[],note:"",lastIncomingAt:0,lastOutgoingAt:0}}
+  6195 | whatsapp | waMetaSave | function waMetaSave(chatId,patch){const a=waMetaAll();a[chatId]={...waMeta(chatId),...patch};localStorage.setItem(WA_META_KEY,JSON.stringify(a));renderWhatsAppChats();waUpdateStats
+  6196 | whatsapp | waCacheHistory | function waCacheHistory(chatId,rows){try{const all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-500);localStorage.setItem(WA_HISTORY_KEY,JSO
+  6197 | whatsapp | waCachedHistory | function waCachedHistory(chatId){try{return JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}")[chatId]||[]}catch(e){return []}}
+  6198 | whatsapp | waIsUnanswered | function waIsUnanswered(chatId){
+  6201 | whatsapp | waUpdateStats | function waUpdateStats(){
+  6208 | whatsapp | waTrackDirection | function waTrackDirection(chatId,msg){
+  6278 | COMMENT | /* History cache: if GREEN-API returns less, keep the union locally. */
+  6310 | whatsapp | waPrepareMessageCrm | function waPrepareMessageCrm(){
+  6319 | whatsapp | waRefreshChatTopButtons | function waRefreshChatTopButtons(){const id=waLiveState.selected?.id;if(!id)return;const m=waMeta(id);$("waPinChat").textContent=m.pinned?"★":"☆";$("waArchiveChat").textContent=m.a
+  6322 | whatsapp | waAddTag | function waAddTag(){const id=waLiveState.selected?.id;if(!id)return;const tag=prompt("Etiqueta (ej.: Venta, Pendiente, Documentación)","");if(!tag)return;const m=waMeta(id),tags=[.
+  6323 | whatsapp | waRemoveTag | function waRemoveTag(tag){const id=waLiveState.selected?.id;if(!id)return;waMetaSave(id,{tags:(waMeta(id).tags||[]).filter(x=>x!==tag)});waRenderSideExtras()}
+  6326 | whatsapp | waRenderSideExtras | function waRenderSideExtras(){
+  6368 | whatsapp | waExtractLinks | function waExtractLinks(text){return [...String(text||"").matchAll(/https?:\/\/[^\s]+/g)].map(x=>x[0])}
+  6369 | whatsapp | waRenderMediaGallery | function waRenderMediaGallery(){
+  6379 | whatsapp | waTemplateVars | function waTemplateVars(text){
+  6384 | whatsapp | waRenderSlash | function waRenderSlash(){
+  6396 | whatsapp | waRenderFilePreview | function waRenderFilePreview(){
+  6421 | whatsapp | waLocalPersistAll | function waLocalPersistAll(){try{return JSON.parse(localStorage.getItem(WA_PERSIST_KEY)||"{}")}catch(e){return {}}}
+  6422 | whatsapp | waLocalPersist | function waLocalPersist(chatId, rows){
+  6428 | whatsapp | waLocalPersistGet | function waLocalPersistGet(chatId){return waLocalPersistAll()[chatId]?.messages||[]}
+  6430 | whatsapp | waPersistRemote | async function waPersistRemote(chatId, rows){
+  6451 | whatsapp | waLoadRemoteHistory | async function waLoadRemoteHistory(chatId){
+  6480 | whatsapp | waResponseDurations | function waResponseDurations(){
+  6486 | whatsapp | waFmtDuration | function waFmtDuration(sec){
+  6492 | whatsapp | waUpdateAdvancedMetrics | function waUpdateAdvancedMetrics(){
+  6502 | whatsapp | waRenderSla | function waRenderSla(){
+  6515 | COMMENT | /* Conteos de acciones creadas desde WhatsApp */
+  6517 | whatsapp | waActionStats | function waActionStats(){try{return JSON.parse(localStorage.getItem(WA_ACTION_STATS)||'{"opps":0,"tasks":0}')}catch(e){return {opps:0,tasks:0}}}
+  6518 | whatsapp | waActionInc | function waActionInc(k){const s=waActionStats();s[k]=(s[k]||0)+1;localStorage.setItem(WA_ACTION_STATS,JSON.stringify(s));if($("waAOpps"))$("waAOpps").textContent=s.opps||0;if($("wa
+  6548 | whatsapp | waLoadTemplates | function waLoadTemplates(){
+  6554 | whatsapp | waSaveTemplates | function waSaveTemplates(x){
+  6559 | whatsapp | waSyncTemplatesFromSupabase | async function waSyncTemplatesFromSupabase(){
+  6725 | contacts_sales | crmGetContactLabels | async function crmGetContactLabels(contactId){
+  6764 | COMMENT | /* WhatsApp: las etiquetas pasan a ser las del contacto CRM, persistentes. */
+  6765 | whatsapp | waRefreshGlobalContactTags | async function waRefreshGlobalContactTags(){
+  6775 | whatsapp | waOpenTagHandler | const waOpenTagHandler=async()=>{
+  6794 | COMMENT | /* ===== Motor de Automatizaciones CRM v2 ===== */
+  6922 | automations_settings | auto2AlreadyRan | async function auto2AlreadyRan(automationId,eventKey){
+  6925 | automations_settings,system | auto2LogRun | async function auto2LogRun(automationId,eventKey,context,status="ok"){
+  7150 | COMMENT | /* ===== Campos personalizados de Contactos ===== */
+  7175 | contacts_sales | crmRenderContactCustomFields | async function crmRenderContactCustomFields(contactId){
+  7189 | contacts_sales | crmSaveContactCustomValues | async function crmSaveContactCustomValues(contactId,prefix="ccf"){
+  7227 | COMMENT | /* Integración con ficha de contacto */
+  7238 | COMMENT | /* Guardar campos personalizados de contactos nuevos. Se captura el ID recién creado. */
+  7630 | COMMENT | // Acciones de Contactos
+  7635 | COMMENT | // WhatsApp / plantillas
+  8034 | COMMENT | // TARJETAS WhatsApp / ficha cliente / otros listados.
+  8146 | COMMENT | // This preserves special behaviours such as Opportunity -> exact WhatsApp chat.
+  8223 | COMMENT | // WhatsApp -> Ver ficha completa -> Volver al mismo chat
+  8534 | COMMENT | // Reuse the exact, already-working WhatsApp -> full contact origin capture.
+  8541 | COMMENT | // Once the same contact page is open, switch only to Opportunities.
+  8554 | COMMENT | // Use the flow already proven to remember the exact WhatsApp chat.
+  8561 | COMMENT | // Then open Opportunities inside that same contact record.
+  8671 | COMMENT | /* ---------- WhatsApp task origin ---------- */
+  8709 | COMMENT | /* ---------- WhatsApp tasks rendering ---------- */
+  8710 | system | taskExpired | function taskExpired(task){if(!task?.starts_at||String(task.status)!=="pending")return false;const d=new Date(task.starts_at);return Number.isFinite(d.getTime())&&d.getTime()<Date.
+  8768 | COMMENT | /* ---------- WhatsApp + nueva tarea ---------- */
+  8781 | COMMENT | /* ---------- Ver tareas desde WhatsApp ---------- */
+  8838 | COMMENT | /* ---------- Agenda: antes de guardar sincronizar hidden ---------- */
+  8876 | system | recordError | function recordError(type,message,detail){
