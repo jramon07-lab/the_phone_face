@@ -18,6 +18,28 @@ async function expectModuleReady(page,name){
   expect(['ready','ok'], `Módulo ${name} en estado ${state?.state}`).toContain(state.state);
 }
 
+test('estructura física: cada dominio carga desde su archivo y el index no usa app-core', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const structure=await page.evaluate(() => ({
+    scripts:[...document.scripts].map(s=>s.getAttribute('src')||'').filter(Boolean),
+    styles:[...document.querySelectorAll('link[rel="stylesheet"]')].map(x=>x.getAttribute('href')||''),
+    inlineStyles:document.querySelectorAll('style').length,
+    inlineScripts:[...document.scripts].filter(s=>!s.src && (s.textContent||'').trim()).length
+  }));
+  for(const src of [
+    '/js/modules/contacts-sales-core.js',
+    '/js/modules/whatsapp-scheduling-core.js',
+    '/js/modules/whatsapp-green-core.js',
+    '/js/modules/agenda-core.js',
+    '/js/modules/automations-core.js',
+    '/js/modules/system-status-core.js'
+  ]) expect(structure.scripts).toContain(src);
+  expect(structure.scripts.some(x=>x.includes('/js/app-core.js'))).toBe(false);
+  expect(structure.styles).toContain('/assets/app.css');
+  expect(structure.inlineStyles).toBe(0);
+  expect(structure.inlineScripts).toBe(0);
+});
+
 test('runtime: un fallo aislado no rompe el CRM', async ({ page }) => {
   await login(page);
   const result = await page.evaluate(() => {
