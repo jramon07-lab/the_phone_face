@@ -1,0 +1,31 @@
+name: Fix physical split
+
+on:
+  push:
+    branches:
+      - work/crm-modular-20260826
+    paths:
+      - scripts/fix_physical_split.js
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/crm-modular-20260826
+      - run: node scripts/fix_physical_split.js
+      - name: Commit boundary fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html api/index-clean.js api/index-fix.js js tests/e2e/crm-module-isolation.spec.js
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Corrige fronteras de módulos físicos"
+            git push origin HEAD:work/crm-modular-20260826
+          fi
