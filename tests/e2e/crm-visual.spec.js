@@ -40,7 +40,8 @@ test('Automatizaciones muestra constructor avanzado y presets reales', async ({ 
   await expect(page.locator('#view-automations')).toBeVisible({ timeout: 15000 });
   const bar=page.locator('#tpfAutomationAdvancedBar');
   await expect(bar).toBeVisible();
-  await expect(bar).toContainText('Constructor avanzado activo');
+  await expect(bar).toContainText('Constructor avanzado');
+  await expect(bar).toContainText('Motor completo activo');
   await expect(bar.locator('[data-auto-preset]')).toHaveCount(3);
 
   await bar.locator('[data-auto-preset="renewal"]').click();
@@ -52,6 +53,11 @@ test('Automatizaciones muestra constructor avanzado y presets reales', async ({ 
   await expect(page.locator('#auto2Trigger')).toHaveValue('unanswered');
   await expect(page.locator('#auto2Action')).toHaveValue('create_task');
   await expect(page.locator('#auto2UnansweredMinutes')).toHaveValue('120');
+
+  await bar.locator('[data-auto-preset="sequence"]').click();
+  await expect(page.locator('#auto2Trigger')).toHaveValue('label_assigned');
+  await expect(page.locator('#auto2Action')).toHaveValue('sequence_label_opportunity_whatsapp');
+  await expect(page.locator('#auto2SeqDays')).toHaveValue('7');
 
   await page.screenshot({ path: 'test-results/automations-advanced.png', fullPage: true });
 });
