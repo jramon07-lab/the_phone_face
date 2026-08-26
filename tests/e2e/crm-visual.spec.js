@@ -34,11 +34,25 @@ test('Plantillas WhatsApp abre de verdad', async ({ page }) => {
   await page.screenshot({ path: 'test-results/whatsapp-templates.png', fullPage: true });
 });
 
-test('Automatizaciones muestra constructor avanzado', async ({ page }) => {
+test('Automatizaciones muestra constructor avanzado y presets reales', async ({ page }) => {
   await login(page);
   await page.locator('.nav[data-view="automations"]').click();
   await expect(page.locator('#view-automations')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#tpfAutomationAdvancedBar')).toBeVisible();
+  const bar=page.locator('#tpfAutomationAdvancedBar');
+  await expect(bar).toBeVisible();
+  await expect(bar).toContainText('Constructor avanzado activo');
+  await expect(bar.locator('[data-auto-preset]')).toHaveCount(3);
+
+  await bar.locator('[data-auto-preset="renewal"]').click();
+  await expect(page.locator('#auto2Trigger')).toHaveValue('message_contains');
+  await expect(page.locator('#auto2Action')).toHaveValue('assign_label');
+  await expect(page.locator('#auto2Keyword')).toHaveValue('renovación');
+
+  await bar.locator('[data-auto-preset="unanswered"]').click();
+  await expect(page.locator('#auto2Trigger')).toHaveValue('unanswered');
+  await expect(page.locator('#auto2Action')).toHaveValue('create_task');
+  await expect(page.locator('#auto2UnansweredMinutes')).toHaveValue('120');
+
   await page.screenshot({ path: 'test-results/automations-advanced.png', fullPage: true });
 });
 
