@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
+// One-shot extractor for the modular branch: preserve order, move only shell assets.
 const indexPath = path.join(process.cwd(), 'index.html');
 let html = fs.readFileSync(indexPath, 'utf8');
 
