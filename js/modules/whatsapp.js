@@ -106,40 +106,13 @@
     style.textContent=`
       #view-whatsapplive .waChatActive.hidden{display:none!important}
       #view-whatsapplive .waChatEmpty.hidden{display:none!important}
-      #view-whatsapplive .waLivePage{padding:0 14px 22px!important;min-height:0!important}
-      #view-whatsapplive .waLiveLayout{min-height:0!important;margin-bottom:4px!important;border-radius:14px!important}
+      #view-whatsapplive .waLivePage{padding-bottom:18px!important}
+      #view-whatsapplive .waLiveLayout{min-height:0!important}
       #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important}
-
-      /* Cabecera: más compacta, alineada y respirada */
-      #view-whatsapplive .waLiveHeader{min-height:58px!important;margin:0 0 10px!important;padding:8px 2px!important;gap:14px!important;align-items:center!important}
-      #view-whatsapplive .waLiveTitle{min-width:0!important;gap:10px!important;align-items:center!important}
-      #view-whatsapplive .waLiveTitle h2{font-size:27px!important;line-height:1.05!important;margin:0!important}
-      #view-whatsapplive .waLiveTitle small{display:block!important;line-height:1.35!important;margin-top:2px!important}
-      #view-whatsapplive .waLiveHeaderActions{gap:7px!important;flex-wrap:wrap!important;justify-content:flex-end!important;align-items:center!important}
-      #view-whatsapplive .waLiveHeaderActions button{min-height:34px!important;padding:7px 11px!important;white-space:nowrap!important}
-      #view-whatsapplive .waLiveStatus{min-height:30px!important;display:inline-flex!important;align-items:center!important;padding:6px 10px!important}
-      #waMiniStats{display:flex!important;gap:6px!important;flex-wrap:wrap!important;align-items:center!important;justify-content:flex-end!important}
-      #waMiniStats span{cursor:pointer;user-select:none;min-height:28px!important;display:inline-flex!important;align-items:center!important;padding:5px 9px!important;border-radius:999px!important;white-space:nowrap!important}
+      #view-whatsapplive .waComposer{margin-bottom:12px!important;padding-bottom:12px!important}
+      #waMiniStats span{cursor:pointer;user-select:none}
       #waMiniStats span:hover{filter:brightness(.97)}
       #waMiniStats span[role="button"]{outline-offset:2px}
-
-      /* Compositor: margen completo y más aire alrededor */
-      #view-whatsapplive .waComposer{margin:0 12px 14px!important;padding:12px 14px 14px!important;gap:10px!important;align-items:center!important;border:1px solid #e2e7ec!important;border-radius:15px!important;background:#f8f9fb!important;box-shadow:0 2px 8px rgba(20,35,55,.04)!important}
-      #view-whatsapplive .waComposer textarea{min-height:46px!important;max-height:128px!important;margin:0!important;padding:12px 16px!important;border-radius:23px!important;line-height:1.35!important;background:#fff!important}
-      #view-whatsapplive .waComposer button:not(.waSendBtn){min-width:38px!important;min-height:38px!important;padding:8px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
-      #view-whatsapplive .waSendBtn{width:46px!important;height:46px!important;min-width:46px!important;flex:0 0 46px!important;margin:0!important}
-      #view-whatsapplive .waComposerMsg{margin:0 14px 8px!important;padding:0 4px!important;min-height:16px!important;height:auto!important;background:transparent!important}
-      #view-whatsapplive .waMessages{padding-bottom:12px!important}
-
-      @media(max-width:1100px){
-        #view-whatsapplive .waLivePage{padding-left:8px!important;padding-right:8px!important}
-        #view-whatsapplive .waLiveHeader{align-items:flex-start!important}
-        #view-whatsapplive .waLiveHeaderActions{max-width:58%!important}
-      }
-      @media(max-width:820px){
-        #view-whatsapplive .waLivePage{padding:0!important}
-        #view-whatsapplive .waComposer{margin:0 8px 10px!important;padding:9px 10px 11px!important}
-      }
     `;
     document.head.appendChild(style);
   }
