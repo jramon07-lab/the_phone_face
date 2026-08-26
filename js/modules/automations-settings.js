@@ -6,6 +6,22 @@
   const later=(fn,ms=0)=>setTimeout(()=>{try{fn()}catch(e){console.warn('TPF automatizaciones avanzadas',e)}},ms);
   const byId=id=>document.getElementById(id);
 
+  function enableServerAutomationMode(){
+    window.TPF_SERVER_AUTOMATIONS=true;
+    const current=window.auto2Execute;
+    if(typeof current==='function' && current.__tpfServerGate!==true){
+      const original=current;
+      const gated=async function(...args){
+        if(window.TPF_SERVER_AUTOMATIONS===true) return;
+        return original.apply(this,args);
+      };
+      gated.__tpfServerGate=true;
+      gated.__tpfOriginal=original;
+      window.__tpfAuto2ExecuteLocal=original;
+      window.auto2Execute=gated;
+    }
+  }
+
   function ensureAdvancedStyles(){
     if(document.getElementById('tpfAutomationAdvancedStyles')) return;
     const style=document.createElement('style');
@@ -70,9 +86,9 @@
   function fillAdvancedBar(bar){
     bar.innerHTML=`
       <h3>⚡ Constructor avanzado activo</h3>
-      <div class="small">Motor completo activo: elige una automatización rápida o configura manualmente CUANDO → HACER.</div>
+      <div class="small">Motor completo activo en servidor: elige una automatización rápida o configura manualmente CUANDO → HACER. Las reglas siguen funcionando aunque cierres el CRM.</div>
       <div class="tpfAutoCapabilities">
-        <span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta asignada</span><span>Sin respuesta</span>
+        <span>Servidor 24/7</span><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta asignada</span><span>Sin respuesta</span>
         <span>Tarea</span><span>Oportunidad</span><span>Etiqueta</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span>
       </div>
       <div class="tpfAutoPresetButtons">
@@ -95,11 +111,12 @@
       bar.id='tpfAutomationAdvancedBar';
       grid.insertAdjacentElement('beforebegin',bar);
     }
-    if(bar.querySelectorAll('[data-auto-preset]').length!==3 || !bar.textContent.includes('Constructor avanzado activo')) fillAdvancedBar(bar);
+    if(bar.querySelectorAll('[data-auto-preset]').length!==3 || !bar.textContent.includes('Servidor 24/7')) fillAdvancedBar(bar);
     else bindPresetButtons(bar);
   }
 
   async function restoreAdvancedAutomations(){
+    enableServerAutomationMode();
     ensureAdvancedAutomationBar();
     await prepareAutomationOptions();
     renderAutomationConfigs();
@@ -109,6 +126,7 @@
 
   M.register('automations-settings',{
     install(){
+      enableServerAutomationMode();
       M.wrapGlobals('automations-settings',[
         'loadAutomations','renderAutomations','loadGoogleSettings','loadNotifySettings',
         'saveNotifySettings','saveGoogleSettings','loadUsersAdmin','renderSelectedUserPerms',
@@ -120,6 +138,7 @@
         if(e.target?.closest?.('.nav[data-view="automations"]')) later(restoreAdvancedAutomations,120);
       });
       later(()=>{
+        enableServerAutomationMode();
         const view=byId('view-automations');
         if(view&&!view.classList.contains('hidden')) restoreAdvancedAutomations();
       },500);
