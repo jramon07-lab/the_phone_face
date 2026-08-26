@@ -4,6 +4,8 @@
   if(!M) return;
 
   let greenStateCache={at:0,state:''};
+  const fileResultCache=new Map();
+  let fileSafeChain=Promise.resolve();
 
   function normalizeOutgoingChatId(value){
     const raw=String(value||'').trim();
@@ -35,6 +37,49 @@
     const status=Number(err?.status||err?.greenStatus||0);
     const text=String(err?.message||err?.error||err||'').toLowerCase();
     return status===400 && (text.includes('starting')||text.includes('not authorized')||text.includes('not authorised'));
+  }
+
+  async function safeFileRequest(body){
+    const chatId=normalizeOutgoingChatId(body?.chatId);
+    const idMessage=String(body?.idMessage||'').trim();
+    if(!chatId||!idMessage) return {ok:true,available:false,degraded:true,reason:'invalid_request'};
+    const key=`${chatId}::${idMessage}`;
+    if(fileResultCache.has(key)) return fileResultCache.get(key);
+
+    const task=async()=>{
+      const ctrl=new AbortController();
+      const timer=setTimeout(()=>ctrl.abort(),5000);
+      try{
+        const r=await fetch('/api/green-file-safe',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({chatId,idMessage}),
+          signal:ctrl.signal
+        });
+        const data=await r.json().catch(()=>({ok:true,available:false,degraded:true,reason:'bad_response'}));
+        const result={ok:true,...data};
+        fileResultCache.set(key,result);
+        return result;
+      }catch(_){
+        const result={ok:true,available:false,degraded:true,reason:'network_error'};
+        fileResultCache.set(key,result);
+        return result;
+      }finally{
+        clearTimeout(timer);
+      }
+    };
+
+    const queued=fileSafeChain.then(async()=>{
+      const result=await task();
+      await new Promise(r=>setTimeout(r,120));
+      return result;
+    },async()=>{
+      const result=await task();
+      await new Promise(r=>setTimeout(r,120));
+      return result;
+    });
+    fileSafeChain=queued.then(()=>undefined,()=>undefined);
+    return queued;
   }
 
   function scheduledStatus(row){
@@ -100,6 +145,8 @@
         const guardedApi=async function(action,payload){
           const kind=String(action||'').toLowerCase();
           const body=(payload && typeof payload==='object')?{...payload}:payload;
+
+          if(kind==='file') return safeFileRequest(body||{});
 
           if(kind==='send' || kind==='sendfile'){
             const chatId=normalizeOutgoingChatId(body?.chatId);
