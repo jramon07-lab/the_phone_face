@@ -1,0 +1,72 @@
+name: CRM Modular CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - work/crm-modular-20260826
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm-modular-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Critical structure guard
+        run: node scripts/release-guard.js
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate test credentials
+        env:
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: |
+          test -n "$CRM_TEST_EMAIL" || (echo "Missing CRM_TEST_EMAIL" && exit 1)
+          test -n "$CRM_TEST_PASSWORD" || (echo "Missing CRM_TEST_PASSWORD" && exit 1)
+
+      - name: Start isolated local preview
+        run: |
+          node scripts/local-preview.js > /tmp/tpf-preview.log 2>&1 &
+          echo $! > /tmp/tpf-preview.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/healthz >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/tpf-preview.log
+          exit 1
+
+      - name: Run complete CRM regression suite
+        env:
+          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+          VERCEL_AUTOMATION_BYPASS_SECRET: local-modular-preview
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npm run test:e2e
+
+      - name: Upload evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-modular-evidence
+          path: |
+            playwright-report
+            test-results
+            /tmp/tpf-preview.log
+          if-no-files-found: ignore
