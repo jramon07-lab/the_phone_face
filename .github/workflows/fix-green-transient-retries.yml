@@ -1,0 +1,200 @@
+name: Fix GREEN transient retries
+
+on:
+  push:
+    branches:
+      - work/crm-unica-20260825
+    paths:
+      - .github/workflows/fix-green-transient-retries.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/crm-unica-20260825
+      - name: Patch GREEN-API retry handling
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('api/green.js')
+          s = p.read_text()
+          if 'GREEN_RETRYABLE_METHODS' in s:
+              print('Retry protection already present')
+              raise SystemExit(0)
+
+          old_url = '''  async function greenFetchUrl(url, opts = {}) {
+    const r = await fetch(url, opts);
+    const text = await r.text();
+    let data;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!r.ok) {
+      const msg = typeof data === "object" && data
+        ? (data.message || data.error || JSON.stringify(data))
+        : String(data || r.statusText);
+      const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
+      err.status = r.status;
+      throw err;
+    }
+    return data;
+  }
+
+  async function greenFetch(method, opts = {}) {
+    const r = await fetch(apiUrl(method), opts);
+    const text = await r.text();
+    let data;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!r.ok) {
+      const msg = typeof data === "object" && data
+        ? (data.message || data.error || JSON.stringify(data))
+        : String(data || r.statusText);
+      const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
+      err.status = r.status;
+      err.greenMethod = method;
+      throw err;
+    }
+    return data;
+  }
+'''
+
+          new_url = '''  const GREEN_RETRYABLE_METHODS = new Set([
+    "getStateInstance", "getSettings", "getChats", "getChatHistory",
+    "getAvatar", "downloadFile", "receiveNotification",
+    "lastIncomingMessages", "lastOutgoingMessages"
+  ]);
+  const greenSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function greenFetchUrl(url, opts = {}) {
+    const httpMethod = String(opts.method || "GET").toUpperCase();
+    const retryable = httpMethod === "GET";
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const r = await fetch(url, opts);
+        const text = await r.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        if (r.ok) return data;
+        const msg = typeof data === "object" && data
+          ? (data.message || data.error || JSON.stringify(data))
+          : String(data || r.statusText);
+        const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
+        err.status = r.status;
+        lastError = err;
+        if (!(retryable && r.status >= 500 && attempt < 2)) throw err;
+      } catch (err) {
+        lastError = err;
+        if (!(retryable && attempt < 2 && (!err?.status || err.status >= 500))) throw err;
+      }
+      await greenSleep(250 * (attempt + 1));
+    }
+    throw lastError || new Error("GREEN-API no respondió.");
+  }
+
+  async function greenFetch(method, opts = {}) {
+    const retryable = GREEN_RETRYABLE_METHODS.has(method);
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const r = await fetch(apiUrl(method), opts);
+        const text = await r.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        if (r.ok) return data;
+        const msg = typeof data === "object" && data
+          ? (data.message || data.error || JSON.stringify(data))
+          : String(data || r.statusText);
+        const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
+        err.status = r.status;
+        err.greenMethod = method;
+        lastError = err;
+        if (!(retryable && r.status >= 500 && attempt < 2)) throw err;
+      } catch (err) {
+        if (!err.greenMethod) err.greenMethod = method;
+        lastError = err;
+        if (!(retryable && attempt < 2 && (!err?.status || err.status >= 500))) throw err;
+      }
+      await greenSleep(250 * (attempt + 1));
+    }
+    throw lastError || new Error(`GREEN-API ${method} no respondió.`);
+  }
+'''
+
+          if old_url not in s:
+              raise SystemExit('Expected greenFetch block not found; refusing unsafe patch')
+          s = s.replace(old_url, new_url, 1)
+
+          old_del = '''  async function deleteNotification(receiptId) {
+    if (receiptId === undefined || receiptId === null) return false;
+    const r = await fetch(`${apiUrl("deleteNotification")}/${encodeURIComponent(receiptId)}`, {
+      method: "DELETE"
+    });
+    const text = await r.text();
+    let data;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!r.ok) {
+      const err = new Error(
+        (data && typeof data === "object" && (data.message || data.error)) ||
+        String(data || r.statusText || "No se pudo borrar la notificación")
+      );
+      err.status = r.status;
+      err.greenMethod = "deleteNotification";
+      throw err;
+    }
+    return data?.result !== false;
+  }
+'''
+
+          new_del = '''  async function deleteNotification(receiptId) {
+    if (receiptId === undefined || receiptId === null) return false;
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const r = await fetch(`${apiUrl("deleteNotification")}/${encodeURIComponent(receiptId)}`, {
+          method: "DELETE"
+        });
+        const text = await r.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        if (r.ok) return data?.result !== false;
+        const err = new Error(
+          (data && typeof data === "object" && (data.message || data.error)) ||
+          String(data || r.statusText || "No se pudo borrar la notificación")
+        );
+        err.status = r.status;
+        err.greenMethod = "deleteNotification";
+        lastError = err;
+        if (!(r.status >= 500 && attempt < 2)) throw err;
+      } catch (err) {
+        if (!err.greenMethod) err.greenMethod = "deleteNotification";
+        lastError = err;
+        if (!(attempt < 2 && (!err?.status || err.status >= 500))) throw err;
+      }
+      await greenSleep(250 * (attempt + 1));
+    }
+    throw lastError || new Error("No se pudo borrar la notificación.");
+  }
+'''
+
+          if old_del not in s:
+              raise SystemExit('Expected deleteNotification block not found; refusing unsafe patch')
+          s = s.replace(old_del, new_del, 1)
+          p.write_text(s)
+          PY
+      - name: Commit retry protection
+        shell: bash
+        run: |
+          if git diff --quiet -- api/green.js; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- api/green.js
+          git commit -m "Blinda GREEN-API ante 5xx transitorios"
+          git push origin HEAD:work/crm-unica-20260825
