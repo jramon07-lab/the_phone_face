@@ -1,0 +1,211 @@
+from pathlib import Path
+
+p = Path('index.html')
+s = p.read_text(encoding='utf-8')
+
+if 'data-view="system"' in s and 'function loadSystemStatus()' in s:
+    print('Panel already present')
+else:
+    def once(old, new, label):
+        global s
+        n = s.count(old)
+        if n != 1:
+            raise SystemExit(f'{label}: expected 1 anchor, got {n}')
+        s = s.replace(old, new, 1)
+
+    once(
+        '      <div class="nav secondaryNav" data-view="users"><b>♙</b><span>Usuarios</span></div>\n      <div class="nav secondaryNav" data-view="trash"><b>🗑</b><span>Papelera</span></div>',
+        '      <div class="nav secondaryNav" data-view="users"><b>♙</b><span>Usuarios</span></div>\n      <div class="nav secondaryNav" data-view="system" style="display:none"><b>●</b><span>Estado del sistema</span></div>\n      <div class="nav secondaryNav" data-view="trash"><b>🗑</b><span>Papelera</span></div>',
+        'nav'
+    )
+
+    system_view = '''   <section id="view-system" class="hidden">
+    <div class="card systemStatusCard">
+      <div class="systemStatusHead">
+        <div>
+          <h2>Estado del sistema</h2>
+          <p class="small">Diagnóstico rápido del CRM. Visible solo para administradores.</p>
+        </div>
+        <button id="systemRefresh" class="primary">Actualizar estado</button>
+      </div>
+      <div class="systemStatusGrid">
+        <div class="systemStatusBox"><span id="systemAppDot" class="systemDot systemDotPending"></span><div><strong>Aplicación / Vercel</strong><small id="systemAppText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemGreenDot" class="systemDot systemDotPending"></span><div><strong>GREEN-API / WhatsApp</strong><small id="systemGreenText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemSupabaseDot" class="systemDot systemDotPending"></span><div><strong>Supabase</strong><small id="systemSupabaseText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemFrontDot" class="systemDot systemDotPending"></span><div><strong>Frontend</strong><small id="systemFrontText">Sin comprobar</small></div></div>
+      </div>
+      <div id="systemBanner" class="systemBanner systemBannerPending">Comprobando estado general…</div>
+      <div class="systemStatusMeta">Última comprobación: <b id="systemCheckedAt">—</b></div>
+    </div>
+    <div class="card">
+      <div class="systemStatusHead">
+        <div><h3>Últimos fallos detectados</h3><p class="small">Errores JavaScript y respuestas HTTP 4xx/5xx detectadas en este navegador.</p></div>
+        <button id="systemClearErrors" class="secondary">Limpiar historial</button>
+      </div>
+      <div id="systemErrorList" class="systemErrorList"><div class="small">No hay fallos registrados.</div></div>
+    </div>
+   </section>
+
+'''
+    once('   <section id="view-users" class="hidden">', system_view + '   <section id="view-users" class="hidden">', 'view')
+
+    once(
+        '["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","labels","settings","automations","users","trash"]',
+        '["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","labels","settings","automations","users","system","trash"]',
+        'view-list'
+    )
+
+    once(
+        'document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{\n closeOpenDetailScreensForNavigation();',
+        'document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{\n if(n.dataset.view==="system" && !perms?.is_admin){alert("Solo el administrador puede ver Estado del sistema.");return}\n closeOpenDetailScreensForNavigation();',
+        'admin-guard'
+    )
+
+    once(
+        ' if(n.dataset.view==="users")loadUsersAdmin();\n});',
+        ' if(n.dataset.view==="users")loadUsersAdmin();\n if(n.dataset.view==="system")loadSystemStatus();\n});',
+        'system-load'
+    )
+
+    once(
+        '  crmShowNav(\'.nav[data-view="users"]\',crmCan("can_manage_users"));',
+        '  crmShowNav(\'.nav[data-view="users"]\',crmCan("can_manage_users"));\n  crmShowNav(\'.nav[data-view="system"]\',!!perms?.is_admin);',
+        'expanded-permissions'
+    )
+
+    once(
+        ' show(\'[data-view="users"]\',perms?.can_manage_users);',
+        ' show(\'[data-view="users"]\',perms?.can_manage_users);\n show(\'[data-view="system"]\',admin);',
+        'legacy-permissions'
+    )
+
+    css = '''
+<style id="tpfSystemStatusStyles">
+.systemStatusHead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.systemStatusGrid{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px;margin:18px 0}
+.systemStatusBox{border:1px solid var(--line);border-radius:10px;padding:15px;display:flex;align-items:center;gap:12px;background:#fff}
+.systemStatusBox strong{display:block;font-size:13px}.systemStatusBox small{display:block;margin-top:4px;color:var(--muted);line-height:1.35}
+.systemDot{width:13px;height:13px;border-radius:50%;flex:0 0 13px;background:#aab2bf;box-shadow:0 0 0 4px rgba(130,140,155,.12)}
+.systemDotOk{background:#19ad69;box-shadow:0 0 0 4px rgba(25,173,105,.12)}
+.systemDotWarn{background:#e7a617;box-shadow:0 0 0 4px rgba(231,166,23,.13)}
+.systemDotBad{background:#d94349;box-shadow:0 0 0 4px rgba(217,67,73,.12)}
+.systemDotPending{background:#8c96a6}
+.systemBanner{border-radius:9px;padding:12px 14px;font-weight:750;font-size:13px;margin-top:8px}
+.systemBannerOk{background:#eaf8f1;color:#14774b;border:1px solid #bde8d2}.systemBannerWarn{background:#fff7e5;color:#8a6111;border:1px solid #eed59a}.systemBannerBad{background:#fff0f1;color:#a72e36;border:1px solid #efc2c6}.systemBannerPending{background:#f3f5f8;color:#667186;border:1px solid #e1e5eb}
+.systemStatusMeta{margin-top:11px;color:var(--muted);font-size:12px}.systemErrorList{display:grid;gap:8px;margin-top:12px}.systemErrorItem{border:1px solid #ead4d6;background:#fffafa;border-radius:8px;padding:10px 12px;font-size:12px}.systemErrorItem b{display:block;color:#9f3038;margin-bottom:3px}.systemErrorItem small{color:#7b8493}
+@media(max-width:750px){.systemStatusGrid{grid-template-columns:1fr}}
+</style>
+'''
+    once('</head>', css + '</head>', 'css')
+
+    js = '''
+<script id="tpfSystemStatusScript">
+(function(){
+  const KEY='tpf_system_errors_v1';
+  const maxErrors=30;
+  function readErrors(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){return[]}}
+  function writeErrors(items){try{localStorage.setItem(KEY,JSON.stringify(items.slice(0,maxErrors)))}catch(_){}}
+  function recordError(type,message,detail){
+    const items=readErrors();
+    items.unshift({type:String(type||'Error'),message:String(message||'Error desconocido').slice(0,500),detail:String(detail||'').slice(0,700),at:new Date().toISOString()});
+    writeErrors(items);
+    if(!document.getElementById('view-system')?.classList.contains('hidden')) renderSystemErrors();
+  }
+  window.addEventListener('error',e=>recordError('JavaScript',e.message,e.filename?`${e.filename}:${e.lineno||''}`:''));
+  window.addEventListener('unhandledrejection',e=>recordError('Promesa',e.reason?.message||String(e.reason||'Unhandled rejection'),''));
+
+  const originalFetch=window.fetch.bind(window);
+  window.fetch=async function(...args){
+    try{
+      const r=await originalFetch(...args);
+      const url=String(typeof args[0]==='string'?args[0]:args[0]?.url||'');
+      if(r.status>=400 && !url.includes('/api/green-health')) recordError(`HTTP ${r.status}`,url,r.statusText||'');
+      return r;
+    }catch(e){
+      const url=String(typeof args[0]==='string'?args[0]:args[0]?.url||'');
+      recordError('Red',url,e?.message||String(e));
+      throw e;
+    }
+  };
+
+  function setState(dotId,textId,state,text){
+    const dot=document.getElementById(dotId), out=document.getElementById(textId);
+    if(dot)dot.className='systemDot '+(state==='ok'?'systemDotOk':state==='warn'?'systemDotWarn':state==='bad'?'systemDotBad':'systemDotPending');
+    if(out)out.textContent=text;
+  }
+
+  window.renderSystemErrors=function(){
+    const box=document.getElementById('systemErrorList'); if(!box)return;
+    const items=readErrors();
+    if(!items.length){box.innerHTML='<div class="small">No hay fallos registrados en este navegador.</div>';return}
+    const escText=v=>String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    box.innerHTML=items.map(x=>`<div class="systemErrorItem"><b>${escText(x.type)} · ${escText(x.message)}</b><div>${escText(x.detail)}</div><small>${new Date(x.at).toLocaleString('es-ES')}</small></div>`).join('');
+  };
+
+  window.loadSystemStatus=async function(){
+    if(!perms?.is_admin)return;
+    setState('systemAppDot','systemAppText','pending','Comprobando…');
+    setState('systemGreenDot','systemGreenText','pending','Comprobando…');
+    setState('systemSupabaseDot','systemSupabaseText','pending','Comprobando…');
+    setState('systemFrontDot','systemFrontText','pending','Comprobando…');
+    const banner=document.getElementById('systemBanner'); if(banner){banner.className='systemBanner systemBannerPending';banner.textContent='Comprobando estado general…'}
+
+    let app='bad',green='bad',supa='bad';
+    try{
+      const r=await originalFetch(location.pathname||'/',{method:'HEAD',cache:'no-store'});
+      app=r.ok?'ok':'bad'; setState('systemAppDot','systemAppText',app,r.ok?'Aplicación online y respondiendo':'La aplicación no responde correctamente');
+    }catch(e){setState('systemAppDot','systemAppText','bad','Error de conexión con la aplicación')}
+
+    try{
+      const r=await originalFetch('/api/green-health',{cache:'no-store'}); const d=await r.json().catch(()=>null);
+      if(r.ok && d?.providerHealthy===true && d?.degraded!==true && String(d?.state||'').toLowerCase()==='authorized'){
+        green='ok';setState('systemGreenDot','systemGreenText','ok','Authorized · proveedor sano');
+      }else if(r.ok){green='warn';setState('systemGreenDot','systemGreenText','warn',`Degradado · ${d?.state||'estado desconocido'}`)}
+      else setState('systemGreenDot','systemGreenText','bad',`Error HTTP ${r.status}`);
+    }catch(e){setState('systemGreenDot','systemGreenText','bad','No se pudo comprobar GREEN-API')}
+
+    try{
+      const result=await sb.auth.getSession();
+      if(result?.error)throw result.error;
+      supa='ok';setState('systemSupabaseDot','systemSupabaseText','ok','Conexión y sesión operativas');
+    }catch(e){setState('systemSupabaseDot','systemSupabaseText','bad',e?.message||'Error de conexión')}
+
+    const errors=readErrors();
+    const recent=errors.filter(x=>Date.now()-new Date(x.at).getTime()<3600000);
+    const front=recent.length?'warn':'ok';
+    setState('systemFrontDot','systemFrontText',front,recent.length?`${recent.length} fallo(s) registrado(s) en la última hora`:'Sin fallos recientes registrados');
+
+    const states=[app,green,supa,front];
+    const overall=states.includes('bad')?'bad':states.includes('warn')?'warn':'ok';
+    if(banner){
+      banner.className='systemBanner '+(overall==='ok'?'systemBannerOk':overall==='warn'?'systemBannerWarn':'systemBannerBad');
+      banner.textContent=overall==='ok'?'Todo operativo':overall==='warn'?'Sistema operativo con avisos':'Hay un problema que requiere revisión';
+    }
+    const checked=document.getElementById('systemCheckedAt');if(checked)checked.textContent=new Date().toLocaleString('es-ES');
+    renderSystemErrors();
+  };
+
+  document.addEventListener('click',e=>{
+    if(e.target?.id==='systemRefresh')loadSystemStatus();
+    if(e.target?.id==='systemClearErrors'){writeErrors([]);renderSystemErrors();loadSystemStatus();}
+  });
+})();
+</script>
+'''
+    once('</body>', js + '</body>', 'js')
+    p.write_text(s, encoding='utf-8')
+
+Path('tests/e2e/crm-system-status.spec.js').write_text('''const { test, expect } = require('@playwright/test');
+
+test('Estado del sistema: visible para admin y carga diagnóstico', async ({ page }) => {
+  await page.goto('/');
+  await page.getByPlaceholder(/correo|email/i).fill(process.env.CRM_TEST_EMAIL);
+  await page.getByPlaceholder(/contraseña|password/i).fill(process.env.CRM_TEST_PASSWORD);
+  await page.getByRole('button', { name: /entrar|iniciar/i }).click();
+  await expect(page.locator('.nav[data-view="system"]')).toBeVisible();
+  await page.locator('.nav[data-view="system"]').click();
+  await expect(page.locator('#view-system h2')).toHaveText('Estado del sistema');
+  await expect(page.locator('#systemCheckedAt')).not.toHaveText('—', { timeout: 15000 });
+  await expect(page.locator('#systemBanner')).not.toContainText('Comprobando', { timeout: 15000 });
+});
+''', encoding='utf-8')
