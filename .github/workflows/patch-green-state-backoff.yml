@@ -1,0 +1,63 @@
+name: Patch GREEN state backoff
+
+on:
+  push:
+    branches:
+      - work/crm-unica-20260825
+    paths:
+      - '.github/green-state-backoff.trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/crm-unica-20260825
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply GREEN state backoff
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('api/green.js')
+          s=p.read_text()
+
+          if not s.startswith('let greenStateCache'):
+              s='''let greenStateCache = { at: 0, data: null };\nlet greenStateBackoffUntil = 0;\n\n'''+s
+
+          s=s.replace(
+            'if (!(retryable && r.status >= 500 && attempt < 2)) throw err;',
+            'if (!(retryable && (r.status === 429 || r.status >= 500) && attempt < 2)) throw err;'
+          )
+          s=s.replace(
+            'if (!(retryable && attempt < 2 && (!err?.status || err.status >= 500))) throw err;',
+            'if (!(retryable && attempt < 2 && (!err?.status || err.status === 429 || err.status >= 500))) throw err;'
+          )
+          s=s.replace(
+            'await greenSleep(250 * (attempt + 1));',
+            'await greenSleep(lastError?.status === 429 ? 1000 * (attempt + 1) : 250 * (attempt + 1));'
+          )
+
+          old='''    if (req.method === "GET" && action === "state") {\n      const data = await greenFetch("getStateInstance");\n      return res.status(200).json({ ok: true, state: data?.stateInstance || "", data });\n    }'''
+          new='''    if (req.method === "GET" && action === "state") {\n      const now = Date.now();\n      if (greenStateCache.data && now - greenStateCache.at < 30000) {\n        return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true });\n      }\n      if (greenStateCache.data && now < greenStateBackoffUntil) {\n        return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true, degraded: true });\n      }\n      try {\n        const data = await greenFetch("getStateInstance");\n        greenStateCache = { at: Date.now(), data };\n        greenStateBackoffUntil = 0;\n        return res.status(200).json({ ok: true, state: data?.stateInstance || "", data });\n      } catch (e) {\n        if (e?.status === 429 || e?.status === 404) {\n          greenStateBackoffUntil = Date.now() + (e.status === 429 ? 60000 : 15000);\n          if (greenStateCache.data) {\n            return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true, degraded: true, providerStatus: e.status });\n          }\n          return res.status(200).json({ ok: true, state: "unknown", data: null, degraded: true, providerStatus: e.status });\n        }\n        throw e;\n      }\n    }'''
+          if old not in s:
+              raise SystemExit('state block not found')
+          s=s.replace(old,new)
+          p.write_text(s)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add api/green.js
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Añade backoff y caché al estado GREEN-API"
+          git push origin HEAD:work/crm-unica-20260825
