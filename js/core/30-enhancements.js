@@ -51,7 +51,7 @@ function crmRenderCustomFieldsManager(){
 }
 $("customFieldType").onchange=()=>$("customFieldOptionsWrap").classList.toggle("hidden",$("customFieldType").value!=="select");
 $("customFieldsManageBtn").onclick=async()=>{await crmLoadCustomFields();$("customFieldsModal").classList.remove("hidden")};
-$("contactCustomFieldsManage").onclick=$("customFieldsManageBtn").onclick;
+if($("contactCustomFieldsManage")&&$("customFieldsManageBtn"))$("contactCustomFieldsManage").onclick=$("customFieldsManageBtn").onclick;
 $("customFieldsClose").onclick=()=>$("customFieldsModal").classList.add("hidden");
 $("customFieldsModal").onclick=e=>{if(e.target===$("customFieldsModal"))$("customFieldsModal").classList.add("hidden")};
 $("customFieldCreate").onclick=async()=>{

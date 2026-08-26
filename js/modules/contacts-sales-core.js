@@ -307,7 +307,7 @@ function openContactNewOpportunity(){
   setTimeout(()=>$("oppModalTitle")?.focus(),50);
 }
 
-$("cpNewOpp").onclick=$("cpSideNewOpp").onclick=openContactNewOpportunity;
+if($("cpNewOpp"))$("cpNewOpp").onclick=openContactNewOpportunity;if($("cpSideNewOpp"))$("cpSideNewOpp").onclick=openContactNewOpportunity;
 
 
 function localDateTimeValue(date){
@@ -333,7 +333,7 @@ function openContactTaskPage(){
   $("cpTaskContactPhone").textContent=phone||"Sin teléfono";
   $("cpTaskPage").classList.remove("hidden");
 }
-$("cpNewTask").onclick=$("cpSideNewTask").onclick=openContactTaskPage;
+if($("cpNewTask"))$("cpNewTask").onclick=openContactTaskPage;if($("cpSideNewTask"))$("cpSideNewTask").onclick=openContactTaskPage;
 $("cpTaskBack").onclick=async()=>{if(!await tpfBackExactly())$("cpTaskPage").classList.add("hidden")};
 
 

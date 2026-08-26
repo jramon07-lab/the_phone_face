@@ -1,6 +1,6 @@
 /* TPF physical module split · generated from app-core.js */
 /* ===== Motor de Automatizaciones CRM v2 ===== */
-let crmAutomations=[];
+var crmAutomations=[];
 let crmAutomationStartedAt=Math.floor(Date.now()/1000);
 const crmAutomationSeenIncoming=new Set();
 

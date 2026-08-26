@@ -365,7 +365,7 @@ function exportUnifiedSearchToExcel(){
 
   XLSX.writeFile(wb,filename,{compression:true});
 }
-$("exportSearchExcel").onclick=exportUnifiedSearchToExcel;
+if($("exportSearchExcel"))$("exportSearchExcel").onclick=exportUnifiedSearchToExcel;
 
 async function renderGroupedSearchResults(rows){
   const order=["LIQUIDACION","DATA","CLAWBACK","AJUSTES","CONTACTOS"];

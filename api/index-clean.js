@@ -40,11 +40,6 @@ module.exports=async function(req,res){
     const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
     const shortCommit=commit.slice(0,8);
 
-    html=html.replace(/\blet\s+waTemplatesCache\s*=/,'waTemplatesCache=');
-    html=html.replace(/\blet\s+waTemplatesRemoteReady\s*=/,'waTemplatesRemoteReady=');
-    const waTdzFix='<script id="tpf-wa-templates-tdz-fix">var waTemplatesCache=[];var waTemplatesRemoteReady=false;</script>';
-    if(!html.includes('id="tpf-wa-templates-tdz-fix"'))html=html.includes('</head>')?html.replace('</head>',waTdzFix+'\n</head>'):waTdzFix+html;
-
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
 
     if(!html.includes('id="tpfWaTemplatesNav"')){

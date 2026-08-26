@@ -53,12 +53,6 @@ const UX_PATCH = String.raw`
 </script>`;
 
 function applyFix(html){
-  const declaration='let crmAutomations=[];';
-  if(html.includes(declaration)){
-    html=html.replace(declaration,'crmAutomations=[];');
-    const early='<script id="tpf-crm-automations-tdz-fix">var crmAutomations=[];</script>';
-    html=html.includes('</head>')?html.replace('</head>',early+'\n</head>'):early+html;
-  }
   return html.includes('</body>')?html.replace('</body>',UX_PATCH+'\n</body>'):html+UX_PATCH;
 }
 

@@ -1481,8 +1481,9 @@ setInterval(waUpdateAdvancedMetrics,60000);
 
 
 /* ===== Plantillas persistentes en Supabase ===== */
-let waTemplatesCache = waLoadTemplates();
-let waTemplatesRemoteReady = false;
+var waTemplatesCache=[];
+var waTemplatesRemoteReady=false;
+waTemplatesCache=waLoadTemplates();
 
 function waLoadTemplates(){
   return Array.isArray(waTemplatesCache) && waTemplatesCache.length
