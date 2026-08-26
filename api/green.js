@@ -280,7 +280,9 @@ export default async function handler(req, res) {
           data
         });
       } catch (e) {
-        if (e?.status === 404 || e?.status === 429) {
+        const providerMessage = String(e?.message || "");
+        const providerNotReady = e?.status === 400 && /(instance.*starting|starting.*not authorized|not authorized|not authorised|not ready)/i.test(providerMessage);
+        if (e?.status === 404 || e?.status === 429 || providerNotReady) {
           return res.status(200).json({
             ok: true,
             chatId,
@@ -288,6 +290,7 @@ export default async function handler(req, res) {
             base64Avatar: "",
             available: false,
             degraded: true,
+            reason: providerNotReady ? "provider_not_ready" : "provider_unavailable",
             providerStatus: e.status
           });
         }
