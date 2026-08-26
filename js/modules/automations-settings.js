@@ -37,6 +37,16 @@
       .tpfAutoPresetButtons button{background:#fff;border:1px solid #cfdcf0;color:#2454a6;padding:8px 10px;font-size:10px}
       .tpfAutoCapabilities{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
       .tpfAutoCapabilities span{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef4ff;color:#315fa7;font-size:9px;font-weight:700}
+      #tpfAutomationHistory{margin-top:16px;padding:14px;border:1px solid #dfe5ea;border-radius:12px;background:#fff}
+      .tpfAutoHistoryHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+      .tpfAutoHistoryHead h3{margin:0;font-size:15px}
+      .tpfAutoHistoryTableWrap{overflow:auto}
+      .tpfAutoHistoryTable{width:100%;border-collapse:collapse;font-size:11px}
+      .tpfAutoHistoryTable th,.tpfAutoHistoryTable td{padding:8px;border-bottom:1px solid #edf0f3;text-align:left;vertical-align:top}
+      .tpfAutoRunOk,.tpfAutoRunError,.tpfAutoRunPending{display:inline-flex;padding:3px 7px;border-radius:999px;font-weight:700}
+      .tpfAutoRunOk{background:#eaf8ef;color:#24723a}.tpfAutoRunError{background:#fff0f0;color:#a32929}.tpfAutoRunPending{background:#fff7df;color:#7a5a00}
+      .tpfAutoHistoryError{max-width:320px;white-space:normal;word-break:break-word}
+      .tpfAutoHistoryEmpty{padding:12px 0;color:#6b7280}
       @media(max-width:980px){#view-automations .automation2Grid{grid-template-columns:1fr!important}}
     `;
     document.head.appendChild(style);
@@ -115,13 +125,68 @@
     else bindPresetButtons(bar);
   }
 
+  function actionLabel(t){
+    return ({create_task:'Crear tarea',create_opportunity:'Crear oportunidad',assign_label:'Asignar etiqueta',schedule_whatsapp:'Programar WhatsApp',send_template:'Enviar plantilla',sequence_label_opportunity_whatsapp:'Secuencia',__send_whatsapp:'Enviar WhatsApp'})[t]||t||'—';
+  }
+  function historyStatus(row){
+    if(row.run_status==='ok') return ['Correcta','tpfAutoRunOk'];
+    if(row.run_status==='error') return ['Error','tpfAutoRunError'];
+    return [row.run_status||'Pendiente','tpfAutoRunPending'];
+  }
+  function fmtHistoryDate(v){
+    try{return new Date(v).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(_){return String(v||'');}
+  }
+  function ensureHistoryPanel(){
+    const view=byId('view-automations');
+    if(!view) return null;
+    let box=byId('tpfAutomationHistory');
+    if(box) return box;
+    box=document.createElement('section');
+    box.id='tpfAutomationHistory';
+    box.innerHTML=`<div class="tpfAutoHistoryHead"><div><h3>Historial de ejecuciones</h3><div class="small">Comprueba qué automatizaciones se ejecutaron y cuáles fallaron.</div></div><button type="button" id="tpfAutoHistoryReload" class="secondary">Actualizar historial</button></div><div id="tpfAutoHistoryBody" class="tpfAutoHistoryEmpty">Cargando…</div>`;
+    view.appendChild(box);
+    byId('tpfAutoHistoryReload')?.addEventListener('click',()=>loadAutomationHistory());
+    return box;
+  }
+  async function loadAutomationHistory(){
+    ensureHistoryPanel();
+    const body=byId('tpfAutoHistoryBody');
+    if(!body || !window.sb) return;
+    body.textContent='Cargando…';
+    try{
+      const {data,error}=await window.sb.rpc('crm_list_automation_execution_history',{p_limit:50});
+      if(error) throw error;
+      const rows=Array.isArray(data)?data:[];
+      if(!rows.length){body.className='tpfAutoHistoryEmpty';body.textContent='Todavía no hay ejecuciones registradas.';return;}
+      body.className='tpfAutoHistoryTableWrap';
+      body.innerHTML=`<table class="tpfAutoHistoryTable"><thead><tr><th>Fecha</th><th>Automatización</th><th>Acción</th><th>Estado</th><th>Detalle</th><th>Acciones</th></tr></thead><tbody>${rows.map(r=>{
+        const [label,cls]=historyStatus(r);
+        const detail=r.error_message?String(r.error_message):'Sin errores';
+        return `<tr><td>${fmtHistoryDate(r.created_at)}</td><td>${window.esc?window.esc(r.automation_name||''):String(r.automation_name||'')}</td><td>${window.esc?window.esc(actionLabel(r.action_type)):actionLabel(r.action_type)}</td><td><span class="${cls}">${label}</span></td><td class="tpfAutoHistoryError">${window.esc?window.esc(detail):detail}</td><td>${r.can_retry&&r.job_id?`<button type="button" class="secondary" data-tpf-auto-retry="${r.job_id}">Reintentar</button>`:'—'}</td></tr>`;
+      }).join('')}</tbody></table>`;
+      body.querySelectorAll('[data-tpf-auto-retry]').forEach(btn=>btn.addEventListener('click',async()=>{
+        if(!confirm('¿Reintentar esta acción segura ahora?')) return;
+        btn.disabled=true;btn.textContent='Reintentando…';
+        try{
+          const {error}=await window.sb.rpc('crm_retry_automation_job_safe',{p_job_id:btn.dataset.tpfAutoRetry});
+          if(error) throw error;
+          btn.textContent='En cola';
+          later(loadAutomationHistory,1500);
+        }catch(e){alert(e?.message||'No se pudo reintentar.');btn.disabled=false;btn.textContent='Reintentar';}
+      }));
+    }catch(e){body.className='tpfAutoHistoryEmpty';body.textContent='No se pudo cargar el historial: '+(e?.message||e);}
+  }
+  window.loadAutomationHistory=loadAutomationHistory;
+
   async function restoreAdvancedAutomations(){
     enableServerAutomationMode();
     ensureAdvancedAutomationBar();
+    ensureHistoryPanel();
     await prepareAutomationOptions();
     renderAutomationConfigs();
     try{if(typeof window.loadAutomations==='function') await window.loadAutomations();}catch(_){}
     ensureAdvancedAutomationBar();
+    await loadAutomationHistory();
   }
 
   M.register('automations-settings',{
@@ -134,6 +199,12 @@
       ]);
       ensureAdvancedStyles();
       ensureAdvancedAutomationBar();
+      ensureHistoryPanel();
+      const reload=byId('auto2Reload');
+      if(reload && reload.dataset.tpfHistoryBound!=='1'){
+        reload.dataset.tpfHistoryBound='1';
+        reload.addEventListener('click',()=>later(loadAutomationHistory,200));
+      }
       document.addEventListener('click',e=>{
         if(e.target?.closest?.('.nav[data-view="automations"]')) later(restoreAdvancedAutomations,120);
       });
