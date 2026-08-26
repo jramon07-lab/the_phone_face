@@ -1,4 +1,5 @@
 const fs=require('fs');
+// One-shot mapper used only during the physical modular split.
 const lines=fs.readFileSync('js/app-core.js','utf8').split(/\r?\n/);
 const groups={
   whatsapp:/\b(wa|whatsapp|green)/i,
