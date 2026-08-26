@@ -423,9 +423,18 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ ok: false, error: "Acción o método no permitido." });
   } catch (e) {
+    const failedAction = String(req.query.action || "").toLowerCase();
+    console.error("GREEN_API_ERROR", {
+      action: failedAction,
+      requestMethod: req.method,
+      greenMethod: e?.greenMethod || null,
+      greenStatus: e?.status || null,
+      message: e?.message || String(e)
+    });
     return res.status(502).json({
       ok: false,
       error: e?.message || String(e),
+      action: failedAction,
       greenMethod: e?.greenMethod || null,
       greenStatus: e?.status || null
     });
