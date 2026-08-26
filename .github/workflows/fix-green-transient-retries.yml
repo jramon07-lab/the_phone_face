@@ -1,4 +1,5 @@
 name: Fix GREEN transient retries
+# Ejecuta el parche seguro al cambiar este workflow.
 
 on:
   push:
