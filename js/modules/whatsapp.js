@@ -99,6 +99,73 @@
     return String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
   }
 
+  function ensureWhatsappUxStyles(){
+    if(document.getElementById('tpfWhatsappUxFixes'))return;
+    const style=document.createElement('style');
+    style.id='tpfWhatsappUxFixes';
+    style.textContent=`
+      #view-whatsapplive .waChatActive.hidden{display:none!important}
+      #view-whatsapplive .waChatEmpty.hidden{display:none!important}
+      #view-whatsapplive .waLivePage{padding-bottom:18px!important}
+      #view-whatsapplive .waLiveLayout{min-height:0!important}
+      #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important}
+      #view-whatsapplive .waComposer{margin-bottom:12px!important;padding-bottom:12px!important}
+      #waMiniStats span{cursor:pointer;user-select:none}
+      #waMiniStats span:hover{filter:brightness(.97)}
+      #waMiniStats span[role="button"]{outline-offset:2px}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function clickWhatsappTab(tab){
+    const btn=document.querySelector(`#view-whatsapplive [data-wa-tab="${tab}"]`);
+    if(btn){btn.click();return true;}
+    return false;
+  }
+
+  function bindTopWhatsappFilters(){
+    [['waStatUnread','unread'],['waStatWaiting','unanswered']].forEach(([id,tab])=>{
+      const badge=document.getElementById(id);
+      const hit=badge?.closest('span')||badge;
+      if(!hit||hit.dataset.tpfTopFilterBound==='1')return;
+      hit.dataset.tpfTopFilterBound='1';
+      hit.setAttribute('role','button');
+      hit.setAttribute('tabindex','0');
+      hit.setAttribute('title',tab==='unread'?'Ver conversaciones no leídas':'Ver conversaciones sin responder');
+      const run=e=>{
+        if(e?.type==='keydown' && e.key!=='Enter' && e.key!==' ')return;
+        e?.preventDefault?.();
+        clickWhatsappTab(tab);
+      };
+      hit.addEventListener('click',run);
+      hit.addEventListener('keydown',run);
+    });
+  }
+
+  function normalizeInitialWhatsappView(){
+    const view=document.getElementById('view-whatsapplive');
+    if(!view||view.classList.contains('hidden'))return;
+    const active=document.getElementById('waChatActive');
+    const empty=document.getElementById('waChatEmpty');
+    const selected=active && !active.classList.contains('hidden');
+    if(selected){empty?.classList.add('hidden');return;}
+    const first=document.querySelector('#waLiveChats .waChatRow');
+    if(first){
+      first.click();
+      return;
+    }
+    active?.classList.add('hidden');
+    empty?.classList.remove('hidden');
+  }
+
+  function scheduleWhatsappUiNormalize(){
+    [80,220,650].forEach(ms=>setTimeout(()=>{
+      ensureWhatsappUxStyles();
+      bindTopWhatsappFilters();
+      normalizeInitialWhatsappView();
+    },ms));
+  }
+
   async function refreshProgramRows(baseLoad){
     const result=await baseLoad();
     try{
@@ -139,6 +206,25 @@
         'waSendCurrent','waSendText','waSendMedia','waOpenTemplates','waCloseTemplates'
       ]);
       M.wrapGlobals('whatsapp',['waApi'],{rethrow:['waApi']});
+
+      ensureWhatsappUxStyles();
+      bindTopWhatsappFilters();
+      document.querySelectorAll('[data-view="whatsapplive"]').forEach(el=>{
+        if(el.dataset.tpfWhatsappOpenBound==='1')return;
+        el.dataset.tpfWhatsappOpenBound='1';
+        el.addEventListener('click',scheduleWhatsappUiNormalize);
+      });
+
+      const baseLoadLive=window.loadWhatsAppLive;
+      if(typeof baseLoadLive==='function'&&!baseLoadLive.__tpfInitialViewFix){
+        const enhancedLoad=async function(...args){
+          const result=await baseLoadLive.apply(this,args);
+          scheduleWhatsappUiNormalize();
+          return result;
+        };
+        enhancedLoad.__tpfInitialViewFix=true;
+        window.loadWhatsAppLive=enhancedLoad;
+      }
 
       const baseApi=window.waApi;
       if(typeof baseApi==='function' && !baseApi.__tpfGreenGuard){
@@ -230,6 +316,8 @@
         if(!confirm('El resultado anterior es incierto. Reprogramarlo podría duplicar el mensaje si ya llegó. ¿Quieres continuar?'))return;
         if(typeof window.editProgrammedWhatsapp==='function')window.editProgrammedWhatsapp(id);
       };
+
+      scheduleWhatsappUiNormalize();
     }
   });
 })();
