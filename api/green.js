@@ -483,7 +483,9 @@ export default async function handler(req, res) {
       greenStatus: e?.status || null,
       message: e?.message || String(e)
     });
-    return res.status(502).json({
+    const providerStatus = Number(e?.status || 0);
+    const responseStatus = providerStatus >= 400 && providerStatus < 500 ? providerStatus : 502;
+    return res.status(responseStatus).json({
       ok: false,
       error: e?.message || String(e),
       action: failedAction,
