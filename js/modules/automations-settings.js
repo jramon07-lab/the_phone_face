@@ -55,17 +55,18 @@
     },20);
   }
 
-  function ensureAdvancedAutomationBar(){
-    const view=byId('view-automations');
-    if(!view||byId('tpfAutomationAdvancedBar')) return;
-    const grid=view.querySelector('.automation2Grid');
-    if(!grid) return;
-    ensureAdvancedStyles();
-    const bar=document.createElement('div');
-    bar.id='tpfAutomationAdvancedBar';
+  function bindPresetButtons(bar){
+    bar.querySelectorAll('[data-auto-preset]').forEach(btn=>{
+      if(btn.dataset.tpfPresetBound==='1') return;
+      btn.dataset.tpfPresetBound='1';
+      btn.addEventListener('click',()=>applyPreset(btn.dataset.autoPreset));
+    });
+  }
+
+  function fillAdvancedBar(bar){
     bar.innerHTML=`
       <h3>⚡ Constructor avanzado activo</h3>
-      <div class="small">Elige una automatización rápida o configura manualmente CUANDO → HACER.</div>
+      <div class="small">Motor completo activo: elige una automatización rápida o configura manualmente CUANDO → HACER.</div>
       <div class="tpfAutoCapabilities">
         <span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta asignada</span><span>Sin respuesta</span>
         <span>Tarea</span><span>Oportunidad</span><span>Etiqueta</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span>
@@ -75,8 +76,23 @@
         <button type="button" data-auto-preset="unanswered">Sin respuesta → tarea</button>
         <button type="button" data-auto-preset="sequence">Etiqueta → oportunidad + WhatsApp</button>
       </div>`;
-    grid.insertAdjacentElement('beforebegin',bar);
-    bar.querySelectorAll('[data-auto-preset]').forEach(btn=>btn.addEventListener('click',()=>applyPreset(btn.dataset.autoPreset)));
+    bindPresetButtons(bar);
+  }
+
+  function ensureAdvancedAutomationBar(){
+    const view=byId('view-automations');
+    if(!view) return;
+    const grid=view.querySelector('.automation2Grid');
+    if(!grid) return;
+    ensureAdvancedStyles();
+    let bar=byId('tpfAutomationAdvancedBar');
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='tpfAutomationAdvancedBar';
+      grid.insertAdjacentElement('beforebegin',bar);
+    }
+    if(bar.querySelectorAll('[data-auto-preset]').length!==3 || !bar.textContent.includes('Constructor avanzado activo')) fillAdvancedBar(bar);
+    else bindPresetButtons(bar);
   }
 
   async function restoreAdvancedAutomations(){
@@ -84,6 +100,7 @@
     await prepareAutomationOptions();
     renderAutomationConfigs();
     try{if(typeof window.loadAutomations==='function') await window.loadAutomations();}catch(_){}
+    ensureAdvancedAutomationBar();
   }
 
   M.register('automations-settings',{
