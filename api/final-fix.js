@@ -11,7 +11,20 @@ function captureResponse(resolve,reject){
   };
 }
 
+function relocateLateModals(html){
+  const blockStart=html.indexOf('<div id="contactLabelsModal"');
+  const blockEnd=blockStart>=0?html.indexOf('<script id="tpf-v13-final-bindings">',blockStart):-1;
+  const bindPos=html.indexOf('$("contactManageLabels").onclick');
+  if(blockStart<0||blockEnd<0||bindPos<0||blockStart<bindPos)return html;
+  const scriptStart=html.lastIndexOf('<script',bindPos);
+  if(scriptStart<0)return html;
+  const modalBlock=html.slice(blockStart,blockEnd);
+  html=html.slice(0,blockStart)+html.slice(blockEnd);
+  return html.slice(0,scriptStart)+modalBlock+html.slice(scriptStart);
+}
+
 function applyFinalFix(html){
+  html=relocateLateModals(html);
   html=html.replace('$("exportSearchExcel").onclick=exportUnifiedSearchToExcel;','if($("exportSearchExcel"))$("exportSearchExcel").onclick=exportUnifiedSearchToExcel;');
   html=html.replace('$("cpNewOpp").onclick=$("cpSideNewOpp").onclick=openContactNewOpportunity;','if($("cpNewOpp"))$("cpNewOpp").onclick=openContactNewOpportunity;if($("cpSideNewOpp"))$("cpSideNewOpp").onclick=openContactNewOpportunity;');
   html=html.replace('$("cpNewTask").onclick=$("cpSideNewTask").onclick=openContactTaskPage;','if($("cpNewTask"))$("cpNewTask").onclick=openContactTaskPage;if($("cpSideNewTask"))$("cpSideNewTask").onclick=openContactTaskPage;');
@@ -33,9 +46,10 @@ module.exports=async function(req,res){
   try{
     const captured=await new Promise((resolve,reject)=>clean(req,captureResponse(resolve,reject)).catch(reject));
     Object.entries(captured.headers).forEach(([k,v])=>res.setHeader(k,v));
-    res.setHeader('X-TPF-Final-Fix','trace-stack+logout-rescue-v3');
+    res.setHeader('X-TPF-Final-Fix','late-modals-before-bindings+logout-rescue-v4');
     res.status(captured.statusCode).send(applyFinalFix(captured.body));
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));}
 };
 
 module.exports.applyFinalFix=applyFinalFix;
+module.exports.relocateLateModals=relocateLateModals;
