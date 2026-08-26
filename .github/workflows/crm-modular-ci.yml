@@ -26,8 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Critical structure guard
-        run: node scripts/release-guard.js
+      - name: Critical modular structure guard
+        run: node scripts/modular-guard.js
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
