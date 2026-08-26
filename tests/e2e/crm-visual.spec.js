@@ -42,7 +42,15 @@ test('Automatizaciones muestra constructor avanzado y presets reales', async ({ 
   await expect(bar).toBeVisible();
   await expect(bar).toContainText('Constructor avanzado');
   await expect(bar).toContainText('Motor completo activo');
+  await expect(bar).toContainText('Servidor 24/7');
   await expect(bar.locator('[data-auto-preset]')).toHaveCount(3);
+
+  const serverMode=await page.evaluate(()=>({
+    flag: window.TPF_SERVER_AUTOMATIONS===true,
+    gated: window.auto2Execute?.__tpfServerGate===true,
+    originalSaved: typeof window.__tpfAuto2ExecuteLocal==='function'
+  }));
+  expect(serverMode).toEqual({flag:true,gated:true,originalSaved:true});
 
   await bar.locator('[data-auto-preset="renewal"]').click();
   await expect(page.locator('#auto2Trigger')).toHaveValue('message_contains');
