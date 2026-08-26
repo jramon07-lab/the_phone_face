@@ -31,6 +31,12 @@
     }
   }
 
+  function providerNotReadyError(err){
+    const status=Number(err?.status||err?.greenStatus||0);
+    const text=String(err?.message||err?.error||err||'').toLowerCase();
+    return status===400 && (text.includes('starting')||text.includes('not authorized')||text.includes('not authorised'));
+  }
+
   function scheduledStatus(row){
     if(row?.status==='cancelled') return {key:'cancelled',label:'Cancelado'};
     const raw=String(row?.whatsapp_delivery_status||'').toLowerCase();
@@ -113,6 +119,15 @@
               return {ok:true,available:false,degraded:true,state,reason:'provider_not_ready'};
             }
             body.chatId=chatId;
+            try{
+              return await baseApi.call(this,action,body);
+            }catch(err){
+              if(providerNotReadyError(err)){
+                greenStateCache={at:Date.now(),state:'starting'};
+                return {ok:true,available:false,degraded:true,state:'starting',reason:'provider_not_ready'};
+              }
+              throw err;
+            }
           }
 
           return baseApi.call(this,action,body);
