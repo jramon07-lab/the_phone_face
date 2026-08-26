@@ -57,10 +57,12 @@ jobs:
           VERCEL_AUTOMATION_BYPASS_SECRET: local-modular-preview
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
-        run: npx playwright test tests/e2e/crm-*.spec.js --grep-invert "GREEN-API: instancia autorizada y proveedor sano"
+        run: |
+          npx playwright test tests/e2e/crm-*.spec.js --grep-invert "GREEN-API: instancia autorizada y proveedor sano"
 
       - name: Explain external integration validation
-        run: echo "GREEN-API se valida en CRM Browser Validation contra el despliegue real de Vercel; el preview local no expone funciones serverless."
+        run: |
+          echo "GREEN-API se valida en CRM Browser Validation contra el despliegue real de Vercel; el preview local no expone funciones serverless."
 
       - name: Upload evidence on failure
         if: failure()
