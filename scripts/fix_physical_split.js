@@ -1,4 +1,5 @@
 const fs=require('fs');
+// One-shot boundary fixer for the physical modular split.
 
 function read(p){return fs.readFileSync(p,'utf8')}
 function write(p,s){fs.writeFileSync(p,s)}
