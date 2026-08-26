@@ -7,6 +7,13 @@ const requiredFiles = [
   'api/green.js',
   'api/green-health.js',
   'api/health.js',
+  'js/modules/runtime.js',
+  'js/modules/whatsapp.js',
+  'js/modules/agenda.js',
+  'js/modules/contacts-sales.js',
+  'js/modules/automations-settings.js',
+  'js/modules/system-status.js',
+  'tests/e2e/crm-module-isolation.spec.js',
   'tests/e2e/crm-smoke.spec.js',
   'tests/e2e/crm-functional.spec.js',
   'tests/e2e/crm-green-health.spec.js',
@@ -31,6 +38,7 @@ const uiSource = sourceFiles
   .join('\n');
 
 const uiMarkers = [
+  'TPF-MODULAR-RUNTIME-v1',
   'tpfWaTemplatesNav',
   'tpfAutomationAdvancedBar',
   'data-view="system"',
@@ -55,6 +63,16 @@ if (fs.existsSync('api/green.js')) {
     } else {
       console.log(`MODULAR_GUARD_OK: GREEN conserva ${marker}`);
     }
+  }
+}
+
+if (fs.existsSync('api/index.js')) {
+  const indexApi=fs.readFileSync('api/index.js','utf8');
+  if(!indexApi.includes('VERCEL_GIT_COMMIT_SHA') || !indexApi.includes("path.join(__dirname,'..','index.html')")){
+    console.error('MODULAR_GUARD_FAIL: api/index.js no sirve el commit desplegado/local index');
+    failed=true;
+  }else{
+    console.log('MODULAR_GUARD_OK: api/index.js usa el índice del despliegue actual');
   }
 }
 
