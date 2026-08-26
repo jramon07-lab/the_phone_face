@@ -2,16 +2,26 @@ const fs = require('fs');
 
 const requiredFiles = [
   'index.html',
+  'assets/app.css',
   'vercel.json',
   'api/index.js',
   'api/green.js',
   'api/green-health.js',
   'api/health.js',
+  'js/core/00-bootstrap.js',
+  'js/core/20-main.js',
+  'js/core/30-enhancements.js',
   'js/modules/runtime.js',
-  'js/modules/whatsapp.js',
-  'js/modules/agenda.js',
+  'js/modules/contacts-sales-core.js',
   'js/modules/contacts-sales.js',
+  'js/modules/whatsapp-scheduling-core.js',
+  'js/modules/whatsapp-green-core.js',
+  'js/modules/whatsapp.js',
+  'js/modules/agenda-core.js',
+  'js/modules/agenda.js',
+  'js/modules/automations-core.js',
   'js/modules/automations-settings.js',
+  'js/modules/system-status-core.js',
   'js/modules/system-status.js',
   'tests/e2e/crm-module-isolation.spec.js',
   'tests/e2e/crm-smoke.spec.js',
@@ -38,6 +48,7 @@ const uiSource = sourceFiles
   .join('\n');
 
 const uiMarkers = [
+  'TPF-PHYSICAL-SPLIT-v1',
   'TPF-MODULAR-RUNTIME-v1',
   'tpfWaTemplatesNav',
   'tpfAutomationAdvancedBar',
@@ -51,6 +62,22 @@ for (const marker of uiMarkers) {
   } else {
     console.log(`MODULAR_GUARD_OK: Marcador funcional presente ${marker}`);
   }
+}
+
+if (fs.existsSync('index.html')) {
+  const html=fs.readFileSync('index.html','utf8');
+  if (/<style(?:\s|>)/i.test(html)) {
+    console.error('MODULAR_GUARD_FAIL: index.html vuelve a contener CSS inline');
+    failed=true;
+  } else console.log('MODULAR_GUARD_OK: index.html sin CSS inline');
+  if (/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/i.test(html)) {
+    console.error('MODULAR_GUARD_FAIL: index.html vuelve a contener JavaScript inline');
+    failed=true;
+  } else console.log('MODULAR_GUARD_OK: index.html sin JavaScript inline');
+  if (html.includes('/js/app-core.js')) {
+    console.error('MODULAR_GUARD_FAIL: index.html todavía carga app-core.js monolítico');
+    failed=true;
+  } else console.log('MODULAR_GUARD_OK: index.html carga módulos físicos');
 }
 
 if (fs.existsSync('api/green.js')) {
@@ -77,4 +104,4 @@ if (fs.existsSync('api/index.js')) {
 }
 
 if (failed) process.exit(1);
-console.log('MODULAR_GUARD_OK: estructura crítica modular válida');
+console.log('MODULAR_GUARD_OK: estructura física modular válida');
