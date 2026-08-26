@@ -166,7 +166,21 @@ export default async function handler(req, res) {
     // Comprueba y activa, solo si hace falta, las notificaciones necesarias
     // para recibir mensajes nuevos por la cola HTTP de GREEN-API.
     if (req.method === "POST" && action === "ensure") {
-      const current = await greenFetch("getSettings");
+      let current;
+      try {
+        current = await greenFetch("getSettings");
+      } catch (e) {
+        if (e?.status === 404 || e?.status === 429) {
+          return res.status(200).json({
+            ok: true,
+            changed: false,
+            degraded: true,
+            providerStatus: e.status,
+            message: "GREEN-API no permitió comprobar ajustes temporalmente; se conserva la configuración actual."
+          });
+        }
+        throw e;
+      }
       const needIncoming = String(current?.incomingWebhook || "").toLowerCase() !== "yes";
       const needOutgoingPhone = String(current?.outgoingMessageWebhook || "").toLowerCase() !== "yes";
       const needOutgoingApi = String(current?.outgoingAPIMessageWebhook || "").toLowerCase() !== "yes";
@@ -251,19 +265,34 @@ export default async function handler(req, res) {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
       if (!chatId) return res.status(400).json({ ok: false, error: "Falta chatId." });
-      const data = await greenFetch("getAvatar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId })
-      });
-      return res.status(200).json({
-        ok: true,
-        chatId,
-        urlAvatar: data?.urlAvatar || "",
-        base64Avatar: data?.base64Avatar || "",
-        available: data?.available !== false,
-        data
-      });
+      try {
+        const data = await greenFetch("getAvatar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId })
+        });
+        return res.status(200).json({
+          ok: true,
+          chatId,
+          urlAvatar: data?.urlAvatar || "",
+          base64Avatar: data?.base64Avatar || "",
+          available: data?.available !== false,
+          data
+        });
+      } catch (e) {
+        if (e?.status === 404 || e?.status === 429) {
+          return res.status(200).json({
+            ok: true,
+            chatId,
+            urlAvatar: "",
+            base64Avatar: "",
+            available: false,
+            degraded: true,
+            providerStatus: e.status
+          });
+        }
+        throw e;
+      }
     }
 
     // Recupera el enlace de un archivo del historial cuando getChatHistory
