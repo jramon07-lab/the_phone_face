@@ -1,3 +1,5 @@
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
@@ -18,28 +20,60 @@ export default async function handler(req, res) {
   const call = async (method) => {
     const url = `${base}/waInstance${id}/${method}/${token}`;
     const started = Date.now();
-    try {
-      const r = await fetch(url, { method: 'GET' });
-      const text = await r.text();
-      let data;
-      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-      return {
-        method,
-        ok: r.ok,
-        status: r.status,
-        ms: Date.now() - started,
-        data: r.ok ? data : undefined,
-        error: r.ok ? undefined : (data?.message || data?.error || String(data || r.statusText))
-      };
-    } catch (e) {
-      return { method, ok: false, status: null, ms: Date.now() - started, error: e?.message || String(e) };
+    let last = null;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const r = await fetch(url, { method: 'GET' });
+        const text = await r.text();
+        let data;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+
+        if (r.ok) {
+          return {
+            method,
+            ok: true,
+            status: r.status,
+            ms: Date.now() - started,
+            attempts: attempt + 1,
+            data,
+            error: null
+          };
+        }
+
+        last = {
+          method,
+          ok: false,
+          status: r.status,
+          ms: Date.now() - started,
+          attempts: attempt + 1,
+          error: data?.message || data?.error || String(data || r.statusText)
+        };
+
+        const transient = r.status === 404 || r.status === 429 || r.status >= 500;
+        if (!transient || attempt === 2) return last;
+        await sleep(r.status === 429 ? 1000 * (attempt + 1) : 500 * (attempt + 1));
+      } catch (e) {
+        last = {
+          method,
+          ok: false,
+          status: null,
+          ms: Date.now() - started,
+          attempts: attempt + 1,
+          error: e?.message || String(e)
+        };
+        if (attempt === 2) return last;
+        await sleep(500 * (attempt + 1));
+      }
     }
+
+    return last || { method, ok: false, status: null, ms: Date.now() - started, attempts: 3, error: 'GREEN-API no respondió.' };
   };
 
-  const [state, settings] = await Promise.all([
-    call('getStateInstance'),
-    call('getSettings')
-  ]);
+  // Secuencial para no lanzar dos comprobaciones simultáneas contra el proveedor.
+  const state = await call('getStateInstance');
+  await sleep(250);
+  const settings = await call('getSettings');
 
   const ok = state.ok && settings.ok;
   return res.status(ok ? 200 : 502).json({
@@ -47,8 +81,8 @@ export default async function handler(req, res) {
     instanceConfigured: true,
     state: state.ok ? state.data?.stateInstance || null : null,
     checks: [
-      { method: state.method, ok: state.ok, status: state.status, ms: state.ms, error: state.error || null },
-      { method: settings.method, ok: settings.ok, status: settings.status, ms: settings.ms, error: settings.error || null }
+      { method: state.method, ok: state.ok, status: state.status, ms: state.ms, attempts: state.attempts, error: state.error || null },
+      { method: settings.method, ok: settings.ok, status: settings.status, ms: settings.ms, attempts: settings.attempts, error: settings.error || null }
     ]
   });
 }
