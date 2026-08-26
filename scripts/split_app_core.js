@@ -1,6 +1,7 @@
 const fs=require('fs');
 const path=require('path');
 
+// One-shot physical split; keeps the original execution order exactly.
 const sourcePath=path.join(process.cwd(),'js','app-core.js');
 const indexPath=path.join(process.cwd(),'index.html');
 const source=fs.readFileSync(sourcePath,'utf8');
