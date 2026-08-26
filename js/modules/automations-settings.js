@@ -5,6 +5,7 @@
 
   const later=(fn,ms=0)=>setTimeout(()=>{try{fn()}catch(e){console.warn('TPF automatizaciones avanzadas',e)}},ms);
   const byId=id=>document.getElementById(id);
+  const safeEsc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
   function enableServerAutomationMode(){
     window.TPF_SERVER_AUTOMATIONS=true;
@@ -151,10 +152,10 @@
   async function loadAutomationHistory(){
     ensureHistoryPanel();
     const body=byId('tpfAutoHistoryBody');
-    if(!body || !window.sb) return;
+    if(!body || typeof sb==='undefined' || !sb) return;
     body.textContent='Cargando…';
     try{
-      const {data,error}=await window.sb.rpc('crm_list_automation_execution_history',{p_limit:50});
+      const {data,error}=await sb.rpc('crm_list_automation_execution_history',{p_limit:50});
       if(error) throw error;
       const rows=Array.isArray(data)?data:[];
       if(!rows.length){body.className='tpfAutoHistoryEmpty';body.textContent='Todavía no hay ejecuciones registradas.';return;}
@@ -162,13 +163,13 @@
       body.innerHTML=`<table class="tpfAutoHistoryTable"><thead><tr><th>Fecha</th><th>Automatización</th><th>Acción</th><th>Estado</th><th>Detalle</th><th>Acciones</th></tr></thead><tbody>${rows.map(r=>{
         const [label,cls]=historyStatus(r);
         const detail=r.error_message?String(r.error_message):'Sin errores';
-        return `<tr><td>${fmtHistoryDate(r.created_at)}</td><td>${window.esc?window.esc(r.automation_name||''):String(r.automation_name||'')}</td><td>${window.esc?window.esc(actionLabel(r.action_type)):actionLabel(r.action_type)}</td><td><span class="${cls}">${label}</span></td><td class="tpfAutoHistoryError">${window.esc?window.esc(detail):detail}</td><td>${r.can_retry&&r.job_id?`<button type="button" class="secondary" data-tpf-auto-retry="${r.job_id}">Reintentar</button>`:'—'}</td></tr>`;
+        return `<tr><td>${fmtHistoryDate(r.created_at)}</td><td>${safeEsc(r.automation_name||'')}</td><td>${safeEsc(actionLabel(r.action_type))}</td><td><span class="${cls}">${safeEsc(label)}</span></td><td class="tpfAutoHistoryError">${safeEsc(detail)}</td><td>${r.can_retry&&r.job_id?`<button type="button" class="secondary" data-tpf-auto-retry="${safeEsc(r.job_id)}">Reintentar</button>`:'—'}</td></tr>`;
       }).join('')}</tbody></table>`;
       body.querySelectorAll('[data-tpf-auto-retry]').forEach(btn=>btn.addEventListener('click',async()=>{
         if(!confirm('¿Reintentar esta acción segura ahora?')) return;
         btn.disabled=true;btn.textContent='Reintentando…';
         try{
-          const {error}=await window.sb.rpc('crm_retry_automation_job_safe',{p_job_id:btn.dataset.tpfAutoRetry});
+          const {error}=await sb.rpc('crm_retry_automation_job_safe',{p_job_id:btn.dataset.tpfAutoRetry});
           if(error) throw error;
           btn.textContent='En cola';
           later(loadAutomationHistory,1500);
