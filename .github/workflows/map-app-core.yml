@@ -1,0 +1,31 @@
+name: Map app core
+
+on:
+  push:
+    branches:
+      - work/crm-modular-20260826
+    paths:
+      - scripts/map_app_core.js
+
+permissions:
+  contents: write
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/crm-modular-20260826
+      - run: node scripts/map_app_core.js
+      - name: Commit map
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add APP_CORE_MAP.txt
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Mapea bloques del núcleo por dominio"
+            git push origin HEAD:work/crm-modular-20260826
+          fi
