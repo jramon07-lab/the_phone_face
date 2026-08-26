@@ -78,6 +78,12 @@ if (fs.existsSync('index.html')) {
     console.error('MODULAR_GUARD_FAIL: index.html todavía carga app-core.js monolítico');
     failed=true;
   } else console.log('MODULAR_GUARD_OK: index.html carga módulos físicos');
+  const splitPos=html.indexOf('TPF-PHYSICAL-SPLIT-v1');
+  const runtimePos=html.indexOf('TPF-MODULAR-RUNTIME-v1');
+  if(splitPos<0||runtimePos<0||splitPos>runtimePos){
+    console.error('MODULAR_GUARD_FAIL: orden físico/runtime inválido');
+    failed=true;
+  }else console.log('MODULAR_GUARD_OK: módulos físicos cargan antes del runtime de aislamiento');
 }
 
 if (fs.existsSync('api/green.js')) {
@@ -100,6 +106,19 @@ if (fs.existsSync('api/index.js')) {
     failed=true;
   }else{
     console.log('MODULAR_GUARD_OK: api/index.js usa el índice del despliegue actual');
+  }
+}
+
+for(const [file,legacyMarker] of [
+  ['api/index-clean.js','tpf-wa-templates-tdz-fix'],
+  ['api/index-fix.js','tpf-crm-automations-tdz-fix']
+]){
+  if(fs.existsSync(file)){
+    const src=fs.readFileSync(file,'utf8');
+    if(src.includes(legacyMarker)){
+      console.error(`MODULAR_GUARD_FAIL: ${file} conserva parche legado ${legacyMarker}`);
+      failed=true;
+    }else console.log(`MODULAR_GUARD_OK: ${file} sin parche TDZ legado`);
   }
 }
 
