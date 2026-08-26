@@ -2,9 +2,27 @@
 (function(){
   const KEY='tpf_system_errors_v1';
   const maxErrors=30;
-  function readErrors(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){return[]}}
+
+  function isExpectedWhatsappTransient(type,message,detail){
+    const t=String(type||'').toLowerCase();
+    const m=String(message||'').toLowerCase();
+    const d=String(detail||'').toLowerCase();
+    const text=`${m} ${d}`;
+    if(text.includes('/api/green?action=notifications') && (t.includes('408') || text.includes('request timeout'))) return true;
+    if(text.includes('/api/green?action=notification') && (t.includes('408') || text.includes('request timeout'))) return true;
+    if(text.includes('/api/green?action=avatar') && (t==='red' || t==='network' || text.includes('load failed') || text.includes('failed to fetch') || text.includes('abort'))) return true;
+    return false;
+  }
+
+  function readErrors(){
+    try{
+      const rows=JSON.parse(localStorage.getItem(KEY)||'[]');
+      return (Array.isArray(rows)?rows:[]).filter(x=>!isExpectedWhatsappTransient(x?.type,x?.message,x?.detail));
+    }catch(_){return[]}
+  }
   function writeErrors(items){try{localStorage.setItem(KEY,JSON.stringify(items.slice(0,maxErrors)))}catch(_){}}
   function recordError(type,message,detail){
+    if(isExpectedWhatsappTransient(type,message,detail)) return;
     const items=readErrors();
     items.unshift({type:String(type||'Error'),message:String(message||'Error desconocido').slice(0,500),detail:String(detail||'').slice(0,700),at:new Date().toISOString()});
     writeErrors(items);
@@ -18,11 +36,13 @@
     try{
       const r=await originalFetch(...args);
       const url=String(typeof args[0]==='string'?args[0]:args[0]?.url||'');
-      if(r.status>=400 && !url.includes('/api/green-health')) recordError(`HTTP ${r.status}`,url,r.statusText||'');
+      if(r.status>=400 && !url.includes('/api/green-health') && !isExpectedWhatsappTransient(`HTTP ${r.status}`,url,r.statusText||'')) {
+        recordError(`HTTP ${r.status}`,url,r.statusText||'');
+      }
       return r;
     }catch(e){
       const url=String(typeof args[0]==='string'?args[0]:args[0]?.url||'');
-      recordError('Red',url,e?.message||String(e));
+      if(!isExpectedWhatsappTransient('Red',url,e?.message||String(e))) recordError('Red',url,e?.message||String(e));
       throw e;
     }
   };
