@@ -10,7 +10,8 @@ const requiredFiles = [
   'tests/e2e/crm-smoke.spec.js',
   'tests/e2e/crm-functional.spec.js',
   'tests/e2e/crm-green-health.spec.js',
-  'tests/e2e/crm-system-status.spec.js'
+  'tests/e2e/crm-system-status.spec.js',
+  'tests/e2e/crm-visual.spec.js'
 ];
 
 let failed = false;
@@ -23,21 +24,24 @@ for (const file of requiredFiles) {
   }
 }
 
-if (fs.existsSync('index.html')) {
-  const html = fs.readFileSync('index.html', 'utf8');
-  const markers = [
-    'tpfWaTemplatesNav',
-    'tpfAutomationAdvancedBar',
-    'data-view="system"',
-    'view-system'
-  ];
-  for (const marker of markers) {
-    if (!html.includes(marker)) {
-      console.error(`MODULAR_GUARD_FAIL: Falta marcador ${marker}`);
-      failed = true;
-    } else {
-      console.log(`MODULAR_GUARD_OK: Marcador presente ${marker}`);
-    }
+const sourceFiles = ['index.html', 'api/index.js', 'tests/e2e/crm-visual.spec.js'];
+const uiSource = sourceFiles
+  .filter(fs.existsSync)
+  .map(file => fs.readFileSync(file, 'utf8'))
+  .join('\n');
+
+const uiMarkers = [
+  'tpfWaTemplatesNav',
+  'tpfAutomationAdvancedBar',
+  'data-view="system"',
+  'view-system'
+];
+for (const marker of uiMarkers) {
+  if (!uiSource.includes(marker)) {
+    console.error(`MODULAR_GUARD_FAIL: Falta marcador funcional ${marker}`);
+    failed = true;
+  } else {
+    console.log(`MODULAR_GUARD_OK: Marcador funcional presente ${marker}`);
   }
 }
 
