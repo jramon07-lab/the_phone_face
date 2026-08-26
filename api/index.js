@@ -1,6 +1,14 @@
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-const RAW_INDEX = 'https://raw.githubusercontent.com/jramon07-lab/the_phone_face/work/crm-unica-20260825/index.html';
+const RAW_BASE = 'https://raw.githubusercontent.com/jramon07-lab/the_phone_face';
+const FALLBACK_RAW_INDEX = RAW_BASE + '/work/crm-unica-20260825/index.html';
+
+function rawIndexUrl(){
+  const sha=String(process.env.VERCEL_GIT_COMMIT_SHA||'').trim();
+  return sha ? `${RAW_BASE}/${sha}/index.html` : FALLBACK_RAW_INDEX;
+}
 
 function getText(url){
   return new Promise((resolve,reject)=>{
@@ -132,7 +140,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>`;
 
 async function buildHtml(){
-  const html=await getText(RAW_INDEX+'?v='+Date.now());
+  let html='';
+  try{
+    html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+  }catch(_){
+    html=await getText(rawIndexUrl()+'?v='+Date.now());
+  }
   return html.includes('</body>')?html.replace('</body>',PATCH+'\n</body>'):html+PATCH;
 }
 
@@ -148,5 +161,5 @@ async function handler(req,res){
 
 handler.buildHtml=buildHtml;
 handler.PATCH=PATCH;
-handler.RAW_INDEX=RAW_INDEX;
+handler.RAW_INDEX=rawIndexUrl();
 module.exports=handler;
