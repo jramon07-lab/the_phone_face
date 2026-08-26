@@ -40,6 +40,17 @@
     }catch(_){}
   }
 
+  function setFieldWhenReady(id,value,attempt=0){
+    const field=byId(id);
+    if(field){
+      field.value=String(value);
+      field.dispatchEvent(new Event('input',{bubbles:true}));
+      field.dispatchEvent(new Event('change',{bubbles:true}));
+      return;
+    }
+    if(attempt<20) setTimeout(()=>setFieldWhenReady(id,value,attempt+1),50);
+  }
+
   async function applyPreset(preset){
     await prepareAutomationOptions();
     const trigger=byId('auto2Trigger');
@@ -49,10 +60,8 @@
     if(preset==='unanswered'){trigger.value='unanswered';action.value='create_task';}
     if(preset==='sequence'){trigger.value='label_assigned';action.value='sequence_label_opportunity_whatsapp';}
     renderAutomationConfigs();
-    later(()=>{
-      if(preset==='renewal'&&byId('auto2Keyword')) byId('auto2Keyword').value='renovación';
-      if(preset==='unanswered'&&byId('auto2UnansweredMinutes')) byId('auto2UnansweredMinutes').value='120';
-    },20);
+    if(preset==='renewal') setFieldWhenReady('auto2Keyword','renovación');
+    if(preset==='unanswered') setFieldWhenReady('auto2UnansweredMinutes','120');
   }
 
   function bindPresetButtons(bar){
