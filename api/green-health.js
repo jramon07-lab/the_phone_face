@@ -70,19 +70,47 @@ export default async function handler(req, res) {
     return last || { method, ok: false, status: null, ms: Date.now() - started, attempts: 3, error: 'GREEN-API no respondió.' };
   };
 
-  // Secuencial para no lanzar dos comprobaciones simultáneas contra el proveedor.
   const state = await call('getStateInstance');
   await sleep(250);
   const settings = await call('getSettings');
 
-  const ok = state.ok && settings.ok;
-  return res.status(ok ? 200 : 502).json({
-    ok,
+  const checks = [state, settings];
+  const isTransientFailure = (check) => !check.ok && (check.status === null || check.status === 404 || check.status === 429 || check.status >= 500);
+  const hardFailure = checks.some((check) => !check.ok && !isTransientFailure(check));
+  const providerHealthy = checks.every((check) => check.ok);
+  const authorized = state.ok && String(state.data?.stateInstance || '').toLowerCase() === 'authorized';
+
+  if (hardFailure) {
+    return res.status(502).json({
+      ok: false,
+      providerHealthy: false,
+      degraded: false,
+      instanceConfigured: true,
+      state: state.ok ? state.data?.stateInstance || null : null,
+      checks: checks.map((check) => ({
+        method: check.method,
+        ok: check.ok,
+        status: check.status,
+        ms: check.ms,
+        attempts: check.attempts,
+        error: check.error || null
+      }))
+    });
+  }
+
+  return res.status(200).json({
+    ok: true,
+    providerHealthy,
+    degraded: !providerHealthy,
     instanceConfigured: true,
-    state: state.ok ? state.data?.stateInstance || null : null,
-    checks: [
-      { method: state.method, ok: state.ok, status: state.status, ms: state.ms, attempts: state.attempts, error: state.error || null },
-      { method: settings.method, ok: settings.ok, status: settings.status, ms: settings.ms, attempts: settings.attempts, error: settings.error || null }
-    ]
+    state: authorized ? 'authorized' : (state.ok ? state.data?.stateInstance || null : 'unknown'),
+    checks: checks.map((check) => ({
+      method: check.method,
+      ok: check.ok,
+      status: check.status,
+      ms: check.ms,
+      attempts: check.attempts,
+      error: check.error || null
+    }))
   });
 }
