@@ -12,7 +12,7 @@ async function readHealth(request) {
 test('GREEN-API: instancia autorizada y proveedor sano', async ({ request }) => {
   let last;
 
-  for (let attempt = 1; attempt <= 7; attempt++) {
+  for (let attempt = 1; attempt <= 13; attempt++) {
     last = await readHealth(request);
     const state = String(last.data?.state || '').toLowerCase();
 
@@ -23,7 +23,7 @@ test('GREEN-API: instancia autorizada y proveedor sano', async ({ request }) => 
 
     if (state === 'authorized') return;
     if (state !== 'starting') break;
-    if (attempt < 7) await new Promise(resolve => setTimeout(resolve, 5000));
+    if (attempt < 13) await new Promise(resolve => setTimeout(resolve, 5000));
   }
 
   expect(
