@@ -1,3 +1,6 @@
+let greenStateCache = { at: 0, data: null };
+let greenStateBackoffUntil = 0;
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
@@ -62,12 +65,12 @@ export default async function handler(req, res) {
         const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
         err.status = r.status;
         lastError = err;
-        if (!(retryable && r.status >= 500 && attempt < 2)) throw err;
+        if (!(retryable && (r.status === 429 || r.status >= 500) && attempt < 2)) throw err;
       } catch (err) {
         lastError = err;
-        if (!(retryable && attempt < 2 && (!err?.status || err.status >= 500))) throw err;
+        if (!(retryable && attempt < 2 && (!err?.status || err.status === 429 || err.status >= 500))) throw err;
       }
-      await greenSleep(250 * (attempt + 1));
+      await greenSleep(lastError?.status === 429 ? 1000 * (attempt + 1) : 250 * (attempt + 1));
     }
     throw lastError || new Error("GREEN-API no respondió.");
   }
@@ -89,13 +92,13 @@ export default async function handler(req, res) {
         err.status = r.status;
         err.greenMethod = method;
         lastError = err;
-        if (!(retryable && r.status >= 500 && attempt < 2)) throw err;
+        if (!(retryable && (r.status === 429 || r.status >= 500) && attempt < 2)) throw err;
       } catch (err) {
         if (!err.greenMethod) err.greenMethod = method;
         lastError = err;
-        if (!(retryable && attempt < 2 && (!err?.status || err.status >= 500))) throw err;
+        if (!(retryable && attempt < 2 && (!err?.status || err.status === 429 || err.status >= 500))) throw err;
       }
-      await greenSleep(250 * (attempt + 1));
+      await greenSleep(lastError?.status === 429 ? 1000 * (attempt + 1) : 250 * (attempt + 1));
     }
     throw lastError || new Error(`GREEN-API ${method} no respondió.`);
   }
@@ -131,8 +134,28 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET" && action === "state") {
-      const data = await greenFetch("getStateInstance");
-      return res.status(200).json({ ok: true, state: data?.stateInstance || "", data });
+      const now = Date.now();
+      if (greenStateCache.data && now - greenStateCache.at < 30000) {
+        return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true });
+      }
+      if (greenStateCache.data && now < greenStateBackoffUntil) {
+        return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true, degraded: true });
+      }
+      try {
+        const data = await greenFetch("getStateInstance");
+        greenStateCache = { at: Date.now(), data };
+        greenStateBackoffUntil = 0;
+        return res.status(200).json({ ok: true, state: data?.stateInstance || "", data });
+      } catch (e) {
+        if (e?.status === 429 || e?.status === 404) {
+          greenStateBackoffUntil = Date.now() + (e.status === 429 ? 60000 : 15000);
+          if (greenStateCache.data) {
+            return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true, degraded: true, providerStatus: e.status });
+          }
+          return res.status(200).json({ ok: true, state: "unknown", data: null, degraded: true, providerStatus: e.status });
+        }
+        throw e;
+      }
     }
 
     if (req.method === "GET" && action === "settings") {
