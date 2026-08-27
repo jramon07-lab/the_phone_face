@@ -99,6 +99,14 @@
     return String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
   }
 
+  function removePreviewWatermark(){
+    document.querySelectorAll('body *').forEach(el=>{
+      if(el.children.length)return;
+      const text=String(el.textContent||'').trim();
+      if(/^PRUEBAS\s*·\s*work\/crm-modular/i.test(text)) el.style.setProperty('display','none','important');
+    });
+  }
+
   function ensureWhatsappUxStyles(){
     let style=document.getElementById('tpfWhatsappUxFixes');
     if(!style){
@@ -112,9 +120,19 @@
         #view-whatsapplive .waLiveLayout{min-height:0!important}
         #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important}
         #view-whatsapplive .waComposer{margin-bottom:8px!important;padding-bottom:8px!important}
-        #waMiniStats span{cursor:pointer;user-select:none}
-        #waMiniStats span:hover{filter:brightness(.97)}
-        #waMiniStats span[role="button"]{outline-offset:2px}
+        #view-whatsapplive .waLiveHeader{margin-bottom:4px!important;gap:8px!important;align-items:flex-start!important;flex-wrap:nowrap!important}
+        #view-whatsapplive .waLiveHeader>div:first-child{min-width:0!important;flex:1 1 auto!important}
+        #view-whatsapplive .waLiveTitle{gap:7px!important;min-width:0!important}
+        #view-whatsapplive .waLiveTitle h2{font-size:27px!important;line-height:1!important;margin:0!important}
+        #view-whatsapplive .waLiveTitle small{display:block!important;font-size:9px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:560px!important}
+        #view-whatsapplive .waLiveLogo{width:34px!important;height:34px!important;font-size:20px!important;flex:0 0 34px!important}
+        #view-whatsapplive .waLiveHeaderActions{display:flex!important;flex-wrap:nowrap!important;white-space:nowrap!important;gap:5px!important;align-items:center!important;flex:0 0 auto!important}
+        #view-whatsapplive .waMiniStats{display:flex!important;flex-wrap:nowrap!important;gap:4px!important;align-items:center!important}
+        #view-whatsapplive .waMiniStats span{cursor:pointer;user-select:none;padding:4px 6px!important;font-size:9px!important;line-height:1!important}
+        #view-whatsapplive .waMiniStats span:hover{filter:brightness(.97)}
+        #view-whatsapplive .waMiniStats span[role="button"]{outline-offset:2px}
+        #view-whatsapplive #waLiveStatus{padding:5px 7px!important;font-size:9px!important;line-height:1!important}
+        #view-whatsapplive #waAnalyticsBtn,#view-whatsapplive #waLiveRefresh{padding:7px 9px!important;font-size:11px!important;line-height:1!important;flex:0 0 auto!important}
       `;
       document.head.appendChild(style);
     }
@@ -128,6 +146,7 @@
         page.style.setProperty('padding-bottom','8px','important');
       }
     }
+    removePreviewWatermark();
   }
 
   function clickWhatsappTab(tab){
@@ -176,6 +195,7 @@
       ensureWhatsappUxStyles();
       bindTopWhatsappFilters();
       normalizeInitialWhatsappView();
+      removePreviewWatermark();
     },ms));
   }
 
@@ -222,6 +242,7 @@
 
       ensureWhatsappUxStyles();
       bindTopWhatsappFilters();
+      removePreviewWatermark();
       document.querySelectorAll('[data-view="whatsapplive"]').forEach(el=>{
         if(el.dataset.tpfWhatsappOpenBound==='1')return;
         el.dataset.tpfWhatsappOpenBound='1';
