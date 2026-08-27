@@ -125,6 +125,7 @@
         #view-whatsapplive .waLiveTitle{gap:7px!important;min-width:0!important}
         #view-whatsapplive .waLiveTitle h2{font-size:27px!important;line-height:1!important;margin:0!important}
         #view-whatsapplive .waLiveTitle small{display:block!important;font-size:9px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:560px!important}
+        #view-whatsapplive .waLiveTitle small>span{display:none!important}
         #view-whatsapplive .waLiveLogo{width:34px!important;height:34px!important;font-size:20px!important;flex:0 0 34px!important}
         #view-whatsapplive .waLiveHeaderActions{display:flex!important;flex-wrap:nowrap!important;white-space:nowrap!important;gap:5px!important;align-items:center!important;flex:0 0 auto!important}
         #view-whatsapplive .waMiniStats{display:flex!important;flex-wrap:nowrap!important;gap:4px!important;align-items:center!important}
