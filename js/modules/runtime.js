@@ -29,6 +29,15 @@
     queue();setTimeout(queue,300);
   }
 
+  function loadContactEditFinal(){
+    if(document.getElementById('tpfContactEditFinalScript'))return;
+    const s=document.createElement('script');
+    s.id='tpfContactEditFinalScript';
+    s.src='/js/modules/contact-edit-final.js';
+    s.async=false;
+    document.head.appendChild(s);
+  }
+
   function loadWhatsappOpportunityPlus(){
     if(document.getElementById('tpfWhatsappOpportunityPlusScript'))return;
     const s=document.createElement('script');
@@ -53,10 +62,10 @@
     s.id='tpfContactProfileScript';
     s.src='/js/modules/contact-profile.js';
     s.async=false;
-    s.onload=loadContactActivityTabs;
+    s.onload=()=>{loadContactEditFinal();loadContactActivityTabs();loadWhatsappOpportunityPlus();};
     document.head.appendChild(s);
   }
 
   const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors};
-  window.TPFModules=api;emit('runtime','ready');setTimeout(installWhatsappLogoutPlacement,0);setTimeout(loadContactProfile,0);setTimeout(loadWhatsappOpportunityPlus,0);
+  window.TPFModules=api;emit('runtime','ready');setTimeout(installWhatsappLogoutPlacement,0);setTimeout(loadContactProfile,0);
 })();
