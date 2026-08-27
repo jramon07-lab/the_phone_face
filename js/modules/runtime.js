@@ -98,19 +98,33 @@
     const style=document.createElement('style');
     style.id='tpfWhatsappLogoutStyle';
     style.textContent=`
-      #view-whatsapplive .tpfWaLogout{padding:7px 9px!important;font-size:11px!important;line-height:1!important;flex:0 0 auto!important;margin:0!important;white-space:nowrap!important}
+      .referenceUser .tpfWaLogout{
+        margin-left:auto!important;
+        padding:6px 9px!important;
+        min-width:auto!important;
+        border:1px solid rgba(255,255,255,.18)!important;
+        border-radius:7px!important;
+        background:rgba(255,255,255,.08)!important;
+        color:#fff!important;
+        font-size:11px!important;
+        line-height:1!important;
+        flex:0 0 auto!important;
+        white-space:nowrap!important;
+      }
+      .referenceUser .tpfWaLogout:hover{background:rgba(255,255,255,.14)!important}
+      .referenceUser:has(.tpfWaLogout) .referenceOnline{display:none!important}
     `;
     document.head.appendChild(style);
 
     const sync=()=>{
       const logout=document.getElementById('logout');
       const home=document.querySelector('.referenceTopUser');
-      const actions=document.querySelector('#view-whatsapplive .waLiveHeaderActions');
+      const sideUser=document.querySelector('.referenceUser');
       const view=document.getElementById('view-whatsapplive');
-      if(!logout||!home||!actions||!view)return;
+      if(!logout||!home||!sideUser||!view)return;
       const inWhatsapp=!view.classList.contains('hidden');
       if(inWhatsapp){
-        if(logout.parentElement!==actions)actions.appendChild(logout);
+        if(logout.parentElement!==sideUser)sideUser.appendChild(logout);
         logout.classList.add('tpfWaLogout');
       }else{
         if(logout.parentElement!==home)home.appendChild(logout);
