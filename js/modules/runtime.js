@@ -47,13 +47,22 @@
     document.head.appendChild(s);
   }
 
+  function loadContactOpenNonBlocking(){
+    if(document.getElementById('tpfContactOpenNonBlockingScript'))return;
+    const s=document.createElement('script');
+    s.id='tpfContactOpenNonBlockingScript';
+    s.src='/js/modules/contact-open-nonblocking.js';
+    s.async=false;
+    document.head.appendChild(s);
+  }
+
   function loadContactProfile(){
     if(document.getElementById('tpfContactProfileScript'))return;
     const s=document.createElement('script');
     s.id='tpfContactProfileScript';
     s.src='/js/modules/contact-profile.js';
     s.async=false;
-    s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();};
+    s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();loadContactOpenNonBlocking();};
     document.head.appendChild(s);
   }
 
