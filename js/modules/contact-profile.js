@@ -10,6 +10,7 @@
   let contactObserver=null;
   let labelsObserver=null;
   let templateTargetQuick=false;
+  let internalSendBusy=false;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -20,9 +21,10 @@
     if(byId('tpfContactProfileProtectionStyles'))return;
     const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
       body:has(#contactModal:not(.hidden)) .referenceSidebar{pointer-events:none!important}
-      #contactModal:not(.hidden){z-index:50000!important;isolation:isolate;pointer-events:auto!important}
+      #contactModal:not(.hidden){z-index:50000!important;pointer-events:auto!important}
       #contactLabelsModal:not(.hidden),#waQuickModal:not(.hidden),#waTemplateModal:not(.hidden){z-index:60000!important;pointer-events:auto!important}
-      #contactModal.tpf-contact-readonly input:disabled,#contactModal.tpf-contact-readonly textarea:disabled,#contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
+      #contactModal.tpf-contact-readonly input[readonly],#contactModal.tpf-contact-readonly textarea[readonly]{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
+      #contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
       .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditActions{display:flex;gap:8px;align-items:center}.tpfContactEditBar button{min-width:120px;position:relative;z-index:3;pointer-events:auto!important;cursor:pointer!important}
       #tpfContactSaveLocal{display:none}.tpf-contact-editing #tpfContactSaveLocal{display:inline-flex!important}
       #contactObservations{width:100%;min-height:88px;resize:vertical}
@@ -43,15 +45,28 @@
     return [...new Set(out)];
   }
 
+  function applyFieldProtection(el,on){
+    if(!el)return;
+    const tag=String(el.tagName||'').toUpperCase();
+    if(tag==='SELECT'){
+      el.disabled=!on;
+      el.setAttribute('aria-disabled',String(!on));
+    }else{
+      el.disabled=false;
+      el.readOnly=!on;
+      el.setAttribute('aria-readonly',String(!on));
+    }
+  }
+
   function setEditMode(on){
     editMode=!!on;
     const root=modal();if(!root)return;
     root.classList.toggle('tpf-contact-readonly',!editMode);
     root.classList.toggle('tpf-contact-editing',editMode);
-    editableFields().forEach(el=>{el.disabled=!editMode;el.setAttribute('aria-disabled',String(!editMode));});
+    editableFields().forEach(el=>applyFieldProtection(el,editMode));
     const toggle=byId('tpfContactEditToggle');if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
     const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
-    const save=saveButton();if(save){save.disabled=!editMode;save.style.display=editMode?'':'none';}
+    const real=saveButton();if(real){real.disabled=!editMode;real.style.display='none';}
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
   }
 
@@ -64,8 +79,6 @@
       const actions=document.createElement('div');actions.className='tpfContactEditActions';
       const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
       const saveLocal=document.createElement('button');saveLocal.id='tpfContactSaveLocal';saveLocal.type='button';saveLocal.className='primary';saveLocal.textContent='Guardar cambios';
-      b.onclick=e=>{e.preventDefault();e.stopPropagation();setEditMode(!editMode);};
-      saveLocal.onclick=e=>{e.preventDefault();e.stopPropagation();const real=saveButton();if(real&&!real.disabled)real.click();};
       actions.append(b,saveLocal);bar.append(title,actions);if(h)h.replaceWith(bar);else data.prepend(bar);
       const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
     }
@@ -91,16 +104,6 @@
         field.placeholder=field.placeholder||'Ej.: ES00 0000 0000 0000 0000';
       }
     });
-    root.querySelectorAll('input[type="text"],textarea').forEach(el=>{el.removeAttribute('pattern');if(!el.classList.contains('tpf-bank-field'))el.removeAttribute('inputmode');});
-  }
-
-  function enhanceCustomTypeSelector(){
-    document.querySelectorAll('select').forEach(sel=>{
-      const scope=sel.closest('.waTemplateCard,[role="dialog"],.modalCard,section,div');
-      if(!scope||!/campos\s+personalizados\s+de\s+contactos/i.test(scope.textContent||''))return;
-      const label=sel.closest('label')?.textContent||sel.parentElement?.textContent||'';if(!/tipo/i.test(label))return;
-      const opt=[...sel.options].find(o=>String(o.value).toLowerCase()==='text'||/^texto$/i.test(o.textContent||''));if(opt)opt.textContent='Texto / alfanumérico (letras y números)';
-    });
   }
 
   function ensureLabelSearch(){
@@ -123,13 +126,15 @@
 
   function openContactWhatsappMenu(){
     const phone=byId('contactPhone')?.value?.trim()||'';if(!phone){alert('Este contacto no tiene teléfono');return;}
-    if(typeof window.openWaQuick==='function')window.openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});else byId('contactWhatsapp')?.click();
-    setTimeout(ensureQuickTemplateButton,20);
+    if(typeof window.openWaQuick==='function')window.openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});
+    else if(typeof openWaQuick==='function')openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});
+    else byId('contactWhatsapp')?.click();
+    setTimeout(()=>{ensureQuickTemplateButton();},20);
   }
 
   function ensureWhatsappMainButton(){
     const quick=modal()?.querySelector('.cpQuick');if(!quick||byId('tpfContactWhatsappMain'))return;
-    const b=document.createElement('button');b.id='tpfContactWhatsappMain';b.type='button';b.textContent='◉ WhatsApp · Enviar / Plantilla / Programar';b.onclick=e=>{e.preventDefault();e.stopPropagation();openContactWhatsappMenu();};quick.insertAdjacentElement('afterend',b);
+    const b=document.createElement('button');b.id='tpfContactWhatsappMain';b.type='button';b.textContent='WhatsApp · Enviar / Plantilla / Programar';quick.insertAdjacentElement('afterend',b);
   }
 
   function ensureQuickTemplateButton(){
@@ -145,6 +150,25 @@
       if(templateTargetQuick){templateTargetQuick=false;try{const list=typeof waLoadTemplates==='function'?waLoadTemplates():[];const t=list?.[i];if(t&&byId('waQuickMessage'))byId('waQuickMessage').value=t.text||'';byId('waTemplateModal')?.classList.add('hidden');byId('waQuickMessage')?.focus();return;}catch(_){}}
       return fn.apply(this,arguments);
     };wrapped.__tpfQuickAware=true;window.waUseTemplate=wrapped;
+  }
+
+  async function sendQuickWhatsappInsideCrm(){
+    if(internalSendBusy)return;
+    const phone=String(byId('waQuickPhone')?.value||'').replace(/\D/g,'');
+    const message=String(byId('waQuickMessage')?.value||'').trim();
+    const msg=byId('waQuickMsg'),btn=byId('waQuickSend');
+    if(!phone){if(msg)msg.textContent='Introduce un teléfono.';return;}
+    if(!message){if(msg)msg.textContent='Escribe un mensaje.';return;}
+    const chatId=(phone.length===9?'34'+phone:phone)+'@c.us';
+    internalSendBusy=true;if(btn)btn.disabled=true;if(msg)msg.textContent='Enviando por WhatsApp…';
+    try{
+      const r=await fetch('/api/green?action=send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId,message})});
+      const d=await r.json().catch(()=>null);if(!r.ok||d?.ok===false)throw new Error(d?.error||d?.message||('HTTP '+r.status));
+      if(msg)msg.textContent='WhatsApp enviado desde el CRM';
+      setTimeout(()=>byId('waQuickModal')?.classList.add('hidden'),500);
+      try{if(typeof loadWhatsappPrograms==='function')loadWhatsappPrograms();}catch(_){}
+    }catch(e){if(msg)msg.textContent=e?.message||'No se pudo enviar el WhatsApp.';}
+    finally{internalSendBusy=false;if(btn)btn.disabled=false;}
   }
 
   async function loadObservation(id){
@@ -165,7 +189,7 @@
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
   function syncUi(){
     const root=modal();if(!root||root.classList.contains('hidden'))return;
-    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();enhanceCustomTypeSelector();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(editMode);
+    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(editMode);
   }
 
   function installObservers(){
@@ -181,8 +205,22 @@
       if(typeof originalOpen==='function')window.openContact=async function(id){
         currentRecordId=id;editMode=false;const p=originalOpen.apply(this,arguments);setTimeout(queueSync,0);setTimeout(queueSync,60);const result=await p;queueSync();loadObservation(id);try{window.applyWhatsappVisibilityForContact?.();}catch(_){}return result;
       };
+
       document.addEventListener('click',e=>{
-        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(enhanceCustomTypeSelector,30);
+        const edit=e.target?.closest?.('#tpfContactEditToggle');
+        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();setEditMode(!editMode);return;}
+        const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
+        if(saveLocal){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=saveButton();if(real&&!real.disabled)real.click();return;}
+        const waMain=e.target?.closest?.('#tpfContactWhatsappMain');
+        if(waMain){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openContactWhatsappMenu();return;}
+        const quickSend=e.target?.closest?.('#waQuickSend');
+        if(quickSend && String(quickSend.dataset.mode||'send')==='send'){
+          e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();sendQuickWhatsappInsideCrm();return;
+        }
+      },true);
+
+      document.addEventListener('click',e=>{
+        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>normalizeCustomFields(),30);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
         if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
       },false);
