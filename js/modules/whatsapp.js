@@ -104,6 +104,7 @@
     const style=document.createElement('style');
     style.id='tpfWhatsappUxFixes';
     style.textContent=`
+      #view-whatsapplive{height:100vh!important;height:100dvh!important}
       #view-whatsapplive .waChatActive.hidden{display:none!important}
       #view-whatsapplive .waChatEmpty.hidden{display:none!important}
       #view-whatsapplive .waLivePage{height:100%!important;padding-bottom:8px!important}
