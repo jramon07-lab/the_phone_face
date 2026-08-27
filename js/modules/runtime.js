@@ -29,49 +29,12 @@
     queue();setTimeout(queue,300);
   }
 
-  function loadWhatsappOpportunityPlus(){
-    if(document.getElementById('tpfWhatsappOpportunityPlusScript'))return;
-    const s=document.createElement('script');
-    s.id='tpfWhatsappOpportunityPlusScript';
-    s.src='/js/modules/whatsapp-opportunity-plus.js';
-    s.async=false;
-    document.head.appendChild(s);
-  }
-
-  function loadContactActivityTabs(){
-    if(document.getElementById('tpfContactActivityTabsScript'))return;
-    const s=document.createElement('script');
-    s.id='tpfContactActivityTabsScript';
-    s.src='/js/modules/contact-activity-tabs.js';
-    s.async=false;
-    document.head.appendChild(s);
-  }
-
-  function loadContactOpenNonBlocking(){
-    if(document.getElementById('tpfContactOpenNonBlockingScript'))return;
-    const s=document.createElement('script');
-    s.id='tpfContactOpenNonBlockingScript';
-    s.src='/js/modules/contact-open-nonblocking.js';
-    s.async=false;
-    document.head.appendChild(s);
-  }
-
-  function loadContactOpportunityActions(){
-    if(document.getElementById('tpfContactOpportunityActionsScript'))return;
-    const s=document.createElement('script');
-    s.id='tpfContactOpportunityActionsScript';
-    s.src='/js/modules/contact-opportunity-actions.js';
-    s.async=false;
-    document.head.appendChild(s);
-  }
-
   function loadContactProfile(){
     if(document.getElementById('tpfContactProfileScript'))return;
     const s=document.createElement('script');
     s.id='tpfContactProfileScript';
     s.src='/js/modules/contact-profile.js';
     s.async=false;
-    s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();loadContactOpenNonBlocking();loadContactOpportunityActions();};
     document.head.appendChild(s);
   }
 
