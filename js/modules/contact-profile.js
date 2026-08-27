@@ -21,6 +21,7 @@
     const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
       body:has(#contactModal:not(.hidden)) .referenceSidebar{pointer-events:none!important}
       #contactModal:not(.hidden){z-index:50000!important;isolation:isolate;pointer-events:auto!important}
+      #contactLabelsModal:not(.hidden),#waQuickModal:not(.hidden),#waTemplateModal:not(.hidden){z-index:60000!important;pointer-events:auto!important}
       #contactModal.tpf-contact-readonly input:disabled,#contactModal.tpf-contact-readonly textarea:disabled,#contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
       .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditActions{display:flex;gap:8px;align-items:center}.tpfContactEditBar button{min-width:120px;position:relative;z-index:3;pointer-events:auto!important;cursor:pointer!important}
       #tpfContactSaveLocal{display:none}.tpf-contact-editing #tpfContactSaveLocal{display:inline-flex!important}
