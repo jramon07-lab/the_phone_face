@@ -56,27 +56,14 @@
     document.head.appendChild(s);
   }
 
-  function loadContactActionsBridge(next){
-    if(document.getElementById('tpfContactActionsBridgeScript')){next?.();return;}
-    const s=document.createElement('script');
-    s.id='tpfContactActionsBridgeScript';
-    s.src='/js/modules/contact-actions-bridge.js';
-    s.async=false;
-    s.onload=()=>next?.();
-    document.head.appendChild(s);
-  }
-
   function loadContactProfile(){
     if(document.getElementById('tpfContactProfileScript'))return;
-    const load=()=>{
-      const s=document.createElement('script');
-      s.id='tpfContactProfileScript';
-      s.src='/js/modules/contact-profile.js';
-      s.async=false;
-      s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();loadContactOpenNonBlocking();};
-      document.head.appendChild(s);
-    };
-    loadContactActionsBridge(load);
+    const s=document.createElement('script');
+    s.id='tpfContactProfileScript';
+    s.src='/js/modules/contact-profile.js';
+    s.async=false;
+    s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();loadContactOpenNonBlocking();};
+    document.head.appendChild(s);
   }
 
   const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors};
