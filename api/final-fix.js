@@ -49,6 +49,8 @@ function applyFinalFix(html){
   if(!html.includes('/js/modules/automations-contact-source-ui.js')) html=html.includes('</body>')?html.replace('</body>',autoSource+'\n</body>'):html+autoSource;
   const contactProfile='<script src="/js/modules/contact-profile.js"></script>';
   if(!html.includes('/js/modules/contact-profile.js')) html=html.includes('</body>')?html.replace('</body>',contactProfile+'\n</body>'):html+contactProfile;
+  const waReadGuard='<script src="/js/modules/whatsapp-read-guard.js"></script>';
+  if(!html.includes('/js/modules/whatsapp-read-guard.js')) html=html.includes('</body>')?html.replace('</body>',waReadGuard+'\n</body>'):html+waReadGuard;
 
   const logoutScript=`<script id="tpf-logout-rescue-v4">(function(){var queued=false;function sync(){queued=false;var b=document.getElementById('logout'),side=document.querySelector('.referenceUser');if(!b||!side)return;if(b.parentElement!==side)side.appendChild(b);b.style.setProperty('display','inline-flex','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('opacity','1','important');b.style.setProperty('position','static','important');b.style.removeProperty('top');b.style.removeProperty('right');b.style.removeProperty('z-index');}function queue(){if(queued)return;queued=true;requestAnimationFrame(sync);}function start(){queue();document.querySelectorAll('.nav').forEach(function(n){n.addEventListener('click',function(){queue();setTimeout(queue,120);});});window.addEventListener('resize',queue,{passive:true});document.addEventListener('visibilitychange',function(){if(!document.hidden)queue();});setTimeout(queue,300);}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();})();</script>`;
   html=html.replace(/<script id="tpf-logout-rescue-v[1-3]">[\s\S]*?<\/script>/g,'');
@@ -60,7 +62,7 @@ module.exports=async function(req,res){
   try{
     const captured=await new Promise((resolve,reject)=>clean(req,captureResponse(resolve,reject)).catch(reject));
     Object.entries(captured.headers).forEach(([k,v])=>res.setHeader(k,v));
-    res.setHeader('X-TPF-Final-Fix','late-modals+logout-event-driven+contact-profile-v12');
+    res.setHeader('X-TPF-Final-Fix','late-modals+logout-event-driven+contact-profile-v12+whatsapp-read-safe');
     res.status(captured.statusCode).send(applyFinalFix(captured.body));
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));}
 };
