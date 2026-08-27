@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - name: Validate required browser-test secrets
         env:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
@@ -35,6 +35,14 @@ jobs:
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
         run: npm run test:e2e
+      - name: Run Safari WebKit contact edit validation
+        env:
+          VERCEL_PREVIEW_URL: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.target_url || '' }}
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/crm-safari-edit.spec.js --browser=webkit
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
