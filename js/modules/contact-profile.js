@@ -19,6 +19,8 @@
   function ensureStyles(){
     if(byId('tpfContactProfileProtectionStyles'))return;
     const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
+      body:has(#contactModal:not(.hidden)) .referenceSidebar{pointer-events:none!important}
+      #contactModal:not(.hidden){z-index:50000!important;isolation:isolate;pointer-events:auto!important}
       #contactModal.tpf-contact-readonly input:disabled,#contactModal.tpf-contact-readonly textarea:disabled,#contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
       .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditActions{display:flex;gap:8px;align-items:center}.tpfContactEditBar button{min-width:120px;position:relative;z-index:3;pointer-events:auto!important;cursor:pointer!important}
       #tpfContactSaveLocal{display:none}.tpf-contact-editing #tpfContactSaveLocal{display:inline-flex!important}
@@ -29,7 +31,7 @@
       #contactLabelsSearch{width:100%;margin:8px 0 12px;box-sizing:border-box}
       #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
-      #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px}
+      #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:2}
       #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
     `;document.head.appendChild(s);
   }
@@ -111,8 +113,10 @@
 
   function allowWhatsappForContact(){
     window.contactCanUseWhatsapp=function(){
-      const source=String(window.currentContact?.source_sheet||'').trim().toUpperCase();
-      return source==='DATA'||source==='CONTACTOS'||source==='BASE DE DATOS';
+      let source='';
+      try{source=String((typeof currentContact!=='undefined'&&currentContact?.source_sheet)||'').trim().toUpperCase();}catch(_){}
+      if(!source)source=String(byId('contactMeta')?.textContent||'').trim().toUpperCase();
+      return source==='DATA'||source==='CONTACTOS'||source.includes('BASE DE DATOS');
     };
   }
 
