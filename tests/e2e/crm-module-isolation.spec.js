@@ -28,18 +28,34 @@ test('módulo WhatsApp: está aislado y su vista abre',async({page})=>{await log
 test('módulo Agenda: está aislado y su vista abre',async({page})=>{await login(page);await expectModuleReady(page,'agenda');const nav=page.locator('.nav[data-view="agenda"]');if(await nav.isVisible()){await nav.click();await expect(page.locator('#view-agenda')).toBeVisible();}});
 test('módulo Contactos/Ventas: está aislado y Ventas abre',async({page})=>{await login(page);await expectModuleReady(page,'contacts-sales');const nav=page.locator('.nav[data-view="sales"]');await expect(nav).toBeVisible();await nav.click();await expect(page.locator('#view-sales')).toBeVisible();});
 
-test('módulo Ficha de contacto: edición real, guardado local, observaciones, etiquetas y WhatsApp', async ({ page }) => {
+test('módulo Ficha de contacto: edición real, guardado local, observaciones, etiquetas y WhatsApp interno', async ({ page }) => {
   await login(page);await expectModuleReady(page,'contact-profile');
   const id=await page.evaluate(async()=>{const {data}=await sb.from('records').select('id').limit(1);return data?.[0]?.id||null});
   expect(id,'No hay contacto de prueba disponible').toBeTruthy();
   await page.evaluate(id=>{window.__tpfOpenStart=performance.now();window.openContact(id);},id);
   await expect(page.locator('#contactModal')).toBeVisible({timeout:5000});
   const visibleMs=await page.evaluate(()=>performance.now()-window.__tpfOpenStart);expect(visibleMs,'La ficha tarda demasiado en hacerse visible').toBeLessThan(3500);
-  await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:3000});await expect(page.locator('#contactPhone')).toBeDisabled();await expect(page.locator('#contactObservations')).toBeDisabled();await expect(page.locator('#tpfContactSaveLocal')).toBeHidden();
+  await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:3000});
+  await expect(page.locator('#contactPhone')).toHaveAttribute('readonly','');
+  await expect(page.locator('#contactObservations')).toHaveAttribute('readonly','');
+  await expect(page.locator('#tpfContactSaveLocal')).toBeHidden();
   await page.locator('#tpfContactEditToggle').click();
-  await expect(page.locator('#tpfContactEditToggle')).toHaveText('Cancelar edición');await expect(page.locator('#contactPhone')).toBeEnabled();await expect(page.locator('#contactObservations')).toBeEnabled();await expect(page.locator('#tpfContactSaveLocal')).toBeVisible();
+  await expect(page.locator('#tpfContactEditToggle')).toHaveText('Cancelar edición');
+  await expect(page.locator('#contactPhone')).not.toHaveAttribute('readonly','');
+  await expect(page.locator('#contactObservations')).not.toHaveAttribute('readonly','');
+  await expect(page.locator('#tpfContactSaveLocal')).toBeVisible();
   await page.locator('#contactManageLabels').click();await expect(page.locator('#contactLabelsModal')).toBeVisible();await expect(page.locator('#contactLabelsSearch')).toBeVisible();await page.locator('#contactLabelsClose').click();
-  await expect(page.locator('#tpfContactWhatsappMain')).toBeVisible();await page.evaluate(()=>{const p=document.getElementById('contactPhone');if(p)p.value=p.value||'600000000';});await page.locator('#tpfContactWhatsappMain').click();await expect(page.locator('#waQuickModal')).toBeVisible();await expect(page.locator('#tpfQuickTemplateBtn')).toBeVisible();await expect(page.locator('#waQuickDrop')).toBeVisible();
+  await expect(page.locator('#tpfContactWhatsappMain')).toBeVisible();
+  await page.evaluate(()=>{const p=document.getElementById('contactPhone');if(p)p.value='600000000';window.__tpfExternalOpen=0;window.open=()=>{window.__tpfExternalOpen++;};});
+  await page.locator('#tpfContactWhatsappMain').click();
+  await expect(page.locator('#waQuickModal')).toBeVisible();await expect(page.locator('#tpfQuickTemplateBtn')).toBeVisible();await expect(page.locator('#waQuickDrop')).toBeVisible();
+  let internalRequest=null;
+  await page.route('**/api/green?action=send',async route=>{internalRequest=route.request().postDataJSON();await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,idMessage:'test-only'})});});
+  await page.locator('#waQuickMessage').fill('Prueba interna sin envío real');
+  await page.locator('#waQuickSend').click();
+  await expect.poll(()=>internalRequest).not.toBeNull();
+  expect(internalRequest.chatId).toBe('34600000000@c.us');expect(internalRequest.message).toBe('Prueba interna sin envío real');
+  const externalOpen=await page.evaluate(()=>window.__tpfExternalOpen);expect(externalOpen).toBe(0);
 });
 
 test('navegación principal responde sin bloqueos largos', async ({ page }) => {
