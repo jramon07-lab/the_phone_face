@@ -80,7 +80,7 @@
     const root=modal();
     if(root&&!root.dataset.tpfSafariObserved){
       root.dataset.tpfSafariObserved='1';
-      observer.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['readonly','disabled','class']});
+      observer.observe(root,{childList:true,subtree:true});
     }
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',attach,{once:true});else attach();
