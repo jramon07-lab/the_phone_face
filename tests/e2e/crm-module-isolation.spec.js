@@ -89,10 +89,18 @@ test('módulo Contactos/Ventas: está aislado y Ventas abre', async ({ page }) =
   await expect(page.locator('#view-sales')).toBeVisible();
 });
 
-test('módulo Ficha de contacto: está aislado y registrado', async ({ page }) => {
+test('módulo Ficha de contacto: está aislado, protegido y permite edición explícita', async ({ page }) => {
   await login(page);
   await expectModuleReady(page,'contact-profile');
   await expect(page.locator('#contactModal')).toHaveCount(1);
+  await page.evaluate(() => document.getElementById('contactModal')?.classList.remove('hidden'));
+  await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:5000});
+  await expect(page.locator('#contactPhone')).toBeDisabled();
+  const save=page.locator('#contactModal button').filter({hasText:'Guardar cambios'}).first();
+  if(await save.count())await expect(save).toBeHidden();
+  await page.locator('#tpfContactEditToggle').click();
+  await expect(page.locator('#contactPhone')).toBeEnabled();
+  if(await save.count())await expect(save).toBeVisible();
 });
 
 test('módulo Automatizaciones/Ajustes: está aislado y constructor libre abre', async ({ page }) => {
