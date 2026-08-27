@@ -9,6 +9,7 @@
   let syncQueued=false;
   let contactObserver=null;
   let labelsObserver=null;
+  let templateTargetQuick=false;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -19,15 +20,31 @@
     if(byId('tpfContactProfileProtectionStyles'))return;
     const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
       #contactModal.tpf-contact-readonly input:disabled,#contactModal.tpf-contact-readonly textarea:disabled,#contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
-      .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditBar button{min-width:120px;position:relative;z-index:2;pointer-events:auto!important}
+      .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditActions{display:flex;gap:8px;align-items:center}.tpfContactEditBar button{min-width:120px;position:relative;z-index:3;pointer-events:auto!important;cursor:pointer!important}
+      #tpfContactSaveLocal{display:none}.tpf-contact-editing #tpfContactSaveLocal{display:inline-flex!important}
       #contactObservations{width:100%;min-height:88px;resize:vertical}
       #contactCustomFields{width:100%!important}.contactCustomFieldsBox{width:100%!important;box-sizing:border-box!important}
       #contactCustomFields label:has(.tpf-bank-field),#contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;box-sizing:border-box!important}
-      #contactCustomFields .tpf-bank-field{min-width:22ch!important;font-variant-numeric:tabular-nums;padding-left:12px!important;padding-right:12px!important}
+      #contactCustomFields .tpf-bank-field{min-width:24ch!important;font-variant-numeric:tabular-nums;padding-left:12px!important;padding-right:12px!important}
       #contactLabelsSearch{width:100%;margin:8px 0 12px;box-sizing:border-box}
       #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
+      #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px}
+      #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
     `;document.head.appendChild(s);
+  }
+
+  function setEditMode(on){
+    editMode=!!on;
+    const root=modal();if(!root)return;
+    root.classList.toggle('tpf-contact-readonly',!editMode);
+    root.classList.toggle('tpf-contact-editing',editMode);
+    editableFields().forEach(el=>{el.disabled=!editMode;el.setAttribute('aria-disabled',String(!editMode));});
+    const toggle=byId('tpfContactEditToggle');
+    if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
+    const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
+    const save=saveButton();if(save){save.disabled=!editMode;save.style.display=editMode?'':'none';}
+    const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
   }
 
   function ensureEditButton(){
@@ -37,8 +54,13 @@
       const h=data.querySelector('h3');
       bar=document.createElement('div');bar.id='tpfContactEditBar';bar.className='tpfContactEditBar';
       const title=document.createElement('h3');title.textContent='Datos';
+      const actions=document.createElement('div');actions.className='tpfContactEditActions';
       const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
-      bar.append(title,b);
+      const saveLocal=document.createElement('button');saveLocal.id='tpfContactSaveLocal';saveLocal.type='button';saveLocal.className='primary';saveLocal.textContent='Guardar cambios';
+      const activate=e=>{e?.preventDefault?.();e?.stopPropagation?.();setEditMode(!editMode);};
+      b.onclick=activate;b.onpointerup=e=>{if(e.pointerType==='touch')activate(e);};
+      saveLocal.onclick=e=>{e.preventDefault();e.stopPropagation();const real=saveButton();if(real&&!real.disabled)real.click();};
+      actions.append(b,saveLocal);bar.append(title,actions);
       if(h)h.replaceWith(bar);else data.prepend(bar);
       const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
     }
@@ -56,16 +78,6 @@
     const out=[];CORE_FIELD_IDS.forEach(id=>{const el=byId(id);if(el)out.push(el)});
     customFieldRoot()?.querySelectorAll('input,textarea,select').forEach(el=>out.push(el));
     return [...new Set(out)];
-  }
-
-  function setEditMode(on){
-    editMode=!!on;const root=modal();if(!root)return;
-    ensureEditButton();ensureObservations();
-    root.classList.toggle('tpf-contact-readonly',!editMode);
-    editableFields().forEach(el=>{el.disabled=!editMode;el.setAttribute('aria-disabled',String(!editMode));});
-    const toggle=byId('tpfContactEditToggle');if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
-    const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
-    const save=saveButton();if(save){save.disabled=!editMode;save.style.display=editMode?'':'none';}
   }
 
   function normalizeCustomFields(){
@@ -105,6 +117,46 @@
     [...choices.children].forEach(row=>row.classList.toggle('tpfLabelSearchHidden',!!q&&!String(row.textContent||'').toLowerCase().includes(q)));
   }
 
+  function openContactWhatsappMenu(){
+    const phone=byId('contactPhone')?.value?.trim()||'';
+    if(!phone){alert('Este contacto no tiene teléfono');return;}
+    if(typeof window.openWaQuick==='function')window.openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});
+    else if(typeof openWaQuick==='function')openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});
+    else byId('contactWhatsapp')?.click();
+    setTimeout(ensureQuickTemplateButton,20);
+  }
+
+  function ensureWhatsappMainButton(){
+    const quick=modal()?.querySelector('.cpQuick');if(!quick||byId('tpfContactWhatsappMain'))return;
+    const b=document.createElement('button');b.id='tpfContactWhatsappMain';b.type='button';b.textContent='◉ WhatsApp · Enviar / Plantilla / Programar';
+    b.onclick=e=>{e.preventDefault();e.stopPropagation();openContactWhatsappMenu();};
+    quick.insertAdjacentElement('afterend',b);
+  }
+
+  function ensureQuickTemplateButton(){
+    const msg=byId('waQuickMessage');if(!msg||byId('tpfQuickTemplateBtn'))return;
+    const b=document.createElement('button');b.id='tpfQuickTemplateBtn';b.type='button';b.className='secondary';b.textContent='Usar plantilla de WhatsApp';
+    b.onclick=async e=>{
+      e.preventDefault();e.stopPropagation();templateTargetQuick=true;
+      try{if(typeof waSyncTemplatesFromSupabase==='function')await waSyncTemplatesFromSupabase();if(typeof waRenderTemplates==='function')waRenderTemplates();byId('waTemplateModal')?.classList.remove('hidden');}
+      catch(err){templateTargetQuick=false;console.warn('Plantillas WhatsApp',err);}
+    };
+    msg.insertAdjacentElement('afterend',b);
+  }
+
+  function wrapTemplateUse(){
+    const fn=window.waUseTemplate;if(typeof fn!=='function'||fn.__tpfQuickAware)return;
+    const wrapped=function(i){
+      if(templateTargetQuick){
+        templateTargetQuick=false;
+        try{const list=typeof waLoadTemplates==='function'?waLoadTemplates():[];const t=list?.[i];if(t&&byId('waQuickMessage'))byId('waQuickMessage').value=t.text||'';byId('waTemplateModal')?.classList.add('hidden');byId('waQuickMessage')?.focus();return;}
+        catch(_){ }
+      }
+      return fn.apply(this,arguments);
+    };
+    wrapped.__tpfQuickAware=true;window.waUseTemplate=wrapped;
+  }
+
   async function loadObservation(id){
     const ta=byId('contactObservations');if(!ta||!id)return;
     ta.value='';
@@ -134,7 +186,7 @@
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
   function syncUi(){
     const root=modal();if(!root||root.classList.contains('hidden'))return;
-    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();enhanceCustomTypeSelector();ensureLabelSearch();setEditMode(editMode);
+    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();enhanceCustomTypeSelector();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(editMode);
   }
 
   function installObservers(){
@@ -145,7 +197,7 @@
   M.register('contact-profile',{
     install(){
       M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
-      ensureStyles();installObservers();
+      ensureStyles();installObservers();wrapTemplateUse();
       const originalOpen=window.openContact;
       if(typeof originalOpen==='function')window.openContact=async function(id){
         currentRecordId=id;editMode=false;
@@ -155,11 +207,12 @@
       };
       document.addEventListener('click',e=>{
         const edit=e.target?.closest?.('#tpfContactEditToggle');
-        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();setEditMode(!editMode);return;}
-        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>{enhanceCustomTypeSelector();},30);
+        if(edit){e.preventDefault();e.stopPropagation();setEditMode(!editMode);return;}
+        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(enhanceCustomTypeSelector,30);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
-      },true);
-      setTimeout(()=>{installObservers();queueSync();},350);
+        if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
+      },false);
+      setTimeout(()=>{installObservers();queueSync();wrapTemplateUse();},350);
     }
   });
 })();
