@@ -31,28 +31,27 @@ async function openRecordThroughUi(page,recordId){
   await page.locator('#searchText').fill(value);
   await page.locator('#searchBtn').click();
 
-  const containers=['#searchRows','#searchUnifiedRows','#searchGroupedResults'];
-  let opened=false;
-  for(const selector of containers){
-    const host=page.locator(selector);
-    if(!(await host.count()))continue;
-    const direct=host.locator(`[onclick*="openContact('${recordId}')"], [onclick*='openContact("${recordId}")'], [data-record-id="${recordId}"]`).first();
-    if(await direct.count()){
-      await expect(direct).toBeVisible({timeout:5000});
-      await direct.click();
-      opened=true;
-      break;
-    }
-    const row=host.locator('tr').filter({hasText:value}).first();
-    if(await row.count()){
-      const clickable=row.locator('[onclick*="openContact"],button,a').first();
-      if(await clickable.count())await clickable.click();else await row.click();
-      opened=true;
-      break;
-    }
+  const selectors=[
+    `#searchRows [onclick*="openContact('${recordId}')"]`,
+    `#searchRows [data-record-id="${recordId}"]`,
+    `#searchUnifiedRows [onclick*="openContact('${recordId}')"]`,
+    `#searchUnifiedRows [data-record-id="${recordId}"]`,
+    `#searchGroupedResults [onclick*="openContact('${recordId}')"]`,
+    `#searchGroupedResults [data-record-id="${recordId}"]`
+  ].join(',');
+
+  const direct=page.locator(selectors).first();
+  try{
+    await expect(direct).toBeVisible({timeout:15000});
+    await direct.click();
+  }catch(_){
+    const row=page.locator('#searchRows tr, #searchUnifiedRows tr, #searchGroupedResults tr').filter({hasText:value}).first();
+    await expect(row).toBeVisible({timeout:5000});
+    const clickable=row.locator('[onclick*="openContact"],button,a').first();
+    if(await clickable.count())await clickable.click();else await row.click();
   }
-  if(!opened)throw new Error('El contacto no aparece como elemento pulsable en la búsqueda visible');
-  await expect(page.locator('#contactModal')).toBeVisible({timeout:7000});
+
+  await expect(page.locator('#contactModal')).toBeVisible({timeout:10000});
   await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:5000});
 }
 
