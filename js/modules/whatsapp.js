@@ -106,10 +106,10 @@
     style.textContent=`
       #view-whatsapplive .waChatActive.hidden{display:none!important}
       #view-whatsapplive .waChatEmpty.hidden{display:none!important}
-      #view-whatsapplive .waLivePage{padding-bottom:18px!important}
+      #view-whatsapplive .waLivePage{height:100%!important;padding-bottom:8px!important}
       #view-whatsapplive .waLiveLayout{min-height:0!important}
       #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important}
-      #view-whatsapplive .waComposer{margin-bottom:12px!important;padding-bottom:12px!important}
+      #view-whatsapplive .waComposer{margin-bottom:8px!important;padding-bottom:8px!important}
       #waMiniStats span{cursor:pointer;user-select:none}
       #waMiniStats span:hover{filter:brightness(.97)}
       #waMiniStats span[role="button"]{outline-offset:2px}
