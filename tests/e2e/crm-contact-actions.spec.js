@@ -20,14 +20,25 @@ async function shot(page,name){
 
 test('cuenta demo: Editar datos, crear oportunidad y ver/editar oportunidad responden', async ({page})=>{
   await login(page);
-  const ids=await page.evaluate(async()=>{
-    const {data,error}=await sb.from('records').select('id').limit(30);
-    if(error)throw error;
-    return (data||[]).map(x=>x.id);
-  });
-  expect(ids.length,'No hay contactos disponibles para validar la ficha').toBeGreaterThan(0);
 
-  await openRecord(page,ids[0]);
+  const linked=await page.evaluate(async()=>{
+    const norm=v=>String(v||'').replace(/\D/g,'').slice(-9);
+    const [{data:opps,error:oe},{data:records,error:re}]=await Promise.all([
+      sb.from('sales_opportunities').select('id,phone,client_name').limit(100),
+      sb.from('records').select('id,data').limit(300)
+    ]);
+    if(oe)throw oe;if(re)throw re;
+    for(const o of opps||[]){
+      const op=norm(o.phone);
+      if(!op)continue;
+      const r=(records||[]).find(x=>norm(x.data?.['TELÉFONO']||x.data?.TELEFONO||x.data?.PHONE||x.data?.MOVIL)===op);
+      if(r)return {recordId:r.id,opportunityId:o.id};
+    }
+    return null;
+  });
+  expect(linked?.recordId,'No hay una oportunidad real enlazada a un contacto demo').toBeTruthy();
+
+  await openRecord(page,linked.recordId);
 
   await expect(page.locator('#tpfContactEditToggle')).toHaveText('Editar datos');
   await expect(page.locator('#contactPhone')).toHaveAttribute('readonly','');
@@ -44,22 +55,11 @@ test('cuenta demo: Editar datos, crear oportunidad y ver/editar oportunidad resp
   await shot(page,'demo-02-nueva-oportunidad-abierta');
   await page.evaluate(()=>document.getElementById('oppDetailModal')?.classList.add('hidden'));
 
-  let foundExisting=false;
-  for(const id of ids){
-    await page.evaluate(recordId=>window.openContact(recordId),id);
-    await expect(page.locator('#contactModal')).toBeVisible({timeout:5000});
-    await page.waitForTimeout(350);
-    const openButtons=page.locator('#cpOpportunities button').filter({hasText:/ver|editar/i});
-    if(await openButtons.count()){
-      const first=openButtons.first();
-      if(await first.isVisible()){
-        foundExisting=true;
-        await first.click();
-        await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
-        await shot(page,'demo-03-ver-editar-oportunidad-abierta');
-        break;
-      }
-    }
-  }
-  expect(foundExisting,'No se encontró ninguna oportunidad existente accesible desde una ficha demo').toBe(true);
+  await openRecord(page,linked.recordId);
+  await expect(page.locator('#cpOpportunities')).not.toContainText('No hay oportunidades.',{timeout:5000});
+  const existing=page.locator(`#cpOpportunities [onclick*="${linked.opportunityId}"], #cpOpportunities [data-opp-id="${linked.opportunityId}"]`).first();
+  await expect(existing).toBeVisible({timeout:5000});
+  await existing.click();
+  await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
+  await shot(page,'demo-03-ver-editar-oportunidad-abierta');
 });
