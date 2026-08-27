@@ -34,16 +34,18 @@ test('Plantillas WhatsApp abre de verdad', async ({ page }) => {
   await page.screenshot({ path: 'test-results/whatsapp-templates.png', fullPage: true });
 });
 
-test('Automatizaciones muestra constructor avanzado y presets reales', async ({ page }) => {
+test('Automatizaciones muestra constructor libre y pasos configurables', async ({ page }) => {
   await login(page);
   await page.locator('.nav[data-view="automations"]').click();
   await expect(page.locator('#view-automations')).toBeVisible({ timeout: 15000 });
-  const bar=page.locator('#tpfAutomationAdvancedBar');
-  await expect(bar).toBeVisible();
-  await expect(bar).toContainText('Constructor avanzado');
-  await expect(bar).toContainText('Motor completo activo');
-  await expect(bar).toContainText('Servidor 24/7');
-  await expect(bar.locator('[data-auto-preset]')).toHaveCount(3);
+
+  const builder=page.locator('#tpfFlowBuilder');
+  await expect(builder).toBeVisible({ timeout: 15000 });
+  await expect(builder).toContainText('Constructor libre de automatizaciones');
+  await expect(builder.locator('[data-add="action"]')).toBeVisible();
+  await expect(builder.locator('[data-add="wait"]')).toBeVisible();
+  await expect(builder.locator('[data-add="condition"]')).toBeVisible();
+  await expect(builder.locator('[data-add="repeat"]')).toBeVisible();
 
   const serverMode=await page.evaluate(()=>({
     flag: window.TPF_SERVER_AUTOMATIONS===true,
@@ -52,22 +54,44 @@ test('Automatizaciones muestra constructor avanzado y presets reales', async ({ 
   }));
   expect(serverMode).toEqual({flag:true,gated:true,originalSaved:true});
 
-  await bar.locator('[data-auto-preset="renewal"]').click();
-  await expect(page.locator('#auto2Trigger')).toHaveValue('message_contains');
-  await expect(page.locator('#auto2Action')).toHaveValue('assign_label');
-  await expect(page.locator('#auto2Keyword')).toHaveValue('renovación');
+  await page.locator('#tpfFlowTrigger').selectOption('message_contains');
+  await expect(page.locator('[data-trigger-key="keyword"]')).toBeVisible();
+  await page.locator('[data-trigger-key="keyword"]').fill('renovación');
 
-  await bar.locator('[data-auto-preset="unanswered"]').click();
-  await expect(page.locator('#auto2Trigger')).toHaveValue('unanswered');
-  await expect(page.locator('#auto2Action')).toHaveValue('create_task');
-  await expect(page.locator('#auto2UnansweredMinutes')).toHaveValue('120');
+  await builder.locator('[data-add="action"]').click();
+  await page.locator('#tpfStepEditor select[data-key="action_type"]').selectOption('create_opportunity');
+  await expect(page.locator('#tpfStepEditor')).toContainText('Crear oportunidad');
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Título'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Cliente'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Teléfono'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Importe'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Columna / estado'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Fecha prevista'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Responsable'}).first()).toBeVisible();
+  await expect(page.locator('#tpfStepEditor label').filter({hasText:'Notas'}).first()).toBeVisible();
 
-  await bar.locator('[data-auto-preset="sequence"]').click();
-  await expect(page.locator('#auto2Trigger')).toHaveValue('label_assigned');
-  await expect(page.locator('#auto2Action')).toHaveValue('sequence_label_opportunity_whatsapp');
-  await expect(page.locator('#auto2SeqDays')).toHaveValue('7');
+  await builder.locator('[data-add="wait"]').click();
+  await page.locator('#tpfStepEditor input[data-key="value"]').fill('5');
+  await page.locator('#tpfStepEditor select[data-key="unit"]').selectOption('days');
 
-  await page.screenshot({ path: 'test-results/automations-advanced.png', fullPage: true });
+  await builder.locator('[data-add="action"]').click();
+  await page.locator('#tpfStepEditor select[data-key="action_type"]').selectOption('send_whatsapp_now');
+  await expect(page.locator('#tpfStepEditor')).toContainText('Se envía en cuanto el flujo llega a este paso');
+  await expect(page.locator('#tpfStepEditor textarea[data-cfg="text"]')).toBeVisible();
+
+  await builder.locator('[data-add="repeat"]').click();
+  await page.locator('#tpfStepEditor input[data-key="every_value"]').fill('3');
+  await page.locator('#tpfStepEditor select[data-key="every_unit"]').selectOption('days');
+  await page.locator('#tpfStepEditor input[data-key="times"]').fill('3');
+  await page.locator('#tpfStepEditor input[data-key="stop_if_response"]').check();
+
+  await expect(page.locator('#tpfFlowSteps .tpfFlowStep')).toHaveCount(4);
+  await expect(page.locator('#tpfFlowSteps')).toContainText('Crear oportunidad');
+  await expect(page.locator('#tpfFlowSteps')).toContainText('5 días');
+  await expect(page.locator('#tpfFlowSteps')).toContainText('Enviar WhatsApp ahora');
+  await expect(page.locator('#tpfFlowSteps')).toContainText('Cada 3 días');
+
+  await page.screenshot({ path: 'test-results/automations-flow-builder.png', fullPage: true });
 });
 
 test('Sin errores JavaScript graves al iniciar', async ({ page }) => {
