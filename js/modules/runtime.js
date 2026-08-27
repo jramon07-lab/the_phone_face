@@ -3,6 +3,7 @@
   if(window.TPFModules && window.TPFModules.version>=1) return;
 
   const states=new Map();
+  const owners=new Map();
   const ERROR_KEY='tpf_module_errors_v1';
   const MAX_ERRORS=40;
 
@@ -16,6 +17,33 @@
   function status(){return Array.from(states.values()).map(x=>({...x}));}
   function errors(){try{return JSON.parse(localStorage.getItem(ERROR_KEY)||'[]');}catch(_){return [];}}
   function clearErrors(){try{localStorage.removeItem(ERROR_KEY);}catch(_){}}
+
+  function normalizeControl(control){
+    if(!control)return '';
+    if(typeof control==='string')return control.trim();
+    if(control.id)return '#'+control.id;
+    return safeString(control);
+  }
+  function claimControl(moduleName,control,action='click'){
+    const key=`${normalizeControl(control)}::${safeString(action)}`;
+    if(!moduleName||!key.startsWith('#')&&!key.includes('::'))return false;
+    const current=owners.get(key);
+    if(current&&current.module!==moduleName){
+      report('runtime',new Error(`Conflicto de control: ${key} ya pertenece a ${current.module}`),`claimControl:${moduleName}`);
+      try{window.dispatchEvent(new CustomEvent('tpf:ownership-conflict',{detail:{control:key,module:moduleName,owner:current.module,at:new Date().toISOString()}}));}catch(_){}
+      return false;
+    }
+    owners.set(key,{module:moduleName,control:normalizeControl(control),action:safeString(action),at:new Date().toISOString()});
+    return true;
+  }
+  function releaseControl(moduleName,control,action='click'){
+    const key=`${normalizeControl(control)}::${safeString(action)}`;
+    const current=owners.get(key);
+    if(!current||current.module!==moduleName)return false;
+    owners.delete(key);
+    return true;
+  }
+  function ownerships(){return Array.from(owners.values()).map(x=>({...x}));}
 
   function installWhatsappLogoutPlacement(){
     if(document.getElementById('tpfWhatsappLogoutStyle'))return;
@@ -38,6 +66,6 @@
     document.head.appendChild(s);
   }
 
-  const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors};
+  const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors,claimControl,releaseControl,ownerships};
   window.TPFModules=api;emit('runtime','ready');setTimeout(installWhatsappLogoutPlacement,0);setTimeout(loadContactProfile,0);
 })();
