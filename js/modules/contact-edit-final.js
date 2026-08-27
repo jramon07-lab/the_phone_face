@@ -14,54 +14,59 @@
     return [...new Set(out)];
   }
 
-  function apply(on){
-    const root=modal();if(!root)return;
-    root.dataset.tpfFinalEditing=on?'1':'0';
-    root.classList.toggle('tpf-contact-readonly',!on);
-    root.classList.toggle('tpf-contact-editing',on);
+  function applySimpleMode(){
+    const root=modal();if(!root||root.classList.contains('hidden'))return;
+    root.dataset.tpfFinalEditing='1';
+    root.classList.remove('tpf-contact-readonly');
+    root.classList.add('tpf-contact-editing');
+
     fields().forEach(el=>{
       if(String(el.tagName||'').toUpperCase()==='SELECT'){
-        el.disabled=!on;
-        el.setAttribute('aria-disabled',String(!on));
+        el.disabled=false;
+        el.setAttribute('aria-disabled','false');
       }else{
         el.disabled=false;
-        el.readOnly=!on;
-        if(on)el.removeAttribute('readonly');else el.setAttribute('readonly','');
-        el.setAttribute('aria-readonly',String(!on));
+        el.readOnly=false;
+        el.removeAttribute('readonly');
+        el.setAttribute('aria-readonly','false');
       }
     });
+
     const edit=byId('tpfContactEditToggle');
-    if(edit){edit.textContent=on?'Cancelar edición':'Editar datos';edit.setAttribute('aria-pressed',String(on));}
+    if(edit)edit.style.display='none';
+
     const save=byId('tpfContactSaveLocal');
-    if(save){save.disabled=!on;save.style.display=on?'inline-flex':'none';}
+    if(save){
+      save.disabled=false;
+      save.style.display='inline-flex';
+      save.textContent='Guardar cambios';
+    }
+
     const real=byId('contactSave');
-    if(real)real.disabled=!on;
+    if(real)real.disabled=false;
+
     const hint=byId('tpfContactProtectedHint');
-    if(hint)hint.textContent=on?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
+    if(hint)hint.textContent='Puedes editar los datos directamente y pulsar “Guardar cambios” al terminar.';
   }
 
-  window.addEventListener('click',e=>{
-    const edit=e.target?.closest?.('#tpfContactEditToggle');
-    if(edit){
-      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-      const on=modal()?.dataset.tpfFinalEditing!=='1';
-      apply(on);
-      requestAnimationFrame(()=>apply(on));
-      return;
-    }
+  document.addEventListener('click',e=>{
     const save=e.target?.closest?.('#tpfContactSaveLocal');
-    if(save){
-      e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
-      const real=byId('contactSave');
-      if(real){real.disabled=false;real.click();}
-      setTimeout(()=>apply(false),80);
-    }
+    if(!save)return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    const real=byId('contactSave');
+    if(real){real.disabled=false;real.click();}
+    setTimeout(applySimpleMode,80);
   },true);
 
   const observer=new MutationObserver(()=>{
     const root=modal();
     if(!root||root.classList.contains('hidden'))return;
-    if(root.dataset.tpfFinalEditing==='1')requestAnimationFrame(()=>apply(true));
+    requestAnimationFrame(applySimpleMode);
   });
   observer.observe(document.body,{childList:true,subtree:true});
+
+  window.addEventListener('tpf:contact-open',applySimpleMode);
+  setTimeout(applySimpleMode,250);
 })();
