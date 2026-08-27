@@ -34,14 +34,19 @@
     `;document.head.appendChild(s);
   }
 
+  function editableFields(){
+    const out=[];CORE_FIELD_IDS.forEach(id=>{const el=byId(id);if(el)out.push(el)});
+    customFieldRoot()?.querySelectorAll('input,textarea,select').forEach(el=>out.push(el));
+    return [...new Set(out)];
+  }
+
   function setEditMode(on){
     editMode=!!on;
     const root=modal();if(!root)return;
     root.classList.toggle('tpf-contact-readonly',!editMode);
     root.classList.toggle('tpf-contact-editing',editMode);
     editableFields().forEach(el=>{el.disabled=!editMode;el.setAttribute('aria-disabled',String(!editMode));});
-    const toggle=byId('tpfContactEditToggle');
-    if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
+    const toggle=byId('tpfContactEditToggle');if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
     const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
     const save=saveButton();if(save){save.disabled=!editMode;save.style.display=editMode?'':'none';}
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
@@ -51,17 +56,14 @@
     const data=byId('contactPhone')?.closest('.cpData');if(!data)return;
     let bar=byId('tpfContactEditBar');
     if(!bar){
-      const h=data.querySelector('h3');
-      bar=document.createElement('div');bar.id='tpfContactEditBar';bar.className='tpfContactEditBar';
+      const h=data.querySelector('h3');bar=document.createElement('div');bar.id='tpfContactEditBar';bar.className='tpfContactEditBar';
       const title=document.createElement('h3');title.textContent='Datos';
       const actions=document.createElement('div');actions.className='tpfContactEditActions';
       const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
       const saveLocal=document.createElement('button');saveLocal.id='tpfContactSaveLocal';saveLocal.type='button';saveLocal.className='primary';saveLocal.textContent='Guardar cambios';
-      const activate=e=>{e?.preventDefault?.();e?.stopPropagation?.();setEditMode(!editMode);};
-      b.onclick=activate;b.onpointerup=e=>{if(e.pointerType==='touch')activate(e);};
+      b.onclick=e=>{e.preventDefault();e.stopPropagation();setEditMode(!editMode);};
       saveLocal.onclick=e=>{e.preventDefault();e.stopPropagation();const real=saveButton();if(real&&!real.disabled)real.click();};
-      actions.append(b,saveLocal);bar.append(title,actions);
-      if(h)h.replaceWith(bar);else data.prepend(bar);
+      actions.append(b,saveLocal);bar.append(title,actions);if(h)h.replaceWith(bar);else data.prepend(bar);
       const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
     }
   }
@@ -72,12 +74,6 @@
     const label=document.createElement('label');label.htmlFor='contactObservations';label.textContent='Observaciones';
     const ta=document.createElement('textarea');ta.id='contactObservations';ta.placeholder='Observaciones del contacto';
     notes.insertAdjacentElement('afterend',ta);ta.insertAdjacentElement('beforebegin',label);
-  }
-
-  function editableFields(){
-    const out=[];CORE_FIELD_IDS.forEach(id=>{const el=byId(id);if(el)out.push(el)});
-    customFieldRoot()?.querySelectorAll('input,textarea,select').forEach(el=>out.push(el));
-    return [...new Set(out)];
   }
 
   function normalizeCustomFields(){
@@ -100,87 +96,65 @@
       const scope=sel.closest('.waTemplateCard,[role="dialog"],.modalCard,section,div');
       if(!scope||!/campos\s+personalizados\s+de\s+contactos/i.test(scope.textContent||''))return;
       const label=sel.closest('label')?.textContent||sel.parentElement?.textContent||'';if(!/tipo/i.test(label))return;
-      const opt=[...sel.options].find(o=>String(o.value).toLowerCase()==='text'||/^texto$/i.test(o.textContent||''));
-      if(opt)opt.textContent='Texto / alfanumérico (letras y números)';
+      const opt=[...sel.options].find(o=>String(o.value).toLowerCase()==='text'||/^texto$/i.test(o.textContent||''));if(opt)opt.textContent='Texto / alfanumérico (letras y números)';
     });
   }
 
   function ensureLabelSearch(){
     const lm=byId('contactLabelsModal'),choices=byId('contactLabelsChoices');if(!lm||!choices)return;
-    let input=byId('contactLabelsSearch');
-    if(!input){input=document.createElement('input');input.id='contactLabelsSearch';input.type='search';input.placeholder='Buscar etiqueta…';input.autocomplete='off';choices.insertAdjacentElement('beforebegin',input);input.addEventListener('input',filterContactLabels);}
-    filterContactLabels();
+    let input=byId('contactLabelsSearch');if(!input){input=document.createElement('input');input.id='contactLabelsSearch';input.type='search';input.placeholder='Buscar etiqueta…';input.autocomplete='off';choices.insertAdjacentElement('beforebegin',input);input.addEventListener('input',filterContactLabels);}filterContactLabels();
   }
   function filterContactLabels(){
     const choices=byId('contactLabelsChoices'),input=byId('contactLabelsSearch');if(!choices||!input)return;
-    const q=input.value.trim().toLowerCase();
-    [...choices.children].forEach(row=>row.classList.toggle('tpfLabelSearchHidden',!!q&&!String(row.textContent||'').toLowerCase().includes(q)));
+    const q=input.value.trim().toLowerCase();[...choices.children].forEach(row=>row.classList.toggle('tpfLabelSearchHidden',!!q&&!String(row.textContent||'').toLowerCase().includes(q)));
+  }
+
+  function allowWhatsappForContact(){
+    window.contactCanUseWhatsapp=function(){
+      const source=String(window.currentContact?.source_sheet||'').trim().toUpperCase();
+      return source==='DATA'||source==='CONTACTOS'||source==='BASE DE DATOS';
+    };
   }
 
   function openContactWhatsappMenu(){
-    const phone=byId('contactPhone')?.value?.trim()||'';
-    if(!phone){alert('Este contacto no tiene teléfono');return;}
-    if(typeof window.openWaQuick==='function')window.openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});
-    else if(typeof openWaQuick==='function')openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});
-    else byId('contactWhatsapp')?.click();
+    const phone=byId('contactPhone')?.value?.trim()||'';if(!phone){alert('Este contacto no tiene teléfono');return;}
+    if(typeof window.openWaQuick==='function')window.openWaQuick({phone,name:byId('contactName')?.value?.trim()||''});else byId('contactWhatsapp')?.click();
     setTimeout(ensureQuickTemplateButton,20);
   }
 
   function ensureWhatsappMainButton(){
     const quick=modal()?.querySelector('.cpQuick');if(!quick||byId('tpfContactWhatsappMain'))return;
-    const b=document.createElement('button');b.id='tpfContactWhatsappMain';b.type='button';b.textContent='◉ WhatsApp · Enviar / Plantilla / Programar';
-    b.onclick=e=>{e.preventDefault();e.stopPropagation();openContactWhatsappMenu();};
-    quick.insertAdjacentElement('afterend',b);
+    const b=document.createElement('button');b.id='tpfContactWhatsappMain';b.type='button';b.textContent='◉ WhatsApp · Enviar / Plantilla / Programar';b.onclick=e=>{e.preventDefault();e.stopPropagation();openContactWhatsappMenu();};quick.insertAdjacentElement('afterend',b);
   }
 
   function ensureQuickTemplateButton(){
     const msg=byId('waQuickMessage');if(!msg||byId('tpfQuickTemplateBtn'))return;
     const b=document.createElement('button');b.id='tpfQuickTemplateBtn';b.type='button';b.className='secondary';b.textContent='Usar plantilla de WhatsApp';
-    b.onclick=async e=>{
-      e.preventDefault();e.stopPropagation();templateTargetQuick=true;
-      try{if(typeof waSyncTemplatesFromSupabase==='function')await waSyncTemplatesFromSupabase();if(typeof waRenderTemplates==='function')waRenderTemplates();byId('waTemplateModal')?.classList.remove('hidden');}
-      catch(err){templateTargetQuick=false;console.warn('Plantillas WhatsApp',err);}
-    };
+    b.onclick=async e=>{e.preventDefault();e.stopPropagation();templateTargetQuick=true;try{if(typeof waSyncTemplatesFromSupabase==='function')await waSyncTemplatesFromSupabase();if(typeof waRenderTemplates==='function')waRenderTemplates();byId('waTemplateModal')?.classList.remove('hidden');}catch(err){templateTargetQuick=false;console.warn('Plantillas WhatsApp',err);}};
     msg.insertAdjacentElement('afterend',b);
   }
 
   function wrapTemplateUse(){
     const fn=window.waUseTemplate;if(typeof fn!=='function'||fn.__tpfQuickAware)return;
     const wrapped=function(i){
-      if(templateTargetQuick){
-        templateTargetQuick=false;
-        try{const list=typeof waLoadTemplates==='function'?waLoadTemplates():[];const t=list?.[i];if(t&&byId('waQuickMessage'))byId('waQuickMessage').value=t.text||'';byId('waTemplateModal')?.classList.add('hidden');byId('waQuickMessage')?.focus();return;}
-        catch(_){ }
-      }
+      if(templateTargetQuick){templateTargetQuick=false;try{const list=typeof waLoadTemplates==='function'?waLoadTemplates():[];const t=list?.[i];if(t&&byId('waQuickMessage'))byId('waQuickMessage').value=t.text||'';byId('waTemplateModal')?.classList.add('hidden');byId('waQuickMessage')?.focus();return;}catch(_){}}
       return fn.apply(this,arguments);
-    };
-    wrapped.__tpfQuickAware=true;window.waUseTemplate=wrapped;
+    };wrapped.__tpfQuickAware=true;window.waUseTemplate=wrapped;
   }
 
   async function loadObservation(id){
-    const ta=byId('contactObservations');if(!ta||!id)return;
-    ta.value='';
-    try{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();if(String(currentRecordId)!==String(id))return;ta.value=String(data?.data?.OBSERVACIONES??'');}catch(_){}
-    setEditMode(editMode);
+    const ta=byId('contactObservations');if(!ta||!id)return;ta.value='';
+    try{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();if(String(currentRecordId)!==String(id))return;ta.value=String(data?.data?.OBSERVACIONES??'');}catch(_){}setEditMode(editMode);
   }
 
   async function saveNotesAndObservations(){
-    if(!currentRecordId)return;
-    const notes=byId('contactNotes')?.value??'';const obs=byId('contactObservations')?.value??'';
-    try{
-      const {data,error}=await sb.from('records').select('data').eq('id',currentRecordId).maybeSingle();if(error)throw error;
-      const d={...(data?.data||{})};d.NOTAS=notes;d.OBSERVACIONES=obs;
-      const r=await sb.from('records').update({data:d}).eq('id',currentRecordId);if(r.error)throw r.error;
-    }catch(e){console.warn('Ficha contacto: observaciones',e);}
+    if(!currentRecordId)return;const notes=byId('contactNotes')?.value??'',obs=byId('contactObservations')?.value??'';
+    try{const {data,error}=await sb.from('records').select('data').eq('id',currentRecordId).maybeSingle();if(error)throw error;const d={...(data?.data||{})};d.NOTAS=notes;d.OBSERVACIONES=obs;const r=await sb.from('records').update({data:d}).eq('id',currentRecordId);if(r.error)throw r.error;}catch(e){console.warn('Ficha contacto: observaciones',e);}
   }
 
   function bindSave(){
-    const b=saveButton();if(!b||b.dataset.tpfProfileSaveWrapped==='1')return;
-    const old=b.onclick;b.dataset.tpfProfileSaveWrapped='1';
-    b.onclick=async function(ev){
-      if(typeof old==='function')await old.call(this,ev);
-      await saveNotesAndObservations();setEditMode(false);
-    };
+    const b=saveButton();if(!b||b.dataset.tpfProfileSaveWrapped==='1')return;const old=b.onclick;b.dataset.tpfProfileSaveWrapped='1';
+    b.onclick=async function(ev){if(typeof old==='function')await old.call(this,ev);await saveNotesAndObservations();setEditMode(false);};
   }
 
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
@@ -197,17 +171,12 @@
   M.register('contact-profile',{
     install(){
       M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
-      ensureStyles();installObservers();wrapTemplateUse();
+      ensureStyles();installObservers();wrapTemplateUse();allowWhatsappForContact();
       const originalOpen=window.openContact;
       if(typeof originalOpen==='function')window.openContact=async function(id){
-        currentRecordId=id;editMode=false;
-        const p=originalOpen.apply(this,arguments);
-        setTimeout(queueSync,0);setTimeout(queueSync,60);
-        const result=await p;queueSync();loadObservation(id);return result;
+        currentRecordId=id;editMode=false;const p=originalOpen.apply(this,arguments);setTimeout(queueSync,0);setTimeout(queueSync,60);const result=await p;queueSync();loadObservation(id);try{window.applyWhatsappVisibilityForContact?.();}catch(_){}return result;
       };
       document.addEventListener('click',e=>{
-        const edit=e.target?.closest?.('#tpfContactEditToggle');
-        if(edit){e.preventDefault();e.stopPropagation();setEditMode(!editMode);return;}
         if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(enhanceCustomTypeSelector,30);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
         if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
