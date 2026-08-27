@@ -1,150 +1,164 @@
 (function(){
   'use strict';
   const M=window.TPFModules;
-  if(!M) return;
+  if(!M)return;
 
-  const CORE_FIELD_IDS=['contactFirstName','contactLastName','contactName','contactPhone','contactDni','contactEmail','contactNotes'];
+  const CORE_FIELD_IDS=['contactFirstName','contactLastName','contactName','contactPhone','contactDni','contactEmail','contactNotes','contactObservations'];
   let editMode=false;
-  let observer=null;
+  let currentRecordId=null;
+  let syncQueued=false;
+  let contactObserver=null;
+  let labelsObserver=null;
 
-  function byId(id){return document.getElementById(id)}
-  function modal(){return byId('contactModal')}
-  function visible(el){return !!(el&&el.offsetParent!==null)}
+  const byId=id=>document.getElementById(id);
+  const modal=()=>byId('contactModal');
 
-  function findSaveButton(){
-    const root=modal();
-    if(!root)return null;
-    return [...root.querySelectorAll('button')].find(b=>/guardar\s+cambios/i.test(String(b.textContent||'')))||null;
-  }
-
-  function customFieldRoot(){
-    const root=modal();
-    if(!root)return null;
-    const nodes=[...root.querySelectorAll('section,div,aside')].filter(el=>{
-      const own=[...el.childNodes].filter(n=>n.nodeType===3||n.nodeType===1).slice(0,4).map(n=>n.textContent||'').join(' ');
-      return /campos\s+personalizados/i.test(own) && !/campos\s+personalizados\s+de\s+contactos/i.test(own);
-    });
-    return nodes.sort((a,b)=>a.querySelectorAll('input,textarea,select').length-b.querySelectorAll('input,textarea,select').length).find(x=>x.querySelector('input,textarea,select'))||null;
-  }
-
-  function editableFields(){
-    const out=[];
-    CORE_FIELD_IDS.forEach(id=>{const el=byId(id);if(el)out.push(el)});
-    const custom=customFieldRoot();
-    if(custom)custom.querySelectorAll('input,textarea,select').forEach(el=>{
-      if(!el.closest('[role="dialog"]')||el.closest('[role="dialog"]')===modal())out.push(el);
-    });
-    return [...new Set(out)];
-  }
+  function saveButton(){return byId('contactSave')}
+  function customFieldRoot(){return byId('contactCustomFields')||null}
 
   function ensureStyles(){
     if(byId('tpfContactProfileProtectionStyles'))return;
-    const s=document.createElement('style');
-    s.id='tpfContactProfileProtectionStyles';
-    s.textContent=`
-      #contactModal.tpf-contact-readonly input:disabled,
-      #contactModal.tpf-contact-readonly textarea:disabled,
-      #contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
-      #tpfContactEditToggle{margin-right:8px}
-      #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:4px 0 8px}
-    `;
-    document.head.appendChild(s);
+    const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
+      #contactModal.tpf-contact-readonly input:disabled,#contactModal.tpf-contact-readonly textarea:disabled,#contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
+      .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditBar button{min-width:120px}
+      #contactObservations{width:100%;min-height:88px;resize:vertical}
+      #contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;min-width:100%!important;box-sizing:border-box!important;font-variant-numeric:tabular-nums}
+      #contactLabelsSearch{width:100%;margin:8px 0 12px;box-sizing:border-box}
+      #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
+      #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
+    `;document.head.appendChild(s);
   }
 
-  function ensureToggle(){
-    const save=findSaveButton();
-    if(!save||byId('tpfContactEditToggle'))return;
-    const b=document.createElement('button');
-    b.id='tpfContactEditToggle';
-    b.type='button';
-    b.className='secondary';
-    b.textContent='Editar datos';
-    b.addEventListener('click',()=>setEditMode(!editMode));
-    save.parentElement?.insertBefore(b,save);
+  function ensureEditButton(){
+    const data=byId('contactPhone')?.closest('.cpData');if(!data)return;
+    let bar=byId('tpfContactEditBar');
+    if(!bar){
+      const h=data.querySelector('h3');
+      bar=document.createElement('div');bar.id='tpfContactEditBar';bar.className='tpfContactEditBar';
+      const title=document.createElement('h3');title.textContent='Datos';
+      const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
+      b.onclick=()=>setEditMode(!editMode);
+      bar.append(title,b);
+      if(h)h.replaceWith(bar);else data.prepend(bar);
+      const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
+    }
+  }
+
+  function ensureObservations(){
+    if(byId('contactObservations'))return;
+    const notes=byId('contactNotes');if(!notes)return;
+    const label=document.createElement('label');label.htmlFor='contactObservations';label.textContent='Observaciones';
+    const ta=document.createElement('textarea');ta.id='contactObservations';ta.placeholder='Observaciones del contacto';
+    notes.insertAdjacentElement('afterend',ta);ta.insertAdjacentElement('beforebegin',label);
+  }
+
+  function editableFields(){
+    const out=[];CORE_FIELD_IDS.forEach(id=>{const el=byId(id);if(el)out.push(el)});
+    customFieldRoot()?.querySelectorAll('input,textarea,select').forEach(el=>out.push(el));
+    return [...new Set(out)];
   }
 
   function setEditMode(on){
-    editMode=!!on;
-    const root=modal();
-    if(!root)return;
-    ensureStyles();ensureToggle();
+    editMode=!!on;const root=modal();if(!root)return;
+    ensureEditButton();ensureObservations();
     root.classList.toggle('tpf-contact-readonly',!editMode);
-    editableFields().forEach(el=>{
-      el.disabled=!editMode;
-      el.setAttribute('aria-disabled',String(!editMode));
+    editableFields().forEach(el=>{el.disabled=!editMode;el.setAttribute('aria-disabled',String(!editMode));});
+    const toggle=byId('tpfContactEditToggle');if(toggle)toggle.textContent=editMode?'Cancelar edición':'Editar datos';
+    const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
+    const save=saveButton();if(save){save.disabled=!editMode;save.style.display=editMode?'':'none';}
+  }
+
+  function normalizeCustomFields(){
+    const root=customFieldRoot();if(!root)return;
+    [...root.querySelectorAll('label')].forEach(label=>{
+      const name=String(label.textContent||'').trim().toUpperCase();
+      const field=label.querySelector('input,textarea,select')||label.nextElementSibling?.matches?.('input,textarea,select')&&label.nextElementSibling;
+      if(!field)return;
+      if(name.includes('BANCO')){
+        if(field.tagName==='INPUT')field.type='text';
+        field.classList.add('tpf-bank-field');field.removeAttribute('inputmode');field.removeAttribute('pattern');field.removeAttribute('step');
+        field.placeholder=field.placeholder||'Ej.: ES00 0000 0000 0000 0000 0000';
+      }
     });
-    const toggle=byId('tpfContactEditToggle');
-    if(toggle)toggle.textContent=editMode?'Cancelar edición':'Editar datos';
-    const save=findSaveButton();
-    if(save){
-      save.disabled=!editMode;
-      save.style.display=editMode?'':'none';
-    }
+    root.querySelectorAll('input[type="text"],textarea').forEach(el=>{el.removeAttribute('pattern');if(!el.classList.contains('tpf-bank-field'))el.removeAttribute('inputmode');});
   }
 
   function enhanceCustomTypeSelector(){
-    const dialogs=[...document.querySelectorAll('div,section')].filter(el=>visible(el)&&/campos\s+personalizados\s+de\s+contactos/i.test(el.textContent||''));
-    for(const dlg of dialogs){
-      const selects=[...dlg.querySelectorAll('select')];
-      for(const sel of selects){
-        const label=sel.closest('label')?.textContent||sel.parentElement?.textContent||'';
-        if(!/tipo/i.test(label))continue;
-        const textOpt=[...sel.options].find(o=>String(o.value).toLowerCase()==='text'||/^texto$/i.test(o.textContent||''));
-        if(textOpt)textOpt.textContent='Texto / alfanumérico (letras y números)';
-      }
-    }
-  }
-
-  function normalizeCustomInputs(){
-    const root=customFieldRoot();
-    if(!root)return;
-    root.querySelectorAll('input[type="text"],textarea').forEach(el=>{
-      el.removeAttribute('pattern');
-      el.removeAttribute('inputmode');
+    document.querySelectorAll('select').forEach(sel=>{
+      const scope=sel.closest('.waTemplateCard,[role="dialog"],.modalCard,section,div');
+      if(!scope||!/campos\s+personalizados\s+de\s+contactos/i.test(scope.textContent||''))return;
+      const label=sel.closest('label')?.textContent||sel.parentElement?.textContent||'';if(!/tipo/i.test(label))return;
+      const opt=[...sel.options].find(o=>String(o.value).toLowerCase()==='text'||/^texto$/i.test(o.textContent||''));
+      if(opt)opt.textContent='Texto / alfanumérico (letras y números)';
     });
   }
 
-  function syncProtection(){
-    const root=modal();
-    if(!root||root.classList.contains('hidden'))return;
-    ensureStyles();ensureToggle();normalizeCustomInputs();enhanceCustomTypeSelector();setEditMode(editMode);
+  function ensureLabelSearch(){
+    const lm=byId('contactLabelsModal'),choices=byId('contactLabelsChoices');if(!lm||!choices)return;
+    let input=byId('contactLabelsSearch');
+    if(!input){input=document.createElement('input');input.id='contactLabelsSearch';input.type='search';input.placeholder='Buscar etiqueta…';input.autocomplete='off';choices.insertAdjacentElement('beforebegin',input);input.addEventListener('input',filterContactLabels);}
+    filterContactLabels();
+  }
+  function filterContactLabels(){
+    const choices=byId('contactLabelsChoices'),input=byId('contactLabelsSearch');if(!choices||!input)return;
+    const q=input.value.trim().toLowerCase();
+    [...choices.children].forEach(row=>row.classList.toggle('tpfLabelSearchHidden',!!q&&!String(row.textContent||'').toLowerCase().includes(q)));
   }
 
-  function installObserver(){
-    if(observer)return;
-    observer=new MutationObserver(()=>{
-      if(modal()&&!modal().classList.contains('hidden')){
-        requestAnimationFrame(()=>{enhanceCustomTypeSelector();normalizeCustomInputs();if(!editMode)setEditMode(false);});
-      }
-    });
-    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+  async function loadObservation(id){
+    const ta=byId('contactObservations');if(!ta||!id)return;
+    ta.value='';
+    try{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();if(String(currentRecordId)!==String(id))return;ta.value=String(data?.data?.OBSERVACIONES??'');}catch(_){}
+    setEditMode(editMode);
+  }
+
+  async function saveNotesAndObservations(){
+    if(!currentRecordId)return;
+    const notes=byId('contactNotes')?.value??'';const obs=byId('contactObservations')?.value??'';
+    try{
+      const {data,error}=await sb.from('records').select('data').eq('id',currentRecordId).maybeSingle();if(error)throw error;
+      const d={...(data?.data||{})};d.NOTAS=notes;d.OBSERVACIONES=obs;
+      const r=await sb.from('records').update({data:d}).eq('id',currentRecordId);if(r.error)throw r.error;
+    }catch(e){console.warn('Ficha contacto: observaciones',e);}
+  }
+
+  function bindSave(){
+    const b=saveButton();if(!b||b.dataset.tpfProfileSaveWrapped==='1')return;
+    const old=b.onclick;b.dataset.tpfProfileSaveWrapped='1';
+    b.onclick=async function(ev){
+      if(typeof old==='function')await old.call(this,ev);
+      await saveNotesAndObservations();setEditMode(false);
+    };
+  }
+
+  function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
+  function syncUi(){
+    const root=modal();if(!root||root.classList.contains('hidden'))return;
+    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();enhanceCustomTypeSelector();ensureLabelSearch();setEditMode(editMode);
+  }
+
+  function installObservers(){
+    const cm=modal();if(cm&&!contactObserver){contactObserver=new MutationObserver(queueSync);contactObserver.observe(cm,{childList:true,subtree:true});}
+    const lm=byId('contactLabelsModal');if(lm&&!labelsObserver){labelsObserver=new MutationObserver(()=>requestAnimationFrame(ensureLabelSearch));labelsObserver.observe(lm,{childList:true,subtree:true});}
   }
 
   M.register('contact-profile',{
     install(){
-      M.wrapGlobals('contact-profile',[
-        'renderContactProfile','openContact','openContactProfile',
-        'openContactTaskDetail','deleteContactTask',
-        'openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp'
-      ]);
-      installObserver();
-      document.addEventListener('click',e=>{
-        const save=e.target?.closest?.('button');
-        if(save&&/guardar\s+cambios/i.test(String(save.textContent||''))&&save.closest('#contactModal')){
-          setTimeout(()=>setEditMode(false),250);
-        }
-      },true);
+      M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
+      ensureStyles();installObservers();
       const originalOpen=window.openContact;
-      if(typeof originalOpen==='function'){
-        window.openContact=async function(){
-          editMode=false;
-          const result=await originalOpen.apply(this,arguments);
-          setTimeout(syncProtection,0);
-          setTimeout(syncProtection,180);
-          return result;
-        };
-      }
-      setTimeout(syncProtection,500);
+      if(typeof originalOpen==='function')window.openContact=async function(id){
+        currentRecordId=id;editMode=false;
+        const p=originalOpen.apply(this,arguments);
+        // La protección y los botones se dibujan en cuanto aparece la ficha, sin esperar a todas las cargas laterales.
+        setTimeout(queueSync,0);setTimeout(queueSync,60);
+        const result=await p;queueSync();loadObservation(id);return result;
+      };
+      document.addEventListener('click',e=>{
+        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>{enhanceCustomTypeSelector();},30);
+        if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
+      },true);
+      setTimeout(()=>{installObservers();queueSync();},350);
     }
   });
 })();
