@@ -29,12 +29,22 @@
     queue();setTimeout(queue,300);
   }
 
+  function loadContactActivityTabs(){
+    if(document.getElementById('tpfContactActivityTabsScript'))return;
+    const s=document.createElement('script');
+    s.id='tpfContactActivityTabsScript';
+    s.src='/js/modules/contact-activity-tabs.js';
+    s.async=false;
+    document.head.appendChild(s);
+  }
+
   function loadContactProfile(){
     if(document.getElementById('tpfContactProfileScript'))return;
     const s=document.createElement('script');
     s.id='tpfContactProfileScript';
     s.src='/js/modules/contact-profile.js';
     s.async=false;
+    s.onload=loadContactActivityTabs;
     document.head.appendChild(s);
   }
 
