@@ -29,6 +29,15 @@
     queue();setTimeout(queue,300);
   }
 
+  function loadContactSafariEditHotfix(){
+    if(document.getElementById('tpfContactSafariEditHotfixScript'))return;
+    const s=document.createElement('script');
+    s.id='tpfContactSafariEditHotfixScript';
+    s.src='/js/modules/contact-edit-safari-hotfix.js';
+    s.async=false;
+    document.head.appendChild(s);
+  }
+
   const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors};
-  window.TPFModules=api;emit('runtime','ready');setTimeout(installWhatsappLogoutPlacement,0);
+  window.TPFModules=api;emit('runtime','ready');setTimeout(installWhatsappLogoutPlacement,0);setTimeout(loadContactSafariEditHotfix,0);
 })();
