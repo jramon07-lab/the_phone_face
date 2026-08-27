@@ -88,14 +88,15 @@ test('módulo Contactos/Ventas: está aislado y Ventas abre', async ({ page }) =
   await expect(page.locator('#view-sales')).toBeVisible();
 });
 
-test('módulo Automatizaciones/Ajustes: está aislado y constructor abre', async ({ page }) => {
+test('módulo Automatizaciones/Ajustes: está aislado y constructor libre abre', async ({ page }) => {
   await login(page);
   await expectModuleReady(page,'automations-settings');
   const nav=page.locator('.nav[data-view="automations"]');
   if(await nav.isVisible()){
     await nav.click();
     await expect(page.locator('#view-automations')).toBeVisible();
-    await expect(page.locator('#tpfAutomationAdvancedBar')).toBeVisible();
+    await expect(page.locator('#tpfFlowBuilder')).toBeVisible();
+    await expect(page.locator('#tpfFlowBuilder')).toContainText('Constructor libre de automatizaciones');
   }
 });
 
