@@ -56,13 +56,22 @@
     document.head.appendChild(s);
   }
 
+  function loadContactOpportunityActions(){
+    if(document.getElementById('tpfContactOpportunityActionsScript'))return;
+    const s=document.createElement('script');
+    s.id='tpfContactOpportunityActionsScript';
+    s.src='/js/modules/contact-opportunity-actions.js';
+    s.async=false;
+    document.head.appendChild(s);
+  }
+
   function loadContactProfile(){
     if(document.getElementById('tpfContactProfileScript'))return;
     const s=document.createElement('script');
     s.id='tpfContactProfileScript';
     s.src='/js/modules/contact-profile.js';
     s.async=false;
-    s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();loadContactOpenNonBlocking();};
+    s.onload=()=>{loadContactActivityTabs();loadWhatsappOpportunityPlus();loadContactOpenNonBlocking();loadContactOpportunityActions();};
     document.head.appendChild(s);
   }
 
