@@ -4,7 +4,6 @@
   window.__tpfSeparateContactEditorInstalled=true;
 
   const $=id=>document.getElementById(id);
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let editingId=null;
   let originalData=null;
 
@@ -65,7 +64,7 @@
   async function open(id){
     ensureStyles();ensureEditor();
     if(!id){try{id=currentContact?.id}catch(_){} }
-    if(!id){$('tpfContactEditorMsg').textContent='No se ha podido identificar el contacto.';return;}
+    if(!id){alert('No se ha podido identificar el contacto.');return;}
     const {data,error}=await sb.from('records').select('id,source_sheet,source_row,data').eq('id',id).maybeSingle();
     if(error||!data){alert(error?.message||'No se encontró el contacto.');return;}
     editingId=data.id;originalData={...(data.data||{})};
@@ -84,7 +83,8 @@
   }
 
   function assignPreservingAliases(d,names,value,preferred){
-    let touched=false;for(const n of names){if(Object.prototype.hasOwnProperty.call(d,n)){d[n]=value;touched=true;}}
+    let touched=false;
+    for(const n of names){if(Object.prototype.hasOwnProperty.call(d,n)){d[n]=value;touched=true;}}
     if(!touched)d[preferred]=value;
   }
 
@@ -97,8 +97,8 @@
       const first=$('tpfEditFirstName').value.trim();
       const last=$('tpfEditLastName').value.trim();
       const full=[first,last].filter(Boolean).join(' ').trim();
-      assignPreservingAliases(d,['NOMBRE'],'NOMBRE',first);
-      assignPreservingAliases(d,['APELLIDOS','APELLIDO'],'APELLIDOS',last);
+      assignPreservingAliases(d,['NOMBRE'],first,'NOMBRE');
+      assignPreservingAliases(d,['APELLIDOS','APELLIDO'],last,'APELLIDOS');
       if(Object.prototype.hasOwnProperty.call(d,'NOMBRE Y APELLIDOS'))d['NOMBRE Y APELLIDOS']=full;
       else if(Object.prototype.hasOwnProperty.call(d,'CLIENTE'))d.CLIENTE=full;
       else d['NOMBRE Y APELLIDOS']=full;
@@ -112,7 +112,7 @@
       originalData=d;msg.textContent='Datos guardados correctamente.';
       const id=editingId;
       setTimeout(async()=>{
-        $('tpfContactEditorBack').classList.add('hidden');
+        $('tpfContactEditorBack').classList.add('hidden');editingId=null;
         try{if(typeof window.openContact==='function')await window.openContact(id);}catch(_){ }
       },250);
     }catch(e){msg.textContent=e?.message||'No se pudieron guardar los datos.';}
@@ -120,4 +120,12 @@
   }
 
   window.tpfOpenContactEditor=open;
+
+  document.addEventListener('click',e=>{
+    const edit=e.target?.closest?.('#tpfContactEditToggle');
+    if(!edit)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    let id=null;try{id=currentContact?.id}catch(_){}
+    open(id);
+  },true);
 })();
