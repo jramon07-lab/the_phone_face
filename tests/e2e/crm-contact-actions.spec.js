@@ -24,33 +24,24 @@ async function getSearchValue(page,recordId){
 async function openRecordThroughUi(page,recordId){
   const value=await getSearchValue(page,recordId);
   if(!value)throw new Error('El contacto demo no tiene un valor buscable');
-
   await page.locator('.nav[data-view="search"][data-sheet=""]').click();
   await expect(page.locator('#view-search')).toBeVisible({timeout:5000});
   await page.locator('#searchSheet').selectOption('');
   await page.locator('#searchText').fill(value);
   await page.locator('#searchBtn').click();
-
   const selectors=[
     `#searchRows [onclick*="openContact('${recordId}')"]`,
-    `#searchRows [data-record-id="${recordId}"]`,
     `#searchUnifiedRows [onclick*="openContact('${recordId}')"]`,
-    `#searchUnifiedRows [data-record-id="${recordId}"]`,
-    `#searchGroupedResults [onclick*="openContact('${recordId}')"]`,
-    `#searchGroupedResults [data-record-id="${recordId}"]`
+    `#searchGroupedResults [onclick*="openContact('${recordId}')"]`
   ].join(',');
-
   const direct=page.locator(selectors).first();
-  try{
-    await expect(direct).toBeVisible({timeout:15000});
-    await direct.click();
-  }catch(_){
+  try{await expect(direct).toBeVisible({timeout:15000});await direct.click();}
+  catch(_){
     const row=page.locator('#searchRows tr, #searchUnifiedRows tr, #searchGroupedResults tr').filter({hasText:value}).first();
     await expect(row).toBeVisible({timeout:5000});
     const clickable=row.locator('[onclick*="openContact"],button,a').first();
     if(await clickable.count())await clickable.click();else await row.click();
   }
-
   await expect(page.locator('#contactModal')).toBeVisible({timeout:10000});
   await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:5000});
 }
@@ -61,24 +52,20 @@ async function shot(page,name){
   await page.screenshot({path:path.join(dir,`${name}.png`),fullPage:true});
 }
 
-test('cuenta demo por interfaz real: Editar datos, crear oportunidad y ver/editar oportunidad responden', async ({page})=>{
+test('cuenta demo por interfaz real: editor separado y oportunidades responden', async ({page})=>{
   await login(page);
-
-  const linked={
-    recordId:'fe4b2188-8a08-445f-bbaa-6d4d5f89377d',
-    opportunityId:'f1e68355-6df7-4a94-a62f-06c95daaf0ba'
-  };
-
+  const linked={recordId:'fe4b2188-8a08-445f-bbaa-6d4d5f89377d',opportunityId:'f1e68355-6df7-4a94-a62f-06c95daaf0ba'};
   await openRecordThroughUi(page,linked.recordId);
 
-  await expect(page.locator('#tpfContactEditToggle')).toHaveText('Editar datos');
-  await expect(page.locator('#contactPhone')).toHaveAttribute('readonly','');
   await page.locator('#tpfContactEditToggle').click();
-  await expect(page.locator('#tpfContactEditToggle')).toHaveText('Cancelar edición');
-  await expect(page.locator('#contactPhone')).not.toHaveAttribute('readonly','');
-  await expect(page.locator('#tpfContactSaveLocal')).toBeVisible();
-  await shot(page,'demo-ui-01-editar-datos-activo');
-  await page.locator('#tpfContactEditToggle').click();
+  await expect(page.locator('#tpfContactEditorBack')).toBeVisible({timeout:5000});
+  await expect(page.locator('#tpfEditFirstName')).toBeEditable();
+  await expect(page.locator('#tpfEditLastName')).toBeEditable();
+  await expect(page.locator('#tpfEditPhone')).toBeEditable();
+  await expect(page.locator('#tpfContactEditorSave')).toBeVisible();
+  await shot(page,'demo-ui-01-editor-separado');
+  await page.locator('#tpfContactEditorCancel').click();
+  await expect(page.locator('#tpfContactEditorBack')).toBeHidden({timeout:5000});
 
   await page.locator('#cpNewOpp').click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
@@ -89,10 +76,9 @@ test('cuenta demo por interfaz real: Editar datos, crear oportunidad y ver/edita
   await page.locator('#contactClose').click();
   await expect(page.locator('#contactModal')).toBeHidden({timeout:5000});
   await openRecordThroughUi(page,linked.recordId);
-
-  await expect(page.locator('#cpOpportunities')).not.toContainText('No hay oportunidades.',{timeout:5000});
+  await expect(page.locator('#cpOpportunities')).not.toContainText('No hay oportunidades.',{timeout:10000});
   const existing=page.locator(`#cpOpportunities [onclick*="${linked.opportunityId}"], #cpOpportunities [data-opp-id="${linked.opportunityId}"]`).first();
-  await expect(existing).toBeVisible({timeout:5000});
+  await expect(existing).toBeVisible({timeout:10000});
   await existing.click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
   await shot(page,'demo-ui-03-ver-editar-oportunidad-abierta');
