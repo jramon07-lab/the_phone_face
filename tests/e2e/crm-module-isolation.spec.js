@@ -28,22 +28,30 @@ test('módulo WhatsApp: está aislado y su vista abre',async({page})=>{await log
 test('módulo Agenda: está aislado y su vista abre',async({page})=>{await login(page);await expectModuleReady(page,'agenda');const nav=page.locator('.nav[data-view="agenda"]');if(await nav.isVisible()){await nav.click();await expect(page.locator('#view-agenda')).toBeVisible();}});
 test('módulo Contactos/Ventas: está aislado y Ventas abre',async({page})=>{await login(page);await expectModuleReady(page,'contacts-sales');const nav=page.locator('.nav[data-view="sales"]');await expect(nav).toBeVisible();await nav.click();await expect(page.locator('#view-sales')).toBeVisible();});
 
-test('módulo Ficha de contacto: edición real, guardado local, observaciones, etiquetas y WhatsApp interno', async ({ page }) => {
+test('módulo Ficha de contacto: edición directa, guardado persistente, observaciones, etiquetas y WhatsApp interno', async ({ page }) => {
   await login(page);await expectModuleReady(page,'contact-profile');
-  const id=await page.evaluate(async()=>{const {data}=await sb.from('records').select('id').limit(1);return data?.[0]?.id||null});
-  expect(id,'No hay contacto de prueba disponible').toBeTruthy();
-  await page.evaluate(id=>{window.__tpfOpenStart=performance.now();window.openContact(id);},id);
+  const seed=await page.evaluate(async()=>{const {data}=await sb.from('records').select('id,data').limit(1);const row=data?.[0]||null;return row?{id:row.id,obs:String(row.data?.OBSERVACIONES??'')}:null});
+  expect(seed?.id,'No hay contacto de prueba disponible').toBeTruthy();
+  await page.evaluate(id=>{window.__tpfOpenStart=performance.now();window.openContact(id);},seed.id);
   await expect(page.locator('#contactModal')).toBeVisible({timeout:5000});
   const visibleMs=await page.evaluate(()=>performance.now()-window.__tpfOpenStart);expect(visibleMs,'La ficha tarda demasiado en hacerse visible').toBeLessThan(3500);
-  await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:3000});
-  await expect(page.locator('#contactPhone')).toHaveAttribute('readonly','');
-  await expect(page.locator('#contactObservations')).toHaveAttribute('readonly','');
-  await expect(page.locator('#tpfContactSaveLocal')).toBeHidden();
-  await page.locator('#tpfContactEditToggle').click();
-  await expect(page.locator('#tpfContactEditToggle')).toHaveText('Cancelar edición');
+  await expect(page.locator('#tpfContactEditToggle')).toBeHidden({timeout:3000});
   await expect(page.locator('#contactPhone')).not.toHaveAttribute('readonly','');
   await expect(page.locator('#contactObservations')).not.toHaveAttribute('readonly','');
   await expect(page.locator('#tpfContactSaveLocal')).toBeVisible();
+
+  const probe=`${seed.obs} [E2E-${Date.now()}]`.trim();
+  await page.locator('#contactObservations').fill(probe);
+  await page.locator('#tpfContactSaveLocal').click();
+  await expect.poll(async()=>page.evaluate(async id=>{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();return String(data?.data?.OBSERVACIONES??'');},seed.id),{timeout:5000}).toBe(probe);
+
+  await page.evaluate(id=>window.openContact(id),seed.id);
+  await expect(page.locator('#contactObservations')).toHaveValue(probe,{timeout:5000});
+
+  await page.locator('#contactObservations').fill(seed.obs);
+  await page.locator('#tpfContactSaveLocal').click();
+  await expect.poll(async()=>page.evaluate(async id=>{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();return String(data?.data?.OBSERVACIONES??'');},seed.id),{timeout:5000}).toBe(seed.obs);
+
   await page.locator('#contactManageLabels').click();await expect(page.locator('#contactLabelsModal')).toBeVisible();await expect(page.locator('#contactLabelsSearch')).toBeVisible();await page.locator('#contactLabelsClose').click();
   await expect(page.locator('#tpfContactWhatsappMain')).toBeVisible();
   await page.evaluate(()=>{const p=document.getElementById('contactPhone');if(p)p.value='600000000';window.__tpfExternalOpen=0;window.open=()=>{window.__tpfExternalOpen++;};});
