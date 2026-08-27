@@ -11,6 +11,7 @@
     if(text.includes('/api/green?action=notifications') && (t.includes('408') || text.includes('request timeout'))) return true;
     if(text.includes('/api/green?action=notification') && (t.includes('408') || text.includes('request timeout'))) return true;
     if(text.includes('/api/green?action=avatar') && (t==='red' || t==='network' || text.includes('load failed') || text.includes('failed to fetch') || text.includes('abort'))) return true;
+    if(text.includes('/rest/v1/agenda_items') && text.includes('whatsapp_enabled=eq.true') && (t==='red' || t==='network') && (text.includes('load failed') || text.includes('failed to fetch') || text.includes('networkerror') || text.includes('abort'))) return true;
     return false;
   }
 
@@ -36,25 +37,23 @@
     try{
       const r=await originalFetch(...args);
       const url=String(typeof args[0]==='string'?args[0]:args[0]?.url||'');
-      if(r.status>=400 && !url.includes('/api/green-health') && !isExpectedWhatsappTransient(`HTTP ${r.status}`,url,r.statusText||'')) {
-        recordError(`HTTP ${r.status}`,url,r.statusText||'');
-      }
+      if(r.status>=400 && !url.includes('/api/green-health') && !isExpectedWhatsappTransient(`HTTP ${r.status}`,url,r.statusText||''))recordError(`HTTP ${r.status}`,url,r.statusText||'');
       return r;
     }catch(e){
       const url=String(typeof args[0]==='string'?args[0]:args[0]?.url||'');
-      if(!isExpectedWhatsappTransient('Red',url,e?.message||String(e))) recordError('Red',url,e?.message||String(e));
+      if(!isExpectedWhatsappTransient('Red',url,e?.message||String(e)))recordError('Red',url,e?.message||String(e));
       throw e;
     }
   };
 
   function setState(dotId,textId,state,text){
-    const dot=document.getElementById(dotId), out=document.getElementById(textId);
+    const dot=document.getElementById(dotId),out=document.getElementById(textId);
     if(dot)dot.className='systemDot '+(state==='ok'?'systemDotOk':state==='warn'?'systemDotWarn':state==='bad'?'systemDotBad':'systemDotPending');
     if(out)out.textContent=text;
   }
 
   window.renderSystemErrors=function(){
-    const box=document.getElementById('systemErrorList'); if(!box)return;
+    const box=document.getElementById('systemErrorList');if(!box)return;
     const items=readErrors();
     if(!items.length){box.innerHTML='<div class="small">No hay fallos registrados en este navegador.</div>';return}
     const escText=v=>String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -63,49 +62,17 @@
 
   window.loadSystemStatus=async function(){
     if(!perms?.is_admin)return;
-    setState('systemAppDot','systemAppText','pending','Comprobando…');
-    setState('systemGreenDot','systemGreenText','pending','Comprobando…');
-    setState('systemSupabaseDot','systemSupabaseText','pending','Comprobando…');
-    setState('systemFrontDot','systemFrontText','pending','Comprobando…');
-    const banner=document.getElementById('systemBanner'); if(banner){banner.className='systemBanner systemBannerPending';banner.textContent='Comprobando estado general…'}
-
+    setState('systemAppDot','systemAppText','pending','Comprobando…');setState('systemGreenDot','systemGreenText','pending','Comprobando…');setState('systemSupabaseDot','systemSupabaseText','pending','Comprobando…');setState('systemFrontDot','systemFrontText','pending','Comprobando…');
+    const banner=document.getElementById('systemBanner');if(banner){banner.className='systemBanner systemBannerPending';banner.textContent='Comprobando estado general…'}
     let app='bad',green='bad',supa='bad';
-    try{
-      const r=await originalFetch(location.pathname||'/',{method:'HEAD',cache:'no-store'});
-      app=r.ok?'ok':'bad'; setState('systemAppDot','systemAppText',app,r.ok?'Aplicación online y respondiendo':'La aplicación no responde correctamente');
-    }catch(e){setState('systemAppDot','systemAppText','bad','Error de conexión con la aplicación')}
-
-    try{
-      const r=await originalFetch('/api/green-health',{cache:'no-store'}); const d=await r.json().catch(()=>null);
-      if(r.ok && d?.providerHealthy===true && d?.degraded!==true && String(d?.state||'').toLowerCase()==='authorized'){
-        green='ok';setState('systemGreenDot','systemGreenText','ok','Authorized · proveedor sano');
-      }else if(r.ok){green='warn';setState('systemGreenDot','systemGreenText','warn',`Degradado · ${d?.state||'estado desconocido'}`)}
-      else setState('systemGreenDot','systemGreenText','bad',`Error HTTP ${r.status}`);
-    }catch(e){setState('systemGreenDot','systemGreenText','bad','No se pudo comprobar GREEN-API')}
-
-    try{
-      const result=await sb.auth.getSession();
-      if(result?.error)throw result.error;
-      supa='ok';setState('systemSupabaseDot','systemSupabaseText','ok','Conexión y sesión operativas');
-    }catch(e){setState('systemSupabaseDot','systemSupabaseText','bad',e?.message||'Error de conexión')}
-
-    const errors=readErrors();
-    const recent=errors.filter(x=>Date.now()-new Date(x.at).getTime()<3600000);
-    const front=recent.length?'warn':'ok';
-    setState('systemFrontDot','systemFrontText',front,recent.length?`${recent.length} fallo(s) registrado(s) en la última hora`:'Sin fallos recientes registrados');
-
-    const states=[app,green,supa,front];
-    const overall=states.includes('bad')?'bad':states.includes('warn')?'warn':'ok';
-    if(banner){
-      banner.className='systemBanner '+(overall==='ok'?'systemBannerOk':overall==='warn'?'systemBannerWarn':'systemBannerBad');
-      banner.textContent=overall==='ok'?'Todo operativo':overall==='warn'?'Sistema operativo con avisos':'Hay un problema que requiere revisión';
-    }
-    const checked=document.getElementById('systemCheckedAt');if(checked)checked.textContent=new Date().toLocaleString('es-ES');
-    renderSystemErrors();
+    try{const r=await originalFetch(location.pathname||'/',{method:'HEAD',cache:'no-store'});app=r.ok?'ok':'bad';setState('systemAppDot','systemAppText',app,r.ok?'Aplicación online y respondiendo':'La aplicación no responde correctamente');}catch(e){setState('systemAppDot','systemAppText','bad','Error de conexión con la aplicación')}
+    try{const r=await originalFetch('/api/green-health',{cache:'no-store'});const d=await r.json().catch(()=>null);if(r.ok&&d?.providerHealthy===true&&d?.degraded!==true&&String(d?.state||'').toLowerCase()==='authorized'){green='ok';setState('systemGreenDot','systemGreenText','ok','Authorized · proveedor sano');}else if(r.ok){green='warn';setState('systemGreenDot','systemGreenText','warn',`Degradado · ${d?.state||'estado desconocido'}`)}else setState('systemGreenDot','systemGreenText','bad',`Error HTTP ${r.status}`);}catch(e){setState('systemGreenDot','systemGreenText','bad','No se pudo comprobar GREEN-API')}
+    try{const result=await sb.auth.getSession();if(result?.error)throw result.error;supa='ok';setState('systemSupabaseDot','systemSupabaseText','ok','Conexión y sesión operativas');}catch(e){setState('systemSupabaseDot','systemSupabaseText','bad',e?.message||'Error de conexión')}
+    const errors=readErrors();const recent=errors.filter(x=>Date.now()-new Date(x.at).getTime()<3600000);const front=recent.length?'warn':'ok';setState('systemFrontDot','systemFrontText',front,recent.length?`${recent.length} fallo(s) registrado(s) en la última hora`:'Sin fallos recientes registrados');
+    const states=[app,green,supa,front];const overall=states.includes('bad')?'bad':states.includes('warn')?'warn':'ok';
+    if(banner){banner.className='systemBanner '+(overall==='ok'?'systemBannerOk':overall==='warn'?'systemBannerWarn':'systemBannerBad');banner.textContent=overall==='ok'?'Todo operativo':overall==='warn'?'Sistema operativo con avisos':'Hay un problema que requiere revisión';}
+    const checked=document.getElementById('systemCheckedAt');if(checked)checked.textContent=new Date().toLocaleString('es-ES');renderSystemErrors();
   };
 
-  document.addEventListener('click',e=>{
-    if(e.target?.id==='systemRefresh')loadSystemStatus();
-    if(e.target?.id==='systemClearErrors'){writeErrors([]);renderSystemErrors();loadSystemStatus();}
-  });
+  document.addEventListener('click',e=>{if(e.target?.id==='systemRefresh')loadSystemStatus();if(e.target?.id==='systemClearErrors'){writeErrors([]);renderSystemErrors();loadSystemStatus();}});
 })();
