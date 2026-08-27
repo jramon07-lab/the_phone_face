@@ -93,7 +93,41 @@
   }
   function clearErrors(){try{localStorage.removeItem(ERROR_KEY);}catch(_){ }}
 
+  function installWhatsappLogoutPlacement(){
+    if(document.getElementById('tpfWhatsappLogoutStyle'))return;
+    const style=document.createElement('style');
+    style.id='tpfWhatsappLogoutStyle';
+    style.textContent=`
+      #view-whatsapplive .tpfWaLogout{padding:7px 9px!important;font-size:11px!important;line-height:1!important;flex:0 0 auto!important;margin:0!important;white-space:nowrap!important}
+    `;
+    document.head.appendChild(style);
+
+    const sync=()=>{
+      const logout=document.getElementById('logout');
+      const home=document.querySelector('.referenceTopUser');
+      const actions=document.querySelector('#view-whatsapplive .waLiveHeaderActions');
+      const view=document.getElementById('view-whatsapplive');
+      if(!logout||!home||!actions||!view)return;
+      const inWhatsapp=!view.classList.contains('hidden');
+      if(inWhatsapp){
+        if(logout.parentElement!==actions)actions.appendChild(logout);
+        logout.classList.add('tpfWaLogout');
+      }else{
+        if(logout.parentElement!==home)home.appendChild(logout);
+        logout.classList.remove('tpfWaLogout');
+      }
+    };
+
+    document.querySelectorAll('.nav').forEach(el=>el.addEventListener('click',()=>{
+      setTimeout(sync,0);
+      setTimeout(sync,120);
+    }));
+    setTimeout(sync,0);
+    setTimeout(sync,500);
+  }
+
   const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors};
   window.TPFModules=api;
   emit('runtime','ready');
+  setTimeout(installWhatsappLogoutPlacement,0);
 })();
