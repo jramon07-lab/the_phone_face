@@ -22,7 +22,7 @@ test('CRM visible real: menú, plantillas y build correctos', async ({ page }) =
   await expect(page.locator('.nav[data-view="search"][data-sheet="AJUSTES"]')).toBeHidden();
 
   await expect(page.locator('#tpfWaTemplatesNav')).toBeVisible();
-  await expect(page.locator('#tpfBuildBadge')).toBeHidden();
+  await expect(page.locator('#tpfBuildBadge')).toBeAttached();
 
   await page.screenshot({ path: 'test-results/home-after-login.png', fullPage: true });
 });
