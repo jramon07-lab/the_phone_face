@@ -54,6 +54,19 @@ test('módulo Ficha de contacto: protección, observaciones, etiquetas y apertur
   await expect(page.locator('#contactLabelsModal')).toBeVisible();await expect(page.locator('#contactLabelsSearch')).toBeVisible();
 });
 
+test('navegación principal responde sin bloqueos largos', async ({ page }) => {
+  await login(page);
+  const routes=[['sales','#view-sales'],['database','#view-database'],['agenda','#view-agenda'],['whatsapplive','#view-whatsapplive'],['automations','#view-automations']];
+  for(const [view,target] of routes){
+    const nav=page.locator(`.nav[data-view="${view}"]`).first();
+    if(!(await nav.count())||!(await nav.isVisible()))continue;
+    const start=Date.now();
+    await nav.click();
+    await expect(page.locator(target)).toBeVisible({timeout:2500});
+    expect(Date.now()-start,`${view} tarda demasiado en responder`).toBeLessThan(2500);
+  }
+});
+
 test('módulo Automatizaciones/Ajustes: está aislado y constructor libre abre',async({page})=>{await login(page);await expectModuleReady(page,'automations-settings');const nav=page.locator('.nav[data-view="automations"]');if(await nav.isVisible()){await nav.click();await expect(page.locator('#view-automations')).toBeVisible();await expect(page.locator('#tpfFlowBuilder')).toBeVisible();await expect(page.locator('#tpfFlowBuilder')).toContainText('Constructor libre de automatizaciones');}});
 
 test('módulo Estado del sistema: respeta permisos y muestra módulos al admin', async ({ page }) => {
