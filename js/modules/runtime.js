@@ -35,16 +35,6 @@
     s.id='tpfContactProfileScript';
     s.src='/js/modules/contact-profile.js';
     s.async=false;
-    s.onload=loadContactSafariEditHotfix;
-    document.head.appendChild(s);
-  }
-
-  function loadContactSafariEditHotfix(){
-    if(document.getElementById('tpfContactSafariEditHotfixScript'))return;
-    const s=document.createElement('script');
-    s.id='tpfContactSafariEditHotfixScript';
-    s.src='/js/modules/contact-edit-safari-hotfix.js';
-    s.async=false;
     document.head.appendChild(s);
   }
 
