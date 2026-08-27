@@ -54,8 +54,10 @@
     let queued=false;const sync=()=>{queued=false;const logout=document.getElementById('logout');const sideUser=document.querySelector('.referenceUser');if(!logout||!sideUser)return;if(logout.parentElement!==sideUser)sideUser.appendChild(logout);logout.classList.add('tpfWaLogout');};const queue=()=>{if(queued)return;queued=true;requestAnimationFrame(sync);};document.querySelectorAll('.nav').forEach(el=>el.addEventListener('click',()=>{queue();setTimeout(queue,120);}));window.addEventListener('resize',queue,{passive:true});document.addEventListener('visibilitychange',()=>{if(!document.hidden)queue();});queue();setTimeout(queue,300);
   }
 
-  function loadContactProfile(){if(document.getElementById('tpfContactProfileScript'))return;const s=document.createElement('script');s.id='tpfContactProfileScript';s.src='/js/modules/contact-profile.js';s.async=false;document.head.appendChild(s);}
+  function loadScript(id,src){if(document.getElementById(id))return;const s=document.createElement('script');s.id=id;s.src=src;s.async=false;document.head.appendChild(s);}
+  function loadContactProfile(){loadScript('tpfContactProfileScript','/js/modules/contact-profile.js');}
+  function loadSearchFallback(){loadScript('tpfSearchFallbackScript','/js/modules/search-fallback.js');}
 
   const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors,claimControl,releaseControl,ownerships,conflicts,clearConflicts};
-  window.TPFModules=api;emit('runtime','ready');installBrowserErrorCapture();setTimeout(installWhatsappLogoutPlacement,0);setTimeout(loadContactProfile,0);
+  window.TPFModules=api;emit('runtime','ready');installBrowserErrorCapture();setTimeout(installWhatsappLogoutPlacement,0);setTimeout(loadContactProfile,0);setTimeout(loadSearchFallback,0);
 })();
