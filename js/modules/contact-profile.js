@@ -12,17 +12,18 @@
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
-
-  function saveButton(){return byId('contactSave')}
-  function customFieldRoot(){return byId('contactCustomFields')||null}
+  const saveButton=()=>byId('contactSave');
+  const customFieldRoot=()=>byId('contactCustomFields')||null;
 
   function ensureStyles(){
     if(byId('tpfContactProfileProtectionStyles'))return;
     const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
       #contactModal.tpf-contact-readonly input:disabled,#contactModal.tpf-contact-readonly textarea:disabled,#contactModal.tpf-contact-readonly select:disabled{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
-      .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditBar button{min-width:120px}
+      .tpfContactEditBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.tpfContactEditBar h3{margin:0!important}.tpfContactEditBar button{min-width:120px;position:relative;z-index:2;pointer-events:auto!important}
       #contactObservations{width:100%;min-height:88px;resize:vertical}
-      #contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;min-width:100%!important;box-sizing:border-box!important;font-variant-numeric:tabular-nums}
+      #contactCustomFields{width:100%!important}.contactCustomFieldsBox{width:100%!important;box-sizing:border-box!important}
+      #contactCustomFields label:has(.tpf-bank-field),#contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;box-sizing:border-box!important}
+      #contactCustomFields .tpf-bank-field{min-width:22ch!important;font-variant-numeric:tabular-nums;padding-left:12px!important;padding-right:12px!important}
       #contactLabelsSearch{width:100%;margin:8px 0 12px;box-sizing:border-box}
       #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
@@ -37,7 +38,6 @@
       bar=document.createElement('div');bar.id='tpfContactEditBar';bar.className='tpfContactEditBar';
       const title=document.createElement('h3');title.textContent='Datos';
       const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
-      b.onclick=()=>setEditMode(!editMode);
       bar.append(title,b);
       if(h)h.replaceWith(bar);else data.prepend(bar);
       const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
@@ -63,7 +63,7 @@
     ensureEditButton();ensureObservations();
     root.classList.toggle('tpf-contact-readonly',!editMode);
     editableFields().forEach(el=>{el.disabled=!editMode;el.setAttribute('aria-disabled',String(!editMode));});
-    const toggle=byId('tpfContactEditToggle');if(toggle)toggle.textContent=editMode?'Cancelar edición':'Editar datos';
+    const toggle=byId('tpfContactEditToggle');if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
     const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
     const save=saveButton();if(save){save.disabled=!editMode;save.style.display=editMode?'':'none';}
   }
@@ -72,12 +72,12 @@
     const root=customFieldRoot();if(!root)return;
     [...root.querySelectorAll('label')].forEach(label=>{
       const name=String(label.textContent||'').trim().toUpperCase();
-      const field=label.querySelector('input,textarea,select')||label.nextElementSibling?.matches?.('input,textarea,select')&&label.nextElementSibling;
+      const field=label.querySelector('input,textarea,select')||((label.nextElementSibling?.matches?.('input,textarea,select'))?label.nextElementSibling:null);
       if(!field)return;
       if(name.includes('BANCO')){
         if(field.tagName==='INPUT')field.type='text';
-        field.classList.add('tpf-bank-field');field.removeAttribute('inputmode');field.removeAttribute('pattern');field.removeAttribute('step');
-        field.placeholder=field.placeholder||'Ej.: ES00 0000 0000 0000 0000 0000';
+        field.classList.add('tpf-bank-field');field.removeAttribute('inputmode');field.removeAttribute('pattern');field.removeAttribute('step');field.setAttribute('size','24');
+        field.placeholder=field.placeholder||'Ej.: ES00 0000 0000 0000 0000';
       }
     });
     root.querySelectorAll('input[type="text"],textarea').forEach(el=>{el.removeAttribute('pattern');if(!el.classList.contains('tpf-bank-field'))el.removeAttribute('inputmode');});
@@ -150,11 +150,12 @@
       if(typeof originalOpen==='function')window.openContact=async function(id){
         currentRecordId=id;editMode=false;
         const p=originalOpen.apply(this,arguments);
-        // La protección y los botones se dibujan en cuanto aparece la ficha, sin esperar a todas las cargas laterales.
         setTimeout(queueSync,0);setTimeout(queueSync,60);
         const result=await p;queueSync();loadObservation(id);return result;
       };
       document.addEventListener('click',e=>{
+        const edit=e.target?.closest?.('#tpfContactEditToggle');
+        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();setEditMode(!editMode);return;}
         if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>{enhanceCustomTypeSelector();},30);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
       },true);
