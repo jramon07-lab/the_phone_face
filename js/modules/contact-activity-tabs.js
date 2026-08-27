@@ -5,6 +5,9 @@
 
   const labels={todos:'Todos',notas:'Notas',oportunidades:'Oportunidades',tareas:'Tareas'};
   let current='todos';
+  let timelineObserver=null;
+  let observedTimeline=null;
+  let queued=false;
 
   function classify(row){
     const cls=String(row.className||'').toLowerCase();
@@ -18,18 +21,13 @@
   function tabs(){return [...document.querySelectorAll('#contactModal .cpTabs > *')];}
 
   function ensureTabState(){
-    const ts=tabs();
-    ts.forEach(el=>{
+    tabs().forEach(el=>{
       const text=String(el.textContent||'').trim().toLowerCase();
-      let key='';
-      if(text==='todos')key='todos';
-      else if(text==='notas')key='notas';
-      else if(text==='oportunidades')key='oportunidades';
-      else if(text==='tareas')key='tareas';
+      const key=text==='todos'?'todos':text==='notas'?'notas':text==='oportunidades'?'oportunidades':text==='tareas'?'tareas':'';
       if(!key)return;
-      el.dataset.tpfActivityTab=key;
-      el.setAttribute('role','button');
-      el.setAttribute('tabindex','0');
+      if(el.dataset.tpfActivityTab!==key)el.dataset.tpfActivityTab=key;
+      if(el.getAttribute('role')!=='button')el.setAttribute('role','button');
+      if(el.getAttribute('tabindex')!=='0')el.setAttribute('tabindex','0');
       el.style.cursor='pointer';
       el.style.userSelect='none';
       const active=key===current;
@@ -42,37 +40,65 @@
   }
 
   function applyFilter(){
+    queued=false;
+    const modal=document.getElementById('contactModal');
+    if(!modal||modal.classList.contains('hidden'))return;
     ensureTabState();
-    const rows=[...document.querySelectorAll('#contactModal #cpTimeline .cpEvent')];
+    const timeline=document.getElementById('cpTimeline');
+    if(!timeline)return;
+    const rows=[...timeline.querySelectorAll('.cpEvent')];
     let shown=0;
     rows.forEach(row=>{
-      const type=classify(row);
-      const visible=current==='todos'||type===current;
-      row.style.display=visible?'':'none';
+      const visible=current==='todos'||classify(row)===current;
+      const display=visible?'':'none';
+      if(row.style.display!==display)row.style.display=display;
       if(visible)shown++;
     });
     let empty=document.getElementById('tpfActivityFilterEmpty');
+    if(!empty){
+      empty=document.createElement('div');
+      empty.id='tpfActivityFilterEmpty';
+      empty.className='cpEmpty';
+      timeline.appendChild(empty);
+    }
+    const text='No hay '+labels[current].toLowerCase()+' en el historial.';
+    if(empty.textContent!==text)empty.textContent=text;
+    const display=shown?'none':'';
+    if(empty.style.display!==display)empty.style.display=display;
+  }
+
+  function queueFilter(){
+    if(queued)return;
+    queued=true;
+    requestAnimationFrame(applyFilter);
+  }
+
+  function ensureTimelineObserver(){
     const timeline=document.getElementById('cpTimeline');
-    if(!timeline)return;
-    if(!empty){empty=document.createElement('div');empty.id='tpfActivityFilterEmpty';empty.className='cpEmpty';timeline.appendChild(empty);}
-    empty.textContent='No hay '+labels[current].toLowerCase()+' en el historial.';
-    empty.style.display=shown?'none':'';
+    if(!timeline||timeline===observedTimeline)return;
+    timelineObserver?.disconnect();
+    observedTimeline=timeline;
+    timelineObserver=new MutationObserver(queueFilter);
+    timelineObserver.observe(timeline,{childList:true,subtree:true});
   }
 
   function select(key){
     if(!labels[key])return;
     current=key;
-    applyFilter();
+    ensureTimelineObserver();
+    queueFilter();
   }
 
   document.addEventListener('click',e=>{
     const tab=e.target?.closest?.('#contactModal .cpTabs [data-tpf-activity-tab], #contactModal .cpTabs > *');
-    if(!tab)return;
-    const text=String(tab.dataset.tpfActivityTab||tab.textContent||'').trim().toLowerCase();
-    const key=text==='todos'?'todos':text==='notas'?'notas':text==='oportunidades'?'oportunidades':text==='tareas'?'tareas':'';
-    if(!key)return;
-    e.preventDefault();e.stopPropagation();
-    select(key);
+    if(tab){
+      const text=String(tab.dataset.tpfActivityTab||tab.textContent||'').trim().toLowerCase();
+      const key=text==='todos'?'todos':text==='notas'?'notas':text==='oportunidades'?'oportunidades':text==='tareas'?'tareas':'';
+      if(key){e.preventDefault();e.stopPropagation();select(key);return;}
+    }
+    if(e.target?.closest?.('[onclick*="openContact"], [data-contact-id], #contactModal')){
+      setTimeout(()=>{ensureTimelineObserver();queueFilter();},40);
+    }
   },true);
 
   document.addEventListener('keydown',e=>{
@@ -82,11 +108,6 @@
     e.preventDefault();select(tab.dataset.tpfActivityTab);
   });
 
-  const observer=new MutationObserver(()=>{
-    const modal=document.getElementById('contactModal');
-    if(!modal||modal.classList.contains('hidden'))return;
-    requestAnimationFrame(applyFilter);
-  });
-  observer.observe(document.body,{childList:true,subtree:true});
-  setTimeout(applyFilter,300);
+  window.addEventListener('tpf:contact-open',()=>setTimeout(()=>{ensureTimelineObserver();queueFilter();},0));
+  setTimeout(()=>{ensureTimelineObserver();queueFilter();},300);
 })();
