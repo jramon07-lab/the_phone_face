@@ -39,6 +39,8 @@ function applyFinalFix(html){
   html=html.replace(/<style id="tpf-final-fix-v[1-4]">[\s\S]*?<\/style>/g,'');
   if(!html.includes('id="tpf-final-fix-v5"')) html=html.includes('</head>')?html.replace('</head>',css+'\n</head>'):css+html;
 
+  const authGuard='<script src="/js/modules/automations-auth-guard.js"></script>';
+  if(!html.includes('/js/modules/automations-auth-guard.js')) html=html.includes('</body>')?html.replace('</body>',authGuard+'\n</body>'):html+authGuard;
   const autoUi='<script src="/js/modules/automations-ui-polish.js"></script>';
   if(!html.includes('/js/modules/automations-ui-polish.js')) html=html.includes('</body>')?html.replace('</body>',autoUi+'\n</body>'):html+autoUi;
   const autoFlow='<script src="/js/modules/automations-flow-builder.js"></script>';
@@ -56,7 +58,7 @@ module.exports=async function(req,res){
   try{
     const captured=await new Promise((resolve,reject)=>clean(req,captureResponse(resolve,reject)).catch(reject));
     Object.entries(captured.headers).forEach(([k,v])=>res.setHeader(k,v));
-    res.setHeader('X-TPF-Final-Fix','late-modals+logout-sidebar+automations-flow-source-v9');
+    res.setHeader('X-TPF-Final-Fix','late-modals+logout-sidebar+automations-auth-guard-v10');
     res.status(captured.statusCode).send(applyFinalFix(captured.body));
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));}
 };
