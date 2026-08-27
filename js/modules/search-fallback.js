@@ -22,10 +22,10 @@
   async function fallbackRows(q,sheet){
     const found=[];
     const pageSize=1000;
-    const maxRows=6000;
+    const maxRows=50000;
     const source=sheet||null;
     for(let from=0;from<maxRows && found.length<100;from+=pageSize){
-      let query=sb.from('records').select('id,source_sheet,source_row,data').range(from,from+pageSize-1);
+      let query=sb.from('records').select('id,source_sheet,source_row,data').order('id',{ascending:true}).range(from,from+pageSize-1);
       if(source)query=query.eq('source_sheet',source);
       const {data,error}=await query;
       if(error)throw error;
@@ -41,11 +41,10 @@
       if(typeof base==='function')await base.call(this);
       const q=document.getElementById('searchText')?.value?.trim()||'';
       const sheet=document.getElementById('searchSheet')?.value||'';
-      const current=sheet?(window.lastSearchRows||[]):(window.lastUnifiedRows||[]);
       const visibleRows=sheet?document.querySelectorAll('#searchRows tr').length:document.querySelectorAll('#searchUnifiedRows tr').length;
-      if(!q||current.length||visibleRows)return;
+      if(!q||visibleRows)return;
       const rows=await fallbackRows(q,sheet);
-      if(!rows.length)return;
+      if(!rows.length){M?.emit?.('search-fallback','ok','Fallback sin coincidencias');return;}
       if(sheet){
         document.getElementById('searchSingleResults')?.classList.remove('hidden');
         document.getElementById('searchUnifiedResults')?.classList.add('hidden');
