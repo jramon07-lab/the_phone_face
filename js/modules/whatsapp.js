@@ -100,22 +100,34 @@
   }
 
   function ensureWhatsappUxStyles(){
-    if(document.getElementById('tpfWhatsappUxFixes'))return;
-    const style=document.createElement('style');
-    style.id='tpfWhatsappUxFixes';
-    style.textContent=`
-      #view-whatsapplive{height:100vh!important;height:100dvh!important}
-      #view-whatsapplive .waChatActive.hidden{display:none!important}
-      #view-whatsapplive .waChatEmpty.hidden{display:none!important}
-      #view-whatsapplive .waLivePage{height:100%!important;padding-bottom:8px!important}
-      #view-whatsapplive .waLiveLayout{min-height:0!important}
-      #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important}
-      #view-whatsapplive .waComposer{margin-bottom:8px!important;padding-bottom:8px!important}
-      #waMiniStats span{cursor:pointer;user-select:none}
-      #waMiniStats span:hover{filter:brightness(.97)}
-      #waMiniStats span[role="button"]{outline-offset:2px}
-    `;
-    document.head.appendChild(style);
+    let style=document.getElementById('tpfWhatsappUxFixes');
+    if(!style){
+      style=document.createElement('style');
+      style.id='tpfWhatsappUxFixes';
+      style.textContent=`
+        #view-whatsapplive{height:100vh!important;height:100dvh!important}
+        #view-whatsapplive .waChatActive.hidden{display:none!important}
+        #view-whatsapplive .waChatEmpty.hidden{display:none!important}
+        #view-whatsapplive .waLivePage{height:100%!important;padding-bottom:8px!important}
+        #view-whatsapplive .waLiveLayout{min-height:0!important}
+        #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important}
+        #view-whatsapplive .waComposer{margin-bottom:8px!important;padding-bottom:8px!important}
+        #waMiniStats span{cursor:pointer;user-select:none}
+        #waMiniStats span:hover{filter:brightness(.97)}
+        #waMiniStats span[role="button"]{outline-offset:2px}
+      `;
+      document.head.appendChild(style);
+    }
+    const view=document.getElementById('view-whatsapplive');
+    if(view){
+      view.style.setProperty('height','100dvh','important');
+      view.style.setProperty('min-height','0','important');
+      const page=view.querySelector('.waLivePage');
+      if(page){
+        page.style.setProperty('height','100%','important');
+        page.style.setProperty('padding-bottom','8px','important');
+      }
+    }
   }
 
   function clickWhatsappTab(tab){
