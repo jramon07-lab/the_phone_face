@@ -135,9 +135,12 @@
     document.querySelectorAll('.nav').forEach(el=>el.addEventListener('click',()=>{
       setTimeout(sync,0);
       setTimeout(sync,120);
+      setTimeout(sync,350);
+      setTimeout(sync,700);
     }));
     setTimeout(sync,0);
     setTimeout(sync,500);
+    setInterval(sync,250);
   }
 
   const api={version:1,register,guard,wrapGlobals,report,emit,status,errors,clearErrors};
