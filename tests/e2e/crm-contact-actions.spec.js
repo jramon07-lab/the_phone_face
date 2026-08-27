@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
 
 async function login(page){
   await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -15,7 +17,9 @@ async function openRecord(page,id){
 }
 
 async function shot(page,name){
-  await page.screenshot({path:`test-results/${name}.png`,fullPage:true});
+  const dir=path.join(process.cwd(),'browser-evidence','contact-profile');
+  fs.mkdirSync(dir,{recursive:true});
+  await page.screenshot({path:path.join(dir,`${name}.png`),fullPage:true});
 }
 
 test('cuenta demo: Editar datos, crear oportunidad y ver/editar oportunidad responden', async ({page})=>{
