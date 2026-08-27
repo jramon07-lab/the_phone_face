@@ -35,7 +35,14 @@
     try{const {data}=await sb.from('crm_labels').select('id,name').order('name');opts.labels=data||[]}catch(_){opts.labels=[]}
     try{const {data}=await sb.from('wa_templates').select('id,name,body').order('name');opts.templates=data||[]}catch(_){opts.templates=[]}
     try{const {data}=await sb.from('sales_custom_fields').select('id,field_key,label,field_type,options,required,pipeline_id,active').eq('active',true).order('position');opts.salesFields=data||[]}catch(_){opts.salesFields=[]}
-    try{const {data}=await sb.rpc('admin_list_users_permissions');opts.users=Array.isArray(data)?data:[]}catch(_){opts.users=[]}
+    opts.users=[];
+    try{
+      const {data:sessionData}=await sb.auth.getSession();
+      if(sessionData?.session?.user){
+        const {data,error}=await sb.rpc('admin_list_users_permissions');
+        if(!error)opts.users=Array.isArray(data)?data:[];
+      }
+    }catch(_){opts.users=[]}
   }
 
   function ensureBuilder(){
