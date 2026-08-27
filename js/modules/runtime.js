@@ -118,18 +118,10 @@
 
     const sync=()=>{
       const logout=document.getElementById('logout');
-      const home=document.querySelector('.referenceTopUser');
       const sideUser=document.querySelector('.referenceUser');
-      const view=document.getElementById('view-whatsapplive');
-      if(!logout||!home||!sideUser||!view)return;
-      const inWhatsapp=!view.classList.contains('hidden');
-      if(inWhatsapp){
-        if(logout.parentElement!==sideUser)sideUser.appendChild(logout);
-        logout.classList.add('tpfWaLogout');
-      }else{
-        if(logout.parentElement!==home)home.appendChild(logout);
-        logout.classList.remove('tpfWaLogout');
-      }
+      if(!logout||!sideUser)return;
+      if(logout.parentElement!==sideUser)sideUser.appendChild(logout);
+      logout.classList.add('tpfWaLogout');
     };
 
     document.querySelectorAll('.nav').forEach(el=>el.addEventListener('click',()=>{
