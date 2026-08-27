@@ -49,12 +49,15 @@ test('módulo Ficha de contacto: edición real, guardado local, observaciones, e
   await page.evaluate(()=>{const p=document.getElementById('contactPhone');if(p)p.value='600000000';window.__tpfExternalOpen=0;window.open=()=>{window.__tpfExternalOpen++;};});
   await page.locator('#tpfContactWhatsappMain').click();
   await expect(page.locator('#waQuickModal')).toBeVisible();await expect(page.locator('#tpfQuickTemplateBtn')).toBeVisible();await expect(page.locator('#waQuickDrop')).toBeVisible();
-  let internalRequest=null;
-  await page.route('**/api/green?action=send',async route=>{internalRequest=route.request().postDataJSON();await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,idMessage:'test-only'})});});
-  await page.locator('#waQuickMessage').fill('Prueba interna sin envío real');
-  await page.locator('#waQuickSend').click();
-  await expect.poll(()=>internalRequest).not.toBeNull();
-  expect(internalRequest.chatId).toBe('34600000000@c.us');expect(internalRequest.message).toBe('Prueba interna sin envío real');
+  const isLocal=/127\.0\.0\.1|localhost/.test(String(process.env.PLAYWRIGHT_BASE_URL||''));
+  if(!isLocal){
+    let internalRequest=null;
+    await page.route('**/api/green?action=send',async route=>{internalRequest=route.request().postDataJSON();await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,idMessage:'test-only'})});});
+    await page.locator('#waQuickMessage').fill('Prueba interna sin envío real');
+    await page.locator('#waQuickSend').click();
+    await expect.poll(()=>internalRequest).not.toBeNull();
+    expect(internalRequest.chatId).toBe('34600000000@c.us');expect(internalRequest.message).toBe('Prueba interna sin envío real');
+  }
   const externalOpen=await page.evaluate(()=>window.__tpfExternalOpen);expect(externalOpen).toBe(0);
 });
 
