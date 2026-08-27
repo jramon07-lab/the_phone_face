@@ -14,6 +14,10 @@ async function openRecord(page,id){
   await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:5000});
 }
 
+async function shot(page,name){
+  await page.screenshot({path:`test-results/${name}.png`,fullPage:true});
+}
+
 test('cuenta demo: Editar datos, crear oportunidad y ver/editar oportunidad responden', async ({page})=>{
   await login(page);
   const ids=await page.evaluate(async()=>{
@@ -25,23 +29,21 @@ test('cuenta demo: Editar datos, crear oportunidad y ver/editar oportunidad resp
 
   await openRecord(page,ids[0]);
 
-  // Editar datos debe desbloquear realmente los campos.
   await expect(page.locator('#tpfContactEditToggle')).toHaveText('Editar datos');
   await expect(page.locator('#contactPhone')).toHaveAttribute('readonly','');
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactEditToggle')).toHaveText('Cancelar edición');
   await expect(page.locator('#contactPhone')).not.toHaveAttribute('readonly','');
   await expect(page.locator('#tpfContactSaveLocal')).toBeVisible();
-  // Volvemos a modo protegido sin modificar datos.
+  await shot(page,'demo-01-editar-datos-activo');
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactEditToggle')).toHaveText('Editar datos');
 
-  // Crear oportunidad debe abrir el editor desde la ficha.
   await page.locator('#cpNewOpp').click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
+  await shot(page,'demo-02-nueva-oportunidad-abierta');
   await page.evaluate(()=>document.getElementById('oppDetailModal')?.classList.add('hidden'));
 
-  // Buscar una ficha que ya tenga oportunidad y probar Ver / editar.
   let foundExisting=false;
   for(const id of ids){
     await page.evaluate(recordId=>window.openContact(recordId),id);
@@ -54,6 +56,7 @@ test('cuenta demo: Editar datos, crear oportunidad y ver/editar oportunidad resp
         foundExisting=true;
         await first.click();
         await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
+        await shot(page,'demo-03-ver-editar-oportunidad-abierta');
         break;
       }
     }
