@@ -21,6 +21,8 @@ const requiredFiles = [
   'js/modules/agenda.js',
   'js/modules/automations-core.js',
   'js/modules/automations-settings.js',
+  'js/modules/automations-ui-polish.js',
+  'js/modules/automations-flow-builder.js',
   'js/modules/system-status-core.js',
   'js/modules/system-status.js',
   'tests/e2e/crm-module-isolation.spec.js',
@@ -41,7 +43,14 @@ for (const file of requiredFiles) {
   }
 }
 
-const sourceFiles = ['index.html', 'api/index.js', 'tests/e2e/crm-visual.spec.js'];
+const sourceFiles = [
+  'index.html',
+  'api/index.js',
+  'api/final-fix.js',
+  'js/modules/automations-settings.js',
+  'js/modules/automations-flow-builder.js',
+  'tests/e2e/crm-visual.spec.js'
+];
 const uiSource = sourceFiles
   .filter(fs.existsSync)
   .map(file => fs.readFileSync(file, 'utf8'))
@@ -51,7 +60,8 @@ const uiMarkers = [
   'TPF-PHYSICAL-SPLIT-v1',
   'TPF-MODULAR-RUNTIME-v1',
   'tpfWaTemplatesNav',
-  'tpfAutomationAdvancedBar',
+  'tpfFlowBuilder',
+  'automations-flow-builder.js',
   'data-view="system"',
   'view-system'
 ];
