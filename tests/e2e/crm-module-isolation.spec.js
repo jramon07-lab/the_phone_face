@@ -26,6 +26,7 @@ test('estructura física: cada dominio carga desde su archivo y el index no usa 
   }));
   for(const src of [
     '/js/modules/contacts-sales-core.js',
+    '/js/modules/contact-profile.js',
     '/js/modules/whatsapp-scheduling-core.js',
     '/js/modules/whatsapp-green-core.js',
     '/js/modules/agenda-core.js',
@@ -86,6 +87,12 @@ test('módulo Contactos/Ventas: está aislado y Ventas abre', async ({ page }) =
   await expect(nav).toBeVisible();
   await nav.click();
   await expect(page.locator('#view-sales')).toBeVisible();
+});
+
+test('módulo Ficha de contacto: está aislado y registrado', async ({ page }) => {
+  await login(page);
+  await expectModuleReady(page,'contact-profile');
+  await expect(page.locator('#contactModal')).toHaveCount(1);
 });
 
 test('módulo Automatizaciones/Ajustes: está aislado y constructor libre abre', async ({ page }) => {
