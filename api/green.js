@@ -126,10 +126,7 @@ export default async function handler(req, res) {
   try {
     const action = String(req.query.action || "").toLowerCase();
 
-
     if (req.method === "POST" && action === "webhook") {
-      // Endpoint listo para recibir notificaciones GREEN-API desde servidor.
-      // La persistencia principal se realiza desde el cliente vía Supabase RPC.
       return res.status(200).json({ ok:true });
     }
 
@@ -163,8 +160,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, settings: data || {} });
     }
 
-    // Comprueba y activa, solo si hace falta, las notificaciones necesarias
-    // para recibir mensajes nuevos por la cola HTTP de GREEN-API.
     if (req.method === "POST" && action === "ensure") {
       let current;
       try {
@@ -208,8 +203,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, changed: false, settings: current || {} });
     }
 
-    // Lista híbrida: getChats da contactos/orden base; los diarios aportan
-    // el último mensaje; receiveNotification mantiene las novedades en tiempo real.
     if (req.method === "GET" && action === "summary") {
       const minutes = Math.max(60, Math.min(43200, Number(req.query.minutes || 10080)));
       const chatsData = await greenFetch("getChats");
@@ -232,8 +225,6 @@ export default async function handler(req, res) {
         if (!prev || ts >= Number(prev?.timestamp || 0)) latest.set(chatId,msg);
       }
 
-      // Para chats visibles sin entrada reciente en los diarios, usa un único
-      // mensaje de historial como respaldo (solo en carga/reconciliación).
       for (const chat of chats.slice(0,15)) {
         const chatId=normalizeChatId(chat?.id);
         if (!chatId || latest.has(chatId)) continue;
@@ -259,8 +250,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, chats });
     }
 
-    // Foto de perfil del contacto o grupo. GREEN-API devuelve una URL
-    // visible cuando la privacidad del interlocutor lo permite.
     if (req.method === "POST" && action === "avatar") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
@@ -298,8 +287,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Recupera el enlace de un archivo del historial cuando getChatHistory
-    // no incluye downloadUrl (fotos/documentos antiguos).
     if (req.method === "POST" && action === "file") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
@@ -320,9 +307,6 @@ export default async function handler(req, res) {
       });
     }
 
-
-    // Descarga real desde el mismo dominio de la app. Se responde como
-    // "attachment" para que Safari respete "Consultar al iniciar la descarga".
     if (req.method === "GET" && action === "download") {
       const chatId = normalizeChatId(req.query.chatId);
       const idMessage = String(req.query.idMessage || "").trim();
@@ -354,8 +338,6 @@ export default async function handler(req, res) {
       return res.status(200).send(bytes);
     }
 
-    // Último mensaje real de varios chats. Las llamadas se hacen de forma
-    // secuencial para evitar que GREEN-API rechace/rate-limitée una ráfaga.
     if (req.method === "POST" && action === "previews") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const rawIds = Array.isArray(body.chatIds) ? body.chatIds : [];
@@ -417,7 +399,6 @@ export default async function handler(req, res) {
       });
     }
 
-
     if (req.method === "POST" && action === "read") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
@@ -453,15 +434,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, idMessage: data?.idMessage || null, urlFile: data?.urlFile || "", data });
     }
 
-    // Lee varias notificaciones de la cola en una sola petición.
-    // GREEN-API mezcla mensajes, estados de entrega/lectura y otros eventos;
-    // si leyéramos solo uno cada pocos segundos, un mensaje nuevo podría
-    // quedar detrás de muchos eventos de estado y tardar en aparecer.
     if (req.method === "GET" && (action === "notification" || action === "notifications")) {
       const notifications = [];
       const receipts = [];
       for (let i = 0; i < 25; i += 1) {
-        const packet = await greenFetch("receiveNotification");
+        let packet;
+        try {
+          packet = await greenFetch("receiveNotification");
+        } catch (e) {
+          if (Number(e?.status || 0) === 408) break;
+          throw e;
+        }
         if (!packet || packet.receiptId === undefined || packet.receiptId === null) break;
         notifications.push(packet.body || null);
         receipts.push(packet.receiptId);
@@ -479,6 +462,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: "Acción o método no permitido." });
   } catch (e) {
     const failedAction = String(req.query.action || "").toLowerCase();
+    const providerStatus = Number(e?.status || 0);
+    if ((failedAction === "notification" || failedAction === "notifications") && providerStatus === 408) {
+      return res.status(200).json({
+        ok: true,
+        notifications: [],
+        notification: null,
+        receiptIds: [],
+        timedOut: true
+      });
+    }
     console.error("GREEN_API_ERROR", {
       action: failedAction,
       requestMethod: req.method,
@@ -486,7 +479,6 @@ export default async function handler(req, res) {
       greenStatus: e?.status || null,
       message: e?.message || String(e)
     });
-    const providerStatus = Number(e?.status || 0);
     const responseStatus = providerStatus >= 400 && providerStatus < 500 ? providerStatus : 502;
     return res.status(responseStatus).json({
       ok: false,
