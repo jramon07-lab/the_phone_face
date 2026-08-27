@@ -5,8 +5,6 @@
 
   const labels={todos:'Todos',notas:'Notas',oportunidades:'Oportunidades',tareas:'Tareas'};
   let current='todos';
-  let timelineObserver=null;
-  let observedTimeline=null;
   let queued=false;
 
   function classify(row){
@@ -25,9 +23,9 @@
       const text=String(el.textContent||'').trim().toLowerCase();
       const key=text==='todos'?'todos':text==='notas'?'notas':text==='oportunidades'?'oportunidades':text==='tareas'?'tareas':'';
       if(!key)return;
-      if(el.dataset.tpfActivityTab!==key)el.dataset.tpfActivityTab=key;
-      if(el.getAttribute('role')!=='button')el.setAttribute('role','button');
-      if(el.getAttribute('tabindex')!=='0')el.setAttribute('tabindex','0');
+      el.dataset.tpfActivityTab=key;
+      el.setAttribute('role','button');
+      el.setAttribute('tabindex','0');
       el.style.cursor='pointer';
       el.style.userSelect='none';
       const active=key===current;
@@ -50,8 +48,7 @@
     let shown=0;
     rows.forEach(row=>{
       const visible=current==='todos'||classify(row)===current;
-      const display=visible?'':'none';
-      if(row.style.display!==display)row.style.display=display;
+      row.style.display=visible?'':'none';
       if(visible)shown++;
     });
     let empty=document.getElementById('tpfActivityFilterEmpty');
@@ -61,10 +58,8 @@
       empty.className='cpEmpty';
       timeline.appendChild(empty);
     }
-    const text='No hay '+labels[current].toLowerCase()+' en el historial.';
-    if(empty.textContent!==text)empty.textContent=text;
-    const display=shown?'none':'';
-    if(empty.style.display!==display)empty.style.display=display;
+    empty.textContent='No hay '+labels[current].toLowerCase()+' en el historial.';
+    empty.style.display=shown?'none':'';
   }
 
   function queueFilter(){
@@ -73,19 +68,9 @@
     requestAnimationFrame(applyFilter);
   }
 
-  function ensureTimelineObserver(){
-    const timeline=document.getElementById('cpTimeline');
-    if(!timeline||timeline===observedTimeline)return;
-    timelineObserver?.disconnect();
-    observedTimeline=timeline;
-    timelineObserver=new MutationObserver(queueFilter);
-    timelineObserver.observe(timeline,{childList:true,subtree:true});
-  }
-
   function select(key){
     if(!labels[key])return;
     current=key;
-    ensureTimelineObserver();
     queueFilter();
   }
 
@@ -96,9 +81,7 @@
       const key=text==='todos'?'todos':text==='notas'?'notas':text==='oportunidades'?'oportunidades':text==='tareas'?'tareas':'';
       if(key){e.preventDefault();e.stopPropagation();select(key);return;}
     }
-    if(e.target?.closest?.('[onclick*="openContact"], [data-contact-id], #contactModal')){
-      setTimeout(()=>{ensureTimelineObserver();queueFilter();},40);
-    }
+    if(e.target?.closest?.('[onclick*="openContact"], [data-contact-id]'))setTimeout(queueFilter,60);
   },true);
 
   document.addEventListener('keydown',e=>{
@@ -108,6 +91,6 @@
     e.preventDefault();select(tab.dataset.tpfActivityTab);
   });
 
-  window.addEventListener('tpf:contact-open',()=>setTimeout(()=>{ensureTimelineObserver();queueFilter();},0));
-  setTimeout(()=>{ensureTimelineObserver();queueFilter();},300);
+  window.addEventListener('tpf:contact-open',()=>setTimeout(queueFilter,0));
+  setTimeout(queueFilter,300);
 })();
