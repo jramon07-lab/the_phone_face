@@ -4,6 +4,7 @@
   const byId=id=>document.getElementById(id);
   function value(id){return byId(id)?.value||'';}
   function closeEditor(){byId('tpfContactEditorBack')?.remove();}
+  function fixOpportunityLayer(){const modal=byId('oppDetailModal');if(!modal)return;modal.style.setProperty('z-index','80000','important');modal.style.setProperty('pointer-events','auto','important');const card=modal.querySelector('.opportunityModalCard,.modalCard');if(card){card.style.setProperty('position','relative','important');card.style.setProperty('z-index','80001','important');card.style.setProperty('pointer-events','auto','important');}}
   function openEditor(){
     closeEditor();
     const modal=byId('contactModal');if(!modal||modal.classList.contains('hidden'))return;
@@ -26,7 +27,11 @@
       const edit=e.target?.closest?.('#tpfContactEditToggle');if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openEditor();return;}
       const cancel=e.target?.closest?.('#tpfContactEditorCancel,#tpfContactEditorCancelBottom');if(cancel){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();closeEditor();return;}
       const save=e.target?.closest?.('#tpfContactEditorSave');if(save){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();copyToReal();const real=byId('contactSave');if(real){real.disabled=false;real.click();}closeEditor();return;}
+      if(e.target?.closest?.('#cpNewOpp,[data-action="new-opportunity"]'))setTimeout(fixOpportunityLayer,0);
     },true);
+    const observer=new MutationObserver(()=>{const modal=byId('oppDetailModal');if(modal&&!modal.classList.contains('hidden'))fixOpportunityLayer();});
+    observer.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});
     window.addEventListener('tpf:contact-open',closeEditor);
+    fixOpportunityLayer();
   }});
 })();
