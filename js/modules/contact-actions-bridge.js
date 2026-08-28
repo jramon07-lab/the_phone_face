@@ -1,23 +1,31 @@
 (function(){
   'use strict';
-  const M=window.TPFModules;
-  if(!M)return;
+  const M=window.TPFModules;if(!M)return;
   const byId=id=>document.getElementById(id);
-  const fieldIds=['contactFirstName','contactLastName','contactName','contactPhone','contactDni','contactEmail','contactNotes','contactObservations'];
-  function fields(){const out=[];fieldIds.forEach(id=>{const el=byId(id);if(el)out.push(el);});byId('contactCustomFields')?.querySelectorAll('input,textarea,select').forEach(el=>out.push(el));return [...new Set(out)];}
-  function applyEditing(on){
-    const modal=byId('contactModal');if(!modal||modal.classList.contains('hidden'))return;modal.dataset.tpfBridgeEditing=on?'1':'0';modal.classList.toggle('tpf-contact-editing',on);modal.classList.toggle('tpf-contact-readonly',!on);
-    fields().forEach(el=>{if(String(el.tagName||'').toUpperCase()==='SELECT'){el.disabled=!on;el.setAttribute('aria-disabled',String(!on));}else{el.disabled=false;el.readOnly=!on;if(on)el.removeAttribute('readonly');else el.setAttribute('readonly','');el.setAttribute('aria-readonly',String(!on));}});
-    const edit=byId('tpfContactEditToggle');if(edit){edit.disabled=false;edit.style.display='inline-flex';edit.textContent=on?'Cancelar edición':'Editar datos';edit.setAttribute('aria-pressed',String(on));}
-    const save=byId('tpfContactSaveLocal');if(save){save.disabled=!on;save.style.display=on?'inline-flex':'none';}
-    const real=byId('contactSave');if(real){real.disabled=!on;real.style.display='none';}
-    const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=on?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
+  function value(id){return byId(id)?.value||'';}
+  function closeEditor(){byId('tpfContactEditorBack')?.remove();}
+  function openEditor(){
+    closeEditor();
+    const modal=byId('contactModal');if(!modal||modal.classList.contains('hidden'))return;
+    const back=document.createElement('div');back.id='tpfContactEditorBack';back.className='modalBack';
+    back.innerHTML='<div class="modalCard" style="max-width:760px"><div class="modalHead"><h3>Editar contacto</h3><button id="tpfContactEditorCancel" type="button" class="secondary">Volver</button></div><div class="formGrid"><label>Nombre<input id="tpfEditFirstName"></label><label>Apellidos<input id="tpfEditLastName"></label><label>Teléfono<input id="tpfEditPhone"></label><label>Email<input id="tpfEditEmail" type="email"></label><label>DNI<input id="tpfEditDni"></label></div><div class="modalActions"><button id="tpfContactEditorSave" type="button" class="primary">Guardar cambios</button><button id="tpfContactEditorCancelBottom" type="button" class="secondary">Cancelar</button></div></div>';
+    document.body.appendChild(back);
+    byId('tpfEditFirstName').value=value('contactFirstName')||value('contactName').split(' ')[0]||'';
+    byId('tpfEditLastName').value=value('contactLastName')||value('contactName').split(' ').slice(1).join(' ');
+    byId('tpfEditPhone').value=value('contactPhone');byId('tpfEditEmail').value=value('contactEmail');byId('tpfEditDni').value=value('contactDni');
+  }
+  function copyToReal(){
+    const first=value('tpfEditFirstName'),last=value('tpfEditLastName');
+    if(byId('contactFirstName'))byId('contactFirstName').value=first;if(byId('contactLastName'))byId('contactLastName').value=last;if(byId('contactName'))byId('contactName').value=[first,last].filter(Boolean).join(' ');
+    if(byId('contactPhone'))byId('contactPhone').value=value('tpfEditPhone');if(byId('contactEmail'))byId('contactEmail').value=value('tpfEditEmail');if(byId('contactDni'))byId('contactDni').value=value('tpfEditDni');
   }
   M.register('contact-edit',{install(){
+    if(M.claimControl)M.claimControl('contact-edit','#tpfContactEditToggle','exclusive');
     document.addEventListener('click',e=>{
-      const edit=e.target?.closest?.('#tpfContactEditToggle');if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const modal=byId('contactModal');const on=modal?.dataset?.tpfBridgeEditing!=='1';applyEditing(on);setTimeout(()=>applyEditing(on),0);setTimeout(()=>applyEditing(on),80);return;}
-      const save=e.target?.closest?.('#tpfContactSaveLocal');if(save){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=byId('contactSave');if(real){real.disabled=false;real.click();}setTimeout(()=>applyEditing(false),150);setTimeout(()=>applyEditing(false),700);}
+      const edit=e.target?.closest?.('#tpfContactEditToggle');if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openEditor();return;}
+      const cancel=e.target?.closest?.('#tpfContactEditorCancel,#tpfContactEditorCancelBottom');if(cancel){e.preventDefault();closeEditor();return;}
+      const save=e.target?.closest?.('#tpfContactEditorSave');if(save){e.preventDefault();copyToReal();const real=byId('contactSave');if(real){real.disabled=false;real.click();}closeEditor();return;}
     },true);
-    window.addEventListener('tpf:contact-open',()=>{const modal=byId('contactModal');if(modal)modal.dataset.tpfBridgeEditing='0';setTimeout(()=>applyEditing(false),0);setTimeout(()=>applyEditing(false),120);});
+    window.addEventListener('tpf:contact-open',closeEditor);
   }});
 })();
