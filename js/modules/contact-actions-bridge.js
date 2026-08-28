@@ -21,10 +21,10 @@
   }
   M.register('contact-edit',{install(){
     if(M.claimControl)M.claimControl('contact-edit','#tpfContactEditToggle','exclusive');
-    document.addEventListener('click',e=>{
+    window.addEventListener('click',e=>{
       const edit=e.target?.closest?.('#tpfContactEditToggle');if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openEditor();return;}
-      const cancel=e.target?.closest?.('#tpfContactEditorCancel,#tpfContactEditorCancelBottom');if(cancel){e.preventDefault();closeEditor();return;}
-      const save=e.target?.closest?.('#tpfContactEditorSave');if(save){e.preventDefault();copyToReal();const real=byId('contactSave');if(real){real.disabled=false;real.click();}closeEditor();return;}
+      const cancel=e.target?.closest?.('#tpfContactEditorCancel,#tpfContactEditorCancelBottom');if(cancel){e.preventDefault();e.stopPropagation();closeEditor();return;}
+      const save=e.target?.closest?.('#tpfContactEditorSave');if(save){e.preventDefault();e.stopPropagation();copyToReal();const real=byId('contactSave');if(real){real.disabled=false;real.click();}closeEditor();return;}
     },true);
     window.addEventListener('tpf:contact-open',closeEditor);
   }});
