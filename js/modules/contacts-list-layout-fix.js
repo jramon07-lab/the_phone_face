@@ -6,6 +6,18 @@ M.register('contacts-list-layout',{install(){
   const style=document.createElement('style');
   style.id='tpfContactsResponsiveFix';
   style.textContent=`
+    .referenceShell{min-width:0!important;max-width:100%!important}
+    .referenceWorkspace,.referenceWorkspace main{min-width:0!important}
+    @media (min-width:851px){
+      body:not(.sidebarCollapsed) .referenceWorkspace{margin-left:252px!important;width:calc(100% - 252px)!important;max-width:calc(100% - 252px)!important;flex:0 0 calc(100% - 252px)!important}
+      body.sidebarCollapsed .referenceWorkspace{margin-left:0!important;width:100%!important;max-width:100%!important;flex:0 0 100%!important}
+    }
+    @media (max-width:850px) and (min-width:801px){
+      body:not(.sidebarCollapsed) .referenceWorkspace{margin-left:72px!important;width:calc(100% - 72px)!important;max-width:calc(100% - 72px)!important;flex:0 0 calc(100% - 72px)!important}
+    }
+    @media (max-width:800px){
+      .referenceWorkspace{margin-left:0!important;width:100%!important;max-width:100%!important;flex:0 0 100%!important}
+    }
     #view-database.tpfContactsEnhanced,
     #view-database.tpfContactsEnhanced .tpfContactsApp,
     #view-database.tpfContactsEnhanced .tpfContactsContent,
