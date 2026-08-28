@@ -2,7 +2,7 @@
 'use strict';
 const M=window.TPFModules;if(!M)return;
 function install(){
- const client=window.sb;
+ const client=(typeof sb!=='undefined'&&sb)?sb:window.sb;
  if(!client||typeof client.from!=='function'||client.__tpfContactsSourceGuard)return;
  const originalFrom=client.from.bind(client);
  client.from=function(table){
@@ -14,9 +14,7 @@ function install(){
      if(!query||typeof query.in!=='function')return query;
      const originalIn=query.in.bind(query);
      query.in=function(column,values){
-       if(column==='source_sheet'&&Array.isArray(values)&&values.includes('BASE DE DATOS')&&values.includes('DATA')){
-         return originalIn(column,['BASE DE DATOS']);
-       }
+       if(column==='source_sheet'&&Array.isArray(values)&&values.includes('BASE DE DATOS')&&values.includes('DATA'))return originalIn(column,['BASE DE DATOS']);
        return originalIn(column,values);
      };
      return query;
