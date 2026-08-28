@@ -1,66 +1,8 @@
 (function(){
   'use strict';
-  const backoff=new Map();
-  const pending=new Map();
-
-  function normalizeChatId(value){
-    const raw=String(value||'').trim();
-    if(!raw)return '';
-    if(raw.includes('@'))return raw;
-    const digits=raw.replace(/\D/g,'');
-    return digits?`${digits}@c.us`:'';
-  }
-
-  async function safeRead(payload){
-    const chatId=normalizeChatId(payload?.chatId);
-    const idMessage=String(payload?.idMessage||'').trim();
-    if(!chatId)return {ok:true,setRead:false,degraded:true,reason:'invalid_chat'};
-
-    const now=Date.now();
-    const until=Number(backoff.get(chatId)||0);
-    if(now<until)return {ok:true,setRead:false,degraded:true,reason:'read_backoff'};
-    if(pending.has(chatId))return pending.get(chatId);
-
-    const task=(async()=>{
-      try{
-        const r=await fetch('/api/green-read-safe',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({chatId,...(idMessage?{idMessage}:{})})
-        });
-        const data=await r.json().catch(()=>({ok:true,setRead:false,degraded:true,reason:'bad_response'}));
-        if(data?.degraded)backoff.set(chatId,Date.now()+60000);
-        else backoff.delete(chatId);
-        return {ok:true,...data};
-      }catch(_){
-        backoff.set(chatId,Date.now()+60000);
-        return {ok:true,setRead:false,degraded:true,reason:'network_error'};
-      }finally{
-        pending.delete(chatId);
-      }
-    })();
-    pending.set(chatId,task);
-    return task;
-  }
-
-  function install(){
-    const base=window.waApi;
-    if(typeof base!=='function'||base.__tpfReadSafeGuard)return false;
-    const wrapped=async function(action,payload){
-      if(String(action||'').toLowerCase()==='read')return safeRead(payload||{});
-      return base.apply(this,arguments);
-    };
-    wrapped.__tpfReadSafeGuard=true;
-    wrapped.__tpfReadSafeBase=base;
-    window.waApi=wrapped;
-    return true;
-  }
-
-  if(!install()){
-    let tries=0;
-    const timer=setInterval(()=>{
-      tries++;
-      if(install()||tries>40)clearInterval(timer);
-    },100);
-  }
+  const M=window.TPFModules;if(!M)return;
+  const backoff=new Map(),pending=new Map();
+  function normalizeChatId(value){const raw=String(value||'').trim();if(!raw)return '';if(raw.includes('@'))return raw;const digits=raw.replace(/\D/g,'');return digits?`${digits}@c.us`:'';}
+  async function safeRead(payload){const chatId=normalizeChatId(payload?.chatId),idMessage=String(payload?.idMessage||'').trim();if(!chatId)return {ok:true,setRead:false,degraded:true,reason:'invalid_chat'};const now=Date.now(),until=Number(backoff.get(chatId)||0);if(now<until)return {ok:true,setRead:false,degraded:true,reason:'read_backoff'};if(pending.has(chatId))return pending.get(chatId);const task=(async()=>{try{const r=await fetch('/api/green-read-safe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId,...(idMessage?{idMessage}:{})})});const data=await r.json().catch(()=>({ok:true,setRead:false,degraded:true,reason:'bad_response'}));if(data?.degraded)backoff.set(chatId,Date.now()+60000);else backoff.delete(chatId);return {ok:true,...data};}catch(_){backoff.set(chatId,Date.now()+60000);return {ok:true,setRead:false,degraded:true,reason:'network_error'};}finally{pending.delete(chatId);}})();pending.set(chatId,task);return task;}
+  M.register('whatsapp-read',{install(){function installGuard(){const base=window.waApi;if(typeof base!=='function'||base.__tpfReadSafeGuard)return false;const wrapped=async function(action,payload){if(String(action||'').toLowerCase()==='read')return safeRead(payload||{});return base.apply(this,arguments);};wrapped.__tpfReadSafeGuard=true;wrapped.__tpfReadSafeBase=base;window.waApi=wrapped;return true;}if(!installGuard()){let tries=0;const timer=setInterval(()=>{tries++;if(installGuard()||tries>40)clearInterval(timer);},100);}}});
 })();
