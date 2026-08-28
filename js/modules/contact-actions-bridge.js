@@ -8,7 +8,8 @@
     closeEditor();
     const modal=byId('contactModal');if(!modal||modal.classList.contains('hidden'))return;
     const back=document.createElement('div');back.id='tpfContactEditorBack';back.className='modalBack';
-    back.innerHTML='<div class="modalCard" style="max-width:760px"><div class="modalHead"><h3>Editar contacto</h3><button id="tpfContactEditorCancel" type="button" class="secondary">Volver</button></div><div class="formGrid"><label>Nombre<input id="tpfEditFirstName"></label><label>Apellidos<input id="tpfEditLastName"></label><label>Teléfono<input id="tpfEditPhone"></label><label>Email<input id="tpfEditEmail" type="email"></label><label>DNI<input id="tpfEditDni"></label></div><div class="modalActions"><button id="tpfContactEditorSave" type="button" class="primary">Guardar cambios</button><button id="tpfContactEditorCancelBottom" type="button" class="secondary">Cancelar</button></div></div>';
+    back.style.cssText='position:fixed!important;inset:0!important;z-index:70000!important;pointer-events:auto!important;';
+    back.innerHTML='<div class="modalCard" style="max-width:760px;position:relative;z-index:70001;pointer-events:auto"><div class="modalHead"><h3>Editar contacto</h3><button id="tpfContactEditorCancel" type="button" class="secondary">Volver</button></div><div class="formGrid"><label>Nombre<input id="tpfEditFirstName"></label><label>Apellidos<input id="tpfEditLastName"></label><label>Teléfono<input id="tpfEditPhone"></label><label>Email<input id="tpfEditEmail" type="email"></label><label>DNI<input id="tpfEditDni"></label></div><div class="modalActions"><button id="tpfContactEditorSave" type="button" class="primary">Guardar cambios</button><button id="tpfContactEditorCancelBottom" type="button" class="secondary">Cancelar</button></div></div>';
     document.body.appendChild(back);
     byId('tpfEditFirstName').value=value('contactFirstName')||value('contactName').split(' ')[0]||'';
     byId('tpfEditLastName').value=value('contactLastName')||value('contactName').split(' ').slice(1).join(' ');
@@ -23,8 +24,8 @@
     if(M.claimControl)M.claimControl('contact-edit','#tpfContactEditToggle','exclusive');
     window.addEventListener('click',e=>{
       const edit=e.target?.closest?.('#tpfContactEditToggle');if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openEditor();return;}
-      const cancel=e.target?.closest?.('#tpfContactEditorCancel,#tpfContactEditorCancelBottom');if(cancel){e.preventDefault();e.stopPropagation();closeEditor();return;}
-      const save=e.target?.closest?.('#tpfContactEditorSave');if(save){e.preventDefault();e.stopPropagation();copyToReal();const real=byId('contactSave');if(real){real.disabled=false;real.click();}closeEditor();return;}
+      const cancel=e.target?.closest?.('#tpfContactEditorCancel,#tpfContactEditorCancelBottom');if(cancel){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();closeEditor();return;}
+      const save=e.target?.closest?.('#tpfContactEditorSave');if(save){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();copyToReal();const real=byId('contactSave');if(real){real.disabled=false;real.click();}closeEditor();return;}
     },true);
     window.addEventListener('tpf:contact-open',closeEditor);
   }});
