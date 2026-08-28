@@ -1,0 +1,45 @@
+name: CRM modules check
+
+on:
+  push:
+    branches:
+      - work/crm-modular-20260826
+  pull_request:
+
+jobs:
+  modules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify CRM module files and registrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            js/modules/runtime.js
+            js/modules/whatsapp.js
+            js/modules/agenda.js
+            js/modules/contacts-sales.js
+            js/modules/automations-settings.js
+            js/modules/system-status.js
+            js/modules/contact-profile.js
+            js/modules/contact-activity-tabs.js
+            js/modules/contact-opportunity-actions.js
+            js/modules/contact-open-nonblocking.js
+            js/modules/contact-actions-bridge.js
+            js/modules/automations-auth-guard.js
+            js/modules/whatsapp-read-guard.js
+            js/modules/search-fallback.js
+            js/modules/module-health-final.js
+          )
+          for f in "${files[@]}"; do test -s "$f" || { echo "Missing/empty: $f"; exit 1; }; done
+          grep -q "M.register('contact-activity'" js/modules/contact-activity-tabs.js
+          grep -q "M.register('contact-opportunities'" js/modules/contact-opportunity-actions.js
+          grep -q "M.register('contact-open'" js/modules/contact-open-nonblocking.js
+          grep -q "M.register('contact-edit'" js/modules/contact-actions-bridge.js
+          grep -q "M.register('auth-guard'" js/modules/automations-auth-guard.js
+          grep -q "M.register('whatsapp-read'" js/modules/whatsapp-read-guard.js
+          grep -q "M.register('search'" js/modules/search-fallback.js
+          grep -q "whatsapp-scheduling" js/modules/module-health-final.js
+          grep -q "automations-flow" js/modules/module-health-final.js
+          echo "CRM modular structure OK"
