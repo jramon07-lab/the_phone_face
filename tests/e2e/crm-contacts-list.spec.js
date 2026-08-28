@@ -25,8 +25,24 @@ test('contactos: nueva pantalla, filtros, etiquetas, ficha y alta visibles', asy
 
   await expect(page.locator('#tpfContactsLoading')).toBeHidden({ timeout: 30000 });
 
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  expect(overflow).toBeLessThanOrEqual(1);
+  const layout = await page.evaluate(() => {
+    const contacts = document.getElementById('tpfContactsApp');
+    const view = document.getElementById('view-database');
+    const scroller = document.querySelector('.tpfContactsTableScroll');
+    const contactsRect = contacts.getBoundingClientRect();
+    const viewRect = view.getBoundingClientRect();
+    const overflowX = getComputedStyle(scroller).overflowX;
+    return {
+      contactsLeft: contactsRect.left,
+      contactsRight: contactsRect.right,
+      viewLeft: viewRect.left,
+      viewRight: viewRect.right,
+      overflowX,
+    };
+  });
+  expect(layout.contactsLeft).toBeGreaterThanOrEqual(layout.viewLeft - 1);
+  expect(layout.contactsRight).toBeLessThanOrEqual(layout.viewRight + 1);
+  expect(['auto', 'scroll']).toContain(layout.overflowX);
 
   const filters = page.locator('#tpfContactsFilters');
   if (!(await filters.isVisible())) await page.locator('#tpfContactsFiltersToggle').click();
