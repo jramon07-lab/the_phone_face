@@ -3,20 +3,21 @@
 const M=window.TPFModules;if(!M)return;
 M.register('contacts-list-layout',{install(){
   if(document.getElementById('tpfContactsResponsiveFix'))return;
+  const view=document.getElementById('view-database');
+  const syncActive=()=>document.body.classList.toggle('tpfContactsActive',!!view&&!view.classList.contains('hidden'));
   const style=document.createElement('style');
   style.id='tpfContactsResponsiveFix';
   style.textContent=`
-    .referenceShell{min-width:0!important;max-width:100%!important}
-    .referenceWorkspace,.referenceWorkspace main{min-width:0!important}
-    @media (min-width:851px){
-      body:not(.sidebarCollapsed) .referenceWorkspace{margin-left:252px!important;width:calc(100% - 252px)!important;max-width:calc(100% - 252px)!important;flex:0 0 calc(100% - 252px)!important}
-      body.sidebarCollapsed .referenceWorkspace{margin-left:0!important;width:100%!important;max-width:100%!important;flex:0 0 100%!important}
-    }
+    body.tpfContactsActive{overflow-x:hidden!important}
+    body.tpfContactsActive .referenceShell{min-width:0!important;max-width:100%!important}
+    body.tpfContactsActive .referenceWorkspace{position:absolute!important;top:0!important;right:0!important;left:252px!important;margin-left:0!important;width:auto!important;max-width:none!important;min-width:0!important;flex:none!important}
+    body.tpfContactsActive.sidebarCollapsed .referenceWorkspace{left:0!important}
+    body.tpfContactsActive .referenceWorkspace main{min-width:0!important;overflow-x:hidden!important}
     @media (max-width:850px) and (min-width:801px){
-      body:not(.sidebarCollapsed) .referenceWorkspace{margin-left:72px!important;width:calc(100% - 72px)!important;max-width:calc(100% - 72px)!important;flex:0 0 calc(100% - 72px)!important}
+      body.tpfContactsActive:not(.sidebarCollapsed) .referenceWorkspace{left:72px!important}
     }
     @media (max-width:800px){
-      .referenceWorkspace{margin-left:0!important;width:100%!important;max-width:100%!important;flex:0 0 100%!important}
+      body.tpfContactsActive .referenceWorkspace{left:0!important}
     }
     #view-database.tpfContactsEnhanced,
     #view-database.tpfContactsEnhanced .tpfContactsApp,
@@ -46,5 +47,11 @@ M.register('contacts-list-layout',{install(){
     }
   `;
   document.head.appendChild(style);
+  if(view){
+    new MutationObserver(syncActive).observe(view,{attributes:true,attributeFilter:['class']});
+  }
+  document.addEventListener('click',e=>{if(e.target?.closest?.('.nav'))setTimeout(syncActive,0);},true);
+  window.addEventListener('resize',syncActive,{passive:true});
+  syncActive();
 }});
 })();
