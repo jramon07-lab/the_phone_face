@@ -30,7 +30,8 @@ jobs:
             js/modules/automations-auth-guard.js
             js/modules/whatsapp-read-guard.js
             js/modules/search-fallback.js
-            js/modules/module-health-final.js
+            js/modules/whatsapp-scheduling-core.js
+            js/modules/automations-flow-builder.js
           )
           for f in "${files[@]}"; do test -s "$f" || { echo "Missing/empty: $f"; exit 1; }; done
           grep -q "M.register('contact-activity'" js/modules/contact-activity-tabs.js
@@ -40,6 +41,6 @@ jobs:
           grep -q "M.register('auth-guard'" js/modules/automations-auth-guard.js
           grep -q "M.register('whatsapp-read'" js/modules/whatsapp-read-guard.js
           grep -q "M.register('search'" js/modules/search-fallback.js
-          grep -q "whatsapp-scheduling" js/modules/module-health-final.js
-          grep -q "automations-flow" js/modules/module-health-final.js
+          grep -q "TPFAutomationFlow" js/modules/automations-flow-builder.js
+          grep -q "openWhatsappProgramsView" js/modules/whatsapp-scheduling-core.js
           echo "CRM modular structure OK"
