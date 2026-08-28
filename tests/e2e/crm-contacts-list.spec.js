@@ -18,16 +18,26 @@ test('contactos: nueva pantalla, filtros, etiquetas, ficha y alta visibles', asy
   await expect(app).toBeVisible({ timeout: 30000 });
 
   await expect(page.locator('#tpfContactsSearch')).toBeVisible();
-  await expect(page.locator('#tpfFilterName')).toBeVisible();
-  await expect(page.locator('#tpfFilterDni')).toBeVisible();
-  await expect(page.locator('#tpfFilterPhone')).toBeVisible();
-  await expect(page.locator('#tpfFilterSource')).toBeVisible();
-  await expect(page.locator('#tpfFilterLabel')).toBeVisible();
+  await expect(page.locator('#tpfContactsFiltersToggle')).toBeVisible();
   await expect(page.locator('#tpfContactsExport')).toBeVisible();
   await expect(page.locator('#tpfContactsAdd')).toBeVisible();
   await expect(page.locator('#view-database > .tpfContactsLegacy')).toBeHidden();
 
   await expect(page.locator('#tpfContactsLoading')).toBeHidden({ timeout: 30000 });
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  const filters = page.locator('#tpfContactsFilters');
+  if (!(await filters.isVisible())) await page.locator('#tpfContactsFiltersToggle').click();
+  await expect(filters).toBeVisible();
+  await expect(page.locator('#tpfFilterName')).toBeVisible();
+  await expect(page.locator('#tpfFilterDni')).toBeVisible();
+  await expect(page.locator('#tpfFilterPhone')).toBeVisible();
+  await expect(page.locator('#tpfFilterSource')).toBeVisible();
+  await expect(page.locator('#tpfFilterLabel')).toBeVisible();
+  const closeFilters = page.locator('#tpfContactsFiltersClose');
+  if (await closeFilters.isVisible()) await closeFilters.click();
 
   await page.locator('#tpfContactsAdd').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeVisible();
