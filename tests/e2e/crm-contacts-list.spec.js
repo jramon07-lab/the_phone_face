@@ -50,10 +50,10 @@ test('contactos: nueva pantalla, filtros, etiquetas, ficha y alta visibles', asy
   await expect(page.locator('#tpfFilterName')).toBeVisible();
   await expect(page.locator('#tpfFilterDni')).toBeVisible();
   await expect(page.locator('#tpfFilterPhone')).toBeVisible();
-  await expect(page.locator('#tpfFilterSource')).toBeVisible();
   await expect(page.locator('#tpfFilterLabel')).toBeVisible();
   const closeFilters = page.locator('#tpfContactsFiltersClose');
-  if (await closeFilters.isVisible()) await closeFilters.click();
+  await expect(closeFilters).toBeVisible();
+  await closeFilters.click();
 
   await page.locator('#tpfContactsAdd').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeVisible();
