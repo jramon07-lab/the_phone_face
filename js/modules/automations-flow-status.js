@@ -1,0 +1,1 @@
+(function(){'use strict';const M=window.TPFModules;if(!M)return;M.register('automations-flow',{install(){}});})();
