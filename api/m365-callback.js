@@ -1,5 +1,8 @@
+const CALLBACK_ORIGIN='https://the-phone-face-app-whatsapp-git-b37a28-jramon-07-2402s-projects.vercel.app';
+const CALLBACK_URI=CALLBACK_ORIGIN+'/api/m365-callback';
 function cookies(req){const out={};String(req.headers.cookie||'').split(';').forEach(p=>{const i=p.indexOf('=');if(i>0)out[p.slice(0,i).trim()]=decodeURIComponent(p.slice(i+1).trim())});return out}
 function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function safeReturnTo(v){const s=String(v||'').trim();if(s.startsWith('/'))return CALLBACK_ORIGIN+s;try{const u=new URL(s);if(u.protocol==='https:'&&u.hostname.endsWith('.vercel.app'))return u.toString()}catch(_){}return CALLBACK_ORIGIN+'/'}
 module.exports=async function handler(req,res){
   const clientId=String(process.env.M365_CLIENT_ID||'').trim();
   const clientSecret=String(process.env.M365_CLIENT_SECRET||'').trim();
@@ -8,10 +11,7 @@ module.exports=async function handler(req,res){
   const state=String(req.query?.state||'');
   const code=String(req.query?.code||'');
   const err=String(req.query?.error_description||req.query?.error||'');
-  const host=String(req.headers['x-forwarded-host']||req.headers.host||'').split(',')[0].trim();
-  const proto=String(req.headers['x-forwarded-proto']||'https').split(',')[0].trim();
-  const redirectUri=`${proto}://${host}/api/m365-callback`;
-  const returnTo=c.tpf_m365_return&&String(c.tpf_m365_return).startsWith('/')?c.tpf_m365_return:'/';
+  const returnTo=safeReturnTo(c.tpf_m365_return||CALLBACK_ORIGIN+'/');
   const clear=[
     'tpf_m365_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
     'tpf_m365_verifier=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
@@ -19,7 +19,7 @@ module.exports=async function handler(req,res){
   ];
   if(err){res.status(400).setHeader('Content-Type','text/html; charset=utf-8');return res.end(`<h2>Microsoft 365 no conectado</h2><p>${esc(err)}</p><p><a href="${esc(returnTo)}">Volver al CRM</a></p>`)}
   if(!code||!state||!c.tpf_m365_state||state!==c.tpf_m365_state){res.status(400).setHeader('Content-Type','text/html; charset=utf-8');return res.end('<h2>Microsoft 365</h2><p>La respuesta de seguridad no es válida o ha caducado. Vuelve al CRM e inténtalo otra vez.</p>')}
-  const body=new URLSearchParams({client_id:clientId,grant_type:'authorization_code',code,redirect_uri:redirectUri,scope:'openid profile email offline_access User.Read Mail.Read Mail.ReadWrite Mail.Send'});
+  const body=new URLSearchParams({client_id:clientId,grant_type:'authorization_code',code,redirect_uri:CALLBACK_URI,scope:'openid profile email offline_access User.Read Mail.Read Mail.ReadWrite Mail.Send'});
   if(c.tpf_m365_verifier)body.set('code_verifier',c.tpf_m365_verifier);
   if(clientSecret)body.set('client_secret',clientSecret);
   let token;
