@@ -33,7 +33,16 @@ async function loadAll(){await Promise.all([loadMailboxState(),loadTemplates()])
 
 function optionHtml(items,value,label){return '<option value="">Elige…</option>'+items.map(x=>`<option value="${x.id}" ${String(value||'')===String(x.id)?'selected':''}>${esc(label(x))}</option>`).join('')}
 function enhanceAutomationBuilder(){const builder=$('tpfFlowBuilder');if(!builder)return;const select=builder.querySelector('#tpfStepEditor select[data-key="action_type"]');if(select&&!select.querySelector('option[value="send_email_template"]')){const o=document.createElement('option');o.value='send_email_template';o.textContent='Enviar plantilla de correo';select.appendChild(o)}const selected=select?.value;if(selected!=='send_email_template')return;const cfg=builder.querySelector('#tpfStepEditor .tpfStepConfig');if(!cfg||cfg.querySelector('[data-tpf-email-config]'))return;const wrap=document.createElement('div');wrap.dataset.tpfEmailConfig='1';wrap.className='full';wrap.innerHTML=`<div class="tpfVarHelp">El correo se enviará desde la cuenta Microsoft 365 elegida. Puedes dispararlo con <b>Se asigna una etiqueta</b>.</div><label class="full">Cuenta remitente<select data-cfg="mailbox_id">${optionHtml(mailboxes.filter(x=>x.connected),'',x=>x.display_name||x.email)}</select></label><label class="full">Plantilla de correo<select data-cfg="email_template_id">${optionHtml(templates,'',x=>x.name)}</select></label>`;cfg.appendChild(wrap);}
-function observeAutomations(){const obs=new MutationObserver(()=>enhanceAutomationBuilder());obs.observe(document.body,{childList:true,subtree:true});document.addEventListener('click',e=>{if(e.target?.closest?.('.nav[data-view="automations"]'))setTimeout(()=>{loadAll().then(enhanceAutomationBuilder)},250);});}
-function install(){ensureStyles();ensureNav();ensureView();observeAutomations();loadAll();}
+function bindAutomationsLight(){
+  document.addEventListener('click',e=>{
+    if(e.target?.closest?.('.nav[data-view="automations"]')||e.target?.closest?.('#tpfFlowBuilder [data-add="action"]')){
+      setTimeout(()=>{loadAll().then(enhanceAutomationBuilder)},250);
+    }
+  });
+  document.addEventListener('change',e=>{
+    if(e.target?.matches?.('#tpfFlowBuilder select[data-key="action_type"]'))setTimeout(enhanceAutomationBuilder,0);
+  });
+}
+function install(){ensureStyles();ensureNav();ensureView();bindAutomationsLight();}
 M.register('email-m365',{install});
 })();
