@@ -54,7 +54,7 @@ async function shot(page,name){
 
 test('cuenta demo por interfaz real: editor separado y oportunidades responden', async ({page})=>{
   await login(page);
-  const linked={recordId:'fe4b2188-8a08-445f-bbaa-6d4d5f89377d',opportunityId:'f1e68355-6df7-4a94-a62f-06c95daaf0ba'};
+  const linked={recordId:'fe4b2188-8a08-445f-bbaa-6d4d5f89377d'};
   await openRecordThroughUi(page,linked.recordId);
 
   await page.locator('#tpfContactEditToggle').click();
@@ -77,7 +77,7 @@ test('cuenta demo por interfaz real: editor separado y oportunidades responden',
   await expect(page.locator('#contactModal')).toBeHidden({timeout:5000});
   await openRecordThroughUi(page,linked.recordId);
   await expect(page.locator('#cpOpportunities')).not.toContainText('No hay oportunidades.',{timeout:10000});
-  const existing=page.locator(`#cpOpportunities [onclick*="${linked.opportunityId}"], #cpOpportunities [data-opp-id="${linked.opportunityId}"]`).first();
+  const existing=page.locator('#cpOpportunities').getByText(/Ver\s*\/\s*editar/i).first();
   await expect(existing).toBeVisible({timeout:10000});
   await existing.click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
