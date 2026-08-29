@@ -1,0 +1,1 @@
+Trigger de despliegue limpio desde la base estable d01a9a83454240071710c324707124ed858e90e7. No modifica la aplicación.
