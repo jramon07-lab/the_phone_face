@@ -77,9 +77,11 @@ test('cuenta demo por interfaz real: editor separado y oportunidades responden',
   await expect(page.locator('#contactModal')).toBeHidden({timeout:5000});
   await openRecordThroughUi(page,linked.recordId);
   await expect(page.locator('#cpOpportunities')).not.toContainText('No hay oportunidades.',{timeout:10000});
-  const existing=page.locator('#cpOpportunities').getByText(/Ver\s*\/\s*editar/i).first();
-  await expect(existing).toBeVisible({timeout:10000});
-  await existing.click();
+  const label=page.locator('#cpOpportunities').getByText(/Ver\s*\/\s*editar/i).first();
+  await expect(label).toBeVisible({timeout:10000});
+  const card=label.locator('xpath=ancestor::*[@data-opp-id][1]');
+  if(await card.count()) await card.click({position:{x:8,y:8}});
+  else await label.locator('xpath=ancestor::*[not(self::button) and not(self::a)][1]').click({position:{x:8,y:8}});
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});
   await shot(page,'demo-ui-03-ver-editar-oportunidad-abierta');
 });
