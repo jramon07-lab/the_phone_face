@@ -16,9 +16,9 @@ function loadMail(){
   if(loading)return;
   loading=true;
   const s=document.createElement('script');
-  s.src='/js/modules/email-m365.js?v=20260829-lazy2';
+  s.src='/js/modules/email-m365.js?v=20260829-isolated1';
   s.async=true;
-  s.onload=()=>{loaded=true;loading=false;setTimeout(showMail,0)};
+  s.onload=()=>{loaded=true;loading=false;queueMicrotask(showMail)};
   s.onerror=()=>{loading=false;M.report('email-m365-lazy',new Error('No se pudo cargar Correo'),'script load')};
   document.head.appendChild(s);
 }
@@ -32,13 +32,14 @@ function installNav(){
   el.innerHTML='<b>✉</b><span>Correo</span>';
   const anchor=document.querySelector('.nav[data-view="labels"]');
   nav.insertBefore(el,anchor||null);
-  el.addEventListener('click',e=>{e.preventDefault();loadMail()});
+  el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();loadMail()},{passive:false});
   return true;
 }
 function install(){
-  if(installNav())return;
-  let tries=0;
-  const timer=setInterval(()=>{tries++;if(installNav()||tries>=20)clearInterval(timer)},250);
+  const run=()=>{try{installNav()}catch(e){M.report('email-m365-lazy',e,'nav install')}};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});
+  else if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:1500});
+  else setTimeout(run,0);
 }
 M.register('email-m365-lazy',{install});
 })();
