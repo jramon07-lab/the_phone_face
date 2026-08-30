@@ -2,106 +2,26 @@
 'use strict';
 const M=window.TPFModules;if(!M)return;
 let previousView='view-dashboard';
-
-function visibleView(){
-  return [...document.querySelectorAll('.referenceWorkspace main > section')].find(x=>!x.classList.contains('hidden'))?.id||'view-dashboard';
-}
-function ensureStyles(){
-  if(document.getElementById('tpfWaTemplateLibraryStyles'))return;
-  const s=document.createElement('style');s.id='tpfWaTemplateLibraryStyles';s.textContent=`
-  #view-wa-templates-library{padding:20px;min-height:calc(100dvh - 64px)}
-  .tpfTplPageHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-  .tpfTplPageHead h2{margin:0}.tpfTplPageHead p{margin:4px 0 0;color:#667085;font-size:12px}
-  #tpfTplPageMount .waTemplateCard{position:static!important;transform:none!important;width:100%!important;max-width:none!important;max-height:none!important;box-shadow:none!important;border:1px solid #e4e7ec!important;border-radius:14px!important;margin:0!important}
-  #tpfTplPageMount .waTemplateHead{display:none!important}
-  .tpfTplSearchWrap{margin:0 0 14px}.tpfTplSearch{width:100%;padding:11px 13px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;font-size:14px}
-  .tpfTplNoResults{padding:18px 4px;color:#667085;font-size:13px}
-  `;document.head.appendChild(s);
-}
-function ensurePage(){
-  let v=document.getElementById('view-wa-templates-library');
-  if(v)return v;
-  const main=document.querySelector('.referenceWorkspace main');if(!main)return null;
-  v=document.createElement('section');v.id='view-wa-templates-library';v.className='hidden';v.innerHTML=`<div class="tpfTplPageHead"><div><h2>Plantillas de WhatsApp</h2><p>Busca, crea, edita y reutiliza tus plantillas desde un único módulo.</p></div><button id="tpfTplPageBack" class="secondary">← Volver</button></div><div id="tpfTplPageMount"></div>`;
-  main.appendChild(v);
-  document.getElementById('tpfTplPageBack').onclick=closeLibrary;
-  return v;
-}
-function ensureNav(){
-  const root=document.querySelector('.referenceNav');if(!root)return null;
-  let nav=document.getElementById('tpfWaTemplatesNav');
-  if(!nav){
-    nav=[...root.querySelectorAll('.nav')].find(n=>String(n.textContent||'').trim().toLowerCase().includes('plantillas whatsapp'))||null;
-  }
-  if(!nav){
-    nav=document.createElement('div');
-    nav.className='nav secondaryNav';
-    nav.innerHTML='<b>▤</b><span>Plantillas WhatsApp</span>';
-    const programs=[...root.querySelectorAll('.nav')].find(n=>n.dataset.view==='whatsapp');
-    root.insertBefore(nav,programs||null);
-  }
-  nav.id='tpfWaTemplatesNav';
-  nav.dataset.view='wa-templates-library';
-  return nav;
-}
+const FAV_KEY='tpf_wa_template_favorites_v1';
+function visibleView(){return [...document.querySelectorAll('.referenceWorkspace main > section')].find(x=>!x.classList.contains('hidden'))?.id||'view-dashboard'}
+function favs(){try{return new Set(JSON.parse(localStorage.getItem(FAV_KEY)||'[]'))}catch(_){return new Set()}}
+function saveFavs(set){try{localStorage.setItem(FAV_KEY,JSON.stringify([...set]))}catch(_){}}
+function ensureStyles(){if(document.getElementById('tpfWaTemplateLibraryStyles'))return;const s=document.createElement('style');s.id='tpfWaTemplateLibraryStyles';s.textContent=`
+#view-wa-templates-library{padding:20px;min-height:calc(100dvh - 64px);background:#f8fafc}.tpfTplPageHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.tpfTplPageHead h2{margin:0;font-size:25px}.tpfTplPageHead p{margin:4px 0 0;color:#667085;font-size:13px}.tpfTplToolbar{display:grid;grid-template-columns:minmax(240px,1fr) 190px 150px;gap:10px;margin:0 0 12px}.tpfTplSearch,.tpfTplSelect,.tpfTplFavFilter{width:100%;padding:11px 13px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;font-size:14px}.tpfTplFavFilter{cursor:pointer;font-weight:600}.tpfTplFavFilter.active{border-color:#f5b301;background:#fffbeb}.tpfTplStats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}.tpfTplChip{border:1px solid #e4e7ec;background:#fff;border-radius:999px;padding:7px 11px;font-size:12px;color:#475467}.tpfTplChip b{color:#101828}#tpfTplPageMount .waTemplateCard{position:static!important;transform:none!important;width:100%!important;max-width:none!important;max-height:none!important;box-shadow:none!important;border:1px solid #e4e7ec!important;border-radius:14px!important;margin:0!important;background:#fff!important;padding:16px!important}#tpfTplPageMount .waTemplateHead{display:none!important}#tpfTplPageMount #waTemplateList{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px!important}#tpfTplPageMount #waTemplateList>*{position:relative!important;border:1px solid #e4e7ec!important;border-radius:12px!important;padding:14px 42px 14px 14px!important;margin:0!important;background:#fff!important;min-height:112px!important}.tpfTplStar{position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:21px;cursor:pointer;color:#98a2b3;line-height:1}.tpfTplStar.active{color:#f5b301}.tpfTplNoResults{padding:18px 4px;color:#667085;font-size:13px}.tpfTplPageCreate{border:0;border-radius:9px;padding:10px 14px;background:#146ef5;color:#fff;font-weight:700;cursor:pointer}.tpfTplPageBack{border:1px solid #d0d5dd;border-radius:9px;padding:9px 12px;background:#fff;cursor:pointer}.tpfTplHeadActions{display:flex;gap:8px}@media(max-width:900px){.tpfTplToolbar{grid-template-columns:1fr}.tpfTplPageHead{align-items:flex-start;flex-direction:column}#tpfTplPageMount #waTemplateList{grid-template-columns:1fr!important}}
+`;document.head.appendChild(s)}
+function ensurePage(){let v=document.getElementById('view-wa-templates-library');if(v)return v;const main=document.querySelector('.referenceWorkspace main');if(!main)return null;v=document.createElement('section');v.id='view-wa-templates-library';v.className='hidden';v.innerHTML=`<div class="tpfTplPageHead"><div><h2>Plantillas WhatsApp</h2><p>Gestiona, busca y organiza tus plantillas reales de WhatsApp.</p></div><div class="tpfTplHeadActions"><button id="tpfTplPageBack" class="tpfTplPageBack">← Volver</button><button id="tpfTplPageCreate" class="tpfTplPageCreate">＋ Nueva plantilla</button></div></div><div class="tpfTplToolbar"><input class="tpfTplSearch" type="search" placeholder="Buscar plantillas..." autocomplete="off"><select id="tpfTplSort" class="tpfTplSelect"><option value="original">Orden actual</option><option value="az">Nombre A–Z</option><option value="za">Nombre Z–A</option></select><button id="tpfTplFavFilter" class="tpfTplFavFilter">☆ Favoritas</button></div><div id="tpfTplStats" class="tpfTplStats"></div><div id="tpfTplPageMount"></div>`;main.appendChild(v);v.querySelector('#tpfTplPageBack').onclick=closeLibrary;v.querySelector('.tpfTplSearch').addEventListener('input',applyFilters);v.querySelector('#tpfTplSort').addEventListener('change',applyFilters);v.querySelector('#tpfTplFavFilter').onclick=()=>{const b=v.querySelector('#tpfTplFavFilter');b.classList.toggle('active');b.textContent=b.classList.contains('active')?'★ Favoritas':'☆ Favoritas';applyFilters()};v.querySelector('#tpfTplPageCreate').onclick=()=>{restoreCardToModal();if(typeof window.waOpenTemplates==='function')window.waOpenTemplates();setTimeout(()=>{document.querySelector('#waTemplateModal input, #waTemplateModal textarea')?.focus()},30)};return v}
+function ensureNav(){const root=document.querySelector('.referenceNav');if(!root)return null;let nav=document.getElementById('tpfWaTemplatesNav')||[...root.querySelectorAll('.nav')].find(n=>String(n.textContent||'').trim().toLowerCase().includes('plantillas whatsapp'));if(!nav){nav=document.createElement('div');nav.className='nav secondaryNav';nav.innerHTML='<b>▤</b><span>Plantillas WhatsApp</span>';const wa=[...root.querySelectorAll('.nav')].find(n=>n.dataset.view==='whatsapp');root.insertBefore(nav,wa||null)}nav.id='tpfWaTemplatesNav';nav.dataset.view='wa-templates-library';return nav}
 function templateCard(){return document.querySelector('#waTemplateModal .waTemplateCard')||document.querySelector('#tpfTplPageMount .waTemplateCard')}
-function ensureSearch(card){
-  if(!card)return;
-  let wrap=card.querySelector('.tpfTplSearchWrap');
-  if(!wrap){
-    wrap=document.createElement('div');wrap.className='tpfTplSearchWrap';wrap.innerHTML='<input class="tpfTplSearch" type="search" placeholder="Buscar plantilla por nombre o texto..." autocomplete="off">';
-    const list=card.querySelector('#waTemplateList');if(list)list.parentNode.insertBefore(wrap,list);
-    wrap.querySelector('input').addEventListener('input',filterTemplates);
-  }
-}
-function filterTemplates(e){
-  const input=e?.target||document.querySelector('.tpfTplSearch');
-  const q=String(input?.value||'').trim().toLowerCase();
-  const list=document.getElementById('waTemplateList');if(!list)return;
-  let shown=0;
-  [...list.children].forEach(row=>{
-    const txt=String(row.textContent||'').toLowerCase();
-    const ok=!q||txt.includes(q);row.style.display=ok?'':'none';if(ok)shown++;
-  });
-  let empty=list.parentNode.querySelector('.tpfTplNoResults');
-  if(!empty){empty=document.createElement('div');empty.className='tpfTplNoResults';empty.textContent='No hay plantillas que coincidan con la búsqueda.';list.insertAdjacentElement('afterend',empty)}
-  empty.style.display=q&&shown===0?'block':'none';
-}
-async function syncTemplates(){
-  try{if(typeof window.waSyncTemplatesFromSupabase==='function')await window.waSyncTemplatesFromSupabase()}catch(e){console.warn('Plantillas WhatsApp',e)}
-  try{if(typeof window.waRenderTemplates==='function')window.waRenderTemplates()}catch(e){console.warn('Plantillas WhatsApp render',e)}
-}
+function list(){return document.querySelector('#tpfTplPageMount #waTemplateList')||document.querySelector('#waTemplateModal #waTemplateList')}
+function rowKey(row,index){return String(row.dataset.templateId||row.dataset.id||row.querySelector('b,strong,h3,h4')?.textContent||row.textContent||index).trim().slice(0,160)}
+function decorateRows(){const l=list();if(!l)return;const fs=favs();[...l.children].forEach((row,i)=>{row.dataset.tpfOriginal=String(i);const key=rowKey(row,i);row.dataset.tpfKey=key;if(!row.querySelector('.tpfTplStar')){const b=document.createElement('button');b.type='button';b.className='tpfTplStar';b.title='Favorita';b.onclick=e=>{e.preventDefault();e.stopPropagation();const set=favs();set.has(key)?set.delete(key):set.add(key);saveFavs(set);decorateRows();applyFilters()};row.appendChild(b)}const star=row.querySelector('.tpfTplStar');star.classList.toggle('active',fs.has(key));star.textContent=fs.has(key)?'★':'☆'});updateStats()}
+function updateStats(){const l=list(),box=document.getElementById('tpfTplStats');if(!l||!box)return;const total=l.children.length,f=favs();const favCount=[...l.children].filter((r,i)=>f.has(rowKey(r,i))).length;box.innerHTML=`<span class="tpfTplChip"><b>${total}</b> plantillas</span><span class="tpfTplChip"><b>${favCount}</b> favoritas</span>`}
+function applyFilters(){const l=list();if(!l)return;decorateRows();const page=document.getElementById('view-wa-templates-library'),q=String(page?.querySelector('.tpfTplSearch')?.value||'').trim().toLowerCase(),onlyFav=page?.querySelector('#tpfTplFavFilter')?.classList.contains('active'),set=favs();let rows=[...l.children];const sort=page?.querySelector('#tpfTplSort')?.value||'original';rows.sort((a,b)=>{if(sort==='original')return Number(a.dataset.tpfOriginal)-Number(b.dataset.tpfOriginal);const aa=String(a.textContent||'').trim().toLowerCase(),bb=String(b.textContent||'').trim().toLowerCase();return sort==='za'?bb.localeCompare(aa,'es'):aa.localeCompare(bb,'es')});rows.forEach(r=>l.appendChild(r));let shown=0;rows.forEach((row,i)=>{const okSearch=!q||String(row.textContent||'').toLowerCase().includes(q),okFav=!onlyFav||set.has(row.dataset.tpfKey||rowKey(row,i)),ok=okSearch&&okFav;row.style.display=ok?'':'none';if(ok)shown++});let empty=l.parentNode.querySelector('.tpfTplNoResults');if(!empty){empty=document.createElement('div');empty.className='tpfTplNoResults';empty.textContent='No hay plantillas que coincidan con los filtros.';l.insertAdjacentElement('afterend',empty)}empty.style.display=shown===0?'block':'none';updateStats()}
+async function syncTemplates(){try{if(typeof window.waSyncTemplatesFromSupabase==='function')await window.waSyncTemplatesFromSupabase()}catch(e){console.warn('Plantillas WhatsApp',e)}try{if(typeof window.waRenderTemplates==='function')window.waRenderTemplates()}catch(e){console.warn('Plantillas WhatsApp render',e)}}
 function hideAppViews(){document.querySelectorAll('.referenceWorkspace main > section').forEach(s=>s.classList.add('hidden'))}
-function restoreCardToModal(){
-  const modal=document.getElementById('waTemplateModal'),card=templateCard();
-  if(modal&&card&&card.parentElement!==modal)modal.appendChild(card);
-  ensureSearch(card);
-}
-async function openLibrary(){
-  ensureStyles();ensureNav();const page=ensurePage();if(!page)return;
-  const current=visibleView();if(current!=='view-wa-templates-library')previousView=current;
-  await syncTemplates();
-  const card=templateCard(),mount=document.getElementById('tpfTplPageMount');if(card&&mount)mount.appendChild(card);
-  ensureSearch(card);const input=card?.querySelector('.tpfTplSearch');if(input){input.value='';filterTemplates({target:input})}
-  document.getElementById('waTemplateModal')?.classList.add('hidden');
-  hideAppViews();page.classList.remove('hidden');
-  document.querySelectorAll('.referenceNav .nav').forEach(n=>n.classList.remove('active'));
-  document.getElementById('tpfWaTemplatesNav')?.classList.add('active');
-}
-function closeLibrary(){
-  restoreCardToModal();
-  document.getElementById('view-wa-templates-library')?.classList.add('hidden');
-  const target=document.getElementById(previousView)||document.getElementById('view-dashboard');target?.classList.remove('hidden');
-  document.querySelectorAll('.referenceNav .nav').forEach(n=>n.classList.toggle('active',n.dataset.view===String((target?.id||'').replace(/^view-/,''))));
-}
-function bind(){
-  ensureStyles();ensurePage();restoreCardToModal();
-  const nav=ensureNav();
-  if(nav&&!nav.dataset.tpfLibraryBound){nav.dataset.tpfLibraryBound='1';nav.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openLibrary()},{capture:true})}
-  const chatBtn=document.getElementById('waTemplateBtn');
-  if(chatBtn&&!chatBtn.dataset.tpfSearchBound){chatBtn.dataset.tpfSearchBound='1';chatBtn.addEventListener('click',()=>{restoreCardToModal();setTimeout(()=>{ensureSearch(templateCard());const i=templateCard()?.querySelector('.tpfTplSearch');if(i){i.value='';filterTemplates({target:i})}},0)},{capture:true})}
-  const oldOpen=window.waOpenTemplates;
-  if(typeof oldOpen==='function'&&!oldOpen.__tpfTemplateSearch){const wrapped=function(){restoreCardToModal();const r=oldOpen.apply(this,arguments);setTimeout(()=>ensureSearch(templateCard()),0);return r};wrapped.__tpfTemplateSearch=true;window.waOpenTemplates=wrapped}
-}
+function restoreCardToModal(){const modal=document.getElementById('waTemplateModal'),card=templateCard();if(modal&&card&&card.parentElement!==modal)modal.appendChild(card)}
+async function openLibrary(){ensureStyles();ensureNav();const page=ensurePage();if(!page)return;const current=visibleView();if(current!=='view-wa-templates-library')previousView=current;await syncTemplates();const card=templateCard(),mount=document.getElementById('tpfTplPageMount');if(card&&mount)mount.appendChild(card);document.getElementById('waTemplateModal')?.classList.add('hidden');hideAppViews();page.classList.remove('hidden');decorateRows();applyFilters();document.querySelectorAll('.referenceNav .nav').forEach(n=>n.classList.remove('active'));document.getElementById('tpfWaTemplatesNav')?.classList.add('active')}
+function closeLibrary(){restoreCardToModal();document.getElementById('view-wa-templates-library')?.classList.add('hidden');const target=document.getElementById(previousView)||document.getElementById('view-dashboard');target?.classList.remove('hidden');document.querySelectorAll('.referenceNav .nav').forEach(n=>n.classList.toggle('active',n.dataset.view===String((target?.id||'').replace(/^view-/,''))))}
+function bind(){ensureStyles();ensurePage();restoreCardToModal();const nav=ensureNav();if(nav&&!nav.dataset.tpfLibraryBound){nav.dataset.tpfLibraryBound='1';nav.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openLibrary()},{capture:true})}const chatBtn=document.getElementById('waTemplateBtn');if(chatBtn&&!chatBtn.dataset.tpfSearchBound){chatBtn.dataset.tpfSearchBound='1';chatBtn.addEventListener('click',()=>restoreCardToModal(),{capture:true})}}
 M.register('whatsapp-templates-library',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();setTimeout(bind,300)}});
 })();
