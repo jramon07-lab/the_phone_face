@@ -18,16 +18,27 @@
 `;document.head.appendChild(s);
   }
   function closeOppMenu(){document.querySelectorAll('.tpfOppMenu').forEach(x=>x.remove())}
+  function getOpp(id){try{return (salesCache?.opportunities||[]).find(x=>String(x.id)===String(id))||null}catch(_){return null}}
+  function openDirectWhatsapp(opp){
+    const phone=String(opp?.phone||'').trim();
+    if(!phone){alert('Esta oportunidad no tiene teléfono.');return}
+    if(typeof openWaQuick==='function'){
+      openWaQuick({phone,name:String(opp?.client_name||'').trim(),message:''});
+      return;
+    }
+    if(document.getElementById('waQuickPhone'))document.getElementById('waQuickPhone').value=phone;
+    document.getElementById('waQuickModal')?.classList.remove('hidden');
+  }
   function openOppActions(ev,id){
     ev.preventDefault();ev.stopPropagation();closeOppMenu();
-    const opp=(window.salesCache?.opportunities||[]).find(x=>String(x.id)===String(id));
+    const opp=getOpp(id);
     const m=document.createElement('div');m.className='tpfOppMenu';
     const add=(label,fn,cls='')=>{const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=e=>{e.stopPropagation();closeOppMenu();fn()};m.appendChild(b)};
     add('Abrir ficha',()=>window.openOpportunityCard?.(id));
     add('Editar oportunidad',()=>window.openOpportunityCard?.(id));
     add('Mover a otra columna',()=>{const card=document.querySelector(`.opp[data-opp-id="${CSS.escape(String(id))}"]`);const sel=card?.querySelector('.oppFooter select');if(sel){sel.focus();sel.click()}});
     add('Crear tarea / recordatorio',()=>{try{window.createAgendaFromRecord?.(JSON.stringify({id:'',name:opp?.client_name||'',phone:opp?.phone||''}))}catch(_){document.querySelector('.nav[data-view="agenda"]')?.click()}});
-    add('Abrir WhatsApp',()=>{document.querySelector('.nav[data-view="whatsapplive"]')?.click()});
+    add('Abrir WhatsApp',()=>openDirectWhatsapp(opp));
     add('Programar WhatsApp',()=>{const phone=String(opp?.phone||'');if(document.getElementById('waQuickPhone'))document.getElementById('waQuickPhone').value=phone;document.getElementById('waScheduleBtn')?.click()});
     add('Eliminar oportunidad',()=>window.deleteOpp?.(id),'tpfDanger');
     document.body.appendChild(m);
@@ -39,22 +50,15 @@
     document.querySelectorAll('#salesBoard .oppMenu').forEach(b=>{
       if(b.dataset.tpfActions==='1')return;
       const card=b.closest('.opp'),id=card?.dataset?.oppId;if(!id)return;
-      b.dataset.tpfActions='1';
-      b.onclick=e=>openOppActions(e,id);
-      b.title='Acciones de la oportunidad';
+      b.dataset.tpfActions='1';b.onclick=e=>openOppActions(e,id);b.title='Acciones de la oportunidad';
     });
   }
   M.register('contacts-sales',{
     install(){
-      installSalesSafeUi();
-      bindOppMenus();
+      installSalesSafeUi();bindOppMenus();
       document.addEventListener('click',e=>{if(!e.target.closest('.tpfOppMenu,.oppMenu'))closeOppMenu()});
       const board=document.getElementById('salesBoard');if(board)new MutationObserver(bindOppMenus).observe(board,{childList:true,subtree:true});
-      M.wrapGlobals('contacts-sales',[
-        'loadSales','renderSales','renderSalesList',
-        'openOpportunityFull','openOpportunityCard','deleteOpp','moveSelectedSalesOpportunities',
-        'deleteSelectedSalesOpportunities','loadDatabase','renderDatabase','saveContact','deleteContact'
-      ]);
+      M.wrapGlobals('contacts-sales',['loadSales','renderSales','renderSalesList','openOpportunityFull','openOpportunityCard','deleteOpp','moveSelectedSalesOpportunities','deleteSelectedSalesOpportunities','loadDatabase','renderDatabase','saveContact','deleteContact']);
     }
   });
 })();
