@@ -1,1 +1,56 @@
-(function(){'use strict';if(window.TPFModules&&window.TPFModules.version>=1)return;const states=new Map();const errs=[];function emit(name,state,detail=''){const x={name,state,detail:String(detail||''),at:new Date().toISOString()};states.set(name,x);return x}function report(name,e,c=''){console.error('[TPF:'+name+']',c,e);const item={module:name,error:String(e?.message||e||'Error'),context:String(c||''),at:new Date().toISOString()};errs.push(item);if(errs.length>100)errs.shift();return emit(name,'error',item.error)}function register(name,d={}){emit(name,'loading');try{d.install?.(api);return emit(name,'ready')}catch(e){return report(name,e,'install')}}function guard(name,fn){return typeof fn==='function'?function(...a){try{return fn.apply(this,a)}catch(e){report(name,e)}}:fn}const api={version:1,register,guard,wrapGlobals:()=>[],report,emit,status:()=>[...states.values()],errors:()=>[...errs],clearErrors:()=>{errs.length=0}};window.TPFModules=api;emit('runtime','ready');const files=['contacts-active-only.js','contacts-list-ui.js','contacts-list-layout-fix.js','contacts-filter-layout.js','contacts-final-fix.js','contacts-approved-fixes.js','contacts-four-fixes.js','contact-profile.js','contact-bank-native.js','contact-activity-tabs.js','contact-opportunity-actions.js','contact-open-nonblocking.js','contact-actions-bridge.js','automations-auth-guard.js','automations-flow-status.js','dashboard-performance-guard.js','email-m365-lazy.js','whatsapp-read-guard.js','whatsapp-ui-fixes.js','whatsapp-status-throttle.js','whatsapp-performance-max.js','whatsapp-templates-library.js','search-fallback.js','contacts-lock-final.js'];for(const file of files){const s=document.createElement('script');s.src='/js/modules/'+file+'?v=20260830-02';s.async=false;document.head.appendChild(s)}})();
+(function(){
+'use strict';
+if(window.TPFModules&&window.TPFModules.version>=2)return;
+
+const states=new Map();
+const errs=[];
+function emit(name,state,detail=''){const x={name,state,detail:String(detail||''),at:new Date().toISOString()};states.set(name,x);return x}
+function report(name,e,c=''){console.error('[TPF:'+name+']',c,e);const item={module:name,error:String(e?.message||e||'Error'),context:String(c||''),at:new Date().toISOString()};errs.push(item);if(errs.length>100)errs.shift();return emit(name,'error',item.error)}
+function register(name,d={}){emit(name,'loading');try{d.install?.(api);return emit(name,'ready')}catch(e){return report(name,e,'install')}}
+function guard(name,fn){return typeof fn==='function'?function(...a){try{return fn.apply(this,a)}catch(e){report(name,e)}}:fn}
+const api={version:2,register,guard,wrapGlobals:()=>[],report,emit,status:()=>[...states.values()],errors:()=>[...errs],clearErrors:()=>{errs.length=0}};
+window.TPFModules=api;
+emit('runtime','ready');
+
+/* Anti-freeze: los MutationObserver dentro de Automatizaciones se agrupan y
+   nunca pueden encadenarse indefinidamente en la misma microtarea. */
+(function installSafeMutationObserver(){
+  const Native=window.MutationObserver;
+  if(!Native||Native.__tpfSafe)return;
+  function SafeMutationObserver(callback){
+    let automationTarget=false,queued=false,pending=[];
+    let proxy=null;
+    const native=new Native((records)=>{
+      if(!automationTarget){callback(records,proxy);return;}
+      pending.push(...records);
+      if(queued)return;
+      queued=true;
+      setTimeout(()=>{
+        queued=false;
+        const batch=pending.splice(0,300);
+        try{callback(batch,proxy)}catch(e){report('mutation-observer',e,'automations')}
+        if(pending.length){
+          queued=true;
+          setTimeout(()=>{
+            queued=false;
+            const rest=pending.splice(0,300);
+            try{callback(rest,proxy)}catch(e){report('mutation-observer',e,'automations')}
+          },60);
+        }
+      },60);
+    });
+    proxy={
+      observe(target,options){try{automationTarget=!!(target&&(target.id==='view-automations'||target.closest?.('#view-automations')))}catch(_){automationTarget=false}return native.observe(target,options)},
+      disconnect(){pending.length=0;queued=false;return native.disconnect()},
+      takeRecords(){return native.takeRecords()}
+    };
+    return proxy;
+  }
+  SafeMutationObserver.__tpfSafe=true;
+  SafeMutationObserver.prototype=Native.prototype;
+  window.MutationObserver=SafeMutationObserver;
+})();
+
+const files=['automations-stability-guard.js','contacts-active-only.js','contacts-list-ui.js','contacts-list-layout-fix.js','contacts-filter-layout.js','contacts-final-fix.js','contacts-approved-fixes.js','contacts-four-fixes.js','contact-profile.js','contact-bank-native.js','contact-activity-tabs.js','contact-opportunity-actions.js','contact-open-nonblocking.js','contact-actions-bridge.js','automations-auth-guard.js','automations-flow-status.js','dashboard-performance-guard.js','email-m365-lazy.js','whatsapp-read-guard.js','whatsapp-ui-fixes.js','whatsapp-status-throttle.js','whatsapp-performance-max.js','whatsapp-templates-library.js','search-fallback.js','contacts-lock-final.js'];
+for(const file of files){const s=document.createElement('script');s.src='/js/modules/'+file+'?v=20260830-03';s.async=false;document.head.appendChild(s)}
+})();
