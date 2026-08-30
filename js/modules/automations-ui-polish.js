@@ -28,7 +28,7 @@
     let errors=0;document.querySelectorAll('#tpfAutoHistoryBody .tpfAutoRunError').forEach(()=>errors++);
     return {total:rows.length,active,paused,errors};
   }
-  function refreshStats(){const c=counts();[['tpfAutoTotal',c.total],['tpfAutoActive',c.active],['tpfAutoPaused',c.paused],['tpfAutoErrors',c.errors]].forEach(([id,v])=>{const e=byId(id);if(e)e.textContent=v;});}
+  function refreshStats(){const c=counts();[['tpfAutoTotal',c.total],['tpfAutoActive',c.active],['tpfAutoPaused',c.paused],['tpfAutoErrors',c.errors]].forEach(([id,v])=>{const e=byId(id);if(e&&e.textContent!==String(v))e.textContent=v;});}
   function ensureHero(){
     const view=byId('view-automations');if(!view)return;
     ensureStyles();
@@ -38,11 +38,11 @@
     const reload=byId('auto2Reload');if(reload)reload.style.display='none';
     if(byId('tpfAutoRefresh')&&!byId('tpfAutoRefresh').dataset.bound){byId('tpfAutoRefresh').dataset.bound='1';byId('tpfAutoRefresh').onclick=()=>reload?.click();}
     if(byId('tpfAutoNew')&&!byId('tpfAutoNew').dataset.bound){byId('tpfAutoNew').dataset.bound='1';byId('tpfAutoNew').onclick=()=>{try{window.auto2ResetForm?.()}catch(_){ }byId('auto2Name')?.focus();byId('auto2FormTitle')?.scrollIntoView({behavior:'smooth',block:'center'});};}
-    const bar=byId('tpfAutomationAdvancedBar');if(bar){const h=bar.querySelector('h3');if(h)h.textContent='Plantillas rápidas';const sm=bar.querySelector('.small');if(sm)sm.textContent='Empieza con una automatización habitual y personalízala después.';}
+    const bar=byId('tpfAutomationAdvancedBar');if(bar){const h=bar.querySelector('h3');if(h&&h.textContent!=='Plantillas rápidas')h.textContent='Plantillas rápidas';const sm=bar.querySelector('.small');if(sm&&sm.textContent!=='Empieza con una automatización habitual y personalízala después.')sm.textContent='Empieza con una automatización habitual y personalízala después.';}
     refreshStats();
   }
   function init(){ensureHero();setTimeout(ensureHero,250);setTimeout(refreshStats,700);}
   document.addEventListener('click',e=>{if(e.target?.closest?.('.nav[data-view="automations"]'))setTimeout(init,100);if(e.target?.closest?.('#auto2Save,#auto2Reload,[onclick*="auto2Toggle"],[onclick*="auto2Delete"]'))setTimeout(refreshStats,700);});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
-  setInterval(()=>{const v=byId('view-automations');if(v&&!v.classList.contains('hidden')){ensureHero();refreshStats();}},2000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){const v=byId('view-automations');if(v&&!v.classList.contains('hidden')){ensureHero();refreshStats();}}});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
