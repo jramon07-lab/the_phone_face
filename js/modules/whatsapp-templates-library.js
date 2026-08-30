@@ -27,6 +27,23 @@ function ensurePage(){
   document.getElementById('tpfTplPageBack').onclick=closeLibrary;
   return v;
 }
+function ensureNav(){
+  const root=document.querySelector('.referenceNav');if(!root)return null;
+  let nav=document.getElementById('tpfWaTemplatesNav');
+  if(!nav){
+    nav=[...root.querySelectorAll('.nav')].find(n=>String(n.textContent||'').trim().toLowerCase().includes('plantillas whatsapp'))||null;
+  }
+  if(!nav){
+    nav=document.createElement('div');
+    nav.className='nav secondaryNav';
+    nav.innerHTML='<b>▤</b><span>Plantillas WhatsApp</span>';
+    const programs=[...root.querySelectorAll('.nav')].find(n=>n.dataset.view==='whatsapp');
+    root.insertBefore(nav,programs||null);
+  }
+  nav.id='tpfWaTemplatesNav';
+  nav.dataset.view='wa-templates-library';
+  return nav;
+}
 function templateCard(){return document.querySelector('#waTemplateModal .waTemplateCard')||document.querySelector('#tpfTplPageMount .waTemplateCard')}
 function ensureSearch(card){
   if(!card)return;
@@ -61,7 +78,7 @@ function restoreCardToModal(){
   ensureSearch(card);
 }
 async function openLibrary(){
-  ensureStyles();const page=ensurePage();if(!page)return;
+  ensureStyles();ensureNav();const page=ensurePage();if(!page)return;
   const current=visibleView();if(current!=='view-wa-templates-library')previousView=current;
   await syncTemplates();
   const card=templateCard(),mount=document.getElementById('tpfTplPageMount');if(card&&mount)mount.appendChild(card);
@@ -79,7 +96,7 @@ function closeLibrary(){
 }
 function bind(){
   ensureStyles();ensurePage();restoreCardToModal();
-  const nav=document.getElementById('tpfWaTemplatesNav');
+  const nav=ensureNav();
   if(nav&&!nav.dataset.tpfLibraryBound){nav.dataset.tpfLibraryBound='1';nav.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openLibrary()},{capture:true})}
   const chatBtn=document.getElementById('waTemplateBtn');
   if(chatBtn&&!chatBtn.dataset.tpfSearchBound){chatBtn.dataset.tpfSearchBound='1';chatBtn.addEventListener('click',()=>{restoreCardToModal();setTimeout(()=>{ensureSearch(templateCard());const i=templateCard()?.querySelector('.tpfTplSearch');if(i){i.value='';filterTemplates({target:i})}},0)},{capture:true})}
