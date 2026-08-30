@@ -1,47 +1,40 @@
-(function(){'use strict';const M=window.TPFModules;if(!M)return;function css(){if(document.getElementById('tpfSalesFullscreenCss'))return;const s=document.createElement('style');s.id='tpfSalesFullscreenCss';s.textContent=`
-/* TPF Panel de ventas fullscreen aprobado 2026-08-30: solo presentación */
+(function(){'use strict';const M=window.TPFModules;if(!M)return;
+function css(){if(document.getElementById('tpfSalesFullscreenCss'))return;const s=document.createElement('style');s.id='tpfSalesFullscreenCss';s.textContent=`
 #view-sales{position:fixed!important;inset:0!important;z-index:1200!important;background:#f6f8fb!important;overflow:hidden!important;padding:0!important;margin:0!important}
 #view-sales .salesBoardPage{height:100vh!important;width:100vw!important;max-width:none!important;margin:0!important}
 #view-sales .salesBoardTopbar{min-height:58px!important;height:58px!important;padding:7px 18px!important}
-#view-sales .salesBoardTitleGroup{gap:10px!important}
-#view-sales .salesBoardTitleGroup h2{font-size:19px!important}
-#view-sales .salesBoardTitleGroup .small{font-size:11px!important}
-#view-sales .salesBackBtn{padding:8px 11px!important}
-#view-sales .salesBoardTopActions button{padding:8px 11px!important}
+#view-sales .salesBoardTitleGroup{gap:10px!important}#view-sales .salesBoardTitleGroup h2{font-size:19px!important}#view-sales .salesBoardTitleGroup .small{font-size:11px!important}
+#view-sales .salesBackBtn,#view-sales .salesBoardTopActions button{padding:8px 11px!important}
 #view-sales .salesSummaryAccordion{flex:0 0 auto!important;background:#fff!important;border-bottom:1px solid #e2e7ee!important}
-#view-sales .salesSummaryToggle{min-height:34px!important;padding:6px 18px!important}
-#view-sales .salesSummaryToggle small{display:none!important}
-#view-sales .salesSummaryPanel{padding:6px 18px 8px!important}
-#view-sales .salesSummaryCards{display:none!important}
+#view-sales .salesSummaryToggle{min-height:34px!important;padding:6px 18px!important}#view-sales .salesSummaryToggle small{display:none!important}
+#view-sales .salesSummaryPanel{padding:6px 18px 8px!important}#view-sales .salesSummaryCards{display:none!important}
 #view-sales .salesSummaryExtra{display:grid!important;grid-template-columns:190px 190px minmax(0,1fr)!important;gap:12px!important;align-items:stretch!important}
 #view-sales .salesSummaryMetric,#view-sales .salesSummaryStagesWrap{min-height:68px!important;padding:8px 12px!important;margin:0!important}
-#view-sales .salesSummaryMetric span,#view-sales .salesSummaryStagesWrap>span{font-size:10px!important}
-#view-sales .salesSummaryMetric>b{font-size:18px!important;margin:3px 0!important}
-#view-sales .salesSummaryMetric small{font-size:9px!important}
-#view-sales .salesSummaryProgress{height:6px!important;margin-top:6px!important}
-#view-sales .salesSummaryStages{display:flex!important;gap:6px!important;align-items:stretch!important;overflow-x:auto!important;padding:2px 0!important}
-#view-sales .salesSummaryStages>*{min-width:112px!important;padding:6px 8px!important}
-#view-sales .salesBulkBar{min-height:48px!important;padding:6px 18px!important;gap:8px!important;flex-wrap:nowrap!important;overflow-x:auto!important}
-#view-sales .salesBulkBar select{height:36px!important;padding:6px 9px!important;margin:0!important}
-#view-sales .salesBulkBar button{padding:8px 11px!important;white-space:nowrap!important}
-#view-sales .salesBoardViewport{flex:1 1 auto!important;min-height:0!important;padding:8px 8px 5px!important}
-#view-sales .salesBoardViewport .salesNavWrap{height:calc(100% - 18px)!important}
-#view-sales #salesScroll{height:100%!important}
+#view-sales .salesSummaryMetric span,#view-sales .salesSummaryStagesWrap>span{font-size:10px!important}#view-sales .salesSummaryMetric>b{font-size:18px!important;margin:3px 0!important}#view-sales .salesSummaryMetric small{font-size:9px!important}
+#view-sales .salesSummaryProgress{height:6px!important;margin-top:6px!important}#view-sales .salesSummaryStages{display:flex!important;gap:6px!important;align-items:stretch!important;overflow-x:auto!important;padding:2px 0!important}#view-sales .salesSummaryStages>*{min-width:112px!important;padding:6px 8px!important}
+#view-sales .salesBulkBar{min-height:48px!important;padding:6px 18px!important;gap:8px!important;flex-wrap:nowrap!important;overflow-x:auto!important}#view-sales .salesBulkBar select{height:36px!important;padding:6px 9px!important;margin:0!important}#view-sales .salesBulkBar button{padding:8px 11px!important;white-space:nowrap!important}
+#view-sales .salesBoardViewport{flex:1 1 auto!important;min-height:0!important;padding:8px!important}#view-sales .salesBoardViewport .salesNavWrap{height:calc(100% - 18px)!important}#view-sales #salesScroll{height:100%!important}
+#view-sales #salesScrollLeft,#view-sales #salesScrollRight{display:none!important}
 #view-sales #salesBoard.board{height:100%!important;min-height:0!important;grid-auto-columns:minmax(230px,1fr)!important;gap:8px!important;padding-bottom:4px!important}
-#view-sales #salesBoard>.stage{width:230px!important;height:100%!important;max-height:100%!important;padding:7px!important;border-radius:10px!important;overflow-y:auto!important}
-#view-sales #salesBoard>.stage .stageHead{padding:3px 3px 6px!important;margin-bottom:3px!important}
-#view-sales .stageTitle{font-size:12px!important}
-#view-sales .stageMeta,#view-sales .stageSelectAllLabel{font-size:9px!important}
-#view-sales .opp{padding:8px 9px!important;margin:6px 0!important;border-radius:8px!important;min-height:126px!important;max-height:142px!important;overflow:hidden!important}
-#view-sales .oppTitle{font-size:11px!important;line-height:1.2!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
-#view-sales .oppInfo{gap:2px!important;margin-top:5px!important;font-size:9.5px!important;line-height:1.2!important}
-#view-sales .oppInfo>*{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-#view-sales .oppFooter{margin-top:5px!important;gap:5px!important}
-#view-sales .oppFooter select{padding:5px 6px!important;font-size:9px!important}
-#view-sales .oppAmount{font-size:14px!important}
-#view-sales .emptyStage{padding:10px 3px!important;font-size:10px!important}
-#view-sales .salesCompactFooter{padding:4px 14px!important;min-height:25px!important}
-#view-sales #salesMiniRail{margin-top:3px!important;height:6px!important}
-@media(min-height:800px){#view-sales .opp{min-height:132px!important;max-height:148px!important}}
-@media(max-width:900px){#view-sales .salesSummaryExtra{grid-template-columns:160px 160px minmax(360px,1fr)!important}#view-sales #salesBoard.board{grid-auto-columns:220px!important}#view-sales #salesBoard>.stage{width:220px!important}}
-`;document.head.appendChild(s)}function install(){css()}M.register('sales-fullscreen-ui',{install});})();
+#view-sales #salesBoard>.stage{width:230px!important;height:100%!important;max-height:100%!important;padding:7px!important;border-radius:10px!important;overflow-y:auto!important}#view-sales #salesBoard>.stage .stageHead{padding:3px 3px 6px!important;margin-bottom:3px!important}
+#view-sales .stageTitle{font-size:12px!important}#view-sales .stageMeta,#view-sales .stageSelectAllLabel{font-size:9px!important}
+#view-sales .opp{padding:8px 9px!important;margin:6px 0!important;border-radius:8px!important;min-height:126px!important;max-height:142px!important;overflow:hidden!important;position:relative!important}
+#view-sales .oppTitle{font-size:11px!important;line-height:1.2!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}#view-sales .oppInfo{gap:2px!important;margin-top:5px!important;font-size:9.5px!important;line-height:1.2!important}#view-sales .oppInfo>*{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}#view-sales .oppFooter{margin-top:5px!important;gap:5px!important}#view-sales .oppFooter select{padding:5px 6px!important;font-size:9px!important}#view-sales .oppAmount{font-size:14px!important}
+#view-sales .opp.tpfDueSoon{border-color:#efc46b!important;background:#fffdf6!important}#view-sales .opp.tpfOverdue{border-color:#e59a9a!important;background:#fff8f8!important}
+#view-sales .emptyStage{padding:10px 3px!important;font-size:10px!important}#view-sales .salesCompactFooter{padding:4px 14px!important;min-height:25px!important}#view-sales #salesMiniRail{margin-top:3px!important;height:6px!important}
+.tpfSalesMenu{position:fixed;z-index:25000;width:220px;background:#fff;border:1px solid #dfe5ec;border-radius:11px;box-shadow:0 14px 38px rgba(20,35,55,.2);padding:6px}.tpfSalesMenu button{display:block;width:100%;border:0;background:#fff;text-align:left;padding:9px 10px;border-radius:7px;font-size:11px;color:#26364a}.tpfSalesMenu button:hover{background:#f3f6fa}.tpfSalesMenu .danger{color:#b42318;border-top:1px solid #edf0f4;border-radius:0;margin-top:4px;padding-top:10px}
+.tpfSalesQuick{display:flex;gap:6px;align-items:center;margin-left:auto}.tpfSalesQuick input{width:220px!important;height:36px!important;margin:0!important}.tpfSalesQuick select{width:auto!important;height:36px!important;margin:0!important;min-width:125px!important}
+body.tpfHideEmptyStages #salesBoard>.stage.tpfEmptyStage{display:none!important}
+@media(min-height:800px){#view-sales .opp{min-height:132px!important;max-height:148px!important}}@media(max-width:900px){#view-sales .salesSummaryExtra{grid-template-columns:160px 160px minmax(360px,1fr)!important}#view-sales #salesBoard.board{grid-auto-columns:220px!important}#view-sales #salesBoard>.stage{width:220px!important}.tpfSalesQuick input{width:160px!important}}
+`;document.head.appendChild(s)}
+const $=id=>document.getElementById(id);function closeMenu(){document.querySelectorAll('.tpfSalesMenu').forEach(x=>x.remove())}function clickText(el){return String(el?.textContent||'').trim()}function oppId(card){return card?.dataset?.id||card?.getAttribute('data-opportunity-id')||card?.querySelector('[data-id]')?.dataset?.id||''}function stageName(card){return card?.closest('.stage')?.querySelector('.stageTitle')?.textContent?.trim()||''}
+function menuAt(btn,items){closeMenu();const m=document.createElement('div');m.className='tpfSalesMenu';items.forEach(i=>{const b=document.createElement('button');b.textContent=i[0];if(i[2])b.className=i[2];b.onclick=e=>{e.stopPropagation();closeMenu();i[1]()};m.appendChild(b)});document.body.appendChild(m);const r=btn.getBoundingClientRect(),w=220;m.style.left=Math.max(8,Math.min(innerWidth-w-8,r.right-w))+'px';m.style.top=Math.min(innerHeight-m.offsetHeight-8,r.bottom+4)+'px'}
+function bindMenus(){document.querySelectorAll('#salesBoard .opp').forEach(card=>{const b=card.querySelector('.oppMenu');if(!b||b.dataset.tpfMenu)return;b.dataset.tpfMenu='1';b.onclick=e=>{e.preventDefault();e.stopPropagation();const id=oppId(card),phone=(card.textContent.match(/(?:Tel[eé]fono:?\s*)([+\d\s]+)/i)||[])[1]?.replace(/\D/g,'')||'';menuAt(b,[['Abrir ficha',()=>card.click()],['Editar oportunidad',()=>card.click()],['Mover a otra columna',()=>card.querySelector('.oppFooter select')?.focus()],['Duplicar oportunidad',()=>{if(typeof window.duplicateOpportunity==='function')window.duplicateOpportunity(id);else alert('Duplicar estará disponible cuando la oportunidad tenga identificador cargado.')}],['Crear tarea / recordatorio',()=>{if(typeof window.openContactTaskPage==='function')window.openContactTaskPage();else document.querySelector('[data-view="agenda"]')?.click()}],['Abrir WhatsApp',()=>{document.querySelector('[data-view="whatsapplive"]')?.click();if(phone)setTimeout(()=>{const q=$('waLiveSearch');if(q){q.value=phone;q.dispatchEvent(new Event('input',{bubbles:true}))}},300)}],['Programar WhatsApp',()=>{if($('waQuickPhone'))$('waQuickPhone').value=phone;if(typeof window.openWaScheduleV3==='function')window.openWaScheduleV3();else $('waScheduleBtn')?.click()}],['Eliminar oportunidad',()=>{if(typeof window.deleteOpp==='function'&&id)window.deleteOpp(id);else card.querySelector('.danger')?.click()},'danger']])}});document.querySelectorAll('#salesBoard .stage').forEach(st=>{const b=st.querySelector('.stageMenu');if(!b||b.dataset.tpfMenu)return;b.dataset.tpfMenu='1';b.onclick=e=>{e.preventDefault();e.stopPropagation();menuAt(b,[['Nueva oportunidad',()=>{st.querySelector('[data-new-opportunity],.addOpportunity')?.click()||$('newOpp')?.click()}],['Renombrar columna',()=>{const old=stageName(st),n=prompt('Nombre de la columna',old);if(n&&typeof window.renameStage==='function')window.renameStage(st.dataset.id,n)}],['Nueva columna',()=>$('newStage')?.click()],['Eliminar columna',()=>{if(confirm('¿Eliminar esta columna?')&&typeof window.deleteStage==='function')window.deleteStage(st.dataset.id)},'danger']])}})}
+function enhanceDates(){const now=new Date();now.setHours(0,0,0,0);document.querySelectorAll('#salesBoard .opp').forEach(c=>{c.classList.remove('tpfOverdue','tpfDueSoon');const m=c.textContent.match(/(?:Fecha:?\s*)(\d{1,2})\/(\d{1,2})\/(\d{4})/i);if(!m)return;const d=new Date(+m[3],+m[2]-1,+m[1]);const days=Math.round((d-now)/86400000);if(days<0)c.classList.add('tpfOverdue');else if(days<=7)c.classList.add('tpfDueSoon')})}
+function markEmpty(){document.querySelectorAll('#salesBoard>.stage').forEach(s=>s.classList.toggle('tpfEmptyStage',!s.querySelector('.opp')))}
+function quickTools(){if(document.querySelector('.tpfSalesQuick'))return;const bar=$('salesBulkBar');if(!bar)return;const d=document.createElement('div');d.className='tpfSalesQuick';d.innerHTML='<input id="tpfSalesSearch" placeholder="Buscar oportunidad..."><select id="tpfSalesDate"><option value="">Todas las fechas</option><option value="overdue">Vencidas</option><option value="soon">Próximos 7 días</option></select><select id="tpfSalesOrder"><option value="">Orden actual</option><option value="amountDesc">Importe mayor</option><option value="amountAsc">Importe menor</option></select><button id="tpfHideEmpty" class="secondary">Ocultar vacías</button>';bar.appendChild(d);$('tpfSalesSearch').oninput=filter;$('tpfSalesDate').onchange=filter;$('tpfSalesOrder').onchange=sortCards;$('tpfHideEmpty').onclick=()=>{document.body.classList.toggle('tpfHideEmptyStages');$('tpfHideEmpty').textContent=document.body.classList.contains('tpfHideEmptyStages')?'Mostrar todas':'Ocultar vacías'}}
+function filter(){const q=($('tpfSalesSearch')?.value||'').toLowerCase(),f=$('tpfSalesDate')?.value||'';document.querySelectorAll('#salesBoard .opp').forEach(c=>{const ok=(!q||c.textContent.toLowerCase().includes(q))&&(!f||(f==='overdue'&&c.classList.contains('tpfOverdue'))||(f==='soon'&&c.classList.contains('tpfDueSoon')));c.style.display=ok?'':'none'})}
+function sortCards(){const mode=$('tpfSalesOrder')?.value;if(!mode)return;document.querySelectorAll('#salesBoard>.stage').forEach(st=>{const cards=[...st.querySelectorAll(':scope>.opp')];cards.sort((a,b)=>{const money=x=>Number((x.textContent.match(/([\d.]+,\d{2})\s*€/ )||[])[1]?.replace(/\./g,'').replace(',','.')||0);return mode==='amountDesc'?money(b)-money(a):money(a)-money(b)});cards.forEach(c=>st.appendChild(c))})}
+function remember(){const sc=$('salesScroll');if(!sc)return;sc.addEventListener('scroll',()=>sessionStorage.setItem('tpfSalesLeft',String(sc.scrollLeft)),{passive:true});const x=Number(sessionStorage.getItem('tpfSalesLeft')||0);if(x)setTimeout(()=>sc.scrollLeft=x,50)}
+function enhance(){css();quickTools();bindMenus();enhanceDates();markEmpty()}
+function install(){enhance();remember();document.addEventListener('click',e=>{if(!e.target.closest('.tpfSalesMenu,.oppMenu,.stageMenu'))closeMenu()});const o=new MutationObserver(()=>enhance());const root=$('salesBoard');if(root)o.observe(root,{childList:true,subtree:true});setInterval(enhance,1500)}M.register('sales-fullscreen-ui',{install});})();
