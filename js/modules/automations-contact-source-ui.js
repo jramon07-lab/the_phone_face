@@ -1,8 +1,8 @@
 (function(){
   'use strict';
   const $=(s,r=document)=>r.querySelector(s);
-  const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
   const mark='data-tpf-source-ui';
+  let decorateQueued=false;
 
   function setDefault(input,value){
     if(!input||String(input.value||'').trim()!=='') return;
@@ -44,6 +44,7 @@
   }
 
   function decorate(){
+    decorateQueued=false;
     const root=document.getElementById('tpfStepEditor');if(!root)return;
     installStyles();
     const action=$('[data-key="action_type"]',root)?.value||'';
@@ -59,12 +60,18 @@
     }
   }
 
-  function start(){
-    decorate();
-    const target=document.getElementById('view-automations')||document.body;
-    new MutationObserver(()=>decorate()).observe(target,{childList:true,subtree:true});
-    document.addEventListener('change',e=>{if(e.target?.matches?.('[data-key="action_type"]'))setTimeout(decorate,0);});
-    document.addEventListener('click',e=>{if(e.target?.closest?.('.nav[data-view="automations"],.tpfFlowStep,[data-add]'))setTimeout(decorate,80);});
+  function queueDecorate(delay=40){
+    if(decorateQueued)return;
+    decorateQueued=true;
+    setTimeout(decorate,delay);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+
+  function start(){
+    queueDecorate(0);
+    const target=document.getElementById('tpfStepEditor')||document.getElementById('view-automations');
+    if(target)new MutationObserver(()=>queueDecorate(60)).observe(target,{childList:true,subtree:true});
+    document.addEventListener('change',e=>{if(e.target?.matches?.('[data-key="action_type"]'))queueDecorate(0);});
+    document.addEventListener('click',e=>{if(e.target?.closest?.('.nav[data-view="automations"],.tpfFlowStep,[data-add]'))queueDecorate(80);});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
