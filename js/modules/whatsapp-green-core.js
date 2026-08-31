@@ -489,7 +489,7 @@ async function matchWaContact(){
 
   if(!found){
     $("waContactState").innerHTML='<span class="pill amber">No está en Contactos</span>';
-    $("waCreateContactTop").classList.remove("hidden");
+    
     $("waSideCreateContact").classList.remove("hidden");
     return;
   }
