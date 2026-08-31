@@ -1,0 +1,50 @@
+name: Temporary WhatsApp task detail fix
+on:
+  push:
+    branches:
+      - tmp/wa-task-native-restore-20260831
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/wa-task-native-restore-20260831
+      - name: Patch existing WhatsApp task glue only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('js/core/30-enhancements.js')
+          s=p.read_text()
+          old='''  window.waTaskEdit=async id=>{waTaskOrigin=captureWaOrigin();if(typeof waPrepareCurrentContactForCrm==="function")waPrepareCurrentContactForCrm();await openContactTaskDetail(id)};'''
+          new='''  window.waTaskEdit=async id=>{
+    waTaskOrigin=captureWaOrigin();
+    if(typeof waPrepareCurrentContactForCrm==="function")waPrepareCurrentContactForCrm();
+    await openContactTaskDetail(id);
+    const modal=byId("contactModal"), cols=document.querySelector("#contactModal .cpColumns"), top=document.querySelector("#contactModal .cpTop");
+    modal?.classList.remove("hidden"); modal?.classList.add("tpfTaskStandalone");
+    if(cols)cols.style.display="none"; if(top)top.style.display="none";
+    byId("cpTaskPage")?.classList.add("hidden");
+    byId("cpTaskDetailPage")?.classList.remove("hidden");
+    byId("cpTaskDetailStarts")?.__tpfSyncFromHidden?.();
+    byId("cpTaskDetailReminder")?.__tpfSyncFromHidden?.();
+  };'''
+          if old not in s:
+              raise SystemExit('Expected waTaskEdit block not found')
+          s=s.replace(old,new,1)
+          old_card='''    return `<div class="waTaskCard${overdue?" overdue":""}">'''
+          new_card='''    return `<div class="waTaskCard${overdue?" overdue":""}" onclick="waTaskEdit('${id}')">'''
+          if old_card not in s:
+              raise SystemExit('Expected task card block not found')
+          s=s.replace(old_card,new_card,1)
+          p.write_text(s)
+          PY
+          git rm .github/workflows/tmp-wa-task-detail-fix.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add js/core/30-enhancements.js
+          git commit -m "Restore WhatsApp task detail from side panel"
+          git push origin HEAD:tmp/wa-task-native-restore-20260831
