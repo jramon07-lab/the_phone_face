@@ -191,7 +191,7 @@
   function decorateRules(){
     const rules=Array.isArray(window.crmAutomations)?window.crmAutomations:[];
     document.querySelectorAll('#auto2List .auto2Rule').forEach(el=>{
-      const edit=el.querySelector('button[onclick*="auto2Edit"]');if(!edit)return;const m=(edit.getAttribute('onclick')||'').match(/auto2Edit\('([^']+)'\)/);if(!m)return;const r=rules.find(x=>String(x.id)===m[1]);if(r?.action_type==='flow_v1'){const txt=el.querySelector('.auto2RuleText');if(txt)txt.textContent=`${triggerLabel(r.trigger_type)} → Flujo avanzado · ${(r.action_config?.steps||[]).length} pasos`;el.dataset.tpfFlowRule='1';}
+      const edit=el.querySelector('button[onclick*="auto2Edit"]');if(!edit)return;const m=(edit.getAttribute('onclick')||'').match(/auto2Edit\('([^']+)'\)/);if(!m)return;const r=rules.find(x=>String(x.id)===m[1]);if(r?.action_type==='flow_v1'){const txt=el.querySelector('.auto2RuleText'),next=`${triggerLabel(r.trigger_type)} → Flujo avanzado · ${(r.action_config?.steps||[]).length} pasos`;if(txt&&txt.textContent!==next)txt.textContent=next;if(el.dataset.tpfFlowRule!=='1')el.dataset.tpfFlowRule='1';}
     });
   }
 
