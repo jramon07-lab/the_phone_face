@@ -72,10 +72,7 @@
 
   function bindNativeEditControls(){
     const toggle=byId('tpfContactEditToggle');
-    if(toggle && toggle.dataset.tpfNativeEdit!=='1'){
-      toggle.dataset.tpfNativeEdit='1';
-      toggle.onclick=e=>{e.preventDefault();e.stopPropagation();setEditMode(!editMode);};
-    }
+    if(toggle && toggle.dataset.tpfNativeEdit!=='1')toggle.dataset.tpfNativeEdit='1';
     const local=byId('tpfContactSaveLocal');
     if(local && local.dataset.tpfNativeSave!=='1'){
       local.dataset.tpfNativeSave='1';
@@ -201,4 +198,17 @@
   }
 
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
-  function
+  function syncUi(){
+    const root=modal();if(!root||root.classList.contains('hidden'))return;
+    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(false);
+  }
+
+  function installObservers(){
+    const cm=modal();if(cm&&!contactObserver){contactObserver=new MutationObserver(queueSync);contactObserver.observe(cm,{childList:true,subtree:true});}
+    const lm=byId('contactLabelsModal');if(lm&&!labelsObserver){labelsObserver=new MutationObserver(()=>requestAnimationFrame(ensureLabelSearch));labelsObserver.observe(lm,{childList:true,subtree:true});}
+  }
+
+  M.register('contact-profile',{
+    install(){
+      M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
+      ensureStyles
