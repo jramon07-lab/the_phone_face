@@ -36,6 +36,14 @@ function hideContactModal(){
 function showContactModal(){
   $('contactModal')?.classList.remove('hidden');
 }
+function revealTaskDetail(){
+  const modal=$('contactModal');
+  const detail=$('cpTaskDetailPage');
+  modal?.classList.remove('hidden');
+  $('cpTaskPage')?.classList.add('hidden');
+  $('tpfWaTasksPage')?.classList.add('hidden');
+  detail?.classList.remove('hidden');
+}
 
 async function openProfile(e){
   stop(e);
@@ -97,15 +105,21 @@ function taskIdFromRow(row){
 async function openTask(id,e){
   stop(e);
   if(!id||!requireContact())return;
+  if(typeof window.openContactTaskDetail!=='function')return;
   detachTaskDetail();
   hideFocusedTasks();
-  hideContactModal();
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
-  if(typeof window.openContactTaskDetail==='function'){
+
+  // The native detail page lives inside contactModal. Keep the parent visible
+  // before, during and after the asynchronous database read.
+  showContactModal();
+  try{
     await window.openContactTaskDetail(id);
-    showContactModal();
-    $('cpTaskDetailPage')?.classList.remove('hidden');
+  }finally{
+    revealTaskDetail();
+    requestAnimationFrame(revealTaskDetail);
+    setTimeout(revealTaskDetail,0);
   }
 }
 function patchTaskRows(){
