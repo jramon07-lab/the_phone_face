@@ -82,15 +82,8 @@
   M.register('contact-activity',{install(){
     repairTaskDom();
     document.addEventListener('click',e=>{
-      const task=e.target?.closest?.('#waSideTasks .waSideItem');
-      if(task){
-        const m=String(task.getAttribute('onclick')||'').match(/openContactTaskDetail\(['\"]([^'\"]+)['\"]\)/);
-        if(m){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openDirectTask(m[1]);return;}
-      }
-      const viewTasks=e.target?.closest?.('#waSideViewTasks');
-      if(viewTasks){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();renderDirectSection('tareas');return;}
-      const viewOpps=e.target?.closest?.('#waSideViewOpps');
-      if(viewOpps){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();renderDirectSection('oportunidades');return;}
+      // WhatsApp right-panel actions are owned exclusively by
+      // whatsapp-contact-reuse.js. This module only owns Contact Profile tabs.
       const back=e.target?.closest?.('#contactClose,#cpTaskBack,#cpTaskDetailBack');
       if(back&&waOrigin){backToWhatsapp(e);return;}
       const tab=e.target?.closest?.('#contactModal .cpTabs [data-tpf-activity-tab], #contactModal .cpTabs > *');
