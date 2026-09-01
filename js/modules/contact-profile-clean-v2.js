@@ -131,8 +131,21 @@ function observationValue(data){
  return'';
 }
 
+function ensureObservationField(){
+ let field=$('contactObservations');if(field)return field;
+ const notes=$('contactNotes');if(!notes)return null;
+ let label=document.querySelector('#contactModal label[for="contactObservations"]');
+ if(!label){label=document.createElement('label');label.htmlFor='contactObservations';label.textContent='Observaciones'}
+ field=document.createElement('textarea');field.id='contactObservations';field.placeholder='Observaciones del contacto';field.rows=3;
+ const notesLabel=notes.previousElementSibling?.tagName==='LABEL'?notes.previousElementSibling:null;
+ if(notesLabel)notesLabel.insertAdjacentElement('beforebegin',label);else notes.insertAdjacentElement('beforebegin',label);
+ label.insertAdjacentElement('afterend',field);
+ field.readOnly=!$('contactModal')?.classList.contains('tpf-contact-editing');field.setAttribute('aria-readonly',String(field.readOnly));
+ return field;
+}
+
 async function refreshObservation(id){
- const field=$('contactObservations');if(!field||!id)return;
+ const field=ensureObservationField();if(!field||!id)return;
  try{
   const {data,error}=await sb.from('records').select('data').eq('id',id).maybeSingle();
   if(error)throw error;
@@ -144,6 +157,7 @@ async function refreshObservation(id){
 
 function apply(){
  const modal=$('contactModal');if(!modal)return;modal.classList.add('tpfContactCleanV2');
+ ensureObservationField();
  const title=$('tpfContactEditBar')?.querySelector('h3');if(title)title.textContent='Datos del contacto';
  polishTimeline();polishOpportunities();
 }
