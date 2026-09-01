@@ -12,6 +12,7 @@
   let templateTargetQuick=false;
   let internalSendBusy=false;
   let sharedEditAction=null;
+  let nativeEditHandler=null;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -73,13 +74,14 @@
 
   function bindNativeEditControls(){
     const toggle=byId('tpfContactEditToggle');
-    if(toggle && toggle.dataset.tpfNativeEdit!=='1'){
-      toggle.dataset.tpfNativeEdit='1';
-      if(typeof toggle.onclick==='function')sharedEditAction=toggle.onclick;
-      toggle.onclick=e=>{
+    if(toggle){
+      if(typeof toggle.onclick==='function'&&toggle.onclick!==nativeEditHandler)sharedEditAction=toggle.onclick;
+      if(!nativeEditHandler)nativeEditHandler=e=>{
         e.preventDefault();e.stopPropagation();
         if(typeof sharedEditAction==='function')return sharedEditAction.call(toggle,e);
       };
+      toggle.dataset.tpfNativeEdit='1';
+      toggle.onclick=nativeEditHandler;
     }
     const local=byId('tpfContactSaveLocal');
     if(local && local.dataset.tpfNativeSave!=='1'){
@@ -219,7 +221,7 @@
   M.register('contact-profile',{
     install(){
       M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
-      ensureStyles();installObservers();wrapTemplateUse();allowWhatsappForContact();
+      ensureStyles();ensureEditButton();installObservers();wrapTemplateUse();allowWhatsappForContact();
       const originalOpen=window.openContact;
       if(typeof originalOpen==='function')window.openContact=async function(id){
         currentRecordId=id;editMode=false;const p=originalOpen.apply(this,arguments);setTimeout(queueSync,0);setTimeout(queueSync,60);const result=await p;queueSync();loadObservation(id);try{window.applyWhatsappVisibilityForContact?.();}catch(_){}return result;
