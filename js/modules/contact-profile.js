@@ -210,7 +210,6 @@
   }
 
   function installObservers(){
-    const cm=modal();if(cm&&!contactObserver){contactObserver=new MutationObserver(queueSync);contactObserver.observe(cm,{childList:true,subtree:true});}
     const lm=byId('contactLabelsModal');if(lm&&!labelsObserver){labelsObserver=new MutationObserver(()=>requestAnimationFrame(ensureLabelSearch));labelsObserver.observe(lm,{childList:true,subtree:true});}
   }
 
