@@ -3,6 +3,7 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 let timelineObserver=null,opportunityObserver=null,busy=false;
+let nativeNewOpportunity=null;
 
 function addStyles(){
  if($('tpfContactCleanV2Styles'))return;
@@ -100,10 +101,34 @@ function polishOpportunities(){
  });
 }
 
+async function openContactOpportunity(e){
+ e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+ const button=$('cpNewOpp');if(button)button.disabled=true;
+ try{
+  if(typeof window.loadSales==='function')await Promise.race([
+   window.loadSales(),
+   new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tiempo de carga agotado')),8000))
+  ]);
+  const open=typeof window.openContactNewOpportunity==='function'?window.openContactNewOpportunity:nativeNewOpportunity;
+  if(typeof open!=='function')throw new Error('No está disponible la creación de oportunidades.');
+  open();
+ }catch(error){
+  console.error('Crear oportunidad desde contacto',error);
+  alert(error?.message||'No se pudo abrir la nueva oportunidad.');
+ }finally{if(button)button.disabled=false}
+}
+
+function bindQuickActions(){
+ const button=$('cpNewOpp');if(!button||button.dataset.tpfCleanBound==='1')return;
+ nativeNewOpportunity=button.onclick||window.openContactNewOpportunity||nativeNewOpportunity;
+ button.onclick=null;button.dataset.tpfCleanBound='1';
+ button.addEventListener('click',openContactOpportunity,true);
+}
+
 function apply(){
  const modal=$('contactModal');if(!modal)return;modal.classList.add('tpfContactCleanV2');
  const title=$('tpfContactEditBar')?.querySelector('h3');if(title)title.textContent='Datos del contacto';
- polishTimeline();polishOpportunities();
+ bindQuickActions();polishTimeline();polishOpportunities();
 }
 
 function install(){
