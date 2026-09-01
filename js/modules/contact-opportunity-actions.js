@@ -4,7 +4,8 @@
   if(!M)return;
 
   // Opportunity creation/editing belongs to the native sales owner.
-  // This module only preserves the contact-profile column layout.
+  // This module only preserves contact-profile layout and fixes the authored
+  // task DOM ownership once, without click interception or duplicate logic.
   function ensureContactScroll(){
     if(document.getElementById('tpfContactThreeColumnScroll'))return;
     const s=document.createElement('style');
@@ -25,5 +26,15 @@
     document.head.appendChild(s);
   }
 
-  M.register('contact-opportunities',{install(){ensureContactScroll();}});
+  function ensureNativeTaskPageOwnership(){
+    const createPage=document.getElementById('cpTaskPage');
+    const detailPage=document.getElementById('cpTaskDetailPage');
+    if(!createPage||!detailPage||detailPage.parentElement!==createPage)return;
+    createPage.insertAdjacentElement('afterend',detailPage);
+  }
+
+  M.register('contact-opportunities',{install(){
+    ensureContactScroll();
+    ensureNativeTaskPageOwnership();
+  }});
 })();
