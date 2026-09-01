@@ -124,22 +124,28 @@ function polishOpportunities(){
  });
 }
 
-function syncObservation(){
- const field=$('contactObservations');if(!field)return;
- let data=null;try{data=typeof currentContact!=='undefined'?currentContact?.data:null}catch(_){data=null}
- if(!data)return;
- const keys=['OBSERVACIONES','OBSERVACION','Observaciones','observaciones','OBSERVATIONS'];
- const value=keys.map(key=>data?.[key]).find(item=>item!=null&&String(item).trim());
- if(value!=null&&String(value).trim())field.value=String(value);
- const noteKeys=['NOTAS','NOTES'];
- const note=noteKeys.map(key=>data?.[key]).find(item=>item!=null&&String(item).trim());
- if(note==null&&value!=null&&String(value).trim()&&$('contactNotes'))$('contactNotes').value='';
+function observationValue(data){
+ for(const key of ['OBSERVACIONES','OBSERVACION','Observaciones','observaciones','OBSERVATIONS']){
+  if(Object.prototype.hasOwnProperty.call(data||{},key))return String(data[key]??'');
+ }
+ return'';
+}
+
+async function refreshObservation(id){
+ const field=$('contactObservations');if(!field||!id)return;
+ try{
+  const {data,error}=await sb.from('records').select('data').eq('id',id).maybeSingle();
+  if(error)throw error;
+  let active='';try{active=String(typeof currentContact!=='undefined'?currentContact?.id||'':'')}catch(_){}
+  if(active&&active!==String(id))return;
+  field.value=observationValue(data?.data||{});
+ }catch(error){console.warn('Observaciones del contacto',error)}
 }
 
 function apply(){
  const modal=$('contactModal');if(!modal)return;modal.classList.add('tpfContactCleanV2');
  const title=$('tpfContactEditBar')?.querySelector('h3');if(title)title.textContent='Datos del contacto';
- syncObservation();polishTimeline();polishOpportunities();
+ polishTimeline();polishOpportunities();
 }
 
 function install(){
@@ -148,7 +154,11 @@ function install(){
  if(timeline&&!timelineObserver){timelineObserver=new MutationObserver(()=>requestAnimationFrame(polishTimeline));timelineObserver.observe(timeline,{childList:true})}
  if(opps&&!opportunityObserver){opportunityObserver=new MutationObserver(()=>requestAnimationFrame(polishOpportunities));opportunityObserver.observe(opps,{childList:true})}
  document.addEventListener('click',e=>{if(e.target.closest?.('#contactModal:not(.hidden),[onclick*="openContact"]'))setTimeout(apply,40)},true);
- window.addEventListener('tpf:contact-open',()=>{setTimeout(apply,250);setTimeout(apply,900)});
+ window.addEventListener('tpf:contact-open',event=>{
+  const id=event?.detail?.id;
+  setTimeout(apply,250);
+  setTimeout(()=>refreshObservation(id),700);
+ });
 }
 M.register('contact-profile-clean-v2',{install});
 })();
