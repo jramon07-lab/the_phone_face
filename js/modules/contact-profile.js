@@ -11,6 +11,7 @@
   let labelsObserver=null;
   let templateTargetQuick=false;
   let internalSendBusy=false;
+  let sharedEditAction=null;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -72,7 +73,14 @@
 
   function bindNativeEditControls(){
     const toggle=byId('tpfContactEditToggle');
-    if(toggle && toggle.dataset.tpfNativeEdit!=='1')toggle.dataset.tpfNativeEdit='1';
+    if(toggle && toggle.dataset.tpfNativeEdit!=='1'){
+      toggle.dataset.tpfNativeEdit='1';
+      if(typeof toggle.onclick==='function')sharedEditAction=toggle.onclick;
+      toggle.onclick=e=>{
+        e.preventDefault();e.stopPropagation();
+        if(typeof sharedEditAction==='function')return sharedEditAction.call(toggle,e);
+      };
+    }
     const local=byId('tpfContactSaveLocal');
     if(local && local.dataset.tpfNativeSave!=='1'){
       local.dataset.tpfNativeSave='1';
@@ -200,7 +208,7 @@
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
   function syncUi(){
     const root=modal();if(!root||root.classList.contains('hidden'))return;
-    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(false);
+    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(editMode);
   }
 
   function installObservers(){
@@ -211,4 +219,31 @@
   M.register('contact-profile',{
     install(){
       M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
-      ensureStyles
+      ensureStyles();installObservers();wrapTemplateUse();allowWhatsappForContact();
+      const originalOpen=window.openContact;
+      if(typeof originalOpen==='function')window.openContact=async function(id){
+        currentRecordId=id;editMode=false;const p=originalOpen.apply(this,arguments);setTimeout(queueSync,0);setTimeout(queueSync,60);const result=await p;queueSync();loadObservation(id);try{window.applyWhatsappVisibilityForContact?.();}catch(_){}return result;
+      };
+
+      document.addEventListener('click',e=>{
+        const edit=e.target?.closest?.('#tpfContactEditToggle');
+        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(typeof sharedEditAction==='function')sharedEditAction.call(edit,e);else if(typeof edit.onclick==='function')edit.onclick.call(edit,e);return;}
+        const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
+        if(saveLocal){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=saveButton();if(real&&!real.disabled)real.click();return;}
+        const waMain=e.target?.closest?.('#tpfContactWhatsappMain');
+        if(waMain){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openContactWhatsappMenu();return;}
+        const quickSend=e.target?.closest?.('#waQuickSend');
+        if(quickSend && String(quickSend.dataset.mode||'send')==='send'){
+          e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();sendQuickWhatsappInsideCrm();return;
+        }
+      },true);
+
+      document.addEventListener('click',e=>{
+        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>normalizeCustomFields(),30);
+        if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
+        if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
+      },false);
+      setTimeout(()=>{installObservers();queueSync();wrapTemplateUse();},350);
+    }
+  });
+})();
