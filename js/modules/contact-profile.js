@@ -64,8 +64,14 @@
     root.classList.toggle('tpf-contact-readonly',!editMode);
     root.classList.toggle('tpf-contact-editing',editMode);
     editableFields().forEach(el=>applyFieldProtection(el,editMode));
-    const toggle=byId('tpfContactEditToggle');if(toggle){toggle.textContent=editMode?'Cancelar edición':'Editar datos';toggle.setAttribute('aria-pressed',String(editMode));}
-    const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';
+    const toggle=byId('tpfContactEditToggle');
+    if(toggle){
+      const text=editMode?'Cancelar edición':'Editar datos';
+      if(toggle.textContent!==text)toggle.textContent=text;
+      toggle.setAttribute('aria-pressed',String(editMode));
+    }
+    const hint=byId('tpfContactProtectedHint');
+    if(hint){const text=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';if(hint.textContent!==text)hint.textContent=text;}
     const real=saveButton();if(real){real.disabled=!editMode;real.style.display='none';}
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
   }
