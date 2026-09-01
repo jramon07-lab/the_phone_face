@@ -16,6 +16,31 @@ let waLiveState={
   unread:(()=>{try{return JSON.parse(localStorage.getItem("tpf_wa_unread")||"{}")||{}}catch(e){return {}}})()
 };
 
+const waRuntimeOwnerId=(()=>{
+  try{return globalThis.crypto?.randomUUID?.()||("wa-"+Date.now()+"-"+Math.random().toString(36).slice(2))}
+  catch(_){return "wa-"+Date.now()+"-"+Math.random().toString(36).slice(2)}
+})();
+function waOwnRuntimeLease(key,ttlMs){
+  try{
+    const now=Date.now();
+    const current=JSON.parse(localStorage.getItem(key)||"null");
+    if(current?.owner&&current.owner!==waRuntimeOwnerId&&Number(current.expires||0)>now)return false;
+    localStorage.setItem(key,JSON.stringify({owner:waRuntimeOwnerId,expires:now+ttlMs}));
+    const saved=JSON.parse(localStorage.getItem(key)||"null");
+    return saved?.owner===waRuntimeOwnerId;
+  }catch(_){return true}
+}
+function waReleaseRuntimeLease(key){
+  try{
+    const current=JSON.parse(localStorage.getItem(key)||"null");
+    if(current?.owner===waRuntimeOwnerId)localStorage.removeItem(key);
+  }catch(_){}
+}
+window.addEventListener("pagehide",()=>{
+  waReleaseRuntimeLease("tpf_wa_poll_lease_v2");
+  waReleaseRuntimeLease("tpf_wa_schedule_lease_v2");
+});
+
 function waNormalizePhone(chatId){
   return String(chatId||"").replace(/@.*$/,"").replace(/\D/g,"");
 }
@@ -332,7 +357,7 @@ async function waRefreshHybridSummary(){
     const r=await waApi("summary");
     waApplySummaryChats(r.chats);
     if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
-  }catch(e){console.warn("WhatsApp hybrid summary",e)}
+  }catch(e){waBackoffRateLimit(e);console.warn("WhatsApp hybrid summary",e)}
 }
 
 async function loadWhatsAppLive(){
@@ -801,6 +826,17 @@ let waPreviewCursor=0;
 let waLastPreviewSweep=0;
 let waPreviewPrimed=false;
 let waLastHybridSummary=0;
+let waPollBackoffUntil=0;
+function waIsRateLimitError(e){
+  const status=Number(e?.status||e?.greenStatus||0);
+  const text=String(e?.message||e?.error||e||"").toLowerCase();
+  return status===429||text.includes("too many requests")||text.includes("429");
+}
+function waBackoffRateLimit(e){
+  if(!waIsRateLimitError(e))return false;
+  waPollBackoffUntil=Math.max(waPollBackoffUntil,Date.now()+45000);
+  return true;
+}
 const waReadSuppressUntil={};
 const waProcessedMessageIds=new Set();
 const waSessionStartedAt=Math.floor(Date.now()/1000);
@@ -894,7 +930,8 @@ async function waRefreshRecentPreviews(){
 }
 
 async function waPollOnce(){
-  if(waLiveState.pollBusy)return;
+  if(waLiveState.pollBusy||Date.now()<waPollBackoffUntil)return;
+  if(!waOwnRuntimeLease("tpf_wa_poll_lease_v2",12000))return;
   waLiveState.pollBusy=true;
   try{
     const r=await waApi("notifications");
@@ -943,7 +980,7 @@ async function waPollOnce(){
     }
     // Actualiza la lista una sola vez después de procesar todo el lote:
     // llegan avisos y previews sin provocar destellos repetidos.
-    if(touched){
+    if(touched&&!$("view-whatsapplive")?.classList.contains("hidden")){
       try{renderWhatsAppChats()}catch(_){}
     }
 
@@ -951,7 +988,7 @@ async function waPollOnce(){
     // que su orden puede actualizarse con menos frecuencia. El preview en vivo
     // de arriba no depende de este refresco.
     const summaryNow=Date.now();
-    if(summaryNow-waLastHybridSummary>10000){
+    if(summaryNow-waLastHybridSummary>30000){
       waLastHybridSummary=summaryNow;
       try{await waRefreshHybridSummary()}catch(e){}
     }
@@ -968,7 +1005,7 @@ async function waPollOnce(){
     }
   }catch(e){
     const now=Date.now();
-    if(waLiveState.selected && now-waLastHistoryFallback>30000){
+    if(!waBackoffRateLimit(e)&&waLiveState.selected && now-waLastHistoryFallback>30000){
       waLastHistoryFallback=now;
       try{await loadWaHistory(false)}catch(_){}
     }
@@ -980,7 +1017,7 @@ async function waPollOnce(){
 function startWaPolling(){
   if(waLiveState.poll)clearInterval(waLiveState.poll);
   waPollOnce();
-  waLiveState.poll=setInterval(waPollOnce,2500);
+  waLiveState.poll=setInterval(waPollOnce,5000);
 }
 
 
@@ -1057,7 +1094,9 @@ $("waScheduleBtn").onclick=()=>{
 
 let waAutoScheduleBusy=false;
 async function waAutoSendDueSchedules(){
-  if(waAutoScheduleBusy||!sb)return; waAutoScheduleBusy=true;
+  if(waAutoScheduleBusy||!sb)return;
+  if(!waOwnRuntimeLease("tpf_wa_schedule_lease_v2",45000))return;
+  waAutoScheduleBusy=true;
   try{
     const now=new Date().toISOString();
     const {data,error}=await sb.from("agenda_items").select("*").eq("whatsapp_enabled",true).eq("status","pending").lte("whatsapp_scheduled_at",now).order("whatsapp_scheduled_at",{ascending:true}).limit(10);
@@ -1066,7 +1105,31 @@ async function waAutoSendDueSchedules(){
       const phone=String(row.whatsapp_phone||row.customer_phone||"").replace(/\D/g,"");
       const message=String(row.whatsapp_message||"").trim();
       if(!phone||!message)continue;
-      try{await waApi("send",{chatId:phone,message});await sb.from("agenda_items").update({status:"completed"}).eq("id",row.id)}catch(e){console.warn("WhatsApp programado",e)}
+      const claimed=await sb.from("agenda_items")
+        .update({
+          whatsapp_delivery_status:"sending",whatsapp_delivery_error:null,
+          whatsapp_attempted_at:new Date().toISOString()
+        })
+        .eq("id",row.id).eq("status","pending")
+        .or("whatsapp_delivery_status.is.null,whatsapp_delivery_status.eq.pending")
+        .select("id").maybeSingle();
+      if(claimed.error){console.warn("No se pudo reservar el WhatsApp programado",claimed.error);continue}
+      if(!claimed.data)continue;
+      try{
+        const sent=await waApi("send",{chatId:phone,message});
+        const completed=await sb.from("agenda_items").update({
+          status:"completed",whatsapp_delivery_status:"sent",whatsapp_delivery_error:null,
+          whatsapp_sent_at:new Date().toISOString(),whatsapp_provider_message_id:sent?.idMessage||null
+        }).eq("id",row.id).eq("status","pending").eq("whatsapp_delivery_status","sending");
+        if(completed.error)throw completed.error;
+      }catch(e){
+        const failed=await sb.from("agenda_items").update({
+          whatsapp_delivery_status:"uncertain",
+          whatsapp_delivery_error:String(e?.message||e||"No se pudo confirmar el envío").slice(0,500)
+        }).eq("id",row.id).eq("status","pending").eq("whatsapp_delivery_status","sending");
+        if(failed.error)console.warn("No se pudo guardar el estado del WhatsApp programado",failed.error);
+        console.warn("WhatsApp programado",e);
+      }
     }
   }catch(e){console.warn("Programados WhatsApp",e)}finally{waAutoScheduleBusy=false}
 }
