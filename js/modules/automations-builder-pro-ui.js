@@ -3,6 +3,8 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 let queued=false,wasOpen=false;
+function setClass(el,name,on){if(el&&el.classList.contains(name)!==!!on)el.classList.toggle(name,!!on);}
+function setText(el,value){if(el&&el.textContent!==value)el.textContent=value;}
 function esc(s){return String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));}
 function installCss(){
   if($('tpfAutomationBuilderProCss'))return;
@@ -31,7 +33,7 @@ function ensureHeader(b){
   const actions=$('tpfBuilderProActions'),legacy=b.querySelector('.tpfFlowHeadActions'),back=$('apBuilderBack');
   if(actions&&back&&back.parentElement!==actions)actions.appendChild(back);
   if(actions&&legacy&&legacy.parentElement!==actions)actions.appendChild(legacy);
-  const h=$('tpfBuilderProHeading');if(h)h.textContent=modeTitle();
+  const h=$('tpfBuilderProHeading');setText(h,modeTitle());
   const n=$('tpfFlowNew');if(n&&n.textContent.trim()!=='Reiniciar')n.textContent='Reiniciar';
 }
 function ensureStepper(b){if($('tpfBuilderStepper'))return;const x=document.createElement('div');x.id='tpfBuilderStepper';x.className='tpfBuilderStepper';x.innerHTML=['Disparador','Condición (opcional)','Acciones','Revisar y activar'].map((t,i)=>`<div class="tpfBuilderStage" data-builder-stage="${i+1}"><span class="tpfBuilderStageDot">${i+1}</span><span>${t}</span></div>`).join('');const top=$('tpfBuilderProTop');top?.insertAdjacentElement('afterend',x);}
@@ -41,14 +43,17 @@ function triggerText(){const s=$('tpfFlowTrigger');return s?.selectedOptions?.[0
 function updateState(){
   const b=$('tpfFlowBuilder');if(!b||!openNow())return;
   const trigger=String($('tpfFlowTrigger')?.value||''),steps=[...document.querySelectorAll('#tpfFlowSteps .tpfFlowStep')],hasCond=steps.some(x=>/\bSI\b/.test(x.textContent||'')),name=String($('tpfFlowName')?.value||'').trim();
-  const stages=[...document.querySelectorAll('#tpfBuilderStepper [data-builder-stage]')];stages.forEach(x=>x.classList.remove('on','done'));
-  if(stages[0])stages[0].classList.add(trigger?'done':'on');
-  if(stages[1])stages[1].classList.add(hasCond?'done':(trigger?'on':''));
-  if(stages[2])stages[2].classList.add(steps.length?'done':(trigger?'on':''));
-  if(stages[3])stages[3].classList.add(name&&trigger&&steps.length?'on':'');
-  const rn=$('tpfReviewName'),rt=$('tpfReviewTrigger'),rs=$('tpfReviewSteps'),ready=$('tpfBuilderReady');if(rn)rn.textContent=name||'Sin nombre';if(rt)rt.textContent=triggerText();if(rs)rs.textContent=`${steps.length} ${steps.length===1?'paso':'pasos'}`;if(ready){const ok=!!(name&&trigger&&steps.length);ready.classList.toggle('ok',ok);ready.textContent=ok?'Lista para guardar':'Configuración pendiente';}
+  const stages=[...document.querySelectorAll('#tpfBuilderStepper [data-builder-stage]')],states=[
+    {done:!!trigger,on:!trigger},
+    {done:hasCond,on:!!trigger&&!hasCond},
+    {done:!!steps.length,on:!!trigger&&!steps.length},
+    {done:false,on:!!(name&&trigger&&steps.length)}
+  ];
+  stages.forEach((stage,i)=>{setClass(stage,'done',states[i]?.done);setClass(stage,'on',states[i]?.on);});
+  const rn=$('tpfReviewName'),rt=$('tpfReviewTrigger'),rs=$('tpfReviewSteps'),ready=$('tpfBuilderReady'),ok=!!(name&&trigger&&steps.length);
+  setText(rn,name||'Sin nombre');setText(rt,triggerText());setText(rs,`${steps.length} ${steps.length===1?'paso':'pasos'}`);if(ready){setClass(ready,'ok',ok);setText(ready,ok?'Lista para guardar':'Configuración pendiente');}
 }
-function decorate(){queued=false;const v=$('view-automations'),b=$('tpfFlowBuilder');if(!v||!b)return;const open=openNow();if(open&&!wasOpen){b.dataset.tpfInitialMode=String($('tpfFlowName')?.value||'').trim()?'edit':'new';}wasOpen=open;if(!open){v.classList.remove('tpfBuilderProfessional');return;}installCss();v.classList.add('tpfBuilderProfessional');b.classList.add('tpfBuilderPro');ensureHeader(b);ensureStepper(b);ensureCaptions(b);ensureReview(b);updateState();}
+function decorate(){queued=false;const v=$('view-automations'),b=$('tpfFlowBuilder');if(!v||!b)return;const open=openNow();if(open&&!wasOpen){b.dataset.tpfInitialMode=String($('tpfFlowName')?.value||'').trim()?'edit':'new';}wasOpen=open;if(!open){setClass(v,'tpfBuilderProfessional',false);return;}installCss();setClass(v,'tpfBuilderProfessional',true);setClass(b,'tpfBuilderPro',true);ensureHeader(b);ensureStepper(b);ensureCaptions(b);ensureReview(b);updateState();}
 function queue(ms=30){if(queued)return;queued=true;setTimeout(decorate,ms);}
 function bind(){installCss();queue(0);const v=$('view-automations');if(v)new MutationObserver(()=>queue(50)).observe(v,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});document.addEventListener('click',()=>queue(60),true);document.addEventListener('input',e=>{if(e.target?.closest?.('#tpfFlowBuilder'))queue(0)},true);document.addEventListener('change',e=>{if(e.target?.closest?.('#tpfFlowBuilder'))queue(0)},true);}
 M.register('automations-builder-pro-ui',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();}});
