@@ -372,6 +372,7 @@ async function loadWhatsAppLive(){
     $("waLiveStatus").textContent=connected?"Conectado":"Estado: "+(st||"desconocido");
     $("waLiveStatus").className="waLiveStatus "+(connected?"ok":"error");
     waApplySummaryChats(summaryR.chats);
+    waLastHybridSummary=Date.now();
     renderWhatsAppChats();
 
     if(waLiveState.selected){
@@ -936,7 +937,7 @@ async function waPollOnce(){
   try{
     const r=await waApi("notifications");
     const bodies=Array.isArray(r?.notifications)?r.notifications:(r?.notification?[r.notification]:[]);
-    let touched=false;
+    let touched=false,selectedTouched=false,metaTouched=false;
 
     for(const body of bodies){
       if(!body)continue;
@@ -950,7 +951,7 @@ async function waPollOnce(){
       // CUALQUIER mensaje real (entrante o saliente) actualiza el preview
       // de la lista inmediatamente.
       waRememberLivePreview(chatId,msg);
-      try{waTrackDirection(chatId,msg)}catch(_){}
+      try{if(waTrackDirection(chatId,msg,{persist:false,render:false}))metaTouched=true}catch(_){}
       touched=true;
 
       if(webhookType==="incomingMessageReceived" || direction==="in"){
@@ -967,17 +968,16 @@ async function waPollOnce(){
         }
       }
 
-      // Mensaje saliente desde teléfono o API: waTrackDirection ya registra
-      // lastOutgoingAt. Eso hace desaparecer "Pendiente respuesta" cuando
-      // el saliente es posterior al último entrante.
-      if(direction==="out" || webhookType==="outgoingMessageReceived" || webhookType==="outgoingAPIMessageReceived"){
-        try{waTrackDirection(chatId,msg)}catch(_){}
-      }
-
       if(waLiveState.selected&&chatId===waLiveState.selected.id){
-        waPushLiveMessage(msg,true);
+        const id=String(msg.idMessage||"");
+        if(!id||!waLiveState.history.some(x=>String(x?.idMessage||"")===id)){
+          waLiveState.history.push(msg);
+          selectedTouched=true;
+        }
       }
     }
+    if(metaTouched){waFlushMeta();waUpdateStats()}
+    if(selectedTouched)renderWaMessages(true);
     // Actualiza la lista una sola vez después de procesar todo el lote:
     // llegan avisos y previews sin provocar destellos repetidos.
     if(touched&&!$("view-whatsapplive")?.classList.contains("hidden")){
@@ -1192,9 +1192,22 @@ window.selectWhatsAppChat=async(chatId)=>{
 /* ===== WhatsApp CRM Total ===== */
 const WA_META_KEY="tpf_wa_chat_meta_v3";
 const WA_HISTORY_KEY="tpf_wa_history_cache_v2";
-function waMetaAll(){try{return JSON.parse(localStorage.getItem(WA_META_KEY)||"{}")}catch(e){return {}}}
-function waMeta(chatId){const a=waMetaAll();return a[chatId]||{pinned:false,archived:false,tags:[],note:"",lastIncomingAt:0,lastOutgoingAt:0}}
-function waMetaSave(chatId,patch){const a=waMetaAll();a[chatId]={...waMeta(chatId),...patch};localStorage.setItem(WA_META_KEY,JSON.stringify(a));renderWhatsAppChats();waUpdateStats();if(waLiveState.selected?.id===chatId)waRenderSideExtras()}
+let waMetaCache=null,waMetaDirty=false,waMetaUiFrame=0,waMetaUiChatId="";
+function waMetaDefaults(){return {pinned:false,archived:false,tags:[],note:"",lastIncomingAt:0,lastOutgoingAt:0}}
+function waMetaAll(){if(waMetaCache)return waMetaCache;try{waMetaCache=JSON.parse(localStorage.getItem(WA_META_KEY)||"{}")||{}}catch(e){waMetaCache={}}return waMetaCache}
+function waMeta(chatId){const a=waMetaAll();return a[chatId]||waMetaDefaults()}
+function waFlushMeta(){if(!waMetaDirty)return;try{localStorage.setItem(WA_META_KEY,JSON.stringify(waMetaAll()));waMetaDirty=false}catch(e){}}
+function waScheduleMetaUi(chatId=""){
+  if(chatId)waMetaUiChatId=chatId;
+  if(waMetaUiFrame)return;
+  waMetaUiFrame=requestAnimationFrame(()=>{
+    waMetaUiFrame=0;
+    try{renderWhatsAppChats();waUpdateStats();if(waLiveState.selected?.id===waMetaUiChatId)waRenderSideExtras()}catch(_){}
+    waMetaUiChatId="";
+  });
+}
+function waMetaSave(chatId,patch,{persist=true,render=true}={}){const a=waMetaAll(),current=a[chatId]||waMetaDefaults();a[chatId]={...current,...patch};waMetaDirty=true;if(persist)waFlushMeta();if(render)waScheduleMetaUi(chatId)}
+window.addEventListener("storage",e=>{if(e.key!==WA_META_KEY)return;waMetaCache=null;waScheduleMetaUi(waLiveState.selected?.id||"")});
 function waCacheHistory(chatId,rows){try{const all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-500);localStorage.setItem(WA_HISTORY_KEY,JSON.stringify(all))}catch(e){}}
 function waCachedHistory(chatId){try{return JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}")[chatId]||[]}catch(e){return []}}
 function waIsUnanswered(chatId){
@@ -1207,13 +1220,14 @@ function waUpdateStats(){
   if($("waStatUnread"))$("waStatUnread").textContent=unread;
   if($("waStatWaiting"))$("waStatWaiting").textContent=waiting;
 }
-function waTrackDirection(chatId,msg){
-  if(!chatId||!msg)return;
+function waTrackDirection(chatId,msg,options={}){
+  if(!chatId||!msg)return false;
   const ts=Number(waMessageTimestamp(msg)||Math.floor(Date.now()/1000));
   const dir=waMessageDirection(msg);
   const m=waMeta(chatId);
-  if(dir==="in"&&ts>Number(m.lastIncomingAt||0))waMetaSave(chatId,{lastIncomingAt:ts});
-  if(dir==="out"&&ts>Number(m.lastOutgoingAt||0))waMetaSave(chatId,{lastOutgoingAt:ts});
+  if(dir==="in"&&ts>Number(m.lastIncomingAt||0)){waMetaSave(chatId,{lastIncomingAt:ts},options);return true}
+  if(dir==="out"&&ts>Number(m.lastOutgoingAt||0)){waMetaSave(chatId,{lastOutgoingAt:ts},options);return true}
+  return false;
 }
 
 /* Re-render chats with CRM filters/metadata. */
@@ -1287,7 +1301,7 @@ loadWaHistory=async function(scrollBottom=true){
     const remote=Array.isArray(r.messages)?r.messages:[],cached=waCachedHistory(chatId),map=new Map();
     [...cached,...remote].forEach(x=>map.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
     waLiveState.history=[...map.values()];
-    waLiveState.history.forEach(m=>waTrackDirection(chatId,m));waCacheHistory(chatId,waLiveState.history);renderWaMessages(scrollBottom);
+    waLiveState.history.forEach(m=>waTrackDirection(chatId,m,{persist:false,render:false}));waFlushMeta();waCacheHistory(chatId,waLiveState.history);renderWaMessages(scrollBottom);waScheduleMetaUi(chatId);
   }catch(e){
     const cached=waCachedHistory(chatId);if(cached.length){waLiveState.history=cached;renderWaMessages(scrollBottom)}else $("waMessages").innerHTML=`<div class="waLiveEmpty">${esc(e.message)}</div>`;
   }
@@ -1302,7 +1316,7 @@ renderWaMessages=function(scrollBottom){
     if(!m)return;node.dataset.waMsgIndex=String(i);node.title="Doble clic: crear tarea, recordatorio u oportunidad";
     node.ondblclick=()=>waOpenMessageActions(m);
   });
-  if(waLiveState.selected){waCacheHistory(waLiveState.selected.id,waLiveState.history);waLiveState.history.forEach(m=>waTrackDirection(waLiveState.selected.id,m))}
+  if(waLiveState.selected){const chatId=waLiveState.selected.id;waCacheHistory(chatId,waLiveState.history);waLiveState.history.forEach(m=>waTrackDirection(chatId,m,{persist:false,render:false}));waFlushMeta();waScheduleMetaUi(chatId)}
 };
 
 let waSelectedActionMessage=null;
@@ -1467,11 +1481,12 @@ loadWaHistory=async function(scrollBottom=true){
     const remote=Array.isArray(r.messages)?r.messages:[],cached=waCachedHistory(chatId),map=new Map();
     [...persisted,...cached,...remote].forEach(x=>map.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
     waLiveState.history=[...map.values()];
-    waLiveState.history.forEach(m=>waTrackDirection(chatId,m));
+    waLiveState.history.forEach(m=>waTrackDirection(chatId,m,{persist:false,render:false}));
+    waFlushMeta();
     waCacheHistory(chatId,waLiveState.history); waLocalPersist(chatId,waLiveState.history);
     renderWaMessages(scrollBottom);
     waPersistRemote(chatId,waLiveState.history);
-    waUpdateAdvancedMetrics();
+    waUpdateAdvancedMetrics();waScheduleMetaUi(chatId);
   }catch(e){
     const persisted=await waLoadRemoteHistory(chatId);
     if(persisted.length){waLiveState.history=persisted;renderWaMessages(scrollBottom)}
