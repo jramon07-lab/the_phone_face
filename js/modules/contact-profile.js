@@ -3,7 +3,8 @@
   const M=window.TPFModules;
   if(!M)return;
 
-  const CORE_FIELD_IDS=['contactFirstName','contactLastName','contactName','contactPhone','contactDni','contactEmail','contactNotes','contactObservations'];
+  const CORE_FIELD_IDS=['contactFirstName','contactLastName','contactName','contactPhone','contactDni','contactEmail','contactNotes','contactObservations','contactBank'];
+  const LABEL_CATEGORIES_KEY='crm_label_categories_v1';
   let editMode=false;
   let currentRecordId=null;
   let syncQueued=false;
@@ -12,6 +13,9 @@
   let templateTargetQuick=false;
   let internalSendBusy=false;
   let createEditState=null;
+  let contactLabelCategories={};
+  let contactLabelCategoriesReady=false;
+  let contactLabelCategoriesRequest=null;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -32,11 +36,14 @@
       #contactCustomFields{width:100%!important}.contactCustomFieldsBox{width:100%!important;box-sizing:border-box!important}
       #contactCustomFields label:has(.tpf-bank-field),#contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;box-sizing:border-box!important}
       #contactCustomFields .tpf-bank-field{min-width:24ch!important;font-variant-numeric:tabular-nums;padding-left:12px!important;padding-right:12px!important}
-      #contactLabelsSearch{width:100%;margin:8px 0 12px;box-sizing:border-box}
+      #tpfContactLabelsTools{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.7fr) minmax(130px,.55fr);gap:8px;margin:8px 0 12px}
+      #tpfContactLabelsTools input,#tpfContactLabelsTools select{width:100%;margin:0;box-sizing:border-box}
       #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
+      #contactLabelsFilterEmpty{grid-column:1/-1;padding:16px;text-align:center;color:#667085}
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
       #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:2}
       #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
+      @media(max-width:700px){#tpfContactLabelsTools{grid-template-columns:1fr}}
     `;document.head.appendChild(s);
   }
 
@@ -75,6 +82,14 @@
     if(hint){const text=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';if(hint.textContent!==text)hint.textContent=text;}
     const real=saveButton();if(real){real.disabled=!editMode;real.style.display='none';}
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
+  }
+
+  function protectContactFieldEvent(event){
+    if(editMode)return;
+    const root=modal(),target=event?.target;
+    if(!root||root.classList.contains('hidden')||!target||!root.contains(target)||!editableFields().includes(target))return;
+    applyFieldProtection(target,false);
+    if(['beforeinput','paste','drop'].includes(event.type))event.preventDefault();
   }
 
   function recordField(d,...names){for(const n of names){if(d?.[n]!==undefined&&d?.[n]!==null)return String(d[n]);}return '';}
@@ -191,13 +206,79 @@
     });
   }
 
+  function inferredContactLabelCategory(name){
+    const n=String(name||'').toLowerCase();
+    if(n.includes('vodafone'))return 'Vodafone';
+    if(n.includes('orange'))return 'Orange';
+    if(n.includes('masmovil')||n.includes('másmóvil')||n.includes('mas movil')||n.includes('más móvil'))return 'MásMóvil';
+    if(n.includes('yoigo'))return 'Yoigo';
+    return 'Otras';
+  }
+  async function loadContactLabelCategories(force=false){
+    if(contactLabelCategoriesReady&&!force)return contactLabelCategories;
+    if(contactLabelCategoriesRequest)return contactLabelCategoriesRequest;
+    contactLabelCategoriesRequest=(async()=>{
+      try{
+        const r=await sb.from('app_settings').select('value').eq('key',LABEL_CATEGORIES_KEY).maybeSingle();
+        if(r.error)throw r.error;
+        const value=r.data?.value;
+        contactLabelCategories=(value&&typeof value==='object'&&!Array.isArray(value))?value:{};
+      }catch(_){contactLabelCategories={};}
+      contactLabelCategoriesReady=true;
+      return contactLabelCategories;
+    })();
+    try{return await contactLabelCategoriesRequest;}finally{contactLabelCategoriesRequest=null;}
+  }
+  function contactLabelCategory(row){
+    const input=row?.querySelector('input[type="checkbox"]');
+    const name=row?.querySelector('span')?.textContent||row?.textContent||'';
+    return contactLabelCategories[String(input?.value||'')]||inferredContactLabelCategory(name);
+  }
+  function refreshContactLabelCategories(){
+    const choices=byId('contactLabelsChoices'),select=byId('contactLabelsCategory');if(!choices||!select)return;
+    const rows=[...choices.querySelectorAll('.contactLabelChoice')];
+    rows.forEach(row=>{row.dataset.tpfLabelCategory=contactLabelCategory(row);});
+    const cats=[...new Set(rows.map(row=>row.dataset.tpfLabelCategory).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+    const signature=cats.join('\u001f');
+    if(select.dataset.tpfCategories!==signature){
+      const current=select.value;
+      select.replaceChildren(new Option('Todas las categorías',''),...cats.map(cat=>new Option(cat,cat)));
+      select.dataset.tpfCategories=signature;
+      select.value=cats.includes(current)?current:'';
+    }
+  }
   function ensureLabelSearch(){
     const lm=byId('contactLabelsModal'),choices=byId('contactLabelsChoices');if(!lm||!choices)return;
-    let input=byId('contactLabelsSearch');if(!input){input=document.createElement('input');input.id='contactLabelsSearch';input.type='search';input.placeholder='Buscar etiqueta…';input.autocomplete='off';choices.insertAdjacentElement('beforebegin',input);input.addEventListener('input',filterContactLabels);}filterContactLabels();
+    let tools=byId('tpfContactLabelsTools');
+    if(!tools){tools=document.createElement('div');tools.id='tpfContactLabelsTools';choices.insertAdjacentElement('beforebegin',tools);}
+    let input=byId('contactLabelsSearch');
+    if(!input){input=document.createElement('input');input.id='contactLabelsSearch';input.type='search';input.placeholder='Buscar etiqueta…';input.autocomplete='off';input.addEventListener('input',filterContactLabels);}
+    let category=byId('contactLabelsCategory');
+    if(!category){category=document.createElement('select');category.id='contactLabelsCategory';category.innerHTML='<option value="">Todas las categorías</option>';category.addEventListener('change',filterContactLabels);}
+    let assignment=byId('contactLabelsAssignmentFilter');
+    if(!assignment){assignment=document.createElement('select');assignment.id='contactLabelsAssignmentFilter';assignment.innerHTML='<option value="all">Todas las etiquetas</option><option value="selected">Seleccionadas</option>';assignment.addEventListener('change',filterContactLabels);}
+    [input,category,assignment].forEach(el=>{if(el.parentElement!==tools)tools.appendChild(el);});
+    if(choices.dataset.tpfLabelFiltersBound!=='1'){
+      choices.dataset.tpfLabelFiltersBound='1';
+      choices.addEventListener('change',e=>{if(e.target.matches('input[type="checkbox"]'))filterContactLabels();});
+    }
+    refreshContactLabelCategories();filterContactLabels();
+    loadContactLabelCategories().then(()=>{refreshContactLabelCategories();filterContactLabels();});
   }
   function filterContactLabels(){
     const choices=byId('contactLabelsChoices'),input=byId('contactLabelsSearch');if(!choices||!input)return;
-    const q=input.value.trim().toLowerCase();[...choices.children].forEach(row=>row.classList.toggle('tpfLabelSearchHidden',!!q&&!String(row.textContent||'').toLowerCase().includes(q)));
+    refreshContactLabelCategories();
+    const q=input.value.trim().toLowerCase(),category=byId('contactLabelsCategory')?.value||'',assignment=byId('contactLabelsAssignmentFilter')?.value||'all';
+    const rows=[...choices.querySelectorAll('.contactLabelChoice')];let visible=0;
+    rows.forEach(row=>{
+      const checkbox=row.querySelector('input[type="checkbox"]');
+      const name=String(row.querySelector('span')?.textContent||row.textContent||'').toLowerCase();
+      const show=(!q||name.includes(q))&&(!category||row.dataset.tpfLabelCategory===category)&&(assignment!=='selected'||checkbox?.checked);
+      row.classList.toggle('tpfLabelSearchHidden',!show);if(show)visible++;
+    });
+    let empty=byId('contactLabelsFilterEmpty');
+    if(rows.length&&!empty){empty=document.createElement('div');empty.id='contactLabelsFilterEmpty';empty.className='small';empty.textContent='No hay etiquetas que coincidan con los filtros.';choices.appendChild(empty);}
+    if(empty)empty.classList.toggle('hidden',!rows.length||visible>0);
   }
 
   function allowWhatsappForContact(){
@@ -291,6 +372,7 @@
       };
 
       document.addEventListener('click',e=>{
+        protectContactFieldEvent(e);
         const edit=e.target?.closest?.('#tpfContactEditToggle');
         if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateModalEdit();return;}
         const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
@@ -303,8 +385,11 @@
         }
       },true);
 
+      ['pointerdown','focusin','beforeinput','paste','drop'].forEach(type=>document.addEventListener(type,protectContactFieldEvent,true));
+
       document.addEventListener('click',e=>{
         if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>normalizeCustomFields(),30);
+        if(e.target?.closest?.('#contactManageLabels,#waAddTagSide,#waTagChat'))setTimeout(()=>{ensureLabelSearch();loadContactLabelCategories(true).then(()=>{refreshContactLabelCategories();filterContactLabels();});},20);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
         if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
       },false);
