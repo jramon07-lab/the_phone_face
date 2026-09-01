@@ -36,8 +36,9 @@
       #contactCustomFields{width:100%!important}.contactCustomFieldsBox{width:100%!important;box-sizing:border-box!important}
       #contactCustomFields label:has(.tpf-bank-field),#contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;box-sizing:border-box!important}
       #contactCustomFields .tpf-bank-field{min-width:24ch!important;font-variant-numeric:tabular-nums;padding-left:12px!important;padding-right:12px!important}
-      #tpfContactLabelsTools{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.7fr) minmax(130px,.55fr);gap:8px;margin:8px 0 12px}
+      #tpfContactLabelsTools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 12px}
       #tpfContactLabelsTools input,#tpfContactLabelsTools select{width:100%;margin:0;box-sizing:border-box}
+      #contactLabelsSearch{grid-column:1/-1}
       #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
       #contactLabelsFilterEmpty{grid-column:1/-1;padding:16px;text-align:center;color:#667085}
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
