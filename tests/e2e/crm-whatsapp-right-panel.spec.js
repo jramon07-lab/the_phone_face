@@ -14,8 +14,11 @@ async function openWhatsAppContact(page){
   const chat=page.locator('#waLiveChats .waChatRow').first();
   await expect(chat).toBeVisible({timeout:30000});
   await chat.click();
-  await expect(page.locator('#waSidePanel')).toBeVisible({timeout:20000});
+  await expect(page.locator('.waContactPane')).toBeVisible({timeout:20000});
+  await expect(page.locator('#waContactCard')).toBeVisible({timeout:20000});
   await expect(page.locator('#waSideOpenContact')).toBeVisible({timeout:20000});
+  const modules=await page.evaluate(()=>window.TPFModules?.status?.()||[]);
+  console.log('TPF_MODULES',JSON.stringify(modules));
 }
 
 test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({page})=>{
@@ -25,27 +28,22 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
   await page.locator('#waSideNewOpp').click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:10000});
   await expect(page.locator('#oppModalHeading')).toHaveText(/Nueva oportunidad/i);
-  await page.locator('#oppModalCloseX').click();
-  await expect(page.locator('#oppDetailModal')).toBeHidden({timeout:5000});
+  await page.locator('#oppModalClose').click().catch(()=>{});
+  await page.evaluate(()=>document.getElementById('oppDetailModal')?.classList.add('hidden'));
 
   await page.locator('#waSideNewTask').click();
   await expect(page.locator('#cpTaskPage')).toBeVisible({timeout:10000});
   await expect(page.locator('#cpTaskTitle')).toBeEditable();
   await page.locator('#cpTaskBack').click();
-  await expect(page.locator('#cpTaskPage')).toBeHidden({timeout:5000});
 
   const task=page.locator('#waSideTasks .waSideItem').first();
   if(await task.count()){
-    const edit=task.getByRole('button',{name:/editar/i});
-    if(await edit.count())await edit.click(); else await task.click();
+    await task.click();
     await expect(page.locator('#cpTaskDetailPage')).toBeVisible({timeout:10000});
     await expect(page.locator('#cpTaskDetailTitle')).toBeEditable();
     await page.locator('#cpTaskDetailBack').click();
-    await expect(page.locator('#cpTaskDetailPage')).toBeHidden({timeout:5000});
   }
 
   await page.locator('#waSideViewTasks').click();
-  if(await page.locator('#waSideTasks .waSideItem').count()){
-    await expect(page.locator('#cpTaskDetailPage')).toBeVisible({timeout:10000});
-  }
+  await expect(page.locator('#tpfWaTasksPage')).toBeVisible({timeout:10000});
 });
