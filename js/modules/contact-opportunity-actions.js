@@ -26,5 +26,19 @@
     document.head.appendChild(s);
   }
 
-  M.register('contact-opportunities',{install(){ensureContactScroll();}});
+  // cpTaskDetailPage was authored inside cpTaskPage. That makes the native
+  // detail invisible whenever the create page is hidden. Correct ownership
+  // once at module installation: create and detail pages become siblings.
+  // No click interception, polling, observer or duplicate task implementation.
+  function ensureNativeTaskPageOwnership(){
+    const createPage=document.getElementById('cpTaskPage');
+    const detailPage=document.getElementById('cpTaskDetailPage');
+    if(!createPage||!detailPage||detailPage.parentElement!==createPage)return;
+    createPage.insertAdjacentElement('afterend',detailPage);
+  }
+
+  M.register('contact-opportunities',{install(){
+    ensureContactScroll();
+    ensureNativeTaskPageOwnership();
+  }});
 })();
