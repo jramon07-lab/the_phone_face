@@ -10,7 +10,8 @@
     const s=document.createElement('style');
     s.id='tpfContactThreeColumnScroll';
     s.textContent=`
-      #contactModal.contactProfileBack{overflow:hidden!important;padding:0!important}
+      #contactModal.contactProfileBack{overflow:hidden!important;padding:0!important;left:252px!important;width:auto!important;right:0!important}
+      body.sidebarCollapsed #contactModal.contactProfileBack{left:0!important}
       #contactModal .contactProfile{width:100%!important;max-width:none!important;height:100vh!important;min-height:100vh!important;margin:0!important;overflow:hidden!important;box-sizing:border-box!important}
       #contactModal .cpColumns{display:grid!important;grid-template-columns:minmax(250px,300px) minmax(430px,1fr) minmax(270px,320px)!important;width:100%!important;max-width:100%!important;height:calc(100vh - 62px)!important;min-height:0!important;overflow:hidden!important;align-items:stretch!important;box-sizing:border-box!important}
       #contactModal .cpLeft,#contactModal .cpCenter,#contactModal .cpRight{width:auto!important;min-width:0!important;height:100%!important;max-height:100%!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;box-sizing:border-box!important}
@@ -30,7 +31,7 @@
       .tpfContactOppListBody{padding:12px 18px;overflow:auto;max-height:70vh}.tpfContactOppNativeRow{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 4px;border-bottom:1px solid #edf0f5}.tpfContactOppNativeRow small{display:block;color:#6b7280;margin-top:4px}
       #cpViewOpportunities{margin:10px 0 0;width:100%}
       @media(max-width:1180px){#contactModal .cpColumns{grid-template-columns:minmax(225px,270px) minmax(380px,1fr) minmax(240px,285px)!important}}
-      @media(max-width:900px){#contactModal.contactProfileBack{overflow:auto!important}#contactModal .contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important}#contactModal .cpColumns{display:block!important;height:auto!important;overflow:visible!important}#contactModal .cpLeft,#contactModal .cpCenter,#contactModal .cpRight{width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important}#contactModal .cpTaskPage:not(.hidden){position:fixed!important;inset:0!important;height:100vh!important}}
+      @media(max-width:900px){#contactModal.contactProfileBack{left:0!important;overflow:auto!important}#contactModal .contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important}#contactModal .cpColumns{display:block!important;height:auto!important;overflow:visible!important}#contactModal .cpLeft,#contactModal .cpCenter,#contactModal .cpRight{width:100%!important;height:auto!important;max-height:none!important;overflow:visible!important}#contactModal .cpTaskPage:not(.hidden){position:fixed!important;inset:0!important;height:100vh!important}}
       @media(max-width:700px){#contactModal .cpTaskPageTop{grid-template-columns:auto 1fr auto!important;padding:10px!important;gap:8px!important}#contactModal .cpTaskPageTop>div small{display:none!important}#contactModal .cpTaskPageBody{padding:12px!important}}
     `;
     document.head.appendChild(s);
