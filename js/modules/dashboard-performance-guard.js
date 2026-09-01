@@ -1,85 +1,131 @@
 (function(){
 'use strict';
 const M=window.TPFModules;if(!M)return;
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+const S={ready:false,busy:false,data:null,activityAll:false,backups:null};
+
+function money(v){return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',minimumFractionDigits:2}).format(Number(v||0))}
+function madridParts(v=new Date()){const d=v instanceof Date?v:new Date(v);if(!Number.isFinite(d.getTime()))return null;return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]))}
+function dayKey(v=new Date()){if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v))return v;const p=madridParts(v);return p?`${p.year}-${p.month}-${p.day}`:''}
+function dateTime(v){const p=madridParts(v);return p?`${p.day}/${p.month}/${p.year}, ${p.hour}:${p.minute}`:'—'}
+function dateOnly(v){const k=dayKey(v);if(!k)return'—';const [y,m,d]=k.split('-');return`${d}/${m}/${y}`}
+function timeOnly(v){const p=madridParts(v);return p?`${p.hour}:${p.minute}`:'—'}
+function addDays(k,n){const d=new Date(`${k}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
+function status(v){return String(v||'').trim().toLowerCase()}
+function wonStage(n){return/ganad|cerrad.*gan|venta|contratad/i.test(String(n||''))}
+function lostStage(n){return/perdid|rechazad|cancelad|cerrad.*per/i.test(String(n||''))}
+function isWon(o,map){return/won|ganad/.test(status(o.status))||wonStage(map.get(String(o.stage_id))?.name)}
+function isLost(o,map){return/lost|perdid|cancelad|rechazad/.test(status(o.status))||lostStage(map.get(String(o.stage_id))?.name)}
+function isExpired(o,map,today){return!isWon(o,map)&&!isLost(o,map)&&!!o.expected_date&&String(o.expected_date).slice(0,10)<today}
+function isOpen(o,map,today){return!isWon(o,map)&&!isLost(o,map)&&!isExpired(o,map,today)}
+function phone(v){return String(v||'').replace(/\D/g,'').slice(-9)}
+function visible(){const v=$('view-dashboard');return!!v&&!v.classList.contains('hidden')}
+function go(view){[...document.querySelectorAll('.nav')].find(n=>n.dataset.view===view)?.click()}
+function clickSoon(sel){setTimeout(()=>document.querySelector(sel)?.click(),100)}
+function hideTemplateLeak(){if(visible())$('view-wa-templates-v3')?.classList.add('hidden')}
+
+function css(){if($('dp2Css'))return;const s=document.createElement('style');s.id='dp2Css';s.textContent=`
+#view-dashboard.dp2{padding:18px 20px 28px!important;background:#f6f8fb!important;min-height:calc(100dvh - 64px);color:#101828}#view-dashboard.dp2 *{box-sizing:border-box}
+.dp2Hero{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:13px}.dp2Eyebrow{display:block;color:#1267ed;font-size:9px;font-weight:900;letter-spacing:.14em;margin-bottom:3px}.dp2Hero h1{margin:0 0 4px;font-size:25px;line-height:1.1}.dp2Hero p{margin:0;color:#667085;font-size:11px}.dp2HeroBtns{display:flex;gap:7px;align-items:center}.dp2Btn{height:37px;border-radius:9px;padding:0 12px;font-size:10px;font-weight:800;cursor:pointer}.dp2Btn.secondary{border:1px solid #d7dee8;background:#fff;color:#344054}.dp2Btn.primary{border:1px solid #1267ed;background:#1267ed;color:#fff}.dp2MoreWrap{position:relative}.dp2MoreMenu{position:absolute;right:0;top:43px;z-index:90;width:235px;padding:7px;background:#fff;border:1px solid #dfe5ed;border-radius:11px;box-shadow:0 15px 35px rgba(15,23,42,.17)}.dp2MoreMenu.hidden{display:none!important}.dp2MoreMenu button{display:block;width:100%;height:auto;border:0;background:#fff;text-align:left;padding:9px;border-radius:7px;color:#344054;font-size:10px;font-weight:700}.dp2MoreMenu button:hover{background:#f3f6fa}.dp2MoreMenu .small{display:block;padding:5px 8px;color:#667085}
+.dp2Metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-bottom:9px}.dp2Metric{position:relative;min-width:0;padding:12px 13px;border:1px solid #e1e6ed;border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(16,24,40,.035);cursor:pointer;text-align:left;transition:.15s}.dp2Metric:hover{transform:translateY(-1px);border-color:#c5d6ee;box-shadow:0 7px 18px rgba(16,24,40,.07)}.dp2Metric>span:first-child{display:block;color:#475467;font-size:9px;margin-bottom:5px}.dp2Metric>b{display:block;font-size:21px;line-height:1}.dp2Metric>small{display:block;margin-top:6px;color:#667085;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2MetricIcon{position:absolute!important;right:11px;top:11px;width:28px;height:28px;border-radius:50%;display:grid!important;place-items:center;background:#eef4ff;color:#175cd3;font-size:13px!important}.dp2Metric.red>b{color:#b42318}.dp2Metric.red .dp2MetricIcon{background:#fff0f0;color:#b42318}.dp2Metric.green .dp2MetricIcon{background:#eaf8ef;color:#23733c}
+.dp2Top{display:grid;grid-template-columns:1.25fr 1fr .95fr;gap:9px;margin-bottom:9px}.dp2Bottom{display:grid;grid-template-columns:.95fr 1.15fr .95fr;gap:9px;margin-bottom:9px}.dp2Card{min-width:0;background:#fff;border:1px solid #e1e6ed;border-radius:13px;padding:13px;box-shadow:0 3px 13px rgba(16,24,40,.035)}.dp2Head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.dp2Head h3{margin:0;font-size:13px}.dp2Link{border:0;background:transparent;color:#145bc2;font-size:9px;font-weight:850;cursor:pointer;padding:3px}.dp2Empty{display:grid;place-items:center;min-height:105px;text-align:center;color:#667085;font-size:10px}
+.dp2Priority{display:grid}.dp2PriorityRow{position:relative;display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:43px;padding:6px 0;border-top:1px solid #edf0f4;cursor:pointer}.dp2PriorityRow:first-child{border-top:0}.dp2Line{height:31px;border-radius:999px;background:#f79009}.dp2PriorityRow.red .dp2Line{background:#d92d20}.dp2PriorityRow.blue .dp2Line{background:#2e90fa}.dp2PMain{min-width:0}.dp2PMain b{display:block;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2PMain small{display:block;margin-top:2px;color:#667085;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2PRight{display:flex;gap:6px;align-items:center}.dp2Pill{display:inline-flex;padding:4px 7px;border-radius:999px;background:#fff6df;color:#8a6100;font-size:7px;font-weight:900}.dp2Pill.red{background:#fff0f0;color:#b42318}.dp2Pill.blue{background:#eaf2ff;color:#175cd3}.dp2Dots{width:25px;height:25px;border:0;border-radius:7px;background:#fff;color:#475467;font-size:15px;cursor:pointer}.dp2Dots:hover{background:#f2f4f7}.dp2RowMenu{position:absolute;right:0;top:36px;z-index:85;width:130px;padding:5px;background:#fff;border:1px solid #dfe5ed;border-radius:9px;box-shadow:0 12px 27px rgba(15,23,42,.16)}.dp2RowMenu.hidden{display:none}.dp2RowMenu button{display:block;width:100%;border:0;background:#fff;text-align:left;padding:7px;border-radius:6px;font-size:9px;cursor:pointer}.dp2RowMenu button:hover{background:#f2f4f7}.dp2RowMenu .danger{color:#b42318}
+.dp2Funnel{display:grid;gap:7px}.dp2FunnelRow{display:grid;grid-template-columns:minmax(82px,1fr) 1.7fr 22px;gap:7px;align-items:center;font-size:9px}.dp2FunnelRow>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2Track{height:6px;border-radius:999px;background:#edf1f6;overflow:hidden}.dp2Fill{height:100%;min-width:3px;border-radius:inherit;background:#1267ed}.dp2FunnelFoot{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}.dp2FunnelStat{padding:8px;border:1px solid #edf0f4;border-radius:8px;background:#f9fbfd}.dp2FunnelStat span{display:block;color:#667085;font-size:7px}.dp2FunnelStat b{display:block;margin-top:2px;font-size:12px}
+.dp2Contacts{display:grid}.dp2Contact{display:grid;grid-template-columns:29px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #edf0f4;cursor:pointer}.dp2Contact:first-child{border-top:0}.dp2Avatar{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;background:#eaf2ff;color:#175cd3;font-size:8px;font-weight:900}.dp2ContactMain{min-width:0}.dp2ContactMain b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2ContactMain small{display:block;color:#667085;font-size:7px;margin-top:2px}.dp2ContactCount{text-align:right}.dp2ContactCount b{display:block;color:#1267ed;font-size:14px}.dp2ContactCount small{font-size:7px;color:#667085}
+.dp2GoalStats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.dp2GoalStat{padding:8px;border:1px solid #edf0f4;border-radius:8px}.dp2GoalStat span{display:block;color:#667085;font-size:7px}.dp2GoalStat b{display:block;margin-top:2px;font-size:13px}.dp2GoalTrack{height:7px;margin:11px 0 6px;border-radius:999px;background:#edf1f6;overflow:hidden}.dp2GoalFill{height:100%;width:0;border-radius:inherit;background:#1267ed;transition:width .2s}.dp2GoalNote{color:#667085;font-size:7px}
+.dp2Forecast{display:grid}.dp2ForecastRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:6px 0;border-top:1px solid #edf0f4;font-size:8px}.dp2ForecastRow:first-child{border-top:0}.dp2ForecastRow b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2ForecastRow span{color:#475467}
+.dp2Follow{display:grid}.dp2FollowRow{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:7px;align-items:center;padding:8px 0;border-top:1px solid #edf0f4;font-size:8px;cursor:pointer}.dp2FollowRow:first-child{border-top:0}.dp2FollowRow b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dp2FollowRow>span{color:#475467}
+.dp2Activity{display:grid}.dp2ActivityRow{display:grid;grid-template-columns:25px 125px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #edf0f4;font-size:8px;cursor:pointer}.dp2ActivityRow:first-child{border-top:0}.dp2ActIcon{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:#eef4ff}.dp2ActType{font-weight:850}.dp2ActText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#475467}.dp2ActTime{white-space:nowrap;color:#667085}
+.dp2Modal{position:fixed;inset:0;z-index:95000;background:rgba(15,23,42,.45);display:grid;place-items:center;padding:18px}.dp2Modal.hidden{display:none}.dp2ModalCard{width:min(470px,100%);background:#fff;border-radius:15px;padding:18px;box-shadow:0 22px 60px rgba(15,23,42,.28)}.dp2ModalCard h3{margin:0 0 5px}.dp2ModalCard p{margin:0 0 14px;color:#667085;font-size:10px}.dp2ModalCard label{display:block;font-size:9px;font-weight:800;margin:10px 0 5px}.dp2ModalCard input{width:100%;height:40px;border:1px solid #d0d5dd;border-radius:9px;padding:0 10px}.dp2ModalActions{display:flex;justify-content:flex-end;gap:7px;margin-top:15px}
+#view-wa-templates-v3.hidden{display:none!important}
+@media(max-width:1180px){.dp2Metrics{grid-template-columns:repeat(3,1fr)}.dp2Top{grid-template-columns:1fr 1fr}.dp2Top>.dp2Card:last-child{grid-column:1/-1}.dp2Bottom{grid-template-columns:1fr 1fr}.dp2Bottom>.dp2Card:last-child{grid-column:1/-1}}
+@media(max-width:760px){#view-dashboard.dp2{padding:13px!important}.dp2Hero{flex-direction:column}.dp2HeroBtns{width:100%;flex-wrap:wrap}.dp2Metrics{grid-template-columns:repeat(2,1fr)}.dp2Top,.dp2Bottom{grid-template-columns:1fr}.dp2Top>.dp2Card:last-child,.dp2Bottom>.dp2Card:last-child{grid-column:auto}.dp2ActivityRow{grid-template-columns:25px minmax(0,1fr) auto}.dp2ActType{display:none}}
+`;document.head.appendChild(s)}
+
+function build(){
+  const v=$('view-dashboard');if(!v||v.dataset.dp2==='1')return;
+  S.backups={json:$('backupJson'),csv:$('backupCsv')};
+  const hidden=v.classList.contains('hidden');v.className='dp2'+(hidden?' hidden':'');v.dataset.dp2='1';
+  v.innerHTML=`
+  <div class="dp2Hero"><div><span class="dp2Eyebrow">THE PHONE FACE</span><h1>Resumen del negocio</h1><p>Todo lo importante de hoy en una sola pantalla.</p></div><div class="dp2HeroBtns"><button id="dashRefresh" class="dp2Btn secondary">↻ Actualizar</button><div class="dp2MoreWrap"><button id="dp2More" class="dp2Btn secondary">⋯</button><div id="dp2MoreMenu" class="dp2MoreMenu hidden"><div id="dp2BackupJson"></div><div id="dp2BackupCsv"></div><div id="backupMsg" class="small"></div></div></div><button id="dashNewOpp" class="dp2Btn primary">＋ Nueva oportunidad</button></div></div>
+  <div class="dp2Metrics"><button class="dp2Metric" data-dp2-route="sales"><span>Ventas / oportunidades</span><b id="mOppTotal">—</b><small id="mOppAmount">—</small><i class="dp2MetricIcon">▣</i></button><button class="dp2Metric" data-dp2-route="sales"><span>Abiertas</span><b id="mOppOpen">—</b><small>con fecha vigente</small><i class="dp2MetricIcon">□</i></button><button class="dp2Metric red" data-dp2-route="alerts-expired"><span>Vencidas</span><b id="mOppExpired">—</b><small>necesitan seguimiento</small><i class="dp2MetricIcon">◷</i></button><button class="dp2Metric green" data-dp2-route="agenda"><span>Tareas pendientes</span><b id="mTasks">—</b><small id="mTasksToday">—</small><i class="dp2MetricIcon">✓</i></button><button class="dp2Metric" data-dp2-route="database"><span>Contactos</span><b id="mContacts">—</b><small>contactos registrados</small><i class="dp2MetricIcon">♙</i></button><button class="dp2Metric" data-dp2-route="sales"><span>Conversión</span><b id="mConversion">—</b><small>ganadas / total</small><i class="dp2MetricIcon">◎</i></button></div>
+  <div class="dp2Top"><section class="dp2Card"><div class="dp2Head"><h3>🔔 Prioridad de hoy</h3><button class="dp2Link" data-dp2-route="alerts">Ver todos</button></div><div id="dashAlerts" class="dp2Priority"></div></section><section class="dp2Card"><div class="dp2Head"><h3>📊 Embudo de ventas</h3><button class="dp2Link" data-dp2-route="sales">Abrir panel</button></div><div id="dashFunnel" class="dp2Funnel"></div><div id="dp2FunnelFoot" class="dp2FunnelFoot"></div></section><section class="dp2Card"><div class="dp2Head"><h3>📞 Clientes a contactar hoy</h3><button class="dp2Link" data-dp2-route="agenda">Abrir agenda</button></div><div id="dashContactToday" class="dp2Contacts"></div></section></div>
+  <div class="dp2Bottom"><section class="dp2Card"><div class="dp2Head"><h3>🎯 Objetivo del mes</h3><button id="dashGoalEdit" class="dp2Link">Editar objetivo</button></div><div class="dp2GoalStats"><div class="dp2GoalStat"><span>Objetivo</span><b id="dashGoalAmount">—</b></div><div class="dp2GoalStat"><span>Conseguido</span><b id="dashWonAmount">—</b></div><div class="dp2GoalStat"><span>Progreso</span><b id="dashGoalProgress">—</b></div></div><div class="dp2GoalTrack"><div id="dashGoalBarFill" class="dp2GoalFill"></div></div><div id="dp2GoalNote" class="dp2GoalNote"></div><span id="dashForecastAmount" class="hidden"></span></section><section class="dp2Card"><div class="dp2Head"><h3>📈 Previsión comercial</h3><button class="dp2Link" data-dp2-route="sales">Ver previsión completa</button></div><div id="dashForecastBreakdown" class="dp2Forecast"></div></section><section class="dp2Card"><div class="dp2Head"><h3>⚠️ Seguimientos prioritarios</h3><button class="dp2Link" data-dp2-route="alerts-expired">Ver todos</button></div><div id="dashPriorityFollowups" class="dp2Follow"></div></section></div>
+  <section class="dp2Card"><div class="dp2Head"><h3>🕘 Actividad reciente</h3><button id="dp2ActivityMore" class="dp2Link">Ver toda la actividad</button></div><div id="dashActivity" class="dp2Activity"></div></section>
+  <div id="dp2GoalModal" class="dp2Modal hidden"><div class="dp2ModalCard"><h3>Objetivo del mes</h3><p>Define el objetivo comercial del mes actual.</p><label>Objetivo de facturación (€)</label><input id="dp2GoalAmountInput" type="number" min="0" step="0.01"><label>Objetivo de oportunidades ganadas</label><input id="dp2GoalCountInput" type="number" min="0" step="1"><div id="dp2GoalMsg" class="small"></div><div class="dp2ModalActions"><button id="dp2GoalCancel" class="dp2Btn secondary">Cancelar</button><button id="dp2GoalSave" class="dp2Btn primary">Guardar objetivo</button></div></div></div>`;
+  if(S.backups.json){S.backups.json.className='';S.backups.json.textContent='Descargar copia completa (JSON)';$('dp2BackupJson').appendChild(S.backups.json)}
+  if(S.backups.csv){S.backups.csv.className='';S.backups.csv.textContent='Exportar oportunidades (CSV)';$('dp2BackupCsv').appendChild(S.backups.csv)}
+  bind();
+}
+
+function bind(){
+  $('dashRefresh').onclick=load;
+  $('dashNewOpp').onclick=()=>{go('sales');clickSoon('#newOpp')};
+  $('dp2More').onclick=e=>{e.stopPropagation();$('dp2MoreMenu').classList.toggle('hidden')};
+  $('dashGoalEdit').onclick=openGoal;
+  $('dp2GoalCancel').onclick=closeGoal;
+  $('dp2GoalSave').onclick=saveGoal;
+  $('dp2GoalModal').onclick=e=>{if(e.target===$('dp2GoalModal'))closeGoal()};
+  $('dp2ActivityMore').onclick=()=>{S.activityAll=!S.activityAll;renderActivity()};
+  $('view-dashboard').addEventListener('click',onClick);
+}
+function onClick(e){
+  const route=e.target.closest('[data-dp2-route]')?.dataset.dp2Route;
+  if(route){if(route==='alerts-expired'){go('alerts');clickSoon('[data-alert-filter="expired"]')}else go(route);return}
+  const dots=e.target.closest('[data-dp2-dots]');if(dots){e.stopPropagation();const menu=dots.closest('.dp2PriorityRow')?.querySelector('.dp2RowMenu');document.querySelectorAll('.dp2RowMenu').forEach(m=>m.classList.add('hidden'));menu?.classList.toggle('hidden');return}
+  const action=e.target.closest('[data-dp2-action]');if(action){e.stopPropagation();runAction(action.dataset.dp2Action,action.dataset.type,action.dataset.id);return}
+  const row=e.target.closest('[data-dp2-open]');if(row)openItem(row.dataset.type,row.dataset.id);
+}
+function openItem(type,id){if(type==='opportunity')window.openOpportunityFull?.(id);else if(type==='task'){if(window.openAlertTask)window.openAlertTask(id);else window.openContactTaskDetail?.(id)}else if(type==='contact')window.openContact?.(id);else if(type==='agenda')go('agenda')}
+function runAction(action,type,id){if(action==='open')openItem(type,id);if(action==='edit'){if(type==='opportunity')window.openOpportunityCard?.(id);else if(type==='task')window.editAlertTask?.(id)}if(action==='delete'){if(type==='opportunity')window.deleteOpp?.(id);else if(type==='task')window.deleteAlertTask?.(id);setTimeout(load,500)}}
+
+async function fetchData(){
+  const now=new Date(),today=dayKey(now),month=today.slice(0,7),monthStart=`${month}-01`;
+  const [oppR,stageR,taskR,countR,auditR,goalR]=await Promise.all([
+    sb.from('sales_opportunities').select('*').order('updated_at',{ascending:false}).limit(1000),
+    sb.from('sales_stages').select('*').eq('active',true).order('position'),
+    sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(700),
+    sb.from('records').select('id',{count:'exact',head:true}).eq('source_sheet','BASE DE DATOS'),
+    sb.from('crm_audit_log').select('*').order('created_at',{ascending:false}).limit(60),
+    sb.rpc('crm_get_month_goal',{p_month:monthStart})
+  ]);
+  if(oppR.error)throw oppR.error;if(stageR.error)throw stageR.error;if(taskR.error)throw taskR.error;
+  let activity=auditR.data||[];try{if(typeof window.localAuditRead==='function')activity=[...activity,...window.localAuditRead()]}catch(_){}
+  const seen=new Set();activity=activity.filter(a=>{const k=String(a.id||`${a.entity_type}|${a.entity_id}|${a.action}|${a.created_at}`);if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  return{opps:oppR.data||[],stages:stageR.data||[],tasks:taskR.data||[],contacts:Number(countR.count||0),activity,goal:Array.isArray(goalR.data)?goalR.data[0]||{}:goalR.data||{},today,month,monthStart};
+}
+async function load(){
+  build();hideTemplateLeak();if(S.busy)return;S.busy=true;$('dashRefresh').disabled=true;$('dashRefresh').textContent='Actualizando…';
+  try{S.data=await fetchData();render()}catch(err){console.error('Dashboard pro',err);$('dashAlerts').innerHTML=`<div class="dp2Empty">${esc(err?.message||'No se pudo cargar el resumen.')}</div>`}finally{S.busy=false;if($('dashRefresh')){$('dashRefresh').disabled=false;$('dashRefresh').textContent='↻ Actualizar'}}
+}
+function render(){if(!S.data)return;const d=S.data,map=new Map(d.stages.map(s=>[String(s.id),s])),won=d.opps.filter(o=>isWon(o,map)),open=d.opps.filter(o=>isOpen(o,map,d.today)),expired=d.opps.filter(o=>isExpired(o,map,d.today)),pending=d.tasks.filter(t=>status(t.status||'pending')==='pending'),todayTasks=pending.filter(t=>dayKey(t.starts_at)===d.today),amount=d.opps.reduce((n,o)=>n+Number(o.amount||0),0);
+  $('mOppTotal').textContent=d.opps.length;$('mOppAmount').textContent=money(amount);$('mOppOpen').textContent=open.length;$('mOppExpired').textContent=expired.length;$('mTasks').textContent=pending.length;$('mTasksToday').textContent=todayTasks.length?`${todayTasks.length} para hoy`:'Ninguna para hoy';$('mContacts').textContent=d.contacts;$('mConversion').textContent=d.opps.length?`${Math.round(won.length/d.opps.length*100)}%`:'0%';
+  renderPriorities(d,map,pending);renderFunnel(d);renderContacts(todayTasks);renderGoal(d,map,won,open);renderForecast(d,map);renderFollowups(expired);renderActivity();
+}
+function priorities(d,map,pending){const out=[];for(const o of d.opps){const k=String(o.expected_date||'').slice(0,10);if(isExpired(o,map,d.today))out.push({type:'opportunity',id:o.id,tone:'red',tag:'Vencida',title:o.title||'Oportunidad vencida',sub:`${o.client_name||'Sin cliente'} · Fecha ${dateOnly(k)}`,sort:0,date:k});else if(k===d.today)out.push({type:'opportunity',id:o.id,tone:'amber',tag:'Hoy',title:o.title||'Oportunidad para hoy',sub:o.client_name||'Sin cliente',sort:1,date:k});else if(k===addDays(d.today,1))out.push({type:'opportunity',id:o.id,tone:'blue',tag:'Mañana',title:o.title||'Oportunidad para mañana',sub:o.client_name||'Sin cliente',sort:3,date:k});else if(isOpen(o,map,d.today)&&o.updated_at&&(Date.now()-new Date(o.updated_at).getTime())>=3*86400000)out.push({type:'opportunity',id:o.id,tone:'blue',tag:'Seguimiento',title:o.title||'Sin seguimiento',sub:`${o.client_name||'Sin cliente'} · 3+ días sin cambios`,sort:4,date:dayKey(o.updated_at)})}
+  for(const t of pending){const k=dayKey(t.starts_at);if(!k)continue;if(k<d.today)out.push({type:'task',id:t.id,tone:'red',tag:'Vencida',title:t.title||'Tarea atrasada',sub:`Tarea · ${t.customer_name||'Sin cliente'}`,sort:0,date:k});else if(k===d.today)out.push({type:'task',id:t.id,tone:'amber',tag:'Hoy',title:t.title||'Tarea para hoy',sub:t.customer_name||'Agenda',sort:1,date:k});else if(k===addDays(d.today,1))out.push({type:'task',id:t.id,tone:'blue',tag:'Mañana',title:t.title||'Tarea para mañana',sub:t.customer_name||'Agenda',sort:3,date:k})}
+  return out.sort((a,b)=>a.sort-b.sort||String(a.date).localeCompare(String(b.date)))}
+function renderPriorities(d,map,pending){const all=priorities(d,map,pending),rows=all.slice(0,6);if($('navAlertCount'))$('navAlertCount').textContent=all.length;$('dashAlerts').innerHTML=rows.length?rows.map(x=>`<div class="dp2PriorityRow ${x.tone==='amber'?'':x.tone}" data-dp2-open="1" data-type="${x.type}" data-id="${x.id}"><i class="dp2Line"></i><div class="dp2PMain"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></div><div class="dp2PRight"><span class="dp2Pill ${x.tone==='amber'?'':x.tone}">${esc(x.tag)}</span><button class="dp2Dots" data-dp2-dots="1">⋯</button></div><div class="dp2RowMenu hidden"><button data-dp2-action="open" data-type="${x.type}" data-id="${x.id}">Abrir</button><button data-dp2-action="edit" data-type="${x.type}" data-id="${x.id}">Editar</button><button class="danger" data-dp2-action="delete" data-type="${x.type}" data-id="${x.id}">Eliminar</button></div></div>`).join(''):'<div class="dp2Empty">Todo al día. No hay prioridades.</div>'}
+function renderFunnel(d){const counts=d.stages.map(s=>({name:s.name,count:d.opps.filter(o=>String(o.stage_id)===String(s.id)).length})),max=Math.max(1,...counts.map(x=>x.count));$('dashFunnel').innerHTML=counts.length?counts.map(x=>`<div class="dp2FunnelRow"><span>${esc(x.name)}</span><div class="dp2Track"><div class="dp2Fill" style="width:${Math.max(x.count?3:0,x.count/max*100)}%"></div></div><b>${x.count}</b></div>`).join(''):'<div class="dp2Empty">No hay columnas de ventas.</div>';$('dp2FunnelFoot').innerHTML=`<div class="dp2FunnelStat"><span>Total oportunidades</span><b>${d.opps.length}</b></div><div class="dp2FunnelStat"><span>Importe total</span><b>${money(d.opps.reduce((n,o)=>n+Number(o.amount||0),0))}</b></div>`}
+function initials(n){return String(n||'C').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'C'}
+function renderContacts(tasks){const groups=new Map();for(const t of tasks){const key=String(t.related_record_id||phone(t.customer_phone)||t.customer_name||t.id),g=groups.get(key)||{id:t.related_record_id||'',name:t.customer_name||'Sin nombre',phone:t.customer_phone||'',count:0,time:t.starts_at};g.count++;if(new Date(t.starts_at)<new Date(g.time))g.time=t.starts_at;groups.set(key,g)}const rows=[...groups.values()].sort((a,b)=>b.count-a.count||String(a.time).localeCompare(String(b.time))).slice(0,6);$('dashContactToday').innerHTML=rows.length?rows.map(x=>`<div class="dp2Contact" data-dp2-open="1" data-type="${x.id?'contact':'agenda'}" data-id="${esc(x.id)}"><div class="dp2Avatar">${esc(initials(x.name))}</div><div class="dp2ContactMain"><b>${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')} · ${timeOnly(x.time)}</small></div><div class="dp2ContactCount"><b>${x.count}</b><small>${x.count===1?'gestión':'gestiones'} hoy</small></div></div>`).join(''):'<div class="dp2Empty">No hay clientes programados para hoy.</div>'}
+function renderGoal(d,map,won,open){const target=Number(d.goal?.target_amount||0),wonAmount=won.filter(o=>{const k=dayKey(o.updated_at||o.expected_date||o.created_at);return k.startsWith(d.month)}).reduce((n,o)=>n+Number(o.amount||0),0),forecast=open.reduce((n,o)=>n+Number(o.amount||0),0),pct=target?Math.min(100,Math.round(wonAmount/target*100)):0,now=new Date(),last=new Date(now.getFullYear(),now.getMonth()+1,0),days=Math.max(0,last.getDate()-Number(d.today.slice(-2)));$('dashGoalAmount').textContent=money(target);$('dashWonAmount').textContent=money(wonAmount);$('dashForecastAmount').textContent=money(forecast);$('dashGoalProgress').textContent=`${pct}%`;$('dashGoalBarFill').style.width=`${pct}%`;$('dp2GoalNote').textContent=target?`Quedan ${days} días para finalizar el mes · Previsión abierta ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.'}
+function renderForecast(d,map){const rows=d.stages.map(s=>({name:s.name,amount:d.opps.filter(o=>String(o.stage_id)===String(s.id)&&!isLost(o,map)).reduce((n,o)=>n+Number(o.amount||0),0)})).filter(x=>x.amount||d.opps.some(o=>String(o.stage_id)===String(d.stages.find(s=>s.name===x.name)?.id))).slice(0,7);$('dashForecastBreakdown').innerHTML=rows.length?rows.map(x=>`<div class="dp2ForecastRow"><b>${esc(x.name)}</b><span>${money(x.amount)}</span></div>`).join(''):'<div class="dp2Empty">No hay previsión comercial.</div>'}
+function renderFollowups(expired){const rows=[...expired].sort((a,b)=>String(a.expected_date||'').localeCompare(String(b.expected_date||''))).slice(0,6);$('dashPriorityFollowups').innerHTML=rows.length?rows.map(o=>`<div class="dp2FollowRow" data-dp2-open="1" data-type="opportunity" data-id="${o.id}"><b>${esc(o.client_name||o.title||'Oportunidad')}</b><span>${dateOnly(o.expected_date)}</span><strong>${money(o.amount||0)}</strong><span class="dp2Pill red">Vencida</span></div>`).join(''):'<div class="dp2Empty">No hay seguimientos vencidos.</div>'}
+function activityLabel(a){const type=status(a.entity_type),act=status(a.action),summary=String(a.summary||'');if(type==='agenda'||type==='task'){if(/delete|papelera/.test(act+' '+summary.toLowerCase()))return['🗑','Tarea eliminada'];if(/complete|complet/.test(act+' '+summary.toLowerCase()))return['✓','Tarea completada'];return['▣','Tarea actualizada']}if(type==='opportunity'){if(/delete|papelera/.test(act+' '+summary.toLowerCase()))return['🗑','Oportunidad eliminada'];if(/move|movid/.test(act+' '+summary.toLowerCase()))return['↔','Oportunidad movida'];return['▣','Oportunidad actualizada']}if(type==='contact')return['♙','Contacto actualizado'];if(type.includes('whatsapp'))return['◉','WhatsApp enviado'];return['•','Actividad del CRM']}
+function activityText(a,label){const detail=a.details||{},raw=String(detail.label||detail.title||detail.name||a.summary||a.action||'').trim();if(/enviado a papelera/i.test(raw))return raw.replace(/enviado a papelera(?: local)?/i,label);return raw||label}
+function renderActivity(){if(!S.data)return;const rows=S.data.activity.slice(0,S.activityAll?24:6);$('dashActivity').innerHTML=rows.length?rows.map(a=>{const [icon,label]=activityLabel(a),type=status(a.entity_type),openType=type==='agenda'||type==='task'?'task':type==='opportunity'?'opportunity':type==='contact'?'contact':'';return`<div class="dp2ActivityRow" ${openType&&a.entity_id?`data-dp2-open="1" data-type="${openType}" data-id="${a.entity_id}"`:''}><span class="dp2ActIcon">${icon}</span><b class="dp2ActType">${esc(label)}</b><span class="dp2ActText">${esc(activityText(a,label))}</span><span class="dp2ActTime">${dateTime(a.created_at)}</span></div>`}).join(''):'<div class="dp2Empty">La actividad nueva aparecerá aquí.</div>';$('dp2ActivityMore').textContent=S.activityAll?'Ver menos':'Ver toda la actividad'}
+
+function openGoal(){const g=S.data?.goal||{};$('dp2GoalAmountInput').value=Number(g.target_amount||0)||'';$('dp2GoalCountInput').value=Number(g.target_opportunities||0)||'';$('dp2GoalMsg').textContent='';$('dp2GoalModal').classList.remove('hidden');setTimeout(()=>$('dp2GoalAmountInput').focus(),20)}
+function closeGoal(){$('dp2GoalModal').classList.add('hidden')}
+async function saveGoal(){const btn=$('dp2GoalSave'),amount=Math.max(0,Number($('dp2GoalAmountInput').value||0)),count=Math.max(0,Math.floor(Number($('dp2GoalCountInput').value||0)));btn.disabled=true;$('dp2GoalMsg').textContent='Guardando…';try{const month=S.data?.monthStart||`${dayKey().slice(0,7)}-01`;const r=await sb.rpc('crm_set_month_goal',{p_month:month,p_target_amount:amount,p_target_opportunities:count});if(r.error)throw r.error;closeGoal();await load()}catch(e){$('dp2GoalMsg').textContent=e?.message||'No se pudo guardar el objetivo.'}finally{btn.disabled=false}}
 
 function install(){
-  if(typeof window.sb==='undefined' || typeof window.$!=='function'){
-    let tries=0;
-    const timer=setInterval(()=>{
-      tries++;
-      if(typeof window.sb!=='undefined' && typeof window.$==='function'){
-        clearInterval(timer);
-        installFastDashboard();
-      }else if(tries>=40){
-        clearInterval(timer);
-      }
-    },100);
-    return;
-  }
-  installFastDashboard();
+  if(S.ready)return;const v=$('view-dashboard');if(!v||typeof window.sb==='undefined'){setTimeout(install,120);return}S.ready=true;css();build();window.loadDashboard=load;
+  document.addEventListener('click',e=>{if(!e.target.closest('#dp2More,.dp2MoreMenu'))$('dp2MoreMenu')?.classList.add('hidden');const nav=e.target.closest('.nav');if(nav?.dataset.view==='dashboard')setTimeout(()=>{hideTemplateLeak();load()},80)},true);
+  const obs=new MutationObserver(()=>hideTemplateLeak());obs.observe(document.querySelector('.referenceWorkspace main')||document.body,{subtree:true,attributes:true,attributeFilter:['class']});
+  if(visible())load();
 }
-
-function installFastDashboard(){
-  if(window.__tpfFastDashboardInstalled)return;
-  window.__tpfFastDashboardInstalled=true;
-
-  const fastDashboard=async function(){
-    try{
-      const [oppR,stageR,taskR,countR,actR]=await Promise.all([
-        sb.from('sales_opportunities').select('*').order('updated_at',{ascending:false}).limit(1000),
-        sb.from('sales_stages').select('*').eq('active',true).order('position'),
-        sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(500),
-        sb.from('records').select('id',{count:'exact',head:true}).eq('source_sheet','BASE DE DATOS'),
-        sb.from('crm_audit_log').select('*').order('created_at',{ascending:false}).limit(20)
-      ]);
-
-      const d={
-        opps:oppR.data||[],
-        stages:stageR.data||[],
-        tasks:taskR.data||[],
-        contactCount:Number(countR.count||0),
-        activity:[]
-      };
-      const localActivity=typeof localAuditRead==='function'?localAuditRead():[];
-      d.activity=actR.error?localActivity:[...(actR.data||[]),...localActivity]
-        .sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')))
-        .slice(0,50);
-
-      const today=localDateKey();
-      const open=d.opps.filter(oppIsOpen), expired=d.opps.filter(oppIsExpired);
-      const amount=d.opps.reduce((s,o)=>s+Number(o.amount||0),0);
-      const wonStageIds=new Set(d.stages.filter(s=>stageLooksWon(s.name)).map(s=>s.id));
-      const won=d.opps.filter(o=>wonStageIds.has(o.stage_id)||/won|ganad/i.test(String(o.status||''))).length;
-      const pending=d.tasks.filter(t=>String(t.status||'pending')==='pending');
-      const todayTasks=pending.filter(t=>String(t.starts_at||'').slice(0,10)===today).length;
-
-      $('mOppTotal').textContent=d.opps.length;
-      $('mOppAmount').textContent=fmtMoney(amount);
-      $('mOppOpen').textContent=open.length;
-      $('mOppExpired').textContent=expired.length;
-      $('mTasks').textContent=pending.length;
-      $('mTasksToday').textContent=todayTasks?`${todayTasks} para hoy`:'Ninguna para hoy';
-      $('mContacts').textContent=d.contactCount;
-      $('mConversion').textContent=d.opps.length?`${Math.round(won/d.opps.length*100)}%`:'0%';
-
-      crmAlertsCache=buildAlerts(d);
-      updateAlertBadge();
-      $('dashAlerts').innerHTML=crmAlertsCache.slice(0,6).map(a=>`<div class="dashItem"><div class="dashItemMain"><b>${esc(a.title)}</b><small>${esc(a.sub)}</small></div><div class="itemActionPack"><span class="pill ${a.severity}">${a.type==='expired'?'Vencida':a.type==='stale'?'Sin seguimiento':'Hoy'}</span>${renderCrmActions(a)}</div></div>`).join('')||'<div class="small">Todo al día. No hay avisos prioritarios.</div>';
-
-      const counts=d.stages.map(s=>({name:s.name,count:d.opps.filter(o=>o.stage_id===s.id).length}));
-      const mx=Math.max(1,...counts.map(x=>x.count));
-      $('dashFunnel').innerHTML=counts.map(x=>`<div class="funnelRow"><span>${esc(x.name)}</span><div class="funnelBar"><div class="funnelFill" style="width:${Math.max(3,x.count/mx*100)}%"></div></div><b>${x.count}</b></div>`).join('')||'<div class="small">No hay columnas.</div>';
-      $('dashActivity').innerHTML=d.activity.slice(0,8).map(a=>`<div class="dashItem"><div class="dashItemMain"><b>${esc(a.summary||a.action)}</b><small>${new Date(a.created_at).toLocaleString('es-ES')}</small></div><div class="itemActionPack"><span class="pill">${esc(a.entity_type)}</span>${renderAuditActions(a)}</div></div>`).join('')||'<div class="small">La actividad nueva aparecerá aquí.</div>';
-    }catch(e){
-      console.error('Dashboard ligero',e);
-      const box=$('dashAlerts');if(box)box.innerHTML=`<div class="small">${esc(e.message||'No se pudo cargar el resumen')}</div>`;
-    }
-  };
-
-  window.loadDashboard=fastDashboard;
-  const btn=$('dashRefresh');
-  if(btn)btn.onclick=fastDashboard;
-}
-
-M.register('dashboard-performance-guard',{install});
+M.register('dashboard-pro-v2',{install});
 })();
