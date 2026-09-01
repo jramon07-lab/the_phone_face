@@ -13,11 +13,10 @@
       #contactModal.contactProfileBack{overflow:hidden!important;padding:0!important;left:252px!important;width:auto!important;right:0!important}
       body.sidebarCollapsed #contactModal.contactProfileBack{left:0!important}
       #contactModal .contactProfile{width:100%!important;max-width:none!important;height:100vh!important;min-height:100vh!important;margin:0!important;overflow:hidden!important;box-sizing:border-box!important}
-      #contactModal .cpColumns{display:grid!important;grid-template-columns:minmax(250px,300px) minmax(430px,1fr) minmax(270px,320px)!important;width:100%!important;max-width:100%!important;height:calc(100vh - 62px)!important;min-height:0!important;overflow:hidden!important;align-items:stretch!important;box-sizing:border-box!important}
-      #contactModal .cpLeft,#contactModal .cpCenter,#contactModal .cpRight{width:auto!important;min-width:0!important;height:100%!important;max-height:100%!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;box-sizing:border-box!important}
-      #contactModal .cpLeft{position:relative!important;left:auto!important;right:auto!important;top:auto!important;align-self:stretch!important}
-      #contactModal .cpCenter{position:relative!important;left:auto!important;right:auto!important}
-      #contactModal .cpRight{position:relative!important;left:auto!important;right:auto!important}
+      #contactModal .cpColumns{display:grid!important;grid-template-columns:minmax(250px,300px) minmax(430px,1fr) minmax(270px,320px)!important;width:100%!important;max-width:100%!important;height:calc(100vh - 62px)!important;min-height:0!important;overflow:hidden!important;align-items:start!important;box-sizing:border-box!important}
+      #contactModal .cpLeft,#contactModal .cpCenter,#contactModal .cpRight{width:auto!important;min-width:0!important;height:100%!important;max-height:100%!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;box-sizing:border-box!important;margin-top:0!important;top:0!important;align-self:start!important}
+      #contactModal .cpLeft,#contactModal .cpCenter,#contactModal .cpRight{position:relative!important;left:auto!important;right:auto!important}
+      #contactModal .cpRight{padding-top:0!important;transform:none!important}
       #contactModal .cpTaskPage:not(.hidden){position:absolute!important;inset:0!important;z-index:120!important;background:#f7f9fc!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
       #contactModal .cpTaskPageTop{position:relative!important;top:0!important;z-index:3!important;flex:0 0 auto!important;min-height:72px!important;display:grid!important;grid-template-columns:minmax(120px,1fr) minmax(260px,2fr) minmax(120px,1fr)!important;align-items:center!important;gap:14px!important;padding:12px 20px!important;background:#fff!important;border-bottom:1px solid #e3e7ed!important}
       #contactModal .cpTaskPageTop>div{text-align:center!important;min-width:0!important}
@@ -45,6 +44,18 @@
     if(newTask){newTask.textContent='＋ Tarea';newTask.title='Nueva tarea';}
   }
 
+  function ensureNativeContactEditEntry(){
+    const data=document.getElementById('contactPhone')?.closest('.cpData');if(!data)return;
+    let b=document.getElementById('tpfContactEditToggle');
+    if(!b){
+      const h=data.querySelector('h3');
+      b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
+      if(h){const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px';h.parentNode.insertBefore(row,h);row.append(h,b);}else data.prepend(b);
+    }
+    b.style.display='inline-flex';
+    const real=document.getElementById('contactSave');if(real)real.style.display='none';
+  }
+
   function currentContactOpportunities(){
     try{
       const c=currentContact;if(!c)return[];
@@ -55,40 +66,17 @@
     }catch(_){return[]}
   }
 
-  function openNativeOpportunity(id){
-    document.querySelector('.tpfContactOppListBack')?.remove();
-    if(typeof window.openOpportunityCard==='function')window.openOpportunityCard(id);
-  }
-
+  function openNativeOpportunity(id){document.querySelector('.tpfContactOppListBack')?.remove();if(typeof window.openOpportunityCard==='function')window.openOpportunityCard(id);}
   function showContactOpportunities(){
-    const rows=currentContactOpportunities();
-    document.querySelector('.tpfContactOppListBack')?.remove();
-    const back=document.createElement('div');back.className='tpfContactOppListBack';
-    const name=document.getElementById('contactName')?.value||'Contacto';
+    const rows=currentContactOpportunities();document.querySelector('.tpfContactOppListBack')?.remove();const back=document.createElement('div');back.className='tpfContactOppListBack';const name=document.getElementById('contactName')?.value||'Contacto';
     back.innerHTML=`<div class="tpfContactOppList"><div class="tpfContactOppListHead"><div><h3 style="margin:0">Oportunidades</h3><small>${String(name).replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}</small></div><button class="secondary" data-close>← Volver</button></div><div class="tpfContactOppListBody"></div></div>`;
-    const body=back.querySelector('.tpfContactOppListBody');
-    if(!rows.length)body.innerHTML='<div class="small" style="padding:18px 0">Sin oportunidades.</div>';
-    rows.forEach(o=>{
-      const row=document.createElement('div');row.className='tpfContactOppNativeRow';
-      const left=document.createElement('div');const title=document.createElement('b');title.textContent=o.title||'Oportunidad';const meta=document.createElement('small');meta.textContent=[o.status||'',o.expected_date?new Date(o.expected_date+'T12:00:00').toLocaleDateString('es-ES'):''].filter(Boolean).join(' · ');left.append(title,meta);
-      const b=document.createElement('button');b.className='secondary';b.textContent='Ver / editar';b.onclick=()=>openNativeOpportunity(o.id);row.append(left,b);body.appendChild(row);
-    });
+    const body=back.querySelector('.tpfContactOppListBody');if(!rows.length)body.innerHTML='<div class="small" style="padding:18px 0">Sin oportunidades.</div>';
+    rows.forEach(o=>{const row=document.createElement('div');row.className='tpfContactOppNativeRow';const left=document.createElement('div');const title=document.createElement('b');title.textContent=o.title||'Oportunidad';const meta=document.createElement('small');meta.textContent=[o.status||'',o.expected_date?new Date(o.expected_date+'T12:00:00').toLocaleDateString('es-ES'):''].filter(Boolean).join(' · ');left.append(title,meta);const b=document.createElement('button');b.className='secondary';b.textContent='Ver / editar';b.onclick=()=>openNativeOpportunity(o.id);row.append(left,b);body.appendChild(row);});
     back.querySelector('[data-close]').onclick=()=>back.remove();back.onclick=e=>{if(e.target===back)back.remove()};document.body.appendChild(back);
   }
-
   function ensureOpportunityEntry(){
-    const root=document.getElementById('cpOpportunities');if(!root)return;
-    let b=document.getElementById('cpViewOpportunities');
-    if(!b){b=document.createElement('button');b.id='cpViewOpportunities';b.type='button';b.className='secondary';b.textContent='Ver oportunidades';b.onclick=showContactOpportunities;root.insertAdjacentElement('afterend',b);}
-    const rows=currentContactOpportunities();
-    [...root.children].forEach((card,i)=>{
-      const edit=[...card.querySelectorAll('button')].find(x=>/ver\s*\/\s*editar/i.test(x.textContent||''));
-      if(edit&&rows[i])edit.onclick=e=>{e.preventDefault();e.stopPropagation();openNativeOpportunity(rows[i].id);};
-    });
+    const root=document.getElementById('cpOpportunities');if(!root)return;let b=document.getElementById('cpViewOpportunities');if(!b){b=document.createElement('button');b.id='cpViewOpportunities';b.type='button';b.className='secondary';b.textContent='Ver oportunidades';b.onclick=showContactOpportunities;root.insertAdjacentElement('afterend',b);}const rows=currentContactOpportunities();[...root.children].forEach((card,i)=>{const edit=[...card.querySelectorAll('button')].find(x=>/ver\s*\/\s*editar/i.test(x.textContent||''));if(edit&&rows[i])edit.onclick=e=>{e.preventDefault();e.stopPropagation();openNativeOpportunity(rows[i].id);};});
   }
 
-  M.register('contact-opportunities',{install(){
-    ensureContactScroll();ensureNativeTaskPageOwnership();ensureOpportunityEntry();
-    const root=document.getElementById('cpOpportunities');if(root)new MutationObserver(()=>ensureOpportunityEntry()).observe(root,{childList:true,subtree:true});
-  }});
+  M.register('contact-opportunities',{install(){ensureContactScroll();ensureNativeTaskPageOwnership();ensureNativeContactEditEntry();ensureOpportunityEntry();const root=document.getElementById('cpOpportunities');if(root)new MutationObserver(()=>ensureOpportunityEntry()).observe(root,{childList:true,subtree:true});}});
 })();
