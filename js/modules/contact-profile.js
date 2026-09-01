@@ -11,7 +11,7 @@
   let labelsObserver=null;
   let templateTargetQuick=false;
   let internalSendBusy=false;
-  let sharedEditLoaderBusy=false;
+  let createEditState=null;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -37,8 +37,6 @@
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
       #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:2}
       #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
-      #view-database.tpfContactsEnhanced.tpf-contact-shared-edit>.card.tpfContactsLegacy{display:block!important}
-      #view-database.tpf-contact-shared-edit>#tpfContactsApp{display:none!important}
     `;document.head.appendChild(s);
   }
 
@@ -79,34 +77,71 @@
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
   }
 
-  async function loadCustomFieldsForSharedEdit(){
-    const {data,error}=await sb.rpc('crm_list_custom_fields');
-    if(error)throw error;
-    crmCustomFieldsCache=Array.isArray(data)?data:[];
-    if(typeof crmRenderCustomFieldsManager==='function')crmRenderCustomFieldsManager();
-    if(typeof crmRenderCreateCustomFields==='function')crmRenderCreateCustomFields();
-    return crmCustomFieldsCache;
+  function recordField(d,...names){for(const n of names){if(d?.[n]!==undefined&&d?.[n]!==null)return String(d[n]);}return '';}
+  function setCreateValue(id,value){const el=byId(id);if(el)el.value=value==null?'':String(value);}
+  async function waitForCreateModal(){for(let i=0;i<80;i++){const back=byId('tpfContactsCreateBack');if(back&&!back.classList.contains('hidden'))return back;await new Promise(r=>setTimeout(r,25));}return null;}
+  function restoreCreateModal(close=true){
+    const s=createEditState;if(!s)return;
+    const save=byId('tpfContactsCreateSave'),closeBtn=byId('tpfContactsCreateClose'),cancel=byId('tpfContactsCreateCancel');
+    if(save){save.onclick=s.saveHandler;save.textContent=s.saveText;save.disabled=false;}
+    if(closeBtn)closeBtn.onclick=s.closeHandler;
+    if(cancel)cancel.onclick=s.cancelHandler;
+    if(s.title)s.title.textContent=s.titleText;
+    if(s.subtitle)s.subtitle.textContent=s.subtitleText;
+    if(close)byId('tpfContactsCreateBack')?.classList.add('hidden');
+    createEditState=null;
   }
-
-  function delegateSharedEdit(edit,event){
-    if(sharedEditLoaderBusy)return;
-    const action=edit?.onclick;
-    if(typeof action!=='function')return;
-    sharedEditLoaderBusy=true;
-    let originalLoader=null,swapped=false;
+  async function returnFromCreateEdit(){restoreCreateModal(true);}
+  async function saveCreateModalEdit(){
+    const s=createEditState;if(!s)return;
+    const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg');
+    const first=byId('tpfCreateFirst')?.value.trim()||'',last=byId('tpfCreateLast')?.value.trim()||'';
+    if(!first&&!last){if(msg)msg.textContent='Escribe el nombre o los apellidos.';return;}
+    const phone=byId('tpfCreatePhone')?.value.trim()||'',email=byId('tpfCreateEmail')?.value.trim()||'',dni=byId('tpfCreateDni')?.value.trim()||'',bank=byId('tpfCreateBank')?.value.trim()||'',notes=byId('tpfCreateNotes')?.value||'',obs=byId('tpfCreateObs')?.value||'';
+    if(btn)btn.disabled=true;if(msg)msg.textContent='Guardando…';
     try{
-      if(typeof crmLoadCustomFields==='function'){
-        originalLoader=crmLoadCustomFields;
-        crmLoadCustomFields=loadCustomFieldsForSharedEdit;
-        swapped=true;
-      }
-      action.call(edit,event);
-    }catch(error){
-      console.warn('Editar contacto compartido',error);
-    }finally{
-      if(swapped&&crmLoadCustomFields===loadCustomFieldsForSharedEdit)crmLoadCustomFields=originalLoader;
-      sharedEditLoaderBusy=false;
-    }
+      const q=await sb.from('records').select('data').eq('id',s.id).maybeSingle();if(q.error)throw q.error;
+      const d={...(q.data?.data||{})};
+      d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;d.NOTAS=notes;d.OBSERVACIONES=obs;
+      const u=await sb.from('records').update({data:d}).eq('id',s.id);if(u.error)throw u.error;
+      const ids=[...byId('tpfCreateLabels')?.querySelectorAll('input:checked')||[]].map(x=>x.value);
+      const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:String(s.id),p_label_ids:ids});if(lr.error)throw lr.error;
+      const id=s.id;
+      if(msg)msg.textContent='Contacto guardado correctamente';
+      restoreCreateModal(true);
+      try{await window.tpfReloadContacts?.();}catch(_){}
+      if(typeof window.openContact==='function')await window.openContact(id);
+    }catch(err){if(msg)msg.textContent=err?.message||'No se pudo guardar el contacto.';if(btn)btn.disabled=false;}
+  }
+  async function openCreateModalEdit(){
+    if(createEditState)return;
+    let c=null;try{c=(typeof currentContact!=='undefined'&&currentContact)||null;}catch(_){}
+    const id=c?.id||currentRecordId;if(!id)return;
+    const add=byId('tpfContactsAdd');if(!add)return;
+    add.click();
+    const back=await waitForCreateModal();if(!back)return;
+    const save=byId('tpfContactsCreateSave'),closeBtn=byId('tpfContactsCreateClose'),cancel=byId('tpfContactsCreateCancel');
+    const title=back.querySelector('.tpfContactsModalHead h3'),subtitle=back.querySelector('.tpfContactsModalHead .small');
+    createEditState={id,saveHandler:save?.onclick||null,closeHandler:closeBtn?.onclick||null,cancelHandler:cancel?.onclick||null,saveText:save?.textContent||'Crear contacto',title,titleText:title?.textContent||'Agregar contacto',subtitle,subtitleText:subtitle?.textContent||''};
+    const d=c?.data||{};
+    setCreateValue('tpfCreateFirst',byId('contactFirstName')?.value||recordField(d,'NOMBRE','Nombre'));
+    setCreateValue('tpfCreateLast',byId('contactLastName')?.value||recordField(d,'APELLIDOS','Apellidos'));
+    setCreateValue('tpfCreatePhone',byId('contactPhone')?.value||recordField(d,'TELÉFONO','TELEFONO','PHONE','MOVIL'));
+    setCreateValue('tpfCreateEmail',byId('contactEmail')?.value||recordField(d,'EMAIL','CORREO','CORREO ELECTRÓNICO'));
+    setCreateValue('tpfCreateDni',byId('contactDni')?.value||recordField(d,'DNI / NIF','DNI','NIF'));
+    setCreateValue('tpfCreateBank',recordField(d,'BANCO','Banco'));
+    setCreateValue('tpfCreateNotes',byId('contactNotes')?.value||recordField(d,'NOTAS','NOTES'));
+    setCreateValue('tpfCreateObs',byId('contactObservations')?.value||recordField(d,'OBSERVACIONES','OBSERVACION'));
+    try{
+      const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:String(id)});if(r.error)throw r.error;
+      const ids=new Set((r.data||[]).map(x=>String(x.id??x.label_id??x.value??'')));
+      byId('tpfCreateLabels')?.querySelectorAll('input').forEach(x=>x.checked=ids.has(String(x.value)));
+    }catch(_){}
+    if(title)title.textContent='Editar contacto';
+    if(subtitle)subtitle.textContent='Modifica los datos del contacto.';
+    if(save){save.textContent='Guardar cambios';save.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();saveCreateModalEdit();};}
+    if(closeBtn)closeBtn.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
+    if(cancel)cancel.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
   }
 
   function bindNativeEditControls(){
@@ -257,7 +292,7 @@
 
       document.addEventListener('click',e=>{
         const edit=e.target?.closest?.('#tpfContactEditToggle');
-        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();delegateSharedEdit(edit,e);return;}
+        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateModalEdit();return;}
         const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
         if(saveLocal){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=saveButton();if(real&&!real.disabled)real.click();return;}
         const waMain=e.target?.closest?.('#tpfContactWhatsappMain');
