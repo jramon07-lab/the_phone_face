@@ -11,6 +11,7 @@
   let labelsObserver=null;
   let templateTargetQuick=false;
   let internalSendBusy=false;
+  let sharedEditLoaderBusy=false;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -36,6 +37,8 @@
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
       #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:2}
       #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
+      #view-database.tpf-contact-shared-edit>.card.tpfContactsLegacy{display:block!important}
+      #view-database.tpf-contact-shared-edit>#tpfContactsApp{display:none!important}
     `;document.head.appendChild(s);
   }
 
@@ -74,6 +77,36 @@
     if(hint){const text=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';if(hint.textContent!==text)hint.textContent=text;}
     const real=saveButton();if(real){real.disabled=!editMode;real.style.display='none';}
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
+  }
+
+  async function loadCustomFieldsForSharedEdit(){
+    const {data,error}=await sb.rpc('crm_list_custom_fields');
+    if(error)throw error;
+    crmCustomFieldsCache=Array.isArray(data)?data:[];
+    if(typeof crmRenderCustomFieldsManager==='function')crmRenderCustomFieldsManager();
+    if(typeof crmRenderCreateCustomFields==='function')crmRenderCreateCustomFields();
+    return crmCustomFieldsCache;
+  }
+
+  function delegateSharedEdit(edit,event){
+    if(sharedEditLoaderBusy)return;
+    const action=edit?.onclick;
+    if(typeof action!=='function')return;
+    sharedEditLoaderBusy=true;
+    let originalLoader=null,swapped=false;
+    try{
+      if(typeof crmLoadCustomFields==='function'){
+        originalLoader=crmLoadCustomFields;
+        crmLoadCustomFields=loadCustomFieldsForSharedEdit;
+        swapped=true;
+      }
+      action.call(edit,event);
+    }catch(error){
+      console.warn('Editar contacto compartido',error);
+    }finally{
+      if(swapped&&crmLoadCustomFields===loadCustomFieldsForSharedEdit)crmLoadCustomFields=originalLoader;
+      sharedEditLoaderBusy=false;
+    }
   }
 
   function bindNativeEditControls(){
@@ -223,6 +256,8 @@
       };
 
       document.addEventListener('click',e=>{
+        const edit=e.target?.closest?.('#tpfContactEditToggle');
+        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();delegateSharedEdit(edit,e);return;}
         const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
         if(saveLocal){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=saveButton();if(real&&!real.disabled)real.click();return;}
         const waMain=e.target?.closest?.('#tpfContactWhatsappMain');
