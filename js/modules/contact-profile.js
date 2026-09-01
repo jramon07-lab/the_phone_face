@@ -70,6 +70,19 @@
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
   }
 
+  function bindNativeEditControls(){
+    const toggle=byId('tpfContactEditToggle');
+    if(toggle && toggle.dataset.tpfNativeEdit!=='1'){
+      toggle.dataset.tpfNativeEdit='1';
+      toggle.onclick=e=>{e.preventDefault();e.stopPropagation();setEditMode(!editMode);};
+    }
+    const local=byId('tpfContactSaveLocal');
+    if(local && local.dataset.tpfNativeSave!=='1'){
+      local.dataset.tpfNativeSave='1';
+      local.onclick=e=>{e.preventDefault();e.stopPropagation();const real=saveButton();if(real&&!real.disabled)real.click();};
+    }
+  }
+
   function ensureEditButton(){
     const data=byId('contactPhone')?.closest('.cpData');if(!data)return;
     let bar=byId('tpfContactEditBar');
@@ -82,6 +95,7 @@
       actions.append(b,saveLocal);bar.append(title,actions);if(h)h.replaceWith(bar);else data.prepend(bar);
       const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
     }
+    bindNativeEditControls();
   }
 
   function ensureObservations(){
@@ -187,44 +201,4 @@
   }
 
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
-  function syncUi(){
-    const root=modal();if(!root||root.classList.contains('hidden'))return;
-    ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(editMode);
-  }
-
-  function installObservers(){
-    const cm=modal();if(cm&&!contactObserver){contactObserver=new MutationObserver(queueSync);contactObserver.observe(cm,{childList:true,subtree:true});}
-    const lm=byId('contactLabelsModal');if(lm&&!labelsObserver){labelsObserver=new MutationObserver(()=>requestAnimationFrame(ensureLabelSearch));labelsObserver.observe(lm,{childList:true,subtree:true});}
-  }
-
-  M.register('contact-profile',{
-    install(){
-      M.wrapGlobals('contact-profile',['renderContactProfile','openContact','openContactProfile','openContactTaskDetail','deleteContactTask','openContactProgrammedWhatsapp','deleteContactProgrammedWhatsapp']);
-      ensureStyles();installObservers();wrapTemplateUse();allowWhatsappForContact();
-      const originalOpen=window.openContact;
-      if(typeof originalOpen==='function')window.openContact=async function(id){
-        currentRecordId=id;editMode=false;const p=originalOpen.apply(this,arguments);setTimeout(queueSync,0);setTimeout(queueSync,60);const result=await p;queueSync();loadObservation(id);try{window.applyWhatsappVisibilityForContact?.();}catch(_){}return result;
-      };
-
-      document.addEventListener('click',e=>{
-        const edit=e.target?.closest?.('#tpfContactEditToggle');
-        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();setEditMode(!editMode);return;}
-        const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
-        if(saveLocal){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=saveButton();if(real&&!real.disabled)real.click();return;}
-        const waMain=e.target?.closest?.('#tpfContactWhatsappMain');
-        if(waMain){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openContactWhatsappMenu();return;}
-        const quickSend=e.target?.closest?.('#waQuickSend');
-        if(quickSend && String(quickSend.dataset.mode||'send')==='send'){
-          e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();sendQuickWhatsappInsideCrm();return;
-        }
-      },true);
-
-      document.addEventListener('click',e=>{
-        if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>normalizeCustomFields(),30);
-        if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
-        if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
-      },false);
-      setTimeout(()=>{installObservers();queueSync();wrapTemplateUse();},350);
-    }
-  });
-})();
+  function
