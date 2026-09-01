@@ -3,7 +3,17 @@
 const M=window.TPFModules;
 if(!M)return;
 const $=id=>document.getElementById(id);
-const state=window.__tpfWhatsappContactConnectorState||(window.__tpfWhatsappContactConnectorState={taskObserver:null,contactObserver:null,registered:false});
+const state=window.__tpfWhatsappContactConnectorState||(window.__tpfWhatsappContactConnectorState={
+  taskObserver:null,
+  contactObserver:null,
+  taskObserverTarget:null,
+  contactObserverTarget:null,
+  taskSyncTimer:null,
+  taskSyncBusy:false,
+  taskSyncAgain:false,
+  captureBound:false,
+  registered:false
+});
 
 function stop(e){
   e?.preventDefault?.();
@@ -37,12 +47,125 @@ function showContactModal(){
   $('contactModal')?.classList.remove('hidden');
 }
 function revealTaskDetail(){
-  const modal=$('contactModal');
-  const detail=$('cpTaskDetailPage');
-  modal?.classList.remove('hidden');
+  detachTaskDetail();
   $('cpTaskPage')?.classList.add('hidden');
-  $('tpfWaTasksPage')?.classList.add('hidden');
-  detail?.classList.remove('hidden');
+  showContactModal();
+  $('cpTaskDetailPage')?.classList.remove('hidden');
+}
+function esc(value){
+  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function digits(value){
+  return String(value||'').replace(/\D/g,'').slice(-9);
+}
+function norm(value){
+  return String(value||'').trim().replace(/\s+/g,' ').toLowerCase();
+}
+function taskTitle(row){
+  return String(row?.querySelector?.('.waTaskTitle,b,strong,h3,h4')?.textContent||'').trim();
+}
+function taskRows(){
+  const box=$('waSideTasks');
+  if(!box)return [];
+  const explicit=[...box.querySelectorAll('.waTaskCard,.waSideItem,[data-task-id],[data-agenda-id]')];
+  const direct=[...box.children].filter(row=>{
+    if(row.nodeType!==1||row.matches('.small,.cpEmpty'))return false;
+    return [...row.querySelectorAll('button,a')].some(el=>/^(editar|ver\s*\/\s*editar)$/i.test(String(el.textContent||'').trim()));
+  });
+  return [...new Set([...explicit,...direct])].filter(row=>
+    !explicit.some(other=>other!==row&&row.contains(other))
+  );
+}
+
+async function relatedTasks(){
+  const c=contact();
+  if(!c||typeof sb==='undefined')return [];
+  const d=c.data||{};
+  const phone=digits(d['TELÉFONO']||d.TELEFONO||d.PHONE||d.MOVIL||'');
+  const name=norm(d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||d.NOMBRE||'');
+  try{
+    const {data,error}=await sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(200);
+    if(error)throw error;
+    return (data||[]).filter(item=>{
+      if(item.whatsapp_enabled||norm(item.title)==='whatsapp programado')return false;
+      const itemPhone=digits(item.customer_phone||item.phone||'');
+      const itemName=norm(item.customer_name||item.client_name||'');
+      return String(item.related_record_id||'')===String(c.id)||(phone&&itemPhone===phone)||(name&&itemName===name);
+    });
+  }catch(err){
+    console.warn('WhatsApp tareas del contacto',err);
+    return [];
+  }
+}
+function findTaskForRow(row,tasks,used){
+  const direct=String(row?.dataset?.taskId||row?.dataset?.agendaId||row?.dataset?.id||'');
+  if(direct){
+    const exact=tasks.find(x=>String(x.id)===direct);
+    if(exact)return exact;
+  }
+  const title=norm(taskTitle(row));
+  const rowText=norm(row?.textContent||'');
+  let candidates=tasks.filter(x=>!used.has(String(x.id))&&norm(x.title||x.subject||'')===title);
+  if(candidates.length>1){
+    const dated=candidates.find(x=>{
+      if(!x.starts_at)return false;
+      const full=norm(new Date(x.starts_at).toLocaleString('es-ES'));
+      const date=norm(new Date(x.starts_at).toLocaleDateString('es-ES'));
+      return rowText.includes(full)||rowText.includes(date);
+    });
+    if(dated)return dated;
+  }
+  if(candidates[0])return candidates[0];
+  return tasks.find(x=>!used.has(String(x.id))&&rowText.includes(norm(x.title||x.subject||'')))||null;
+}
+function wireTaskRow(row,id){
+  if(!row||!id)return;
+  row.dataset.taskId=String(id);
+  row.removeAttribute('onclick');
+  const editButtons=[...row.querySelectorAll('button,a')].filter(el=>
+    /^(editar|ver\s*\/\s*editar)$/i.test(String(el.textContent||'').trim())
+  );
+  editButtons.forEach(edit=>{
+    edit.dataset.taskId=String(id);
+    edit.removeAttribute('onclick');
+    edit.onclick=e=>openTask(id,e);
+  });
+  row.onclick=e=>{
+    const action=e.target.closest?.('button,a,input,select,textarea,label');
+    if(action)return;
+    openTask(id,e);
+  };
+}
+async function syncTaskRowsNow(){
+  if(state.taskSyncBusy){state.taskSyncAgain=true;return}
+  state.taskSyncBusy=true;
+  try{
+    const rows=taskRows();
+    if(!rows.length)return;
+    const tasks=await relatedTasks();
+    const used=new Set();
+    rows.forEach(row=>{
+      const task=findTaskForRow(row,tasks,used);
+      if(!task)return;
+      used.add(String(task.id));
+      wireTaskRow(row,task.id);
+    });
+  }finally{
+    state.taskSyncBusy=false;
+    if(state.taskSyncAgain){state.taskSyncAgain=false;scheduleTaskSync(20)}
+  }
+}
+function scheduleTaskSync(delay=80){
+  clearTimeout(state.taskSyncTimer);
+  state.taskSyncTimer=setTimeout(syncTaskRowsNow,delay);
+}
+async function resolveTaskId(row){
+  const direct=String(row?.dataset?.taskId||row?.dataset?.agendaId||row?.dataset?.id||'');
+  if(direct)return direct;
+  const tasks=await relatedTasks();
+  const found=findTaskForRow(row,tasks,new Set());
+  if(found){wireTaskRow(row,found.id);return String(found.id)}
+  return '';
 }
 
 async function openProfile(e){
@@ -73,7 +196,12 @@ async function createOpportunity(e){
   $('cpTaskDetailPage')?.classList.add('hidden');
   if(typeof openContactNewOpportunity==='function'){
     openContactNewOpportunity();
-    $('oppDetailModal')?.classList.remove('hidden');
+    const reveal=()=>{
+      hideContactModal();
+      $('oppDetailModal')?.classList.remove('hidden');
+    };
+    reveal();
+    requestAnimationFrame(reveal);
   }
 }
 function createTask(e){
@@ -86,72 +214,26 @@ function createTask(e){
   if(typeof openContactTaskPage==='function'){
     openContactTaskPage();
     showContactModal();
+    $('cpTaskPage')?.classList.remove('hidden');
   }
-}
-function taskIdFromRow(row){
-  if(!row)return '';
-  const direct=row.dataset?.taskId||row.dataset?.agendaId||row.dataset?.id||'';
-  if(direct)return direct;
-  const nodes=[row,...row.querySelectorAll('[onclick],[data-task-id],[data-agenda-id],[data-id]')];
-  for(const el of nodes){
-    const id=el.dataset?.taskId||el.dataset?.agendaId||el.dataset?.id||'';
-    if(id)return id;
-    const code=String(el.getAttribute?.('onclick')||'');
-    const m=code.match(/openContactTaskDetail\(['\"]([^'\"]+)['\"]\)/);
-    if(m)return m[1];
-  }
-  return '';
 }
 async function openTask(id,e){
   stop(e);
   if(!id||!requireContact())return;
-  if(typeof window.openContactTaskDetail!=='function')return;
   detachTaskDetail();
   hideFocusedTasks();
+  hideContactModal();
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
-
-  // The native detail page lives inside contactModal. Keep the parent visible
-  // before, during and after the asynchronous database read.
-  showContactModal();
-  try{
-    await window.openContactTaskDetail(id);
-  }finally{
+  if(typeof window.openContactTaskDetail==='function'){
+    await window.openContactTaskDetail(String(id));
     revealTaskDetail();
     requestAnimationFrame(revealTaskDetail);
-    setTimeout(revealTaskDetail,0);
+    setTimeout(revealTaskDetail,40);
+    setTimeout(revealTaskDetail,140);
   }
 }
-function patchTaskRows(){
-  const box=$('waSideTasks');
-  if(!box)return;
-  box.querySelectorAll('.waSideItem').forEach(row=>{
-    const id=taskIdFromRow(row);
-    if(!id)return;
-    row.dataset.taskId=id;
-    row.removeAttribute('onclick');
-    row.onclick=e=>openTask(id,e);
-    let edit=row.querySelector('.tpfWaTaskEdit');
-    if(!edit){
-      edit=document.createElement('button');
-      edit.type='button';
-      edit.className='tpfWaTaskEdit';
-      edit.textContent='Editar';
-      row.appendChild(edit);
-    }
-    edit.onclick=e=>openTask(id,e);
-  });
-}
-function taskRowsFromPanel(){
-  return [...($('waSideTasks')?.querySelectorAll('.waSideItem')||[])].map(row=>({
-    id:taskIdFromRow(row),
-    title:String(row.querySelector('b,strong')?.textContent||'Tarea').trim(),
-    detail:String(row.querySelector('small')?.textContent||'').trim()
-  })).filter(x=>x.id);
-}
-function esc(value){
-  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-}
+
 function ensureTasksPage(){
   let page=$('tpfWaTasksPage');
   if(page)return page;
@@ -166,19 +248,19 @@ function ensureTasksPage(){
   $('tpfWaTasksNew').onclick=createTask;
   return page;
 }
-function viewTasks(e){
+async function viewTasks(e){
   stop(e);
   if(!requireContact())return;
   detachTaskDetail();
   const page=ensureTasksPage();
   if(!page)return;
-  const rows=taskRowsFromPanel();
+  const tasks=await relatedTasks();
   const list=$('tpfWaTasksList');
-  list.innerHTML=rows.length?rows.map(x=>`<div class="cpTaskWrap" data-task-id="${esc(x.id)}"><button class="cpTask cpTaskButton" type="button"><b>${esc(x.title)}</b><span>${esc(x.detail)}</span><small>Pendiente</small></button><div class="cpTaskActions"><button class="tpfWaFocusedTaskEdit" type="button">Editar</button></div></div>`).join(''):'<div class="cpEmpty">No hay tareas pendientes.</div>';
+  list.innerHTML=tasks.length?tasks.map(task=>`<div class="cpTaskWrap" data-task-id="${esc(task.id)}"><button class="cpTask cpTaskButton" type="button"><b>${esc(task.title||task.subject||'Tarea')}</b><span>${task.starts_at?esc(new Date(task.starts_at).toLocaleString('es-ES')):''}</span><small>${task.status==='completed'?'Completada':'Pendiente'}</small></button><div class="cpTaskActions"><button class="tpfWaFocusedTaskEdit" type="button">Editar</button></div></div>`).join(''):'<div class="cpEmpty">No hay tareas.</div>';
   list.querySelectorAll('[data-task-id]').forEach(row=>{
     const id=row.dataset.taskId;
-    row.querySelector('.cpTaskButton').onclick=ev=>openTask(id,ev);
-    row.querySelector('.tpfWaFocusedTaskEdit').onclick=ev=>openTask(id,ev);
+    row.querySelector('.cpTaskButton').onclick=event=>openTask(id,event);
+    row.querySelector('.tpfWaFocusedTaskEdit').onclick=event=>openTask(id,event);
   });
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
@@ -223,17 +305,42 @@ function observePanels(){
   const tasks=$('waSideTasks');
   if(tasks&&state.taskObserverTarget!==tasks){
     state.taskObserver?.disconnect?.();
-    state.taskObserver=new MutationObserver(()=>patchTaskRows());
+    state.taskObserver=new MutationObserver(()=>scheduleTaskSync());
     state.taskObserver.observe(tasks,{childList:true,subtree:true});
     state.taskObserverTarget=tasks;
   }
   const card=$('waContactCard');
   if(card&&state.contactObserverTarget!==card){
     state.contactObserver?.disconnect?.();
-    state.contactObserver=new MutationObserver(()=>{ensureEditButton();patchTaskRows();});
+    state.contactObserver=new MutationObserver(()=>{ensureEditButton();scheduleTaskSync();});
     state.contactObserver.observe(card,{attributes:true,childList:true,subtree:true,attributeFilter:['class']});
     state.contactObserverTarget=card;
   }
+}
+async function capture(e){
+  const target=e.target;
+  if(!target?.closest)return;
+  if(target.closest('#waSideOpenContact'))return openProfile(e);
+  if(target.closest('#waSideEditContact'))return openEdit(e);
+  if(target.closest('#waSideNewOpp'))return createOpportunity(e);
+  if(target.closest('#waSideNewTask'))return createTask(e);
+  if(target.closest('#waSideViewOpps'))return viewOpportunities(e);
+  if(target.closest('#waSideViewTasks'))return viewTasks(e);
+  if(!target.closest('#waSideTasks'))return;
+  const row=target.closest('.waTaskCard,.waSideItem,[data-task-id],[data-agenda-id]');
+  if(!row)return;
+  const action=target.closest('button,a');
+  const text=String(action?.textContent||'').trim();
+  if(action&&/completar|eliminar|borrar/i.test(text))return;
+  if(action&&!/^(editar|ver\s*\/\s*editar)$/i.test(text))return;
+  stop(e);
+  const id=await resolveTaskId(row);
+  if(id)await openTask(id);
+}
+function bindCapture(){
+  if(state.captureBound)return;
+  state.captureBound=true;
+  window.addEventListener('click',capture,true);
 }
 function bind(){
   detachTaskDetail();
@@ -243,11 +350,12 @@ function bind(){
   bindButton('waSideViewOpps',viewOpportunities);
   bindButton('waSideViewTasks',viewTasks);
   ensureEditButton();
-  patchTaskRows();
   observePanels();
+  bindCapture();
+  scheduleTaskSync(20);
 }
 
-window.TPFWhatsAppContactConnector={bind,createOpportunity,createTask,openTask,viewTasks,viewOpportunities};
+window.TPFWhatsAppContactConnector={bind,createOpportunity,createTask,openTask,viewTasks,viewOpportunities,syncTaskRows:syncTaskRowsNow};
 if(!state.registered){
   state.registered=true;
   M.register('whatsapp-contact-reuse',{install(){bind();setTimeout(bind,120);setTimeout(bind,600);}});
