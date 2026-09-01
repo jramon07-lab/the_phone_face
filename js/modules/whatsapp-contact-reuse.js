@@ -12,7 +12,8 @@ const state=window.__tpfWhatsappContactConnectorState||(window.__tpfWhatsappCont
   taskSyncBusy:false,
   taskSyncAgain:false,
   captureBound:false,
-  registered:false
+  registered:false,
+  taskOrigin:null
 });
 
 function stop(e){
@@ -46,8 +47,97 @@ function hideContactModal(){
 function showContactModal(){
   $('contactModal')?.classList.remove('hidden');
 }
+function ensureTaskModeStyles(){
+  if($('tpfWaTaskModeStyles'))return;
+  const style=document.createElement('style');
+  style.id='tpfWaTaskModeStyles';
+  style.textContent=`
+    #contactModal.tpf-wa-task-mode{overflow:hidden!important}
+    #contactModal.tpf-wa-task-mode>.contactProfile>.cpTop{display:none!important}
+    #contactModal.tpf-wa-task-mode #cpTaskPage,
+    #contactModal.tpf-wa-task-mode #cpTaskDetailPage,
+    #contactModal.tpf-wa-task-mode #tpfWaTasksPage{
+      position:fixed!important;
+      inset:0!important;
+      width:100vw!important;
+      height:100vh!important;
+      min-height:100vh!important;
+      max-height:100vh!important;
+      overflow:hidden!important;
+      z-index:51000!important;
+      background:#f4f7fb!important;
+    }
+    #contactModal.tpf-wa-task-mode .cpTaskPageTop{
+      top:0!important;
+      height:68px!important;
+      min-height:68px!important;
+      z-index:4!important;
+    }
+    #contactModal.tpf-wa-task-mode .cpTaskPageBody{
+      height:calc(100vh - 68px)!important;
+      max-height:calc(100vh - 68px)!important;
+      min-height:0!important;
+      overflow-y:auto!important;
+      overflow-x:hidden!important;
+      margin:0 auto!important;
+      padding-top:24px!important;
+      padding-bottom:36px!important;
+      align-content:start!important;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-gutter:stable;
+    }
+    #contactModal.tpf-wa-task-mode #tpfWaTasksPage .cpTaskPageBody{
+      display:block!important;
+      max-width:1100px!important;
+      width:100%!important;
+    }
+    #contactModal.tpf-wa-task-mode #tpfWaTasksPage .cpTaskFormCard{
+      width:100%!important;
+      max-width:none!important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+function rememberTaskOrigin(){
+  let chatId='';
+  try{chatId=String(waLiveState?.selected?.id||'')}catch(_){}
+  state.taskOrigin={chatId};
+}
+function enterTaskMode(){
+  ensureTaskModeStyles();
+  rememberTaskOrigin();
+  $('contactModal')?.classList.add('tpf-wa-task-mode');
+}
+function leaveTaskMode(){
+  $('contactModal')?.classList.remove('tpf-wa-task-mode');
+  state.taskOrigin=null;
+}
+async function backToWhatsapp(e){
+  stop(e);
+  const origin=state.taskOrigin;
+  $('cpTaskPage')?.classList.add('hidden');
+  $('cpTaskDetailPage')?.classList.add('hidden');
+  $('tpfWaTasksPage')?.classList.add('hidden');
+  hideContactModal();
+  leaveTaskMode();
+
+  const waView=$('view-whatsapplive');
+  if(waView?.classList.contains('hidden')){
+    const nav=document.querySelector('.nav[data-view="whatsapplive"]');
+    if(nav){nav.dataset.tpfBackNavigation='1';nav.click();delete nav.dataset.tpfBackNavigation;}
+    await new Promise(r=>setTimeout(r,80));
+  }
+  if(origin?.chatId){
+    let selected='';
+    try{selected=String(waLiveState?.selected?.id||'')}catch(_){}
+    if(selected!==origin.chatId&&typeof window.selectWhatsAppChat==='function'){
+      try{await window.selectWhatsAppChat(origin.chatId)}catch(_){}
+    }
+  }
+}
 function revealTaskDetail(){
   detachTaskDetail();
+  enterTaskMode();
   $('cpTaskPage')?.classList.add('hidden');
   showContactModal();
   $('cpTaskDetailPage')?.classList.remove('hidden');
@@ -170,6 +260,7 @@ async function resolveTaskId(row){
 
 async function openProfile(e){
   stop(e);
+  leaveTaskMode();
   const c=contact();
   if(!c)return alert('Primero vincula este chat con un contacto.');
   hideFocusedTasks();
@@ -177,6 +268,7 @@ async function openProfile(e){
 }
 async function openEdit(e){
   stop(e);
+  leaveTaskMode();
   const c=contact();
   if(!c)return alert('Primero vincula este chat con un contacto.');
   hideFocusedTasks();
@@ -186,6 +278,7 @@ async function openEdit(e){
 }
 async function createOpportunity(e){
   stop(e);
+  leaveTaskMode();
   if(!requireContact())return;
   try{
     if(!(salesCache?.stages||[]).length&&typeof loadSales==='function')await loadSales();
@@ -211,6 +304,7 @@ function createTask(e){
   hideFocusedTasks();
   hideContactModal();
   $('cpTaskDetailPage')?.classList.add('hidden');
+  enterTaskMode();
   if(typeof openContactTaskPage==='function'){
     openContactTaskPage();
     showContactModal();
@@ -225,6 +319,7 @@ async function openTask(id,e){
   hideContactModal();
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
+  enterTaskMode();
   if(typeof window.openContactTaskDetail==='function'){
     await window.openContactTaskDetail(String(id));
     revealTaskDetail();
@@ -244,7 +339,7 @@ function ensureTasksPage(){
   page.className='cpTaskPage hidden';
   page.innerHTML='<div class="cpTaskPageTop"><button id="tpfWaTasksBack" class="cpExit" type="button">← Volver</button><div><b>Tareas del contacto</b><small>Consulta y edita sus tareas</small></div><button id="tpfWaTasksNew" class="primary" type="button">+ Nueva tarea</button></div><div class="cpTaskPageBody"><div class="cpTaskFormCard" style="max-width:none"><h2>Tareas</h2><div id="tpfWaTasksList"></div></div></div>';
   host.appendChild(page);
-  $('tpfWaTasksBack').onclick=e=>{stop(e);page.classList.add('hidden');hideContactModal();};
+  $('tpfWaTasksBack').onclick=backToWhatsapp;
   $('tpfWaTasksNew').onclick=createTask;
   return page;
 }
@@ -264,11 +359,14 @@ async function viewTasks(e){
   });
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
+  enterTaskMode();
   showContactModal();
   page.classList.remove('hidden');
+  page.querySelector('.cpTaskPageBody')?.scrollTo?.({top:0});
 }
 function viewOpportunities(e){
   stop(e);
+  leaveTaskMode();
   if(!requireContact())return;
   const first=$('waSideOpps')?.querySelector('[data-opp-id]');
   const id=first?.dataset?.oppId||'';
@@ -320,6 +418,7 @@ function observePanels(){
 async function capture(e){
   const target=e.target;
   if(!target?.closest)return;
+  if(state.taskOrigin&&target.closest('#cpTaskBack,#cpTaskDetailBack,#tpfWaTasksBack'))return backToWhatsapp(e);
   if(target.closest('#waSideOpenContact'))return openProfile(e);
   if(target.closest('#waSideEditContact'))return openEdit(e);
   if(target.closest('#waSideNewOpp'))return createOpportunity(e);
@@ -343,6 +442,7 @@ function bindCapture(){
   window.addEventListener('click',capture,true);
 }
 function bind(){
+  ensureTaskModeStyles();
   detachTaskDetail();
   bindButton('waSideOpenContact',openProfile);
   bindButton('waSideNewOpp',createOpportunity);
@@ -355,7 +455,7 @@ function bind(){
   scheduleTaskSync(20);
 }
 
-window.TPFWhatsAppContactConnector={bind,createOpportunity,createTask,openTask,viewTasks,viewOpportunities,syncTaskRows:syncTaskRowsNow};
+window.TPFWhatsAppContactConnector={bind,createOpportunity,createTask,openTask,viewTasks,viewOpportunities,syncTaskRows:syncTaskRowsNow,backToWhatsapp};
 if(!state.registered){
   state.registered=true;
   M.register('whatsapp-contact-reuse',{install(){bind();setTimeout(bind,120);setTimeout(bind,600);}});
