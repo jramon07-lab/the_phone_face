@@ -3,7 +3,6 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 let timelineObserver=null,opportunityObserver=null,busy=false;
-let nativeNewOpportunity=null;
 
 function addStyles(){
  if($('tpfContactCleanV2Styles'))return;
@@ -59,8 +58,7 @@ function addStyles(){
 #contactModal.tpfContactCleanV2 .cpSideTitle{padding-bottom:9px;margin-bottom:9px}.tpfContactCleanV2 .cpSideTitle b{font-size:15px}
 #contactModal.tpfContactCleanV2 .cpOppStat{padding:7px 5px;background:#fff}.tpfContactCleanV2 .cpOppStat b{font-size:16px}
 #contactModal.tpfContactCleanV2 .oppUnifiedCard{padding:11px!important;border-radius:10px!important;box-shadow:none!important}
-#contactModal.tpfContactCleanV2 .oppUnifiedCard.tpfOppCollapsed .oppUnifiedNotes,#contactModal.tpfContactCleanV2 .oppUnifiedCard.tpfOppCollapsed .oppUnifiedStageControl,#contactModal.tpfContactCleanV2 .oppUnifiedCard.tpfOppCollapsed .oppUnifiedActions{display:none!important}
-#contactModal.tpfContactCleanV2 .tpfOppToggle{width:100%;margin-top:8px;padding:7px 9px;border:1px solid #dfe5ec;border-radius:7px;background:#fff;color:#344054;font-size:10px;text-align:left;display:flex;justify-content:space-between}
+body:has(#contactModal:not(.hidden)) #oppDetailModal:not(.hidden){z-index:80000!important;pointer-events:auto!important}
 #contactModal.tpfContactCleanV2 .cpSideSection:has(#cpInfo){display:none}
 @media(max-width:1180px){#contactModal.tpfContactCleanV2 .cpColumns{grid-template-columns:280px 1fr}.tpfContactCleanV2 .cpRight{grid-column:1/-1;position:static;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px}.tpfContactCleanV2 .cpSideSection{margin:0}}
 @media(max-width:760px){#contactModal.tpfContactCleanV2 .cpColumns{display:block;padding:8px}.tpfContactCleanV2 .cpLeft,.tpfContactCleanV2 .cpCenter,.tpfContactCleanV2 .cpRight{position:static;margin-bottom:10px}.tpfContactCleanV2 .cpRight{display:block}.tpfContactCleanV2 .cpSideSection{margin-bottom:10px}}
@@ -93,42 +91,16 @@ function polishTimeline(){
 
 function polishOpportunities(){
  const root=$('cpOpportunities');if(!root)return;
+ root.querySelectorAll('.tpfOppToggle').forEach(button=>button.remove());
  root.querySelectorAll('.oppUnifiedCard').forEach(card=>{
-  if(card.dataset.tpfClean==='1')return;card.dataset.tpfClean='1';card.classList.add('tpfOppCollapsed');
-  const b=document.createElement('button');b.type='button';b.className='tpfOppToggle';b.innerHTML='<span>Ver detalles</span><span>⌄</span>';
-  b.onclick=e=>{e.preventDefault();e.stopPropagation();const collapsed=card.classList.toggle('tpfOppCollapsed');b.firstElementChild.textContent=collapsed?'Ver detalles':'Ocultar detalles';b.lastElementChild.textContent=collapsed?'⌄':'⌃'};
-  const meta=card.querySelector('.oppUnifiedMeta');(meta||card.querySelector('.oppUnifiedAmount')||card.firstElementChild)?.insertAdjacentElement('afterend',b);
+  card.classList.remove('tpfOppCollapsed');delete card.dataset.tpfClean;
  });
-}
-
-async function openContactOpportunity(e){
- e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
- const button=$('cpNewOpp');if(button)button.disabled=true;
- try{
-  if(typeof window.loadSales==='function')await Promise.race([
-   window.loadSales(),
-   new Promise((_,reject)=>setTimeout(()=>reject(new Error('Tiempo de carga agotado')),8000))
-  ]);
-  const open=typeof window.openContactNewOpportunity==='function'?window.openContactNewOpportunity:nativeNewOpportunity;
-  if(typeof open!=='function')throw new Error('No está disponible la creación de oportunidades.');
-  open();
- }catch(error){
-  console.error('Crear oportunidad desde contacto',error);
-  alert(error?.message||'No se pudo abrir la nueva oportunidad.');
- }finally{if(button)button.disabled=false}
-}
-
-function bindQuickActions(){
- const button=$('cpNewOpp');if(!button||button.dataset.tpfCleanBound==='1')return;
- nativeNewOpportunity=button.onclick||window.openContactNewOpportunity||nativeNewOpportunity;
- button.onclick=null;button.dataset.tpfCleanBound='1';
- button.addEventListener('click',openContactOpportunity,true);
 }
 
 function apply(){
  const modal=$('contactModal');if(!modal)return;modal.classList.add('tpfContactCleanV2');
  const title=$('tpfContactEditBar')?.querySelector('h3');if(title)title.textContent='Datos del contacto';
- bindQuickActions();polishTimeline();polishOpportunities();
+ polishTimeline();polishOpportunities();
 }
 
 function install(){
