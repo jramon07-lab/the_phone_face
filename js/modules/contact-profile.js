@@ -37,7 +37,7 @@
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
       #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:2}
       #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
-      #view-database.tpf-contact-shared-edit>.card.tpfContactsLegacy{display:block!important}
+      #view-database.tpfContactsEnhanced.tpf-contact-shared-edit>.card.tpfContactsLegacy{display:block!important}
       #view-database.tpf-contact-shared-edit>#tpfContactsApp{display:none!important}
     `;document.head.appendChild(s);
   }
