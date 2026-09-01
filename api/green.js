@@ -48,13 +48,22 @@ export default async function handler(req, res) {
     "getAvatar", "downloadFile", "receiveNotification"
   ]);
   const greenSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  async function greenTimedFetch(url, opts = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      return await fetch(url, { ...opts, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   async function greenFetchUrl(url, opts = {}) {
     const retryable = String(opts.method || "GET").toUpperCase() === "GET";
     let lastError;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        const r = await fetch(url, opts);
+        const r = await greenTimedFetch(url, opts);
         const text = await r.text();
         let data;
         try { data = text ? JSON.parse(text) : null; } catch { data = text; }
@@ -65,12 +74,12 @@ export default async function handler(req, res) {
         const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
         err.status = r.status;
         lastError = err;
-        if (!(retryable && (r.status === 429 || r.status >= 500) && attempt < 2)) throw err;
+        if (!(retryable && r.status >= 500 && attempt < 1)) throw err;
       } catch (err) {
         lastError = err;
-        if (!(retryable && attempt < 2 && (!err?.status || err.status === 429 || err.status >= 500))) throw err;
+        if (!(retryable && attempt < 1 && (!err?.status || err.status >= 500))) throw err;
       }
-      await greenSleep(lastError?.status === 429 ? 1000 * (attempt + 1) : 250 * (attempt + 1));
+      await greenSleep(250 * (attempt + 1));
     }
     throw lastError || new Error("GREEN-API no respondió.");
   }
@@ -78,9 +87,9 @@ export default async function handler(req, res) {
   async function greenFetch(method, opts = {}) {
     const retryable = GREEN_RETRYABLE_METHODS.has(method);
     let lastError;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        const r = await fetch(apiUrl(method), opts);
+        const r = await greenTimedFetch(apiUrl(method), opts);
         const text = await r.text();
         let data;
         try { data = text ? JSON.parse(text) : null; } catch { data = text; }
@@ -92,13 +101,13 @@ export default async function handler(req, res) {
         err.status = r.status;
         err.greenMethod = method;
         lastError = err;
-        if (!(retryable && (r.status === 429 || r.status >= 500) && attempt < 2)) throw err;
+        if (!(retryable && r.status >= 500 && attempt < 1)) throw err;
       } catch (err) {
         if (!err.greenMethod) err.greenMethod = method;
         lastError = err;
-        if (!(retryable && attempt < 2 && (!err?.status || err.status === 429 || err.status >= 500))) throw err;
+        if (!(retryable && attempt < 1 && (!err?.status || err.status >= 500))) throw err;
       }
-      await greenSleep(lastError?.status === 429 ? 1000 * (attempt + 1) : 250 * (attempt + 1));
+      await greenSleep(250 * (attempt + 1));
     }
     throw lastError || new Error(`GREEN-API ${method} no respondió.`);
   }
