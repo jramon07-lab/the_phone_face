@@ -11,8 +11,6 @@
   let labelsObserver=null;
   let templateTargetQuick=false;
   let internalSendBusy=false;
-  let sharedEditAction=null;
-  let nativeEditHandler=null;
 
   const byId=id=>document.getElementById(id);
   const modal=()=>byId('contactModal');
@@ -74,15 +72,7 @@
 
   function bindNativeEditControls(){
     const toggle=byId('tpfContactEditToggle');
-    if(toggle){
-      if(typeof toggle.onclick==='function'&&toggle.onclick!==nativeEditHandler)sharedEditAction=toggle.onclick;
-      if(!nativeEditHandler)nativeEditHandler=e=>{
-        e.preventDefault();e.stopPropagation();
-        if(typeof sharedEditAction==='function')return sharedEditAction.call(toggle,e);
-      };
-      toggle.dataset.tpfNativeEdit='1';
-      toggle.onclick=nativeEditHandler;
-    }
+    if(toggle)toggle.dataset.tpfNativeEdit='1';
     const local=byId('tpfContactSaveLocal');
     if(local && local.dataset.tpfNativeSave!=='1'){
       local.dataset.tpfNativeSave='1';
@@ -228,8 +218,6 @@
       };
 
       document.addEventListener('click',e=>{
-        const edit=e.target?.closest?.('#tpfContactEditToggle');
-        if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();if(typeof sharedEditAction==='function')sharedEditAction.call(edit,e);else if(typeof edit.onclick==='function')edit.onclick.call(edit,e);return;}
         const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
         if(saveLocal){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();const real=saveButton();if(real&&!real.disabled)real.click();return;}
         const waMain=e.target?.closest?.('#tpfContactWhatsappMain');
