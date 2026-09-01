@@ -446,7 +446,7 @@ export default async function handler(req, res) {
     if (req.method === "GET" && (action === "notification" || action === "notifications")) {
       const notifications = [];
       const receipts = [];
-      for (let i = 0; i < 25; i += 1) {
+      for (let i = 0; i < 8; i += 1) {
         let packet;
         try {
           packet = await greenFetch("receiveNotification");
