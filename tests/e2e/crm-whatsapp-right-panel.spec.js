@@ -17,7 +17,8 @@ async function openWhatsAppMatchedContact(page){
   for(let i=0;i<n;i++){
     await chats.nth(i).click();
     await expect(page.locator('#waContactCard')).toBeVisible({timeout:10000});
-    const matched=await page.evaluate(()=>!!window.waLiveState?.contact);
+    await page.waitForTimeout(500);
+    const matched=await page.evaluate(()=>typeof waLiveState!=='undefined'&&!!waLiveState.contact);
     if(matched){
       await expect(page.locator('#waSideOpenContact')).toBeVisible({timeout:10000});
       console.log('MATCHED_CHAT_INDEX',i);
@@ -40,14 +41,20 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
   await page.locator('#waSideNewTask').click();
   await expect(page.locator('#cpTaskPage')).toBeVisible({timeout:10000});
   await expect(page.locator('#cpTaskTitle')).toBeEditable();
-  await page.evaluate(()=>document.getElementById('cpTaskPage')?.classList.add('hidden'));
+  await page.evaluate(()=>{
+    document.getElementById('cpTaskPage')?.classList.add('hidden');
+    document.getElementById('contactModal')?.classList.add('hidden');
+  });
 
   const task=page.locator('#waSideTasks .waSideItem').first();
   if(await task.count()){
     await task.click();
     await expect(page.locator('#cpTaskDetailPage')).toBeVisible({timeout:10000});
     await expect(page.locator('#cpTaskDetailTitle')).toBeEditable();
-    await page.evaluate(()=>document.getElementById('cpTaskDetailPage')?.classList.add('hidden'));
+    await page.evaluate(()=>{
+      document.getElementById('cpTaskDetailPage')?.classList.add('hidden');
+      document.getElementById('contactModal')?.classList.add('hidden');
+    });
   }
 
   await page.locator('#waSideViewTasks').click();
