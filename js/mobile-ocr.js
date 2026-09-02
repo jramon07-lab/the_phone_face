@@ -122,7 +122,8 @@
     if(/^[ABCDEFGHJNPQRSUVW]\d{7}[A-Z0-9]$/.test(value))return value;
 
     if(/^\d{8}$/.test(value))return value+expectedDniLetter(value);
-    if(/^\d{8}5$/.test(value)){
+    // El modelo español suele leer la S final del DNI como 5 u 8.
+    if(/^\d{8}[58]$/.test(value)){
       const digits=value.slice(0,8),letter=expectedDniLetter(digits);
       return letter==='S'?digits+letter:'';
     }

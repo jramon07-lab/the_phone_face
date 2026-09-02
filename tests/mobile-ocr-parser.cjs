@@ -116,6 +116,15 @@ Documento
 `);
 assert.equal(dniSAsFive.dni,'43161930S');
 
+const dniSAsEight=context.window.TPFMobileOCR.extract(`
+Documento
+431619308
+`);
+assert.equal(dniSAsEight.dni,'43161930S');
+
+const dniSAsEightInline=context.window.TPFMobileOCR.extract('Documento: 431619308');
+assert.equal(dniSAsEightInline.dni,'43161930S');
+
 const dniLetterMissing=context.window.TPFMobileOCR.extract(`
 Documento
 43161930
@@ -133,6 +142,12 @@ Documento
 123456789
 `);
 assert.equal(unrelatedNineDigits.dni,'');
+
+const unrelatedEightEnding=context.window.TPFMobileOCR.extract(`
+Documento
+123456788
+`);
+assert.equal(unrelatedEightEnding.dni,'');
 
 const phoneAsDocument=context.window.TPFMobileOCR.extract(`
 Documento
