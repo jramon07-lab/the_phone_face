@@ -83,6 +83,8 @@ $("logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{
  if(n.dataset.view==="system" && !perms?.is_admin){alert("Solo el administrador puede ver Estado del sistema.");return}
  closeOpenDetailScreensForNavigation();
+ document.querySelectorAll('.referenceWorkspace main > section[id^="view-"]').forEach(section=>section.classList.add("hidden"));
+ document.querySelectorAll("dialog[open]").forEach(dialog=>{try{dialog.close()}catch(_){dialog.removeAttribute("open")}});
  if(!n.dataset.tpfBackNavigation)tpfPushView(n.dataset.view);
  else window.__tpfCurrentView=n.dataset.view;
  if($("waQuickModal"))$("waQuickModal").classList.add("hidden");

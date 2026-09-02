@@ -28,6 +28,9 @@ test('CRM principal, móvil e integraciones críticas están operativos', async 
   await page.locator('#tpfWaTemplatesV3Nav').click();
   await expect(page.locator('#view-wa-templates-v3')).toBeVisible({timeout:15000});
   await expect(page.locator('#view-wa-templates-v3 .tv3Search')).toBeVisible();
+  await page.locator('.nav[data-view="dashboard"]').click();
+  await expect(page.locator('#view-wa-templates-v3')).toBeHidden();
+  await expect(page.locator('#view-dashboard')).toBeVisible();
 
   const mobile=await page.request.get('/movil/');
   expect(mobile.ok()).toBeTruthy();
