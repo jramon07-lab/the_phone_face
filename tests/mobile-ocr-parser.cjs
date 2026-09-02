@@ -144,6 +144,143 @@ Docurnento
 `);
 assert.equal(docurnentoOcr.dni,'43161930S');
 
+const structuralDni=context.window.TPFMobileOCR.extract(`
+Criterio
+Msisdn/Fijo
+Docuniento
+431619308
+Msisdn/Fijo
+858718773
+BÚSQUEDA
+MARIA VANESA CORTES
+Datos compartidos
+`);
+assert.equal(structuralDni.dni,'43161930S');
+assert.equal(structuralDni.phone,'858718773');
+
+const bodyZeroAsLetter=context.window.TPFMobileOCR.extract(`
+Documento
+4316193O8
+`);
+assert.equal(bodyZeroAsLetter.dni,'43161930S');
+
+const finalEightAsLetter=context.window.TPFMobileOCR.extract(`
+Documento
+43161930B
+`);
+assert.equal(finalEightAsLetter.dni,'43161930S');
+
+const mergedBeforePhoneLabel=context.window.TPFMobileOCR.extract(`
+Msisdn/Fijo
+Docuniento
+43I6I93O8 Msisdn/Fijo
+858718773
+`);
+assert.equal(mergedBeforePhoneLabel.dni,'43161930S');
+assert.equal(mergedBeforePhoneLabel.phone,'858718773');
+
+const bodyLetters=context.window.TPFMobileOCR.extract(`
+Documento
+43I6I93OS
+Msisdn/Fijo
+858718773
+`);
+assert.equal(bodyLetters.dni,'43161930S');
+
+const structuralPhonesOnly=context.window.TPFMobileOCR.extract(`
+858718773
+Msisdn/Fijo
+642284966
+`);
+assert.equal(structuralPhonesOnly.dni,'');
+
+const structuralLongId=context.window.TPFMobileOCR.extract(`
+YGC25041122282164
+Msisdn/Fijo
+858718773
+`);
+assert.equal(structuralLongId.dni,'');
+
+const structuralNie=context.window.TPFMobileOCR.extract(`
+Msisdn/Fijo
+Docuniento
+X1234567L
+Msisdn/Fijo
+858718773
+`);
+assert.equal(structuralNie.dni,'X1234567L');
+
+const structuralNif=context.window.TPFMobileOCR.extract(`
+Msisdn/Fijo
+Docuniento
+B12345678
+Msisdn/Fijo
+858718773
+`);
+assert.equal(structuralNif.dni,'B12345678');
+
+const separatedDni=context.window.TPFMobileOCR.extract(`
+Documento
+43.161.930-S
+`);
+assert.equal(separatedDni.dni,'43161930S');
+
+const phoneWithDniChecksum=context.window.TPFMobileOCR.extract(`
+Documento
+600000005
+`);
+assert.equal(phoneWithDniChecksum.dni,'');
+
+const phoneWithDniChecksumEight=context.window.TPFMobileOCR.extract(`
+Documento
+600000008
+`);
+assert.equal(phoneWithDniChecksumEight.dni,'');
+
+const phoneWithFinalDigitAsLetter=context.window.TPFMobileOCR.extract(`
+Documento
+60000000B
+`);
+assert.equal(phoneWithFinalDigitAsLetter.dni,'');
+
+const truncatedPhoneAsDocument=context.window.TPFMobileOCR.extract(`
+Documento
+60000000
+`);
+assert.equal(truncatedPhoneAsDocument.dni,'');
+
+const singlePhoneLabelNumber=context.window.TPFMobileOCR.extract(`
+100000015
+Msisdn/Fijo
+858718773
+`);
+assert.equal(singlePhoneLabelNumber.dni,'');
+
+const eightDigitsBeforeFirstPhone=context.window.TPFMobileOCR.extract(`
+12345678
+Criterio
+Msisdn/Fijo
+858718773
+`);
+assert.equal(eightDigitsBeforeFirstPhone.dni,'');
+
+const unrelatedBetweenPhoneLabels=context.window.TPFMobileOCR.extract(`
+Msisdn/Fijo
+123456782
+Msisdn/Fijo
+858718773
+`);
+assert.equal(unrelatedBetweenPhoneLabels.dni,'');
+
+const spacedDocumentValue=context.window.TPFMobileOCR.extract(`
+Documente
+
+
+
+431619308
+`);
+assert.equal(spacedDocumentValue.dni,'43161930S');
+
 const dniLetterMissing=context.window.TPFMobileOCR.extract(`
 Documento
 43161930

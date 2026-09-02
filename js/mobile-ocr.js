@@ -111,6 +111,24 @@
     const first={X:'0',Y:'1',Z:'2'}[prefix];
     return first&&/^\d{7}$/.test(digits)?DNI_LETTERS[Number(first+digits)%23]:'';
   }
+  function recoverDniFromOcr(candidate,strict){
+    const value=String(candidate||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if(!/^[0-9][A-Z0-9]{7,8}$/.test(value))return '';
+    if(strict&&value.length!==9)return '';
+    if(/^[6789]\d{8}$/.test(value))return '';
+    const body=value.slice(0,8);
+    if((body.match(/\d/g)||[]).length<5)return '';
+    const digitMap={O:'0',I:'1',L:'1',Z:'2',G:'6',B:'8'};
+    const digits=body.replace(/[OILZGB]/g,letter=>digitMap[letter]);
+    if(!/^\d{8}$/.test(digits))return '';
+    // No conviertas un teléfono español en DNI cuando su último dígito
+    // llegue como un carácter parecido (por ejemplo, 600000008 -> 60000000B).
+    if(/^[6789]/.test(digits)&&(value.length===8||/[0-9OILZGB]/.test(value[8]||'')))return '';
+    const expected=expectedDniLetter(digits);
+    if(value.length===8)return strict?'':digits+expected;
+    const lookalikes={S:'S58B',B:'B8',Z:'Z2',G:'G6',L:'L1I'}[expected]||expected;
+    return lookalikes.includes(value[8])?digits+expected:'';
+  }
   function validDni(candidate){
     const value=String(candidate||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
     if(/^[XYZ]\d{7}[A-Z]$/.test(value)){
@@ -120,24 +138,30 @@
       return value.at(-1)===expectedDniLetter(value.slice(0,8))?value:'';
     }
     if(/^[ABCDEFGHJNPQRSUVW]\d{7}[A-Z0-9]$/.test(value))return value;
-
-    if(/^\d{8}$/.test(value))return value+expectedDniLetter(value);
-    // El modelo español suele leer la S final del DNI como 5 u 8.
-    if(/^\d{8}[58]$/.test(value)){
-      const digits=value.slice(0,8),letter=expectedDniLetter(digits);
-      return letter==='S'?digits+letter:'';
-    }
     return '';
   }
-  const DOCUMENT_LABEL=/\b(?:DOCUMENT[OE]|DOCURNENTO|DNI|NIF)\b/i;
-  const FIELD_LABEL=/\b(?:DOCUMENT[OE]|DOCURNENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
+  const DOCUMENT_LABEL=/\b(?:DOCUMENT[OE]|DOCURNENTO|DOCUNIENTO|DNI|NIF)\b/i;
+  const DOCUMENT_HINT=/\b(?:DNI|NIF|DOC[A-Z]{4,10})\b/i;
+  const PHONE_LABEL=/\b(?:MSISDN|MSIDN|FIJO|MOVIL|TELEFONO)\b/i;
+  const FIELD_LABEL=/\b(?:DOCUMENT[OE]|DOCURNENTO|DOCUNIENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
   const NAME_BLOCKED=/\b(?:MYCRM|BUSQUEDA|BUSCAR|CRITERIO|DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CLIENTE|MULTIMARCA|FECHA|DIRECCION|NACIMIENTO|NACIONALIDAD|DATOS|COMPARTIDOS|SUSCRIPCION|DISPOSITIVO|SINFIN|ILIMITADOS|CONV|GB)\b/i;
   const NAME_START=/\b(?:BUSQUEDA|BUSCAR)\b/i;
   const NAME_END=/\b(?:DATOS\s+COMPARTIDOS|SUSCRIPCION|DISPOSITIVO)\b/i;
 
+  function dniFromFragment(fragment,strict){
+    const withoutLabel=fold(fragment).replace(new RegExp(DOCUMENT_LABEL.source,'ig'),' ');
+    const compact=withoutLabel.replace(/[^A-Z0-9]/g,'');
+    const direct=validDni(compact)||recoverDniFromOcr(compact,strict);
+    if(direct)return direct;
+    const tokens=withoutLabel.match(/[A-Z0-9]+/g)||[];
+    for(const token of tokens){
+      const dni=validDni(token)||recoverDniFromOcr(token,strict);
+      if(dni)return dni;
+    }
+    return '';
+  }
   function lineDni(line){
-    const compact=fold(line).replace(/[^A-Z0-9]/g,'');
-    return validDni(compact);
+    return dniFromFragment(line);
   }
   function linePhone(line){
     return normalizePhone(line);
@@ -148,10 +172,42 @@
       if(!label.test(current))continue;
       const inline=valueFromLine(current.replace(new RegExp(label.source,'ig'),''));
       if(inline)return inline;
-      for(let offset=1;offset<=2&&index+offset<lines.length;offset+=1){
+      let useful=0;
+      for(let offset=1;offset<=5&&index+offset<lines.length;offset+=1){
         const next=lines[index+offset];
+        if(!tidy(next))continue;
         if(FIELD_LABEL.test(fold(next)))break;
+        useful+=1;
         const value=valueFromLine(next);
+        if(value)return value;
+        if(useful>=2)break;
+      }
+    }
+    return '';
+  }
+  function dniBeforePhoneLabel(lines){
+    let phoneLabels=0;
+    for(let index=0;index<lines.length;index+=1){
+      const current=fold(lines[index]);
+      const phoneMatch=current.match(PHONE_LABEL);
+      if(!phoneMatch)continue;
+      phoneLabels+=1;
+      if(phoneLabels<2)continue;
+      const probes=[current.slice(0,phoneMatch.index)];
+      let hasDocumentHint=DOCUMENT_HINT.test(current.slice(0,phoneMatch.index));
+      let useful=0;
+      for(let offset=1;offset<=5&&index-offset>=0;offset+=1){
+        const previous=lines[index-offset];
+        if(!tidy(previous))continue;
+        if(PHONE_LABEL.test(fold(previous)))break;
+        useful+=1;
+        probes.push(previous);
+        if(DOCUMENT_HINT.test(fold(previous))){hasDocumentHint=true;break;}
+        if(useful>=3)break;
+      }
+      if(!hasDocumentHint)continue;
+      for(const probe of probes){
+        const value=dniFromFragment(probe,true);
         if(value)return value;
       }
     }
@@ -193,8 +249,8 @@
   function extract(text){
     const raw=String(text||'');
     const lines=raw.split(/\r?\n/);
-    const dni=valueAfterLabel(lines,DOCUMENT_LABEL,lineDni);
-    const phone=valueAfterLabel(lines,/\b(?:MSISDN|MSIDN|FIJO|MOVIL|TELEFONO)\b/i,linePhone);
+    const dni=valueAfterLabel(lines,DOCUMENT_LABEL,lineDni)||dniBeforePhoneLabel(lines);
+    const phone=valueAfterLabel(lines,PHONE_LABEL,linePhone);
     const fullName=nameFromLines(lines);
     return {dni,phone,fullName,...splitName(fullName),rawText:raw};
   }
