@@ -133,13 +133,9 @@
     const variants=[value];
     if(value.length===10){
       const body=value.slice(0,8),tail=value.slice(8);
-      // En iPhone el último glifo puede duplicarse: S -> 58, 8S, SS o 88.
-      if([...tail].every(char=>'S58B'.includes(char))){
+      // En iPhone el último glifo puede desdoblarse en dos lecturas distintas: S -> 58 u 8S.
+      if(tail[0]!==tail[1]&&[...tail].every(char=>'S58B'.includes(char))){
         variants.push(body+tail[0],body+tail.at(-1));
-      }
-      // Tolera una sola duplicación adyacente dentro del cuerpo OCR.
-      for(let index=1;index<value.length;index+=1){
-        if(value[index]===value[index-1])variants.push(value.slice(0,index)+value.slice(index+1));
       }
     }
     const recovered=new Set(variants.map(item=>recoverSingleDniVariant(item,strict)).filter(Boolean));
@@ -156,10 +152,10 @@
     if(/^[ABCDEFGHJNPQRSUVW]\d{7}[A-Z0-9]$/.test(value))return value;
     return '';
   }
-  const DOCUMENT_LABEL=/\b(?:DOCUMENT[OEA0]|D0CUMENT0|DOCURNENTO|DOCUNIENTO|DNI|NIF)\b/i;
-  const DOCUMENT_HINT=/\b(?:DNI|NIF|D[O0]C[A-Z0-9]{4,10})\b/i;
+  const DOCUMENT_LABEL=/\b(?:DOCUMENT[OEA0]|D0CUMENT0|DOCURNENTO|DOCUNIENTO|DOCURNENLO|DNI|NIF)\b/i;
+  const DOCUMENT_HINT=DOCUMENT_LABEL;
   const PHONE_LABEL=/\b(?:MSISDN|MSIDN|FIJO|MOVIL|TELEFONO)\b/i;
-  const FIELD_LABEL=/\b(?:DOCUMENT[OEA0]|D0CUMENT0|DOCURNENTO|DOCUNIENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
+  const FIELD_LABEL=/\b(?:DOCUMENT[OEA0]|D0CUMENT0|DOCURNENTO|DOCUNIENTO|DOCURNENLO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
   const NAME_BLOCKED=/\b(?:MYCRM|BUSQUEDA|BUSCAR|CRITERIO|DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CLIENTE|MULTIMARCA|FECHA|DIRECCION|NACIMIENTO|NACIONALIDAD|DATOS|COMPARTIDOS|SUSCRIPCION|DISPOSITIVO|SINFIN|ILIMITADOS|CONV|GB)\b/i;
   const NAME_START=/\b(?:BUSQUEDA|BUSCAR)\b/i;
   const NAME_END=/\b(?:DATOS\s+COMPARTIDOS|SUSCRIPCION|DISPOSITIVO)\b/i;

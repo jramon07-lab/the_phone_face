@@ -345,7 +345,7 @@
     return `<div class="m-page">${pageHead('Escanear contacto','home')}<div class="m-camera-stage">${state.scanUrl?`<img src="${esc(state.scanUrl)}" alt="Documento seleccionado">`:'<div class="m-camera-placeholder"><span>▧</span><strong>Fotografía el documento o la pantalla</strong><p>La imagen se procesa en el teléfono y no se guarda en el CRM.</p></div>'}</div><div class="m-camera-actions"><button class="m-primary" data-action="camera">Cámara</button><button class="m-secondary" data-action="gallery">Fototeca</button></div>${state.scanFile?'<button class="m-primary" style="width:100%;margin-top:12px" data-action="analyse-scan">Detectar datos</button>':'<button class="m-ghost" style="width:100%;margin-top:8px" data-action="manual-contact">Escribir datos manualmente</button>'}<div id="mobileOcrProgress"></div></div>`;
   }
   async function handleImage(file){
-    if(!file)return;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=file;state.scanUrl=URL.createObjectURL(file);go('scan');
+    if(!file)return;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.ocrDebugText='';state.scanFile=file;state.scanUrl=URL.createObjectURL(file);go('scan');
   }
   async function analyseScan(){
     if(!state.scanFile)return;

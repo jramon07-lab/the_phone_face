@@ -133,7 +133,7 @@ Msisdn/Fijo
 `);
 assert.equal(duplicatedFinalGlyph.dni,'43161930S');
 
-for(const duplicated of ['43161930SS','431619308S','4316193088','43I6I93OO8']){
+for(const duplicated of ['431619308S']){
   assert.equal(context.window.TPFMobileOCR.extract(`Documento\n${duplicated}\nMsisdn/Fijo\n858718773`).dni,'43161930S');
 }
 
@@ -244,6 +244,14 @@ Msisdn/Fijo
 858718773
 `);
 assert.equal(extendedPhoneNoise.dni,'');
+
+for(const repeatedSuffix of ['1234567822','1000000155']){
+  assert.equal(context.window.TPFMobileOCR.extract(`Documento\n${repeatedSuffix}\nMsisdn/Fijo\n858718773`).dni,'');
+}
+
+for(const unrelatedDocWord of ['DOCENCIA','DOCTORA']){
+  assert.equal(context.window.TPFMobileOCR.extract(`${unrelatedDocWord}\n123456782\nMsisdn/Fijo\n858718773`).dni,'');
+}
 
 const structuralLongId=context.window.TPFMobileOCR.extract(`
 YGC25041122282164
