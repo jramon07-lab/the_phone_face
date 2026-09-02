@@ -118,9 +118,9 @@ async function run(){
   assert.doesNotMatch(actions,/data-action="wa-create-task"[^>]* disabled/);
   assert.equal(api.resolveMobileWaTemplate('Hola {nombre}. {nombre_completo} · {dni} · {telefono}','34695661409@c.us'),'Hola María. María López · 12345678Z · 695661409');
   api.state.whatsapp.templates=[{name:'Saludo',category:'Atención',text:'Hola {nombre}'}];api.state.whatsapp.templatesLoading=false;api.state.whatsapp.templatesError='';
-  assert.match(api.renderMobileWaTemplatesSheet(),/Saludo/);assert.match(api.renderMobileWaTemplatesSheet(),/Tú decides cuándo enviarla/);
+  assert.match(api.renderMobileWaTemplatesSheet(),/Saludo/);assert.match(api.renderMobileWaTemplatesSheet(),/Buscar plantilla/);assert.match(api.renderMobileWaTemplatesSheet(),/Todas las categorías/);assert.match(api.renderMobileWaTemplatesSheet(),/Tú decides cuándo enviarla/);
   api.state.whatsapp.labels=[{id:'label-1',name:'Cliente VIP'}];api.state.whatsapp.labelIds=['label-1'];api.state.whatsapp.labelsLoading=false;api.state.whatsapp.labelsError='';
-  assert.match(api.renderMobileWaLabelsSheet(api.state.contacts[0]),/value="label-1" checked/);
+  assert.match(api.renderMobileWaLabelsSheet(api.state.contacts[0]),/value="label-1" checked/);assert.match(api.renderMobileWaLabelsSheet(api.state.contacts[0]),/Buscar etiqueta/);assert.match(api.renderMobileWaLabelsSheet(api.state.contacts[0]),/Todas las categorías/);
 
   const fetchCalls=[];
   fetchImpl=async(url,options)=>{fetchCalls.push({url,options});return response(200,{ok:true,chats:[]});};

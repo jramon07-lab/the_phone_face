@@ -33,10 +33,14 @@ assert.match(css,/\.m-wa-sheet-root\{[^}]*position:fixed;z-index:150;inset:0;[^}
 assert.match(css,/\.m-wa-sheet\{[^}]*width:min\(100%,620px\);max-width:100%;[^}]*max-height:min\(78dvh,620px\);[^}]*overflow-x:hidden;overflow-y:auto;[^}]*var\(--m-safe-bottom\)/);
 assert.match(css,/\.m-wa-sheet-option,\.m-wa-template-row\{[^}]*width:100%;min-width:0;max-width:100%;[^}]*grid-template-columns:auto minmax\(0,1fr\) auto/);
 assert.match(css,/\.m-wa-label-row\{[^}]*min-width:0;max-width:100%;[^}]*display:flex/);
+assert.match(css,/\.m-wa-sheet-filters\{[^}]*grid-template-columns:minmax\(0,1fr\);[^}]*min-width:0;max-width:100%/);
+assert.match(css,/\.m-wa-sheet-search,\.m-wa-sheet-category\{[^}]*width:100%;min-width:0;max-width:100%/);
 assert.match(app,/data-route="whatsapp"/);
 assert.match(app,/data-route="whatsapp-chat\/\$\{esc\(encodeURIComponent/);
 assert.match(app,/maxlength="4096"/);
 assert.match(app,/file\.size>2500000/);
 assert.match(app,/aria-controls="mobileWaActionSheet"/);
+assert.match(app,/type="search" data-wa-filter="\$\{type\}-query"/);
+assert.match(app,/data-wa-filter="\$\{type\}-category" aria-label="Filtrar por categoría"/);
 
 console.log('mobile horizontal layout guard: ok');

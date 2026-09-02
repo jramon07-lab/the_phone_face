@@ -7,7 +7,8 @@ const source=fs.readFileSync(path.join(__dirname,'../js/mobile-app.js'),'utf8');
 const testSource=source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`
 window.__mobileWhatsAppActionsTest={
   state,renderMobileWaActions,openMobileWaActions,closeMobileWaSheet,
-  openMobileWaTemplates,useMobileWaTemplate,openMobileWaLabels,saveMobileWaLabels,
+  openMobileWaTemplates,useMobileWaTemplate,openMobileWaLabels,renderMobileWaLabelsSheet,saveMobileWaLabels,
+  mobileWaTemplateCategories,mobileWaFilteredTemplates,mobileWaLabelCategories,mobileWaFilteredLabels,mobileWaInferLabelCategory,handleMobileWaSheetFilter,
   openMobileWaLinkedAction,renderContactOpportunity,saveContactOpportunity,
   renderNewTask,saveTask,sendMobileWaFile
 };
@@ -36,15 +37,20 @@ const actionButtons={
 const rpcCalls=[];
 const inserts=[];
 const rpcResults={
-  wa_list_templates:{data:[{id:7,name:'Saludo',body:'Hola {nombre}, DNI {dni}, teléfono {telefono}',category:'Atención'}],error:null},
-  crm_list_labels:{data:[{id:'label-1',name:'Cliente'},{id:'label-2',name:'Renovación'}],error:null},
+  wa_list_templates:{data:[
+    {id:7,name:'Saludo',body:'Hola {nombre}',category:'Atención'},
+    {id:8,name:'Renovación Vodafone',body:'Oferta para {nombre}, DNI {dni}, teléfono {telefono}',category:'Vodafone'},
+    {id:9,name:'Aviso MásMóvil',body:'Revisión MásMóvil',category:'MásMóvil'},
+    {id:10,name:'General',body:'Texto general',category:''}
+  ],error:null},
+  crm_list_labels:{data:[{id:'label-1',name:'Cliente'},{id:'label-2',name:'vodafone49t'},{id:'label-3',name:'Renovación Yoigo'}],error:null},
   crm_get_contact_labels:{data:[{id:'label-1',name:'Cliente'}],error:null},
   crm_set_contact_labels:{data:true,error:null}
 };
 const client={
   auth:{async getSession(){return {data:{session:{access_token:'token'}},error:null};}},
   async rpc(name,args){rpcCalls.push({name,args});return rpcResults[name]||{data:null,error:null};},
-  from(table){return {insert(row){inserts.push({table,row});return this;},select(){return this;},single(){return Promise.resolve({data:{id:`${table}-1`},error:null});}};}
+  from(table){return {insert(row){inserts.push({table,row});return this;},select(){return this;},eq(){return this;},maybeSingle(){return Promise.resolve(table==='app_settings'?{data:{value:{'label-1':'Seguimiento'}},error:null}:{data:null,error:null});},single(){return Promise.resolve({data:{id:`${table}-1`},error:null});}};}
 };
 let fetchCount=0;
 const location={hash:'#/whatsapp-chat/34695661409%40c.us',replace(value){this.hash=value;}};
@@ -75,14 +81,39 @@ async function run(){
   await api.openMobileWaTemplates();
   assert.equal(rpcCalls.at(-1).name,'wa_list_templates');
   assert.match(sheet.innerHTML,/Saludo/);
-  api.useMobileWaTemplate(0);
-  assert.equal(composer.value,'Hola María, DNI 12345678Z, teléfono 695661409');
+  assert.match(sheet.innerHTML,/Buscar plantilla/);assert.match(sheet.innerHTML,/Todas las categorías/);
+  assert.ok(api.mobileWaTemplateCategories().includes('Sin categoría'));
+  api.state.whatsapp.templateQuery='';api.state.whatsapp.templateCategory='Vodafone';
+  assert.deepEqual(api.mobileWaFilteredTemplates().map(row=>row.index),[1],'La categoría debe filtrar por sí sola');
+  api.state.whatsapp.templateQuery='oferta';api.state.whatsapp.templateCategory='';
+  assert.deepEqual(api.mobileWaFilteredTemplates().map(row=>row.index),[1],'El buscador debe encontrar el contenido de la plantilla');
+  api.state.whatsapp.templateQuery='renovacion';api.state.whatsapp.templateCategory='Vodafone';
+  let templateMatches=api.mobileWaFilteredTemplates();
+  assert.deepEqual(templateMatches.map(row=>row.index),[1],'El filtro debe conservar el índice original');
+  api.state.whatsapp.templateCategory='';api.handleMobileWaSheetFilter({target:{dataset:{waFilter:'template-query'},value:'masmovil'}});
+  assert.equal(api.state.whatsapp.templateQuery,'masmovil','El evento del buscador debe actualizar el filtro');
+  assert.deepEqual(api.mobileWaFilteredTemplates().map(row=>row.index),[2],'La búsqueda debe ignorar acentos');
+  api.state.whatsapp.templateQuery='renovacion';api.state.whatsapp.templateCategory='Vodafone';
+  templateMatches=api.mobileWaFilteredTemplates();
+  assert.equal(rpcCalls.filter(call=>call.name==='wa_list_templates').length,1,'Filtrar no debe repetir la RPC');
+  api.useMobileWaTemplate(templateMatches[0].index);
+  assert.equal(composer.value,'Oferta para María, DNI 12345678Z, teléfono 695661409');
   assert.equal(fetchCount,0,'Elegir una plantilla no debe enviar WhatsApp');
   assert.equal(sheet.classList.contains('hidden'),true);
 
   api.openMobileWaActions(trigger);await api.openMobileWaLabels();
   assert.deepEqual(rpcCalls.slice(-2).map(call=>call.name),['crm_list_labels','crm_get_contact_labels']);
   assert.match(sheet.innerHTML,/value="label-1" checked/);
+  assert.match(sheet.innerHTML,/Buscar etiqueta/);assert.match(sheet.innerHTML,/Seguimiento/);assert.match(sheet.innerHTML,/Vodafone/);
+  assert.ok(api.mobileWaLabelCategories().includes('Seguimiento'));
+  assert.equal(api.mobileWaInferLabelCategory('Renovación MásMóvil'),'MásMóvil');
+  api.handleMobileWaSheetFilter({target:{dataset:{waFilter:'label-query'},value:'renovacion'}});api.handleMobileWaSheetFilter({target:{dataset:{waFilter:'label-category'},value:'Yoigo'}});
+  assert.equal(api.state.whatsapp.labelQuery,'renovacion');assert.equal(api.state.whatsapp.labelCategory,'Yoigo');
+  assert.deepEqual(api.mobileWaFilteredLabels().map(label=>label.id),['label-3'],'La búsqueda de etiquetas debe ignorar acentos');
+  api.state.whatsapp.labelQuery='';api.state.whatsapp.labelCategory='Vodafone';
+  assert.deepEqual(api.mobileWaFilteredLabels().map(label=>label.id),['label-2']);
+  const filteredLabels=api.renderMobileWaLabelsSheet(api.state.contacts[0]);
+  assert.match(filteredLabels,/m-wa-label-row hidden" data-wa-label-id="label-1"><input[^>]*checked/,'La etiqueta asignada debe permanecer marcada aunque esté oculta');
   selectedLabelInputs=[{value:'label-1'},{value:'label-2'}];
   await api.saveMobileWaLabels();
   const labelSave=rpcCalls.find(call=>call.name==='crm_set_contact_labels');
@@ -90,8 +121,9 @@ async function run(){
   assert.equal(sheet.classList.contains('hidden'),true);
   assert.equal(trigger.focused,true,'Al guardar etiquetas el foco debe volver al botón +');
 
-  trigger.focused=false;rpcResults.crm_set_contact_labels={data:null,error:new Error('Fallo simulado')};api.openMobileWaActions(trigger);await api.openMobileWaLabels();selectedLabelInputs=[{value:'label-2'}];await api.saveMobileWaLabels();
+  trigger.focused=false;rpcResults.crm_set_contact_labels={data:null,error:new Error('Fallo simulado')};api.openMobileWaActions(trigger);await api.openMobileWaLabels();api.state.whatsapp.labelQuery='vodafone';api.state.whatsapp.labelCategory='Vodafone';selectedLabelInputs=[{value:'label-2'}];await api.saveMobileWaLabels();
   assert.deepEqual(Array.from(api.state.whatsapp.labelIds),['label-1'],'Un fallo debe restaurar las etiquetas confirmadas');
+  assert.equal(api.state.whatsapp.labelQuery,'vodafone');assert.equal(api.state.whatsapp.labelCategory,'Vodafone');
   assert.match(sheet.innerHTML,/Fallo simulado/);rpcResults.crm_set_contact_labels={data:true,error:null};
 
   api.openMobileWaActions(trigger);api.openMobileWaLinkedAction('task');

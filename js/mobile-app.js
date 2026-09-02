@@ -14,7 +14,7 @@
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
     loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',scanFile:null,scanUrl:'',ocrDebugText:'',
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
-    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelsLoading:false,labelsSaving:false,labelsError:''}
+    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
   let mobileWaRefreshTimer=null;
   let mobileWaSheetTrigger=null;
@@ -136,7 +136,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();
-    closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -703,7 +703,7 @@
     return `<button class="m-wa-sheet-backdrop" data-action="wa-close-sheet" type="button" aria-label="Cerrar acciones"></button><section class="m-wa-sheet" role="dialog" aria-modal="true" aria-labelledby="mobileWaSheetTitle"><div class="m-wa-sheet-head"><h2 id="mobileWaSheetTitle">${esc(title)}</h2><button class="m-wa-sheet-close" data-action="wa-close-sheet" type="button" aria-label="Cerrar">×</button></div>${body}</section>`;
   }
   function setMobileWaSheet(kind,title,body,chatId=state.whatsapp.selectedId){
-    const root=byId('mobileWaActionSheet');if(!root)return;root.dataset.kind=kind;root.dataset.chatId=String(chatId||'');root.innerHTML=mobileWaSheetFrame(title,body);root.classList.remove('hidden');root.setAttribute('aria-hidden','false');const app=byId('mobileApp');if(app)app.inert=true;setTimeout(()=>root.querySelector('.m-wa-sheet-close,[data-action]:not(:disabled)')?.focus(),0);
+    const root=byId('mobileWaActionSheet');if(!root)return;root.dataset.kind=kind;root.dataset.chatId=String(chatId||'');root.innerHTML=mobileWaSheetFrame(title,body);root.classList.remove('hidden');root.setAttribute('aria-hidden','false');applyMobileWaSheetFilters(root);const app=byId('mobileApp');if(app)app.inert=true;setTimeout(()=>root.querySelector('.m-wa-sheet-close,[data-action]:not(:disabled)')?.focus(),0);
   }
   function closeMobileWaSheet(restoreFocus=true){
     const root=byId('mobileWaActionSheet');if(!root)return;root.classList.add('hidden');root.setAttribute('aria-hidden','true');root.innerHTML='';delete root.dataset.kind;delete root.dataset.chatId;const app=byId('mobileApp');if(app)app.inert=false;const trigger=mobileWaSheetTrigger;mobileWaSheetTrigger=null;if(trigger)trigger.setAttribute('aria-expanded','false');if(restoreFocus&&trigger?.focus)setTimeout(()=>trigger.focus(),0);
@@ -717,14 +717,34 @@
   function openMobileWaActions(trigger){
     if(!state.whatsapp.selectedId||state.whatsapp.sending)return;mobileWaSheetTrigger=trigger||null;if(trigger)trigger.setAttribute('aria-expanded','true');setMobileWaSheet('actions','Acciones del chat',renderMobileWaActions());
   }
+  function mobileWaFilterText(value){return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es').replace(/\s+/g,' ');}
+  function mobileWaMatchesFilter(values,query){const needle=mobileWaFilterText(query);if(!needle)return true;const haystack=mobileWaFilterText(values.filter(Boolean).join(' '));return haystack.includes(needle)||haystack.replace(/\s/g,'').includes(needle.replace(/\s/g,''));}
+  function mobileWaTemplateCategory(template){return clean(template?.category)||'Sin categoría';}
+  function mobileWaTemplateCategories(){return [...new Set(state.whatsapp.templates.map(mobileWaTemplateCategory))].sort((a,b)=>a.localeCompare(b,'es'));}
+  function mobileWaFilteredTemplates(){const query=state.whatsapp.templateQuery,category=state.whatsapp.templateCategory;return state.whatsapp.templates.map((template,index)=>({template,index})).filter(({template})=>{const current=mobileWaTemplateCategory(template);return (!category||current===category)&&mobileWaMatchesFilter([template.name,template.text,template.shortcut,current],query);});}
+  function mobileWaInferLabelCategory(name){const value=mobileWaFilterText(name);if(value.includes('vodafone'))return 'Vodafone';if(value.includes('orange'))return 'Orange';if(value.includes('masmovil')||value.includes('mas movil'))return 'MásMóvil';if(value.includes('yoigo'))return 'Yoigo';return 'Otras';}
+  function mobileWaLabelCategories(){return [...new Set(state.whatsapp.labels.map(label=>clean(label.category)||mobileWaInferLabelCategory(label.name)))].sort((a,b)=>a.localeCompare(b,'es'));}
+  function mobileWaFilteredLabels(){const query=state.whatsapp.labelQuery,category=state.whatsapp.labelCategory;return state.whatsapp.labels.filter(label=>{const current=clean(label.category)||mobileWaInferLabelCategory(label.name);return (!category||current===category)&&mobileWaMatchesFilter([label.name,current],query);});}
+  function mobileWaFilterControls(type,query,category,categories){const template=type==='template',noun=template?'plantilla':'etiqueta';return `<div class="m-wa-sheet-filters"><label class="m-wa-sheet-field"><span>Buscar</span><input class="m-input m-wa-sheet-search" type="search" data-wa-filter="${type}-query" value="${esc(query)}" placeholder="Buscar ${noun}…" autocomplete="off" aria-label="Buscar ${noun}"></label><label class="m-wa-sheet-field"><span>Categoría</span><select class="m-select m-wa-sheet-category" data-wa-filter="${type}-category" aria-label="Filtrar por categoría"><option value="">Todas las categorías</option>${categories.map(value=>`<option value="${esc(value)}"${category===value?' selected':''}>${esc(value)}</option>`).join('')}</select></label></div>`;}
+  function applyMobileWaSheetFilters(root=byId('mobileWaActionSheet')){
+    if(!root||root.classList.contains('hidden'))return;
+    if(root.dataset.kind==='templates'){
+      const visible=new Set(mobileWaFilteredTemplates().map(row=>String(row.index)));root.querySelectorAll('[data-wa-template-index]').forEach(row=>row.classList.toggle('hidden',!visible.has(String(row.dataset.waTemplateIndex))));const count=root.querySelector('[data-wa-result-count="templates"]');if(count)count.textContent=`Mostrando ${visible.size} ${visible.size===1?'plantilla':'plantillas'}`;root.querySelector('[data-wa-filter-empty="templates"]')?.classList?.toggle('hidden',visible.size>0);
+    }
+    if(root.dataset.kind==='labels'){
+      const visible=new Set(mobileWaFilteredLabels().map(label=>String(label.id)));root.querySelectorAll('[data-wa-label-id]').forEach(row=>row.classList.toggle('hidden',!visible.has(String(row.dataset.waLabelId))));const count=root.querySelector('[data-wa-result-count="labels"]');if(count)count.textContent=`Mostrando ${visible.size} ${visible.size===1?'etiqueta':'etiquetas'}`;root.querySelector('[data-wa-filter-empty="labels"]')?.classList?.toggle('hidden',visible.size>0);
+    }
+  }
+  function handleMobileWaSheetFilter(event){const filter=event.target?.dataset?.waFilter;if(!filter)return;const value=String(event.target.value||'');if(filter==='template-query')state.whatsapp.templateQuery=value;if(filter==='template-category')state.whatsapp.templateCategory=value;if(filter==='label-query')state.whatsapp.labelQuery=value;if(filter==='label-category')state.whatsapp.labelCategory=value;applyMobileWaSheetFilters();}
   function renderMobileWaTemplatesSheet(){
     if(state.whatsapp.templatesLoading)return '<div class="m-wa-sheet-loading">Cargando plantillas…</div>';
     if(state.whatsapp.templatesError)return `<div class="m-duplicate warn">${esc(state.whatsapp.templatesError)}</div><button class="m-secondary m-wa-sheet-full" data-action="wa-show-templates" type="button">Reintentar</button>`;
     if(!state.whatsapp.templates.length)return '<div class="m-wa-sheet-empty">No tienes plantillas guardadas.</div>';
-    return `<div class="m-wa-template-list">${state.whatsapp.templates.map((template,index)=>`<button class="m-wa-template-row" data-action="wa-use-template" data-index="${index}" type="button"><span><b>${esc(template.name||'Plantilla')}</b><small>${esc(template.category||'Sin categoría')}</small><em>${esc(template.text||'')}</em></span><i aria-hidden="true">›</i></button>`).join('')}</div><p class="m-wa-sheet-note">La plantilla se prepara en el mensaje. Tú decides cuándo enviarla.</p>`;
+    const visible=new Set(mobileWaFilteredTemplates().map(row=>String(row.index))),categories=mobileWaTemplateCategories();
+    return `${mobileWaFilterControls('template',state.whatsapp.templateQuery,state.whatsapp.templateCategory,categories)}<p class="m-wa-result-count" data-wa-result-count="templates">Mostrando ${visible.size} ${visible.size===1?'plantilla':'plantillas'}</p><div class="m-wa-template-list">${state.whatsapp.templates.map((template,index)=>`<button class="m-wa-template-row${visible.has(String(index))?'':' hidden'}" data-action="wa-use-template" data-index="${index}" data-wa-template-index="${index}" type="button"><span><b>${esc(template.name||'Plantilla')}</b><small>${esc(mobileWaTemplateCategory(template))}</small><em>${esc(template.text||'')}</em></span><i aria-hidden="true">›</i></button>`).join('')}<div class="m-wa-sheet-empty${visible.size?' hidden':''}" data-wa-filter-empty="templates">No hay plantillas que coincidan con los filtros.</div></div><p class="m-wa-sheet-note">La plantilla se prepara en el mensaje. Tú decides cuándo enviarla.</p>`;
   }
   async function openMobileWaTemplates(){
-    const chatId=mobileWaSheetChatId()||state.whatsapp.selectedId;if(!chatId||!has('can_manage_templates'))return;state.whatsapp.templatesLoading=true;state.whatsapp.templatesError='';setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);
+    const chatId=mobileWaSheetChatId()||state.whatsapp.selectedId;if(!chatId||!has('can_manage_templates'))return;state.whatsapp.templateQuery='';state.whatsapp.templateCategory='';state.whatsapp.templatesLoading=true;state.whatsapp.templatesError='';setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);
     try{const {data,error}=await client.rpc('wa_list_templates');if(error)throw error;state.whatsapp.templates=(Array.isArray(data)?data:[]).map(row=>({id:row.id,name:row.name||'Plantilla',text:row.body||'',category:row.category||'',shortcut:row.shortcut||''})).filter(row=>clean(row.text));}
     catch(error){state.whatsapp.templates=[];state.whatsapp.templatesError=error?.message||'No se pudieron cargar las plantillas.';}
     finally{state.whatsapp.templatesLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='templates'&&root.dataset.chatId===chatId)setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);}
@@ -736,15 +756,18 @@
   function useMobileWaTemplate(index){
     const chatId=mobileWaSheetChatId(),template=state.whatsapp.templates[Number(index)];if(!chatId||!template)return;const input=byId('mobileWaComposer');if(!input)return;input.value=resolveMobileWaTemplate(template.text,chatId).slice(0,4096);closeMobileWaSheet(false);input.focus?.();input.setSelectionRange?.(input.value.length,input.value.length);toast('Plantilla preparada. Revísala y pulsa Enviar.','success');
   }
+  async function loadMobileWaLabelCategories(){
+    try{const result=await client.from('app_settings').select('value').eq('key','crm_label_categories_v1').maybeSingle();if(result.error)throw result.error;const value=result.data?.value;return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch(_){return {};}
+  }
   function renderMobileWaLabelsSheet(contact){
     if(state.whatsapp.labelsLoading)return '<div class="m-wa-sheet-loading">Cargando etiquetas…</div>';
     if(state.whatsapp.labelsError)return `<div class="m-duplicate warn">${esc(state.whatsapp.labelsError)}</div><button class="m-secondary m-wa-sheet-full" data-action="wa-show-labels" type="button">Reintentar</button>`;
-    const selected=new Set(state.whatsapp.labelIds.map(String)),choices=state.whatsapp.labels.length?`<div class="m-wa-label-list">${state.whatsapp.labels.map(label=>`<label class="m-wa-label-row"><input type="checkbox" value="${esc(label.id)}" ${selected.has(String(label.id))?'checked':''}><span>${esc(label.name||'Etiqueta')}</span></label>`).join('')}</div>`:'<div class="m-wa-sheet-empty">No hay etiquetas creadas.</div>';
+    const selected=new Set(state.whatsapp.labelIds.map(String)),visible=new Set(mobileWaFilteredLabels().map(label=>String(label.id))),categories=mobileWaLabelCategories(),choices=state.whatsapp.labels.length?`${mobileWaFilterControls('label',state.whatsapp.labelQuery,state.whatsapp.labelCategory,categories)}<p class="m-wa-result-count" data-wa-result-count="labels">Mostrando ${visible.size} ${visible.size===1?'etiqueta':'etiquetas'}</p><div class="m-wa-label-list">${state.whatsapp.labels.map(label=>`<label class="m-wa-label-row${visible.has(String(label.id))?'':' hidden'}" data-wa-label-id="${esc(label.id)}"><input type="checkbox" value="${esc(label.id)}" ${selected.has(String(label.id))?'checked':''}><span><b>${esc(label.name||'Etiqueta')}</b><small>${esc(clean(label.category)||mobileWaInferLabelCategory(label.name))}</small></span></label>`).join('')}<div class="m-wa-sheet-empty${visible.size?' hidden':''}" data-wa-filter-empty="labels">No hay etiquetas que coincidan con los filtros.</div></div>`:'<div class="m-wa-sheet-empty">No hay etiquetas creadas.</div>';
     return `<p class="m-wa-sheet-contact">Contacto: <b>${esc(contact.fullName)}</b></p>${choices}<button class="m-primary m-wa-sheet-full" data-action="wa-save-labels" type="button"${state.whatsapp.labelsSaving?' disabled':''}>${state.whatsapp.labelsSaving?'Guardando…':'Guardar etiquetas'}</button><p id="mobileWaLabelsMsg" class="m-form-msg">${esc(state.whatsapp.labelsError)}</p>`;
   }
   async function openMobileWaLabels(){
-    const chatId=mobileWaSheetChatId()||state.whatsapp.selectedId,contact=mobileWaFindContact(chatId);if(!chatId||!contact||!has('can_manage_labels'))return;state.whatsapp.labelsLoading=true;state.whatsapp.labelsError='';setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);
-    try{const [labels,assigned]=await Promise.all([client.rpc('crm_list_labels'),client.rpc('crm_get_contact_labels',{p_contact_id:contact.id})]);if(labels.error)throw labels.error;if(assigned.error)throw assigned.error;state.whatsapp.labels=(Array.isArray(labels.data)?labels.data:[]).map(row=>({id:row.id,name:row.name||'Etiqueta'})).sort((a,b)=>a.name.localeCompare(b.name,'es'));state.whatsapp.labelIds=(Array.isArray(assigned.data)?assigned.data:[]).map(row=>String(row.id??row.label_id??row.value??'')).filter(Boolean);}
+    const chatId=mobileWaSheetChatId()||state.whatsapp.selectedId,contact=mobileWaFindContact(chatId);if(!chatId||!contact||!has('can_manage_labels'))return;state.whatsapp.labelQuery='';state.whatsapp.labelCategory='';state.whatsapp.labelsLoading=true;state.whatsapp.labelsError='';setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);
+    try{const [labels,assigned,categories]=await Promise.all([client.rpc('crm_list_labels'),client.rpc('crm_get_contact_labels',{p_contact_id:contact.id}),loadMobileWaLabelCategories()]);if(labels.error)throw labels.error;if(assigned.error)throw assigned.error;state.whatsapp.labels=(Array.isArray(labels.data)?labels.data:[]).map(row=>({id:row.id,name:row.name||'Etiqueta',category:clean(categories[String(row.id)])||mobileWaInferLabelCategory(row.name)})).sort((a,b)=>a.name.localeCompare(b.name,'es'));state.whatsapp.labelIds=(Array.isArray(assigned.data)?assigned.data:[]).map(row=>String(row.id??row.label_id??row.value??'')).filter(Boolean);}
     catch(error){state.whatsapp.labels=[];state.whatsapp.labelIds=[];state.whatsapp.labelsError=error?.message||'No se pudieron cargar las etiquetas.';}
     finally{state.whatsapp.labelsLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='labels'&&root.dataset.chatId===chatId)setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);}
   }
@@ -846,6 +869,8 @@
     byId('mobileWhatsAppFileInput').onchange=event=>{const chatId=state.whatsapp.pendingFileChatId;state.whatsapp.pendingFileChatId='';sendMobileWaFile(event.target.files?.[0],chatId);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
     byId('mobileWaActionSheet').addEventListener('click',handleViewClick);
+    byId('mobileWaActionSheet').addEventListener('input',handleMobileWaSheetFilter);
+    byId('mobileWaActionSheet').addEventListener('change',handleMobileWaSheetFilter);
     document.addEventListener('keydown',handleMobileWaSheetKeydown);
     addEventListener('hashchange',()=>{closeMobileWaSheet(false);render();});
     addEventListener('pageshow',()=>{if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);});
