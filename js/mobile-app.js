@@ -358,11 +358,13 @@
         'preparing image':'Preparando la foto…','image prepared':'Foto preparada…','loading reader':'Cargando el lector…',
         'loading tesseract core':'Iniciando el lector…','loading language traineddata':'Cargando el idioma…',
         'initializing api':'Preparando el reconocimiento…','recognizing text':'Leyendo DNI, teléfono y nombre…',
-        'checking contact fields':'Revisando la zona del DNI…','recognizing contact fields':'Leyendo DNI y teléfono…',
+        'preparing contact fields':'Preparando DNI y teléfono…','contact fields prepared':'Zona del formulario preparada…',
+        'recognizing contact fields':'Leyendo DNI y teléfono…','retrying full image':'Haciendo una segunda lectura completa…',
+        'recognizing fallback':'Completando los datos del contacto…',
         'recognition complete':'Lectura completada.'
       };
       const result=await window.TPFMobileOCR.recognize(state.scanFile,event=>{label.textContent=labels[event.status]||'Preparando el documento…';bar.style.width=`${Math.max(5,Math.round(event.progress*100))}%`;});
-      state.ocrDebugText=result.dni?'':String(result.rawText||'').trim().slice(0,3000);
+      state.ocrDebugText=String(result.rawText||'').trim().slice(0,6000);
       ensureDraft();state.draft.contact={...state.draft.contact,first:result.first||'',last:result.last||'',dni:result.dni||'',phone:result.phone||''};go('detected');
       if(!result.first&&!result.dni&&!result.phone)toast('No se pudieron reconocer los datos. Puedes escribirlos manualmente.','error');
     }catch(error){progress.innerHTML=`<div class="m-duplicate warn">${esc(error?.message||'No se pudo leer la imagen.')} Puedes continuar escribiendo los datos.</div><button class="m-secondary" style="width:100%" data-action="manual-contact">Continuar manualmente</button>`;}
@@ -371,7 +373,7 @@
   function renderDetected(){
     const contact=state.draft.contact;const duplicate=state.draft.duplicates||[];
     const duplicateHtml=duplicate.length?`<div class="m-duplicate warn">Se han encontrado ${duplicate.length} posibles duplicados. Revisa el DNI o el teléfono antes de continuar.</div>`:'<div class="m-duplicate">✓ No se ha encontrado ningún contacto duplicado.</div>';
-    const ocrDetails=!contact.dni&&state.ocrDebugText?`<details class="m-info-card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Ver qué ha leído el documento</summary><p class="m-muted" style="font-size:.72rem">Solo se muestra en este móvil; no se guarda ni se envía.</p><pre style="white-space:pre-wrap;max-height:240px;overflow:auto;font-size:.72rem">${esc(state.ocrDebugText)}</pre></details>`:'';
+    const ocrDetails=state.ocrDebugText?`<details class="m-info-card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Ver qué ha leído el documento</summary><p class="m-muted" style="font-size:.72rem">Solo se muestra en este móvil; no se guarda ni se envía.</p><pre style="white-space:pre-wrap;max-height:240px;overflow:auto;font-size:.72rem">${esc(state.ocrDebugText)}</pre></details>`:'';
     return `<div class="m-page">${pageHead('Datos detectados','scan')}<p class="m-muted">Comprueba la información antes de continuar. Todos los campos se pueden corregir.</p>${duplicateHtml}${contactFields(contact,'draft')}${ocrDetails}<button class="m-primary" style="width:100%;margin-top:18px" data-action="continue-detected">Continuar</button><button class="m-ghost" style="width:100%;margin-top:5px" data-action="check-duplicates">Comprobar duplicados</button><p id="mobileDetectedMsg" class="m-form-msg"></p></div>`;
   }
   async function captureDraftContact(){state.draft.contact=readContactFields('draft');return state.draft.contact;}

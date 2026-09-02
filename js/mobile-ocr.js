@@ -61,15 +61,22 @@
       image.src=url;
     });
   }
-  function canvasJpeg(canvas,quality){
+  function canvasBlob(canvas,type,quality){
     return new Promise((resolve,reject)=>canvas.toBlob(blob=>{
-      if(blob)resolve(blob);else reject(new Error('No se pudo convertir la foto a JPEG.'));
-    },'image/jpeg',quality));
+      if(blob?.size)resolve(blob);else reject(new Error(`No se pudo convertir la foto a ${type==='image/png'?'PNG':'JPEG'}.`));
+    },type,quality));
   }
-  function jpegInput(blob,file,suffix){
+  function canvasJpeg(canvas,quality){
+    return canvasBlob(canvas,'image/jpeg',quality);
+  }
+  function imageInput(blob,file,suffix){
     if(typeof File!=='function')return blob;
     const base=String(file.name||'captura').replace(/\.[^.]+$/,'');
-    return new File([blob],`${base}${suffix||''}.jpg`,{type:'image/jpeg',lastModified:file.lastModified||Date.now()});
+    const png=blob.type==='image/png';
+    return new File([blob],`${base}${suffix||''}.${png?'png':'jpg'}`,{type:png?'image/png':'image/jpeg',lastModified:file.lastModified||Date.now()});
+  }
+  function jpegInput(blob,file,suffix){
+    return imageInput(blob,file,suffix);
   }
   function ratioRect(width,height,leftRatio,topRatio,widthRatio,heightRatio){
     const left=Math.max(0,Math.min(width-1,Math.floor(width*leftRatio)));
@@ -78,11 +85,11 @@
     const bottom=Math.max(top+1,Math.min(height,Math.ceil(height*(topRatio+heightRatio))));
     return {left,top,width:right-left,height:bottom-top};
   }
-  async function prepareOcrSource(file,onProgress,withFormCrop){
+  async function prepareOcrSource(file,onProgress){
     if(!file||typeof file.size!=='number')throw new Error('Selecciona una imagen válida.');
     if(file.type&&!String(file.type).toLowerCase().startsWith('image/'))throw new Error('El archivo seleccionado no es una imagen.');
     report(onProgress,'preparing image',0.03);
-    let decoded,canvas,formCanvas;
+    let decoded,canvas;
     try{
       decoded=await decodeImage(file);
       const maxSide=1800;
@@ -96,46 +103,47 @@
       context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
       context.drawImage(decoded.source,0,0,width,height);
       const jpeg=await canvasJpeg(canvas,.9);
-      // Libera el lienzo grande antes de preparar el recorte: en iPhone evita
-      // mantener dos superficies completas a la vez.
-      canvas.width=1;canvas.height=1;
-
-      let formInput=null;
-      if(withFormCrop){
-        try{
-          const sourceRect=ratioRect(decoded.width,decoded.height,.02,.20,.87,.44);
-          const formScale=Math.min(2,maxSide/Math.max(sourceRect.width,sourceRect.height));
-          const formWidth=Math.max(1,Math.round(sourceRect.width*formScale));
-          const formHeight=Math.max(1,Math.round(sourceRect.height*formScale));
-          if(formWidth<200||formHeight<120)throw new Error('El recorte del documento es demasiado pequeño.');
-          formCanvas=document.createElement('canvas');formCanvas.width=formWidth;formCanvas.height=formHeight;
-          const formContext=formCanvas.getContext('2d',{alpha:false});
-          if(!formContext)throw new Error('No se pudo crear el recorte del documento.');
-          formContext.fillStyle='#fff';formContext.fillRect(0,0,formWidth,formHeight);
-          formContext.imageSmoothingEnabled=true;formContext.imageSmoothingQuality='high';
-          formContext.drawImage(decoded.source,sourceRect.left,sourceRect.top,sourceRect.width,sourceRect.height,0,0,formWidth,formHeight);
-          const formJpeg=await canvasJpeg(formCanvas,.92);
-          if(!formJpeg.size)throw new Error('El recorte del documento está vacío.');
-          formInput=jpegInput(formJpeg,file,'-documento');
-        }catch(cropError){
-          // La lectura general sigue siendo válida si Safari no puede crear el
-          // recorte; recognize() conserva un último fallback sobre toda la foto.
-          console.warn('[TPF OCR] prepare document crop',String(cropError?.message||cropError||'').trim());
-        }
-      }
       report(onProgress,'image prepared',0.08);
-      return {
-        input:jpegInput(jpeg,file,''),
-        formInput
-      };
+      return {input:jpegInput(jpeg,file,'')};
     }finally{
       decoded?.release?.();
       if(canvas){canvas.width=1;canvas.height=1;}
-      if(formCanvas){formCanvas.width=1;formCanvas.height=1;}
+    }
+  }
+  async function prepareFormInput(file){
+    let decoded,canvas;
+    try{
+      decoded=await decodeImage(file);
+      const maxSide=1800;
+      // Incluye las dos disposiciones vistas: formulario alto y formulario
+      // desplazado por la barra del navegador del iPhone.
+      const sourceRect=ratioRect(decoded.width,decoded.height,.02,.14,.87,.72);
+      const scale=Math.min(2,maxSide/Math.max(sourceRect.width,sourceRect.height));
+      const width=Math.max(1,Math.round(sourceRect.width*scale));
+      const height=Math.max(1,Math.round(sourceRect.height*scale));
+      if(width<200||height<120)throw new Error('El recorte del formulario es demasiado pequeño.');
+      canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+      const context=canvas.getContext('2d',{alpha:false});
+      if(!context)throw new Error('No se pudo preparar la zona del formulario.');
+      context.fillStyle='#fff';context.fillRect(0,0,width,height);
+      context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
+      context.drawImage(decoded.source,sourceRect.left,sourceRect.top,sourceRect.width,sourceRect.height,0,0,width,height);
+      let blob;
+      try{
+        // PNG conserva los caracteres pequeños de una pantalla fotografiada.
+        blob=await canvasBlob(canvas,'image/png');
+      }catch(_){
+        // Safari puede rechazar PNG en situaciones de memoria limitada.
+        blob=await canvasJpeg(canvas,.92);
+      }
+      return imageInput(blob,file,'-formulario');
+    }finally{
+      decoded?.release?.();
+      if(canvas){canvas.width=1;canvas.height=1;}
     }
   }
   async function prepareImageForOcr(file,onProgress){
-    return (await prepareOcrSource(file,onProgress,false)).input;
+    return (await prepareOcrSource(file,onProgress)).input;
   }
 
   function tidy(value){return String(value||'').replace(/[|]/g,'I').replace(/\s+/g,' ').trim();}
@@ -308,15 +316,25 @@
     const fullName=personNameCase(nameFromLines(lines));
     return {dni,phone,fullName,...splitName(fullName),rawText:raw};
   }
-  function mergeResults(primary,supplement){
+  function mergeFields(primary,supplement){
     const fullName=primary.fullName||supplement.fullName;
     return {
       dni:primary.dni||supplement.dni,
       phone:primary.phone||supplement.phone,
       fullName,
       ...splitName(fullName),
-      rawText:`LECTURA GENERAL\n${primary.rawText||''}\n\nLECTURA ZONA DOCUMENTO\n${supplement.rawText||''}`
+      rawText:primary.rawText||supplement.rawText||''
     };
+  }
+  function completeContact(result){
+    return Boolean(result?.dni&&result?.phone&&result?.fullName);
+  }
+  function diagnosticResult(result,sections){
+    const rawText=sections.map(section=>{
+      const value=String(section.text||'').trim();
+      return `${section.title}\n${value||section.note||'[sin texto reconocido]'}`;
+    }).join('\n\n');
+    return {...result,rawText};
   }
 
   async function recognize(file,onProgress){
@@ -326,7 +344,7 @@
     let pass='loading';
     let lastProgress=0;
     try{
-      const prepared=await prepareOcrSource(file,onProgress,true);
+      const prepared=await prepareOcrSource(file,onProgress);
       phase='reader';report(onProgress,'loading reader',0.1);
       const api=await load();
       phase='recognition';
@@ -335,9 +353,12 @@
         logger:event=>{
           if(!event?.status)return;
           const value=Math.max(0,Math.min(1,Number(event.progress)||0));
-          const mapped=pass==='loading'?.12+(value*.18):(pass==='document'?.64+(value*.33):.32+(value*.28));
+          const mapped=pass==='loading'?.12+(value*.18):(pass==='document'?.60+(value*.19):(pass==='fallback'?.82+(value*.16):.32+(value*.22)));
           lastProgress=Math.max(lastProgress,mapped);
-          report(onProgress,pass==='document'&&event.status==='recognizing text'?'recognizing contact fields':event.status,lastProgress);
+          const status=event.status==='recognizing text'&&pass==='document'
+            ?'recognizing contact fields'
+            :(event.status==='recognizing text'&&pass==='fallback'?'recognizing fallback':event.status);
+          report(onProgress,status,lastProgress);
         },
         errorHandler:error=>{engineError=String(error?.message||error||'').trim();}
       });
@@ -348,35 +369,52 @@
       const output={text:true,blocks:false,hocr:false,tsv:false};
       const result=await worker.recognize(prepared.input,{},output);
       const primary=extract(result?.data?.text||'');
-      if(primary.dni){report(onProgress,'recognition complete',1);return primary;}
-
-      // No se adivinan números desde el texto general. Solo se reintenta sobre
-      // el recorte que contiene las etiquetas del formulario y se rellenan los
-      // campos que la primera pasada dejó vacíos.
-      try{
-        pass='document';lastProgress=Math.max(lastProgress,.6);
-        report(onProgress,'checking contact fields',lastProgress);
-        await worker.setParameters({tessedit_pageseg_mode:prepared.formInput?(api.PSM?.SINGLE_COLUMN||'4'):(api.PSM?.SPARSE_TEXT||'11')});
-        const formResult=prepared.formInput
-          ?await worker.recognize(prepared.formInput,{},output)
-          :await worker.recognize(prepared.input,{},output);
-        const formText=String(formResult?.data?.text||'');
-        let supplement=extract(formText);
-        // Si Safari decodifica el JPEG pero devuelve una lectura totalmente
-        // vacía, queda un último intento disperso sobre la imagen completa.
-        if(prepared.formInput&&!supplement.dni&&!formText.trim()){
-          await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SPARSE_TEXT||'11'});
-          const sparseResult=await worker.recognize(prepared.input,{},output);
-          supplement=mergeResults(supplement,extract(sparseResult?.data?.text||''));
-        }
-        const merged=mergeResults(primary,supplement);
+      const sections=[{title:'LECTURA GENERAL (PSM3)',text:primary.rawText}];
+      if(completeContact(primary)){
         report(onProgress,'recognition complete',1);
-        return merged;
-      }catch(supplementError){
-        console.warn('[TPF OCR] document region',String(supplementError?.message||supplementError||'').trim());
-        report(onProgress,'recognition complete',1);
-        return primary;
+        return diagnosticResult(primary,sections);
       }
+
+      // Solo se buscan campos ausentes. El segundo pase conserva las etiquetas
+      // del formulario para no confundir teléfonos, contratos ni otros IDs.
+      let merged=primary;
+      try{
+        lastProgress=Math.max(lastProgress,.55);
+        report(onProgress,'preparing contact fields',lastProgress);
+        const formInput=await prepareFormInput(file);
+        lastProgress=Math.max(lastProgress,.58);
+        report(onProgress,'contact fields prepared',lastProgress);
+        pass='document';
+        await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SINGLE_BLOCK||'6'});
+        const formResult=await worker.recognize(formInput,{},output);
+        const formText=String(formResult?.data?.text||'');
+        sections.push({title:'LECTURA FORMULARIO (PSM6)',text:formText});
+        merged=mergeFields(merged,extract(formText));
+      }catch(formError){
+        const message=String(formError?.message||formError||'').trim();
+        console.warn('[TPF OCR] form region',message);
+        sections.push({title:'LECTURA FORMULARIO (PSM6)',note:`[no disponible: ${message||'fallo del recorte'}]`});
+      }
+
+      // Si el recorte no aporta todos los campos, PSM6 sobre la foto completa
+      // ofrece una última vía sin repetir decodificaciones ni crear canvases.
+      if(!completeContact(merged)){
+        try{
+          pass='fallback';lastProgress=Math.max(lastProgress,.81);
+          report(onProgress,'retrying full image',lastProgress);
+          await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SINGLE_BLOCK||'6'});
+          const fallbackResult=await worker.recognize(prepared.input,{},output);
+          const fallbackText=String(fallbackResult?.data?.text||'');
+          sections.push({title:'REINTENTO GENERAL (PSM6)',text:fallbackText});
+          merged=mergeFields(merged,extract(fallbackText));
+        }catch(fallbackError){
+          const message=String(fallbackError?.message||fallbackError||'').trim();
+          console.warn('[TPF OCR] full retry',message);
+          sections.push({title:'REINTENTO GENERAL (PSM6)',note:`[no disponible: ${message||'fallo del reintento'}]`});
+        }
+      }
+      report(onProgress,'recognition complete',1);
+      return diagnosticResult(merged,sections);
     }catch(error){
       const message=String(error?.message||engineError||(typeof error==='string'?error:'')).trim();
       console.warn('[TPF OCR]',phase,message);
@@ -389,5 +427,5 @@
   }
 
   window.TPFMobileOCR={recognize,extract,prepareImageForOcr};
-  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-physical-crop';
+  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-form-fallback';
 })();

@@ -5,9 +5,9 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'../js/mobile-ocr.js'),'utf8');
 assert.match(source,/tessedit_pageseg_mode:api\.PSM\?\.AUTO\|\|'3'/);
-assert.match(source,/api\.PSM\?\.SINGLE_COLUMN\|\|'4'/);
-assert.match(source,/api\.PSM\?\.SPARSE_TEXT\|\|'11'/);
-assert.doesNotMatch(source,/tessedit_pageseg_mode:api\.PSM\?\.SINGLE_BLOCK/);
+assert.match(source,/tessedit_pageseg_mode:api\.PSM\?\.SINGLE_BLOCK\|\|'6'/);
+assert.doesNotMatch(source,/api\.PSM\?\.SINGLE_COLUMN/);
+assert.doesNotMatch(source,/api\.PSM\?\.SPARSE_TEXT/);
 assert.doesNotMatch(source,/recognize\(prepared\.input,\{rectangle/);
 const context={window:{},document:{}};
 vm.createContext(context);
