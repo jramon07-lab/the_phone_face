@@ -1,11 +1,13 @@
 /* TPF physical module split · generated from app-core.js */
 /* ===== Campos personalizados de Contactos ===== */
 let crmCustomFieldsCache=[];
+let crmCustomFieldsLoaded=false;
 
 async function crmLoadCustomFields(){
   const {data,error}=await sb.rpc("crm_list_custom_fields");
   if(error)throw error;
   crmCustomFieldsCache=Array.isArray(data)?data:[];
+  crmCustomFieldsLoaded=true;
   crmRenderCustomFieldsManager();
   crmRenderCreateCustomFields();
   if(currentContact)await crmRenderContactCustomFields(currentContact.id);
@@ -26,7 +28,7 @@ function crmRenderCreateCustomFields(){
 }
 async function crmRenderContactCustomFields(contactId){
   if(!$("contactCustomFields"))return;
-  if(!crmCustomFieldsCache.length)try{await crmLoadCustomFields()}catch(e){}
+  if(!crmCustomFieldsLoaded)try{await crmLoadCustomFields()}catch(e){}
   const {data,error}=await sb.rpc("crm_get_contact_custom_values",{p_contact_id:String(contactId)});
   if(error){$("contactCustomFields").innerHTML='<div class="small">'+esc(error.message)+'</div>';return}
   const map=new Map((data||[]).map(x=>[String(x.field_id),x.value_text||""]));
@@ -78,7 +80,7 @@ window.crmMoveCustomField=async(id,dir)=>{
 
 /* Integración con ficha de contacto */
 const _openContactCustomFields=window.openContact;
-window.openContact=async function(id){const r=await _openContactCustomFields(id);try{await crmLoadCustomFields();await crmRenderContactCustomFields(id)}catch(e){}return r};
+window.openContact=async function(id){const r=await _openContactCustomFields(id);try{await crmLoadCustomFields()}catch(e){}return r};
 
 /* Guardar los campos personalizados al pulsar Guardar cambios */
 const _contactSaveCustomFields=$("contactSave").onclick;
