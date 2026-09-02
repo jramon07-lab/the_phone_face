@@ -113,10 +113,11 @@ function bindUi(){
 }
 
 async function fetchAllContacts(){
- const out=[],size=1000,cap=10000;let extended=true;
- for(let from=0;from<cap;from+=size){
+ const out=[],size=1000;let extended=true;
+ for(let from=0;;from+=size){
   let q=sb.from('records').select(extended?'id,source_sheet,source_row,data,created_at,updated_at':'id,source_sheet,source_row,data').in('source_sheet',SOURCES).range(from,from+size-1);
-  let res=await q;if(res.error&&extended){extended=false;from-=size;continue;}if(res.error)throw res.error;const chunk=res.data||[];out.push(...chunk);if(chunk.length<size)break;
+ let res=await q;if(res.error&&extended){extended=false;from-=size;continue;}if(res.error)throw res.error;const chunk=res.data||[];out.push(...chunk);if(chunk.length<size)break;
+  if(from>0&&from%10000===0)await new Promise(resolve=>setTimeout(resolve,0));
  }
  return out.map(mapRecord).sort((a,b)=>safe(b.updatedAt||b.createdAt).localeCompare(safe(a.updatedAt||a.createdAt))||a.fullName.localeCompare(b.fullName,'es'));
 }

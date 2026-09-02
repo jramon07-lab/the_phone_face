@@ -4,10 +4,13 @@ name: CRM Browser Validation
 on:
   workflow_dispatch:
   deployment_status:
+  schedule:
+    # 05:00 en España peninsular durante horario de verano.
+    - cron: '0 3 * * *'
 
 jobs:
   e2e:
-    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

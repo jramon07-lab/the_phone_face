@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "crons": [{"path":"/api/crm-backup?action=cron","schedule":"30 1,2 * * *"}],
   "routes": [
     {
       "src": "^/ocr-assets/tesseract-5\\.1\\.1/tesseract\\.min\\.js$",
