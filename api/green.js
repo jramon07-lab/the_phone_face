@@ -1,5 +1,114 @@
 let greenStateCache = { at: 0, data: null };
 let greenStateBackoffUntil = 0;
+const greenReadCache = new Map();
+const greenReadInFlight = new Map();
+const greenReadBackoffUntil = new Map();
+const greenMethodQueue = new Map();
+const greenMethodNextAt = new Map();
+
+// GREEN-API aplica los límites por método y por instancia. En especial,
+// getChatHistory y los diarios solo admiten una petición por segundo.
+// Este control se comparte entre todas las peticiones atendidas por una
+// misma función caliente de Vercel y evita ráfagas desde varias pestañas.
+const GREEN_METHOD_SPACING_MS = new Map([
+  ["getSettings", 1100],
+  ["getStateInstance", 1100],
+  ["getChatHistory", 1100],
+  ["lastIncomingMessages", 1100],
+  ["lastOutgoingMessages", 1100],
+  ["getAvatar", 120],
+  ["downloadFile", 220],
+  ["readChat", 120]
+]);
+
+const greenDelay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForGreenMethodSlot(method) {
+  const spacing = Number(GREEN_METHOD_SPACING_MS.get(String(method || "")) || 0);
+  if (!spacing) return;
+
+  const previous = greenMethodQueue.get(method) || Promise.resolve();
+  const turn = previous.catch(() => {}).then(async () => {
+    const wait = Math.max(0, Number(greenMethodNextAt.get(method) || 0) - Date.now());
+    if (wait) await greenDelay(wait);
+    greenMethodNextAt.set(method, Date.now() + spacing);
+  });
+  greenMethodQueue.set(method, turn);
+  try {
+    await turn;
+  } finally {
+    if (greenMethodQueue.get(method) === turn) greenMethodQueue.delete(method);
+  }
+}
+
+function retryAfterMs(headers) {
+  const value = String(headers?.get?.("retry-after") || "").trim();
+  if (!value) return 0;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds * 1000);
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
+}
+
+function pruneGreenReadCache() {
+  if (greenReadCache.size <= 250) return;
+  const oldest = [...greenReadCache.entries()]
+    .sort((a, b) => Number(a[1]?.at || 0) - Number(b[1]?.at || 0))
+    .slice(0, 50);
+  for (const [key] of oldest) greenReadCache.delete(key);
+}
+
+async function cachedGreenRead(key, policy, loader) {
+  const now = Date.now();
+  const freshMs = Math.max(0, Number(policy?.freshMs || 0));
+  const staleMs = Math.max(freshMs, Number(policy?.staleMs || freshMs));
+  const cached = greenReadCache.get(key);
+  const age = cached ? now - Number(cached.at || 0) : Infinity;
+
+  if (cached && age < freshMs) {
+    return { value: cached.value, cached: true, degraded: false, providerStatus: null };
+  }
+
+  const backoffUntil = Number(greenReadBackoffUntil.get(key) || 0);
+  if (cached && age < staleMs && now < backoffUntil) {
+    return { value: cached.value, cached: true, degraded: true, providerStatus: 429 };
+  }
+
+  if (greenReadInFlight.has(key)) return greenReadInFlight.get(key);
+
+  const task = (async () => {
+    try {
+      const value = await loader();
+      greenReadCache.set(key, { at: Date.now(), value });
+      greenReadBackoffUntil.delete(key);
+      pruneGreenReadCache();
+      return { value, cached: false, degraded: false, providerStatus: null };
+    } catch (error) {
+      if (Number(error?.status || 0) === 429) {
+        const wait = Math.max(45000, Number(error?.retryAfterMs || 0));
+        greenReadBackoffUntil.set(key, Date.now() + wait);
+        const stale = greenReadCache.get(key);
+        if (stale && Date.now() - Number(stale.at || 0) < staleMs) {
+          return { value: stale.value, cached: true, degraded: true, providerStatus: 429 };
+        }
+      }
+      throw error;
+    } finally {
+      greenReadInFlight.delete(key);
+    }
+  })();
+
+  greenReadInFlight.set(key, task);
+  return task;
+}
+
+function sendCachedGreenRead(res, result) {
+  return res.status(200).json({
+    ...result.value,
+    ...(result.cached ? { cached: true } : {}),
+    ...(result.degraded ? { degraded: true, providerStatus: result.providerStatus || null } : {})
+  });
+}
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -47,7 +156,7 @@ export default async function handler(req, res) {
     "getStateInstance", "getSettings", "getChats", "getChatHistory",
     "getAvatar", "downloadFile", "receiveNotification"
   ]);
-  const greenSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const greenSleep = greenDelay;
   async function greenTimedFetch(url, opts = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 12000);
@@ -58,11 +167,12 @@ export default async function handler(req, res) {
     }
   }
 
-  async function greenFetchUrl(url, opts = {}) {
+  async function greenFetchUrl(url, opts = {}, greenMethod = "") {
     const retryable = String(opts.method || "GET").toUpperCase() === "GET";
     let lastError;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
+        await waitForGreenMethodSlot(greenMethod);
         const r = await greenTimedFetch(url, opts);
         const text = await r.text();
         let data;
@@ -73,6 +183,8 @@ export default async function handler(req, res) {
           : String(data || r.statusText);
         const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
         err.status = r.status;
+        err.retryAfterMs = retryAfterMs(r.headers);
+        if (greenMethod) err.greenMethod = greenMethod;
         lastError = err;
         if (!(retryable && r.status >= 500 && attempt < 1)) throw err;
       } catch (err) {
@@ -89,6 +201,7 @@ export default async function handler(req, res) {
     let lastError;
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
+        await waitForGreenMethodSlot(method);
         const r = await greenTimedFetch(apiUrl(method), opts);
         const text = await r.text();
         let data;
@@ -100,6 +213,7 @@ export default async function handler(req, res) {
         const err = new Error(msg || `GREEN-API HTTP ${r.status}`);
         err.status = r.status;
         err.greenMethod = method;
+        err.retryAfterMs = retryAfterMs(r.headers);
         lastError = err;
         if (!(retryable && r.status >= 500 && attempt < 1)) throw err;
       } catch (err) {
@@ -214,49 +328,45 @@ export default async function handler(req, res) {
 
     if (req.method === "GET" && action === "summary") {
       const minutes = Math.max(60, Math.min(43200, Number(req.query.minutes || 10080)));
-      const chatsData = await greenFetch("getChats");
-      const chats = Array.isArray(chatsData) ? chatsData.filter(c => c && c.id) : [];
+      const result = await cachedGreenRead(`summary:${minutes}`, { freshMs: 45000, staleMs: 300000 }, async () => {
+        const chatsData = await greenFetch("getChats");
+        const chats = Array.isArray(chatsData) ? chatsData.filter(c => c && c.id) : [];
 
-      const [incoming, outgoing] = await Promise.all([
-        greenFetchUrl(`${apiUrl("lastIncomingMessages")}?minutes=${minutes}`, {method:"GET"}).catch(()=>[]),
-        greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}).catch(()=>[])
-      ]);
+        const [incoming, outgoing] = await Promise.all([
+          greenFetchUrl(`${apiUrl("lastIncomingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastIncomingMessages").catch(()=>[]),
+          greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastOutgoingMessages").catch(()=>[])
+        ]);
 
-      const latest = new Map();
-      for (const msg of [
-        ...(Array.isArray(incoming)?incoming:[]),
-        ...(Array.isArray(outgoing)?outgoing:[])
-      ]) {
-        const chatId = normalizeChatId(msg?.chatId);
-        if (!chatId) continue;
-        const ts = Number(msg?.timestamp || 0);
-        const prev = latest.get(chatId);
-        if (!prev || ts >= Number(prev?.timestamp || 0)) latest.set(chatId,msg);
-      }
+        const latest = new Map();
+        for (const msg of [
+          ...(Array.isArray(incoming)?incoming:[]),
+          ...(Array.isArray(outgoing)?outgoing:[])
+        ]) {
+          const chatId = normalizeChatId(msg?.chatId);
+          if (!chatId) continue;
+          const ts = Number(msg?.timestamp || 0);
+          const prev = latest.get(chatId);
+          if (!prev || ts >= Number(prev?.timestamp || 0)) latest.set(chatId,msg);
+        }
 
-      for (const chat of chats.slice(0,15)) {
-        const chatId=normalizeChatId(chat?.id);
-        if (!chatId || latest.has(chatId)) continue;
-        try {
-          const hist=await greenFetch("getChatHistory",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({chatId,count:1})
-          });
-          if (Array.isArray(hist) && hist[0]) latest.set(chatId,hist[0]);
-        } catch (_) {}
-      }
-
-      return res.status(200).json({
-        ok:true,
-        chats:chats.map(c=>({...c,_lastMessage:latest.get(normalizeChatId(c.id))||null}))
+        // getChats ya aporta su último mensaje cuando está disponible. El
+        // resumen completa los chats recientes con los diarios, pero nunca
+        // dispara una ráfaga adicional de getChatHistory (límite: 1/segundo).
+        return {
+          ok:true,
+          chats:chats.map(c=>({...c,_lastMessage:latest.get(normalizeChatId(c.id))||c.lastMessage||null}))
+        };
       });
+      return sendCachedGreenRead(res, result);
     }
 
     if (req.method === "GET" && action === "chats") {
-      const data = await greenFetch("getChats");
-      const chats = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
-      return res.status(200).json({ ok: true, chats });
+      const result = await cachedGreenRead("chats", { freshMs: 15000, staleMs: 180000 }, async () => {
+        const data = await greenFetch("getChats");
+        const chats = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
+        return { ok: true, chats };
+      });
+      return sendCachedGreenRead(res, result);
     }
 
     if (req.method === "POST" && action === "avatar") {
@@ -350,26 +460,28 @@ export default async function handler(req, res) {
     if (req.method === "POST" && action === "previews") {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const rawIds = Array.isArray(body.chatIds) ? body.chatIds : [];
-      const chatIds = [...new Set(rawIds.map(normalizeChatId).filter(Boolean))].slice(0, 10);
-      const previews = [];
-
-      for (const chatId of chatIds) {
-        try {
-          const data = await greenFetch("getChatHistory", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ chatId, count: 1 })
-          });
-          previews.push({
-            chatId,
-            message: Array.isArray(data) && data.length ? data[0] : null
-          });
-        } catch (e) {
-          previews.push({ chatId, message: null });
+      const chatIds = [...new Set(rawIds.map(normalizeChatId).filter(Boolean))].slice(0, 4);
+      const key = `previews:${chatIds.join(",")}`;
+      const result = await cachedGreenRead(key, { freshMs: 15000, staleMs: 180000 }, async () => {
+        const previews = [];
+        for (const chatId of chatIds) {
+          try {
+            const data = await greenFetch("getChatHistory", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chatId, count: 1 })
+            });
+            previews.push({
+              chatId,
+              message: Array.isArray(data) && data.length ? data[0] : null
+            });
+          } catch (e) {
+            previews.push({ chatId, message: null });
+          }
         }
-      }
-
-      return res.status(200).json({ ok: true, previews });
+        return { ok: true, previews };
+      });
+      return sendCachedGreenRead(res, result);
     }
 
     if (req.method === "POST" && action === "history") {
@@ -378,12 +490,15 @@ export default async function handler(req, res) {
       const count = Math.max(1, Math.min(200, Number(body.count || 100)));
       if (!chatId) return res.status(400).json({ ok: false, error: "Falta chatId." });
 
-      const data = await greenFetch("getChatHistory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, count })
+      const result = await cachedGreenRead(`history:${chatId}:${count}`, { freshMs: 2500, staleMs: 180000 }, async () => {
+        const data = await greenFetch("getChatHistory", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId, count })
+        });
+        return { ok: true, messages: Array.isArray(data) ? data : [] };
       });
-      return res.status(200).json({ ok: true, messages: Array.isArray(data) ? data : [] });
+      return sendCachedGreenRead(res, result);
     }
 
     if (req.method === "POST" && action === "send") {
