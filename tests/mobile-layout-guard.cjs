@@ -67,5 +67,18 @@ assert.match(app,/file\.size>2500000/);
 assert.match(app,/aria-controls="mobileWaActionSheet"/);
 assert.match(app,/type="search" data-wa-filter="\$\{type\}-query"/);
 assert.match(app,/data-wa-filter="\$\{type\}-category" aria-label="Filtrar por categoría"/);
+assert.match(css,/\.m-home-page,\.m-alerts-page\{[^}]*min-width:0;[^}]*max-width:100%/);
+assert.match(css,/\.m-home-metrics\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\);[^}]*min-width:0;[^}]*max-width:100%/);
+assert.match(css,/\.m-home-metric\{[^}]*min-width:0;[^}]*overflow:hidden/);
+assert.match(css,/\.m-home-alert-filters\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\);[^}]*min-width:0;[^}]*max-width:100%/);
+assert.match(css,/\.m-home-priority-row\{[^}]*width:100%;min-width:0;max-width:100%;[^}]*grid-template-columns:34px minmax\(0,1fr\)/);
+assert.match(css,/\.m-alert-filters\{[^}]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\);[^}]*min-width:0;[^}]*max-width:100%/);
+assert.match(css,/\.m-alert-filter\{[^}]*grid-column:span 2;[^}]*min-width:0;[^}]*overflow:hidden/);
+assert.match(css,/\.m-alert-card\{[^}]*width:100%;min-width:0;max-width:100%;[^}]*overflow:hidden/);
+assert.match(css,/\.m-alert-card-head\{[^}]*grid-template-columns:42px minmax\(0,1fr\);[^}]*min-width:0;[^}]*max-width:100%/);
+assert.match(css,/@media\(max-width:360px\)[\s\S]*?\.m-alert-description,\.m-alert-actions,\.m-alert-meta\{margin-left:0\}/);
+assert.match(app,/id="mobileAlertFilters"[^>]*aria-label="Filtrar avisos"/);
+assert.match(app,/id="mobileAlertResultCount"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+assert.match(app,/data-action="alert-more"/);
 
 console.log('mobile horizontal layout guard: ok');

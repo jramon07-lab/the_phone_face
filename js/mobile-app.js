@@ -12,7 +12,7 @@
 
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
-    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',contactQuery:'',contactFilter:'all',contactLimit:60,opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
+    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',alertFilter:'all',alertLimit:40,contactQuery:'',contactFilter:'all',contactLimit:60,opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
     whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
@@ -58,6 +58,9 @@
   const safeDecode=value=>{try{return decodeURIComponent(String(value||''));}catch(_){return String(value||'');}};
   const todayKey=(value=Date.now())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const TASK_FILTERS=['all','pending','today','overdue','completed'];
+  const ALERT_FILTERS=['all','overdue','today','upcoming','tasks','opportunities'];
+  const ALERT_PAGE_SIZE=40;
+  const MADRID_DATE_FORMATTER=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'});
   const CONTACT_FILTERS=['all','opportunities','tasks','untracked','incomplete'];
   const CONTACT_PAGE_SIZE=60;
   const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
@@ -196,7 +199,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();
-    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -220,17 +223,51 @@
     finally{state.loading=false;if(!silent)render();}
   }
   function renderLoading(){const view=byId('mobileView');if(view)view.innerHTML=`<div class="m-page">${skeleton()}</div>`;}
-  function pendingTasks(){return state.tasks.filter(task=>String(task.status||'pending')==='pending');}
-  function noticeStats(){
-    const now=Date.now(),today=todayKey(),pending=pendingTasks();
-    const expiredTasks=pending.filter(task=>new Date(task.starts_at).getTime()<now);
-    const todayTasks=pending.filter(task=>String(task.starts_at||'').slice(0,10)===today);
-    const open=state.board.opportunities.filter(opp=>String(opp.status||'open')==='open');
-    const expiredOpp=open.filter(opp=>opp.expected_date&&opp.expected_date<today);
-    const todayOpp=open.filter(opp=>opp.expected_date===today);
-    return {all:expiredTasks.length+todayTasks.length+expiredOpp.length+todayOpp.length,expired:expiredTasks.length+expiredOpp.length,today:todayTasks.length+todayOpp.length,pending:pending.length,soon:open.filter(opp=>opp.expected_date&&opp.expected_date>today).length};
+  function pendingTasks(){return state.tasks.filter(task=>taskIsPending(task));}
+  function madridDateKey(value=Date.now()){
+    const parsed=new Date(value);if(Number.isNaN(parsed.getTime()))return '';
+    const parts=Object.fromEntries(MADRID_DATE_FORMATTER.formatToParts(parsed).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
   }
-  function updateAlertDot(){byId('mobileAlertDot')?.classList.toggle('hidden',noticeStats().all===0);}
+  function noticeItems(now=Date.now()){
+    const today=madridDateKey(now),stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage])),items=[];
+    pendingTasks().forEach(task=>{
+      const dueAt=new Date(task?.starts_at||'').getTime(),dueKey=madridDateKey(task?.starts_at);if(!Number.isFinite(dueAt)||!dueKey)return;
+      const category=dueAt<Number(now)?'overdue':dueKey===today?'today':'upcoming';
+      items.push({key:`task:${task.id}`,type:'task',category,dueAt,row:task});
+    });
+    (state.board.opportunities||[]).forEach(opp=>{
+      const stage=stages.get(String(opp?.stage_id)),dueKey=opportunityDateKey(opp);if(!dueKey||opportunityIsClosed(opp,stage))return;
+      const category=dueKey<today?'overdue':dueKey===today?'today':'upcoming';
+      items.push({key:`opportunity:${opp.id}`,type:'opportunity',category,dueAt:Date.parse(`${dueKey}T12:00:00Z`),row:opp,stage});
+    });
+    const priority={overdue:0,today:1,upcoming:2};
+    return items.sort((a,b)=>priority[a.category]-priority[b.category]||a.dueAt-b.dueAt||String(a.key).localeCompare(String(b.key)));
+  }
+  function noticeMatchesFilter(item,filter='all'){
+    const active=ALERT_FILTERS.includes(filter)?filter:'all';
+    if(active==='tasks')return item?.type==='task';
+    if(active==='opportunities')return item?.type==='opportunity';
+    if(['overdue','today','upcoming'].includes(active))return item?.category===active;
+    return true;
+  }
+  function noticeFilterCounts(items){
+    const rows=items||[];
+    return {all:rows.length,overdue:rows.filter(item=>item.category==='overdue').length,today:rows.filter(item=>item.category==='today').length,upcoming:rows.filter(item=>item.category==='upcoming').length,tasks:rows.filter(item=>item.type==='task').length,opportunities:rows.filter(item=>item.type==='opportunity').length};
+  }
+  function noticeListModel(filter=state.alertFilter,now=Date.now()){
+    const items=noticeItems(now),active=ALERT_FILTERS.includes(filter)?filter:'all';
+    return {items,rows:items.filter(item=>noticeMatchesFilter(item,active)),counts:noticeFilterCounts(items),active};
+  }
+  function noticeStats(now=Date.now(),model=null){
+    const current=model||noticeListModel('all',now),counts=current.counts;
+    return {...counts,expired:counts.overdue,pending:pendingTasks().length,soon:counts.upcoming,urgent:counts.overdue+counts.today};
+  }
+  function homeDashboardStats(now=Date.now()){
+    const stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage])),opportunities=state.board.opportunities||[],month=filterOpportunities(opportunities,'month',now,stages);
+    return {contacts:(state.contacts||[]).length,opportunities:opportunities.length,month:month.length,monthAmount:month.reduce((total,opp)=>{const amount=Number(opp?.amount);return total+(Number.isFinite(amount)?amount:0);},0),tasks:pendingTasks().length};
+  }
+  function updateAlertDot(){byId('mobileAlertDot')?.classList.toggle('hidden',noticeStats().urgent===0);}
 
   function render(){
     if(!state.user||byId('mobileApp').classList.contains('hidden'))return;
@@ -269,14 +306,28 @@
     byId('mobileAdd').classList.toggle('active',group==='add');
   }
 
+  function homePriorityRow(item){
+    const row=item.row,isTask=item.type==='task',contact=isTask&&state.contacts.find(value=>String(value.id)===String(row.related_record_id));
+    const action=isTask?(contact?`data-action="route" data-route="contact/${esc(contact.id)}"`:'data-action="open-tasks" data-filter="pending"'):`data-action="route" data-route="opportunity/${esc(row.id)}"`;
+    const title=isTask?(row.title||'Tarea'):(row.title||'Oportunidad'),detail=isTask?`${row.customer_name||contact?.fullName||'Sin contacto'} · ${dateTime(row.starts_at)}`:`${row.client_name||'Sin contacto'} · ${opportunityDateLabel(row)}`;
+    const label=item.category==='overdue'?'Vencido':item.category==='today'?'Hoy':'Próximo';
+    return `<button class="m-home-priority-row" ${action} type="button"><span class="m-home-priority-icon">${isTask?'▣':'◇'}</span><span class="m-home-priority-main"><strong>${esc(title)}</strong><small>${esc(detail)}</small></span><span class="m-home-priority-badge ${item.category}">${label}</span></button>`;
+  }
   function renderHome(){
-    const stats=noticeStats();const name=clean(state.perms?.display_name||state.user?.email?.split('@')[0]||'Ramón').split(' ')[0];
-    return `<div class="m-page">
-      <h1 class="m-greeting">Hola, ${esc(name)}</h1><p class="m-subtitle">Bienvenido de nuevo</p>
-      <button class="m-notice-card" data-action="route" data-route="alerts" type="button" style="width:100%;color:inherit;text-align:left">
-        <div class="m-notice-head"><strong>♧ Centro de avisos</strong><span>›</span></div>
-        <div class="m-notice-grid"><div><b>${stats.all}</b><small>Todos</small></div><div><b>${stats.expired}</b><small>Vencidos</small></div><div><b>${stats.today}</b><small>Hoy</small></div><div class="wide"><span><b>${stats.pending}</b><small>Sin completar</small></span><span><b>${stats.soon}</b><small>Próximos</small></span></div></div>
-      </button>
+    const now=Date.now(),notices=noticeListModel('all',now),stats=noticeStats(now,notices),dashboard=homeDashboardStats(now);const name=clean(state.perms?.display_name||state.user?.email?.split('@')[0]||'Ramón').split(' ')[0];
+    const updated=state.lastRefresh?new Date(state.lastRefresh).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):'—';
+    const urgent=notices.items.filter(item=>item.category!=='upcoming').slice(0,3);
+    return `<div class="m-page m-home-page">
+      <div class="m-home-welcome"><div><h1 class="m-greeting">Hola, ${esc(name)}</h1><p class="m-subtitle">Actualizado a las ${esc(updated)}</p></div><button class="m-home-refresh" data-action="refresh" type="button" aria-label="Actualizar datos">↻</button></div>
+      <h2 class="m-section-title m-home-section-title">Resumen</h2><div class="m-home-metrics">
+        <button class="m-home-metric" data-action="route" data-route="contacts" type="button"><span>Contactos</span><b>${dashboard.contacts}</b><small>registrados</small><i>♙</i></button>
+        <button class="m-home-metric" data-action="route" data-route="opportunities" type="button"><span>Oportunidades</span><b>${dashboard.opportunities}</b><small>en el CRM</small><i>◇</i></button>
+        <button class="m-home-metric purple" data-action="open-opportunities" data-filter="month" type="button"><span>Este mes</span><b>${dashboard.month}</b><small>${esc(money(dashboard.monthAmount))}</small><i>◎</i></button>
+        <button class="m-home-metric green" data-action="open-tasks" data-filter="pending" type="button"><span>Tareas pendientes</span><b>${dashboard.tasks}</b><small>sin completar</small><i>▣</i></button>
+      </div>
+      <section class="m-home-alerts"><div class="m-home-card-head"><div><h2>Centro de avisos</h2><p><b>${stats.urgent}</b> ${stats.urgent===1?'requiere':'requieren'} atención</p></div><button data-action="open-alerts" data-filter="all" type="button">Ver todos ›</button></div><div class="m-home-alert-filters">
+        <button data-action="open-alerts" data-filter="overdue" type="button"><span>Vencidos</span><b>${stats.overdue}</b></button><button data-action="open-alerts" data-filter="today" type="button"><span>Hoy</span><b>${stats.today}</b></button><button data-action="open-alerts" data-filter="upcoming" type="button"><span>Próximos</span><b>${stats.upcoming}</b></button>
+      </div><div class="m-home-priority">${urgent.length?urgent.map(homePriorityRow).join(''):'<p class="m-home-clear">✓ No tienes avisos urgentes.</p>'}</div></section>
       <h2 class="m-section-title">Accesos rápidos</h2>
       <div class="m-quick-grid">
         <button class="m-quick" data-action="route" data-route="contacts"><span>♙</span><small>Contactos</small></button>
@@ -536,12 +587,37 @@
     finally{if(button)button.disabled=false;}
   }
 
+  function renderAlertFilters(counts,active=state.alertFilter){
+    const options=[['all','Todos'],['overdue','Vencidos'],['today','Hoy'],['upcoming','Próximos'],['tasks','Tareas'],['opportunities','Ventas']];
+    return options.map(([key,label])=>`<button class="m-alert-filter ${active===key?'active':''}" data-action="alert-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
+  }
+  function alertCard(item){
+    const row=item.row,label=item.category==='overdue'?'Vencida':item.category==='today'?'Hoy':'Próxima';
+    if(item.type==='task'){
+      const contact=state.contacts.find(value=>String(value.id)===String(row.related_record_id));
+      return `<article class="m-alert-card m-alert-task"><div class="m-alert-card-head"><span class="m-avatar">▣</span><span class="m-alert-main"><strong>${esc(row.title||'Tarea')}</strong><small>${esc(row.customer_name||contact?.fullName||'Sin contacto')} · ${esc(dateTime(row.starts_at))}</small></span><span class="m-alert-badge ${item.category}">${label}</span></div>${row.description?`<p class="m-alert-description">${esc(row.description)}</p>`:''}<div class="m-alert-actions">${has('can_manage_agenda')?`<button class="m-secondary" data-action="complete-task" data-id="${esc(row.id)}" type="button">Completar</button>`:''}${contact?`<button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver contacto</button>`:'<button class="m-secondary" data-action="open-tasks" data-filter="pending" type="button">Ver tareas</button>'}</div></article>`;
+    }
+    return `<button class="m-alert-card m-alert-opportunity" data-action="route" data-route="opportunity/${esc(row.id)}" type="button"><span class="m-alert-card-head"><span class="m-avatar">◇</span><span class="m-alert-main"><strong>${esc(row.title||'Oportunidad')}</strong><small>${esc(row.client_name||'Sin contacto')} · cierre ${esc(opportunityDateLabel(row))}</small></span><span class="m-alert-badge ${item.category}">${label}</span></span><span class="m-alert-meta"><span><small>Importe</small><b>${row.amount!=null?esc(money(row.amount)):'Sin importe'}</b></span><span><small>Columna</small><b>${esc(item.stage?.name||'Sin columna')}</b></span></span></button>`;
+  }
+  function alertResultText(model){
+    const shown=Math.min(model.rows.length,Math.max(ALERT_PAGE_SIZE,state.alertLimit||ALERT_PAGE_SIZE));
+    return shown<model.rows.length?`Mostrando ${shown} de ${model.rows.length} avisos`:`${model.rows.length} ${model.rows.length===1?'aviso':'avisos'}`;
+  }
+  function alertRowsHtml(model){
+    const shown=model.rows.slice(0,Math.max(ALERT_PAGE_SIZE,state.alertLimit||ALERT_PAGE_SIZE));
+    if(shown.length)return `<div class="m-alert-list">${shown.map(alertCard).join('')}</div>${shown.length<model.rows.length?`<button class="m-secondary m-alert-more" data-action="alert-more" type="button">Mostrar ${Math.min(ALERT_PAGE_SIZE,model.rows.length-shown.length)} más</button>`:''}`;
+    if(!model.items.length)return empty('Todo al día','No hay tareas ni oportunidades con fecha pendiente.');
+    return empty('Sin avisos en este filtro','Prueba con otro filtro.');
+  }
   function renderAlerts(){
-    const now=Date.now(),today=todayKey();
-    const taskRows=pendingTasks().filter(task=>new Date(task.starts_at).getTime()<now||String(task.starts_at||'').slice(0,10)===today);
-    const oppRows=state.board.opportunities.filter(opp=>String(opp.status||'open')==='open'&&opp.expected_date&&opp.expected_date<=today);
-    const cards=[...taskRows.map(taskCard),...oppRows.map(opportunityCard)];
-    return `<div class="m-page">${pageHead('Centro de avisos','home')}${cards.length?`<div class="m-list">${cards.join('')}</div>`:empty('Todo al día','No hay avisos vencidos ni para hoy.')}</div>`;
+    const model=noticeListModel();
+    return `<div class="m-page m-alerts-page">${pageHead('Centro de avisos','home','<button class="m-back" data-action="refresh" type="button" aria-label="Actualizar avisos">↻</button>')}<div id="mobileAlertFilters" class="m-alert-filters" role="group" aria-label="Filtrar avisos">${renderAlertFilters(model.counts,model.active)}</div><p id="mobileAlertResultCount" class="m-alert-result-count" aria-live="polite" aria-atomic="true">${alertResultText(model)}</p><div id="mobileAlertsList">${alertRowsHtml(model)}</div></div>`;
+  }
+  function updateAlertResults(){
+    const model=noticeListModel(),filters=byId('mobileAlertFilters'),count=byId('mobileAlertResultCount'),list=byId('mobileAlertsList');
+    if(filters)filters.innerHTML=renderAlertFilters(model.counts,model.active);
+    if(count)count.textContent=alertResultText(model);
+    if(list)list.innerHTML=alertRowsHtml(model);
   }
 
   function ensureDraft(){
@@ -1013,7 +1089,7 @@
 
   function bindStaticEvents(){
     byId('mobileLoginForm').addEventListener('submit',signIn);
-    byId('mobileBrand').onclick=()=>go('home');byId('mobileAlerts').onclick=()=>go('alerts');byId('mobileMenu').onclick=()=>go('more');byId('mobileAdd').onclick=()=>{resetDraft();go('scan');};
+    byId('mobileBrand').onclick=()=>go('home');byId('mobileAlerts').onclick=()=>{state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;go('alerts');};byId('mobileMenu').onclick=()=>go('more');byId('mobileAdd').onclick=()=>{resetDraft();go('scan');};
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.onclick=()=>go(button.dataset.mobileRoute));
     byId('mobileCameraInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
     byId('mobileGalleryInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
@@ -1052,6 +1128,11 @@
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
     if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
+    if(action==='open-tasks'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'pending';go('tasks');}
+    if(action==='open-opportunities'){state.opportunityQuery='';state.opportunityStage='';state.opportunityFilter=OPPORTUNITY_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';go('opportunities');}
+    if(action==='open-alerts'){state.alertFilter=ALERT_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.alertLimit=ALERT_PAGE_SIZE;go('alerts');}
+    if(action==='alert-filter'){state.alertFilter=ALERT_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.alertLimit=ALERT_PAGE_SIZE;updateAlertResults();}
+    if(action==='alert-more'){state.alertLimit+=ALERT_PAGE_SIZE;updateAlertResults();}
     if(action==='contact-filter'){state.contactFilter=CONTACT_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.contactLimit=CONTACT_PAGE_SIZE;updateContactResults();}
     if(action==='contact-more'){state.contactLimit+=CONTACT_PAGE_SIZE;updateContactResults();}
     if(action==='opportunity-filter'){state.opportunityFilter=OPPORTUNITY_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';updateOpportunityResults();}
