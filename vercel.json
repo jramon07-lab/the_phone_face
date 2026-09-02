@@ -2,6 +2,10 @@
   "version": 2,
   "routes": [
     {
+      "src": "^/movil/?$",
+      "dest": "/movil/index.html"
+    },
+    {
       "src": "^/$",
       "dest": "/api/final-fix"
     },

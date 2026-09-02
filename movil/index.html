@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#07131f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Phone Face CRM">
+  <title>The Phone Face CRM · Móvil</title>
+  <link rel="stylesheet" href="/assets/mobile.css?v=20260902-01">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div id="mobileBoot" class="m-boot" aria-live="polite">
+    <div class="m-brand-mark" aria-hidden="true"><span></span></div>
+    <strong>The Phone Face CRM</strong>
+    <div class="m-spinner"></div>
+  </div>
+
+  <main id="mobileLogin" class="m-login hidden" data-testid="mobile-login">
+    <section class="m-login-card">
+      <div class="m-login-logo"><div class="m-brand-mark"><span></span></div></div>
+      <p class="m-kicker">THE PHONE FACE</p>
+      <h1>CRM móvil</h1>
+      <p class="m-muted">Entra con la misma cuenta que utilizas en el CRM.</p>
+      <form id="mobileLoginForm" novalidate>
+        <label>Correo electrónico<input id="mobileEmail" type="email" inputmode="email" autocomplete="username" autocapitalize="none" required></label>
+        <label>Contraseña<input id="mobilePassword" type="password" autocomplete="current-password" required></label>
+        <button id="mobileSignIn" class="m-primary" type="submit">Entrar</button>
+      </form>
+      <p id="mobileLoginMsg" class="m-form-msg" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <div id="mobileApp" class="m-app hidden" data-testid="mobile-app">
+    <header class="m-header">
+      <button id="mobileMenu" class="m-icon-button" type="button" aria-label="Más opciones">
+        <span class="m-menu-lines" aria-hidden="true"></span>
+      </button>
+      <button id="mobileBrand" class="m-header-brand" type="button" aria-label="Ir al inicio">
+        <span class="m-brand-mini" aria-hidden="true"></span><strong>The Phone Face CRM</strong>
+      </button>
+      <button id="mobileAlerts" class="m-icon-button" type="button" aria-label="Ver avisos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>
+        <span id="mobileAlertDot" class="m-alert-dot hidden"></span>
+      </button>
+    </header>
+
+    <section id="mobileView" class="m-view" aria-live="polite"></section>
+
+    <nav class="m-bottom-nav" aria-label="Navegación principal">
+      <button data-mobile-route="home" type="button"><span>⌂</span><small>Inicio</small></button>
+      <button data-mobile-route="contacts" type="button"><span>♙</span><small>Contactos</small></button>
+      <button id="mobileAdd" class="m-nav-add" type="button" aria-label="Crear o escanear contacto"><span>＋</span></button>
+      <button data-mobile-route="opportunities" type="button"><span>◇</span><small>Ventas</small></button>
+      <button data-mobile-route="more" type="button"><span>•••</span><small>Más</small></button>
+    </nav>
+  </div>
+
+  <div id="mobileToast" class="m-toast hidden" role="status" aria-live="polite"></div>
+  <input id="mobileCameraInput" class="m-visually-hidden" type="file" accept="image/*" capture="environment">
+  <input id="mobileGalleryInput" class="m-visually-hidden" type="file" accept="image/*">
+
+  <script src="/js/mobile-ocr.js?v=20260902-01"></script>
+  <script src="/js/mobile-app.js?v=20260902-01"></script>
+</body>
+</html>
