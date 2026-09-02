@@ -13,6 +13,7 @@
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
     loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',alertFilter:'all',alertLimit:40,contactQuery:'',contactFilter:'all',contactLimit:60,opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
+    agenda:{date:'',rows:[],loading:false,loaded:false,error:'',requestId:0},
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
     whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
@@ -199,7 +200,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();
-    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -218,7 +219,7 @@
       if(contacts.error)throw contacts.error;if(board.error)throw board.error;if(tasks.error)throw tasks.error;
       state.contacts=(contacts.data||[]).map(mapContact);
       state.board={stages:board.data?.stages||[],opportunities:board.data?.opportunities||[],fields:board.data?.fields||[]};
-      state.tasks=tasks.data||[];state.lastRefresh=Date.now();updateAlertDot();
+      state.tasks=tasks.data||[];state.agenda.loaded=false;state.lastRefresh=Date.now();updateAlertDot();
     }catch(error){toast(error?.message||'No se pudieron actualizar los datos.','error');}
     finally{state.loading=false;if(!silent)render();}
   }
@@ -282,6 +283,7 @@
         case 'opportunities':view.innerHTML=renderOpportunities();bindOpportunityFilters();break;
         case 'opportunity':view.innerHTML=renderOpportunity(current.parts[1]);break;
         case 'tasks':view.innerHTML=renderTasks();break;
+        case 'agenda':view.innerHTML=renderAgenda();bindAgendaDate();ensureAgendaDayLoaded(agendaSelectedDate());break;
         case 'new-task':view.innerHTML=renderNewTask(current.parts[1]);break;
         case 'new-contact-opportunity':view.innerHTML=renderContactOpportunity(current.parts[1]);break;
         case 'whatsapp':view.innerHTML=renderMobileWhatsApp();initMobileWhatsAppList();break;
@@ -333,7 +335,7 @@
         <button class="m-quick" data-action="route" data-route="contacts"><span>♙</span><small>Contactos</small></button>
         <button class="m-quick" data-action="route" data-route="opportunities"><span>◇</span><small>Oportunidades</small></button>
         <button class="m-quick" data-action="route" data-route="tasks"><span>▣</span><small>Tareas</small></button>
-        <button class="m-quick" data-action="open-desktop"><span>◷</span><small>Agenda</small></button>
+        <button class="m-quick" data-action="route" data-route="agenda"><span>◷</span><small>Agenda</small></button>
         <button class="m-quick" data-action="route" data-route="whatsapp"><span>◉</span><small>WhatsApp</small></button>
         <button class="m-quick" data-action="open-desktop"><span>▤</span><small>Plantillas</small></button>
       </div>
@@ -541,6 +543,81 @@
     const now=Date.now(),rows=filterTasks(allRows,active,now),filters=renderTaskFilters(taskFilterCounts(allRows,now),active);
     const content=rows.length?`<div class="m-list">${rows.map(taskCard).join('')}</div>`:empty(allRows.length?'Sin tareas en este filtro':'Sin tareas',allRows.length?'Prueba con otro filtro.':'No hay tareas pendientes ni completadas.');
     return `<div class="m-page">${pageHead('Tareas','home')}${filters}${content}</div>`;
+  }
+  function validAgendaDateKey(value){
+    const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(value));if(!match)return false;
+    const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]),parsed=new Date(Date.UTC(year,month-1,day,12));
+    return parsed.getUTCFullYear()===year&&parsed.getUTCMonth()===month-1&&parsed.getUTCDate()===day;
+  }
+  function shiftAgendaDateKey(value,days){
+    const base=validAgendaDateKey(value)?value:madridDateKey(),[year,month,day]=base.split('-').map(Number),parsed=new Date(Date.UTC(year,month-1,day+Number(days||0),12));
+    return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth()+1).padStart(2,'0')}-${String(parsed.getUTCDate()).padStart(2,'0')}`;
+  }
+  function agendaSelectedDate(current=route(),now=Date.now()){
+    const requested=clean(current?.query?.get?.('date'));return validAgendaDateKey(requested)?requested:madridDateKey(now);
+  }
+  function agendaDateLabel(value){
+    const parsed=new Date(`${value}T12:00:00Z`),label=parsed.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid',weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    return label.charAt(0).toUpperCase()+label.slice(1);
+  }
+  function madridOffsetAt(value){
+    const parsed=new Date(value),formatter=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});
+    const parts=Object.fromEntries(formatter.formatToParts(parsed).filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+    return Date.UTC(Number(parts.year),Number(parts.month)-1,Number(parts.day),Number(parts.hour),Number(parts.minute),Number(parts.second))-parsed.getTime();
+  }
+  function madridMidnight(value){
+    const [year,month,day]=value.split('-').map(Number),wallTime=Date.UTC(year,month-1,day),first=wallTime-madridOffsetAt(wallTime);
+    return new Date(wallTime-madridOffsetAt(first));
+  }
+  function agendaDayUtcRange(value){
+    const selected=validAgendaDateKey(value)?value:madridDateKey(),next=shiftAgendaDateKey(selected,1);
+    return {start:madridMidnight(selected).toISOString(),end:madridMidnight(next).toISOString()};
+  }
+  const agendaDateTime=value=>{if(!value)return 'Sin fecha';const parsed=new Date(value);return Number.isNaN(parsed.getTime())?'Sin fecha':parsed.toLocaleString('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
+  function agendaListModel(value=agendaSelectedDate(),tasks=state.tasks){
+    const selected=validAgendaDateKey(value)?value:madridDateKey(),rows=(tasks||[]).filter(task=>madridDateKey(task?.starts_at)===selected).sort((a,b)=>String(a.starts_at||'').localeCompare(String(b.starts_at||'')));
+    return {selected,rows,pending:rows.filter(task=>taskIsPending(task)).length,completed:rows.filter(task=>taskIsCompleted(task)).length,cancelled:rows.filter(task=>taskStatus(task)==='cancelled').length};
+  }
+  function agendaTaskCard(task){
+    const status=taskStatus(task),overdue=status==='pending'&&task.starts_at&&new Date(task.starts_at).getTime()<Date.now(),label=status==='completed'?'Completada':status==='cancelled'?'Cancelada':overdue?'Vencida':'Pendiente',badge=status==='completed'?'':status==='cancelled'?'purple':overdue?'red':'amber';
+    return `<article class="m-list-card m-task-card"><div class="m-list-row"><span class="m-avatar">▣</span><span class="m-list-main"><strong>${esc(task.title||'Tarea')}</strong><small>${esc(task.customer_name||'Sin contacto')} · ${esc(agendaDateTime(task.starts_at))}</small></span><span class="m-badge ${badge}">${label}</span></div>${task.description?`<p class="m-muted" style="font-size:.75rem;margin:10px 0 0">${esc(task.description)}</p>`:''}${status==='pending'&&has('can_manage_agenda')?`<div class="m-task-actions"><button class="m-secondary" data-action="complete-task" data-id="${esc(task.id)}">Marcar completada</button>${task.related_record_id?`<button class="m-secondary" data-action="route" data-route="contact/${esc(task.related_record_id)}">Ver contacto</button>`:''}</div>`:''}</article>`;
+  }
+  async function loadAgendaDay(value){
+    if(!client||(!has('can_view_agenda')&&!has('can_manage_agenda'))||!validAgendaDateKey(value))return;
+    const requestId=state.agenda.requestId+1;state.agenda={date:value,rows:[],loading:true,loaded:false,error:'',requestId};
+    try{
+      const range=agendaDayUtcRange(value),result=await client.from('agenda_items').select('id,title,description,customer_name,customer_phone,starts_at,reminder_at,assigned_to,related_record_id,status,whatsapp_enabled,created_at').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').gte('starts_at',range.start).lt('starts_at',range.end).order('starts_at',{ascending:true}).limit(1000);
+      if(result.error)throw result.error;if(state.agenda.requestId!==requestId)return;state.agenda.rows=result.data||[];
+    }catch(error){
+      if(state.agenda.requestId!==requestId)return;state.agenda.rows=agendaListModel(value,state.tasks).rows;state.agenda.error=error?.message||'No se pudo actualizar este día.';
+    }finally{
+      if(state.agenda.requestId!==requestId)return;state.agenda.loading=false;state.agenda.loaded=true;const current=route();if(current.parts[0]==='agenda'&&agendaSelectedDate(current)===value)render();
+    }
+  }
+  function ensureAgendaDayLoaded(value){
+    if(state.agenda.date===value&&(state.agenda.loading||state.agenda.loaded))return;
+    loadAgendaDay(value);
+  }
+  function renderAgenda(){
+    if(!has('can_view_agenda')&&!has('can_manage_agenda'))return `<div class="m-page m-agenda-page">${pageHead('Agenda')}${empty('Acceso restringido','No tienes permiso para ver la agenda.')}</div>`;
+    const selected=agendaSelectedDate(),ready=state.agenda.date===selected&&state.agenda.loaded,model=agendaListModel(selected,ready?state.agenda.rows:[]),today=madridDateKey(),previous=shiftAgendaDateKey(model.selected,-1),next=shiftAgendaDateKey(model.selected,1),isToday=model.selected===today;
+    const content=!ready?skeleton():model.rows.length?`<div class="m-list m-agenda-list">${model.rows.map(agendaTaskCard).join('')}</div>`:empty('Día libre','No hay tareas ni recordatorios para este día.');
+    const warning=ready&&state.agenda.error?`<div class="m-duplicate warn">${esc(state.agenda.error)} Se muestran los datos disponibles.</div>`:'';
+    return `<div class="m-page m-agenda-page">${pageHead('Agenda','home','<button class="m-back" data-action="refresh" type="button" aria-label="Actualizar agenda">↻</button>')}
+      <section class="m-agenda-picker" aria-label="Seleccionar día de la agenda">
+        <button class="m-agenda-arrow" data-action="agenda-day" data-date="${previous}" type="button" aria-label="Día anterior">‹</button>
+        <label class="m-agenda-date"><span>Fecha</span><input id="mobileAgendaDate" type="date" value="${model.selected}" aria-label="Fecha de la agenda"></label>
+        <button class="m-agenda-arrow" data-action="agenda-day" data-date="${next}" type="button" aria-label="Día siguiente">›</button>
+      </section>
+      <div class="m-agenda-day-head"><div><small>${isToday?'Hoy':'Día seleccionado'}</small><h2>${esc(agendaDateLabel(model.selected))}</h2></div>${isToday?'':`<button class="m-secondary" data-action="agenda-day" data-date="${today}" type="button">Hoy</button>`}</div>
+      <div class="m-agenda-summary"><span><small>Recordatorios</small><b>${model.rows.length}</b></span><span><small>Pendientes</small><b>${model.pending}</b></span><span><small>Completados</small><b>${model.completed}</b></span><span><small>Cancelados</small><b>${model.cancelled}</b></span></div>
+      ${warning}${content}
+      <button class="m-secondary m-agenda-all" data-action="route" data-route="tasks" type="button">Ver todas las tareas</button>
+    </div>`;
+  }
+  function bindAgendaDate(){
+    const input=byId('mobileAgendaDate');if(!input)return;
+    input.onchange=()=>{if(validAgendaDateKey(input.value))go(`agenda?date=${input.value}`,true);};
   }
   async function completeTask(id){
     if(!has('can_manage_agenda')||!confirm('¿Marcar esta tarea como completada?'))return;
@@ -1128,6 +1205,7 @@
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
     if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
+    if(action==='agenda-day'&&validAgendaDateKey(target.dataset.date))go(`agenda?date=${target.dataset.date}`,true);
     if(action==='open-tasks'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'pending';go('tasks');}
     if(action==='open-opportunities'){state.opportunityQuery='';state.opportunityStage='';state.opportunityFilter=OPPORTUNITY_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';go('opportunities');}
     if(action==='open-alerts'){state.alertFilter=ALERT_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.alertLimit=ALERT_PAGE_SIZE;go('alerts');}
