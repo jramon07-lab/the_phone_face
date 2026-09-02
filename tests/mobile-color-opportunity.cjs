@@ -50,7 +50,7 @@ assert.match(appSource,/if\(includeOpportunity&&!state\.createdOpportunityId\)/)
 assert.match(appSource,/includeOpportunity\?'Confirmar y crear':'Crear solo contacto'/);
 
 const mobileHtml=fs.readFileSync(path.join(__dirname,'../movil/index.html'),'utf8');
-assert.match(mobileHtml,/mobile\.css\?v=20260902-02/);
+assert.match(mobileHtml,/mobile\.css\?v=20260902-03/);
 assert.match(mobileHtml,/mobile-ocr\.js\?v=20260902-14/);
 assert.match(mobileHtml,/mobile-app\.js\?v=20260902-07/);
 
