@@ -4,6 +4,8 @@ const path=require('node:path');
 const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'../js/mobile-ocr.js'),'utf8');
+assert.match(source,/tessedit_pageseg_mode:api\.PSM\?\.AUTO\|\|'3'/);
+assert.doesNotMatch(source,/tessedit_pageseg_mode:api\.PSM\?\.SINGLE_BLOCK/);
 const context={window:{},document:{}};
 vm.createContext(context);
 vm.runInContext(source,context);

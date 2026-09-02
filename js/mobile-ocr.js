@@ -278,7 +278,9 @@
         logger:event=>{if(event?.status)report(onProgress,event.status,event.progress);},
         errorHandler:error=>{engineError=String(error?.message||error||'').trim();}
       });
-      await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SINGLE_BLOCK||'6'});
+      // AUTO separa los campos del formulario; SINGLE_BLOCK los mezcla en iPhone
+      // y puede hacer desaparecer por completo la fila del DNI.
+      await worker.setParameters({tessedit_pageseg_mode:api.PSM?.AUTO||'3'});
       const result=await worker.recognize(input,{}, {text:true,blocks:false,hocr:false,tsv:false});
       return extract(result?.data?.text||'');
     }catch(error){
