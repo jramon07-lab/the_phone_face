@@ -5,6 +5,7 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'../js/mobile-ocr.js'),'utf8');
 assert.match(source,/tessedit_pageseg_mode:api\.PSM\?\.AUTO\|\|'3'/);
+assert.match(source,/tessedit_pageseg_mode:api\.PSM\?\.SINGLE_COLUMN\|\|'4'/);
 assert.doesNotMatch(source,/tessedit_pageseg_mode:api\.PSM\?\.SINGLE_BLOCK/);
 const context={window:{},document:{}};
 vm.createContext(context);
@@ -31,9 +32,9 @@ LA SINFÍN GB ILIMITADOS CONV
 const result=context.window.TPFMobileOCR.extract(noisyScreen);
 assert.equal(result.dni,'43161930S');
 assert.equal(result.phone,'858718773');
-assert.equal(result.fullName,'MARIA VANESA CORTES');
-assert.equal(result.first,'MARIA');
-assert.equal(result.last,'VANESA CORTES');
+assert.equal(result.fullName,'Maria Vanesa Cortes');
+assert.equal(result.first,'Maria');
+assert.equal(result.last,'Vanesa Cortes');
 assert.ok(!JSON.stringify({dni:result.dni,phone:result.phone,fullName:result.fullName}).includes('YGC25041122282164'));
 assert.notEqual(result.phone,'642284966');
 
@@ -47,7 +48,7 @@ Datos compartidos
 `);
 assert.equal(reordered.dni,'43161930S');
 assert.equal(reordered.phone,'858718773');
-assert.equal(reordered.fullName,'MARIA VANESA CORTES');
+assert.equal(reordered.fullName,'Maria Vanesa Cortes');
 
 const noiseOnly=context.window.TPFMobileOCR.extract(`
 YGC25041122282164
@@ -68,7 +69,7 @@ BÚSQUEDA
 =. MARIA VANESA CORTES “A
 Datos compartidos
 `);
-assert.equal(markedName.fullName,'MARIA VANESA CORTES');
+assert.equal(markedName.fullName,'Maria Vanesa Cortes');
 
 const cameraOcr=context.window.TPFMobileOCR.extract(`
 myCRM Busqueda
@@ -87,7 +88,7 @@ LA SINFIN GB ILIMITADOS CONV
 `);
 assert.equal(cameraOcr.dni,'43161930S');
 assert.equal(cameraOcr.phone,'858718773');
-assert.equal(cameraOcr.fullName,'MARIA VANESA CORTES');
+assert.equal(cameraOcr.fullName,'Maria Vanesa Cortes');
 
 const embeddedNoise=context.window.TPFMobileOCR.extract(`
 Documento
@@ -158,7 +159,7 @@ Datos compartidos
 `);
 assert.equal(documenteOcr.dni,'43161930S');
 assert.equal(documenteOcr.phone,'858718773');
-assert.equal(documenteOcr.fullName,'MARIA VANESA CORTES');
+assert.equal(documenteOcr.fullName,'Maria Vanesa Cortes');
 
 const docurnentoOcr=context.window.TPFMobileOCR.extract(`
 Docurnento
@@ -193,7 +194,7 @@ Datos compartidos
 `);
 assert.equal(distortedFirstPhoneAndDocument.dni,'43161930S');
 assert.equal(distortedFirstPhoneAndDocument.phone,'858718773');
-assert.equal(distortedFirstPhoneAndDocument.fullName,'MARIA VANESA CORTES');
+assert.equal(distortedFirstPhoneAndDocument.fullName,'Maria Vanesa Cortes');
 
 const bodyZeroAsLetter=context.window.TPFMobileOCR.extract(`
 Documento

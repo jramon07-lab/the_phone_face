@@ -66,7 +66,19 @@
       if(blob)resolve(blob);else reject(new Error('No se pudo convertir la foto a JPEG.'));
     },'image/jpeg',quality));
   }
-  async function prepareImageForOcr(file,onProgress){
+  function jpegInput(blob,file,suffix){
+    if(typeof File!=='function')return blob;
+    const base=String(file.name||'captura').replace(/\.[^.]+$/,'');
+    return new File([blob],`${base}${suffix||''}.jpg`,{type:'image/jpeg',lastModified:file.lastModified||Date.now()});
+  }
+  function ratioRect(width,height,leftRatio,topRatio,widthRatio,heightRatio){
+    const left=Math.max(0,Math.min(width-1,Math.floor(width*leftRatio)));
+    const top=Math.max(0,Math.min(height-1,Math.floor(height*topRatio)));
+    const right=Math.max(left+1,Math.min(width,Math.ceil(width*(leftRatio+widthRatio))));
+    const bottom=Math.max(top+1,Math.min(height,Math.ceil(height*(topRatio+heightRatio))));
+    return {left,top,width:right-left,height:bottom-top};
+  }
+  async function prepareOcrSource(file,onProgress){
     if(!file||typeof file.size!=='number')throw new Error('Selecciona una imagen válida.');
     if(file.type&&!String(file.type).toLowerCase().startsWith('image/'))throw new Error('El archivo seleccionado no es una imagen.');
     report(onProgress,'preparing image',0.03);
@@ -85,15 +97,19 @@
       context.drawImage(decoded.source,0,0,width,height);
       const jpeg=await canvasJpeg(canvas,.9);
       report(onProgress,'image prepared',0.08);
-      if(typeof File==='function'){
-        const base=String(file.name||'captura').replace(/\.[^.]+$/,'');
-        return new File([jpeg],`${base}.jpg`,{type:'image/jpeg',lastModified:file.lastModified||Date.now()});
-      }
-      return jpeg;
+      return {
+        input:jpegInput(jpeg,file,''),
+        // Esta zona contiene las etiquetas Criterio / Documento / teléfono.
+        // La etiqueta mantiene la extracción segura y evita confundir IDs.
+        formRect:ratioRect(width,height,.02,.20,.87,.44)
+      };
     }finally{
       decoded?.release?.();
       if(canvas){canvas.width=1;canvas.height=1;}
     }
+  }
+  async function prepareImageForOcr(file,onProgress){
+    return (await prepareOcrSource(file,onProgress)).input;
   }
 
   function tidy(value){return String(value||'').replace(/[|]/g,'I').replace(/\s+/g,' ').trim();}
@@ -255,34 +271,75 @@
     if(words.length<2)return {first:words[0]||'',last:''};
     return {first:words.shift(),last:words.join(' ')};
   }
+  function personNameCase(value){
+    return tidy(value).toLocaleLowerCase('es-ES').replace(/(^|[\s'-])([a-záéíóúüñ])/g,(_match,before,letter)=>before+letter.toLocaleUpperCase('es-ES'));
+  }
   function extract(text){
     const raw=String(text||'');
     const lines=raw.split(/\r?\n/);
     const dni=valueAfterLabel(lines,DOCUMENT_LABEL,lineDni)||dniBeforePhoneLabel(lines);
     const phone=valueAfterLabel(lines,PHONE_LABEL,linePhone);
-    const fullName=nameFromLines(lines);
+    const fullName=personNameCase(nameFromLines(lines));
     return {dni,phone,fullName,...splitName(fullName),rawText:raw};
+  }
+  function mergeResults(primary,supplement){
+    const fullName=primary.fullName||supplement.fullName;
+    return {
+      dni:primary.dni||supplement.dni,
+      phone:primary.phone||supplement.phone,
+      fullName,
+      ...splitName(fullName),
+      rawText:`LECTURA GENERAL\n${primary.rawText||''}\n\nLECTURA ZONA DOCUMENTO\n${supplement.rawText||''}`
+    };
   }
 
   async function recognize(file,onProgress){
     let phase='image';
     let worker=null;
     let engineError='';
+    let pass='loading';
+    let lastProgress=0;
     try{
-      const input=await prepareImageForOcr(file,onProgress);
+      const prepared=await prepareOcrSource(file,onProgress);
       phase='reader';report(onProgress,'loading reader',0.1);
       const api=await load();
       phase='recognition';
       worker=await api.createWorker('spa',api.OEM?.LSTM_ONLY||1,{
         ...ENGINE_OPTIONS,
-        logger:event=>{if(event?.status)report(onProgress,event.status,event.progress);},
+        logger:event=>{
+          if(!event?.status)return;
+          const value=Math.max(0,Math.min(1,Number(event.progress)||0));
+          const mapped=pass==='loading'?.12+(value*.18):(pass==='document'?.64+(value*.33):.32+(value*.28));
+          lastProgress=Math.max(lastProgress,mapped);
+          report(onProgress,pass==='document'&&event.status==='recognizing text'?'recognizing contact fields':event.status,lastProgress);
+        },
         errorHandler:error=>{engineError=String(error?.message||error||'').trim();}
       });
+      pass='general';
       // AUTO separa los campos del formulario; SINGLE_BLOCK los mezcla en iPhone
       // y puede hacer desaparecer por completo la fila del DNI.
       await worker.setParameters({tessedit_pageseg_mode:api.PSM?.AUTO||'3'});
-      const result=await worker.recognize(input,{}, {text:true,blocks:false,hocr:false,tsv:false});
-      return extract(result?.data?.text||'');
+      const output={text:true,blocks:false,hocr:false,tsv:false};
+      const result=await worker.recognize(prepared.input,{},output);
+      const primary=extract(result?.data?.text||'');
+      if(primary.dni){report(onProgress,'recognition complete',1);return primary;}
+
+      // No se adivinan números desde el texto general. Solo se reintenta sobre
+      // el recorte que contiene las etiquetas del formulario y se rellenan los
+      // campos que la primera pasada dejó vacíos.
+      try{
+        pass='document';lastProgress=Math.max(lastProgress,.6);
+        report(onProgress,'checking contact fields',lastProgress);
+        await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SINGLE_COLUMN||'4'});
+        const formResult=await worker.recognize(prepared.input,{rectangle:prepared.formRect},output);
+        const merged=mergeResults(primary,extract(formResult?.data?.text||''));
+        report(onProgress,'recognition complete',1);
+        return merged;
+      }catch(supplementError){
+        console.warn('[TPF OCR] document region',String(supplementError?.message||supplementError||'').trim());
+        report(onProgress,'recognition complete',1);
+        return primary;
+      }
     }catch(error){
       const message=String(error?.message||engineError||(typeof error==='string'?error:'')).trim();
       console.warn('[TPF OCR]',phase,message);
@@ -295,5 +352,5 @@
   }
 
   window.TPFMobileOCR={recognize,extract,prepareImageForOcr};
-  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone';
+  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-crop';
 })();

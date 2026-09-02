@@ -357,7 +357,9 @@
       const labels={
         'preparing image':'Preparando la foto…','image prepared':'Foto preparada…','loading reader':'Cargando el lector…',
         'loading tesseract core':'Iniciando el lector…','loading language traineddata':'Cargando el idioma…',
-        'initializing api':'Preparando el reconocimiento…','recognizing text':'Leyendo DNI, teléfono y nombre…'
+        'initializing api':'Preparando el reconocimiento…','recognizing text':'Leyendo DNI, teléfono y nombre…',
+        'checking contact fields':'Revisando la zona del DNI…','recognizing contact fields':'Leyendo DNI y teléfono…',
+        'recognition complete':'Lectura completada.'
       };
       const result=await window.TPFMobileOCR.recognize(state.scanFile,event=>{label.textContent=labels[event.status]||'Preparando el documento…';bar.style.width=`${Math.max(5,Math.round(event.progress*100))}%`;});
       state.ocrDebugText=result.dni?'':String(result.rawText||'').trim().slice(0,3000);
