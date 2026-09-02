@@ -4,6 +4,7 @@ const path=require('node:path');
 
 const css=fs.readFileSync(path.join(__dirname,'../assets/mobile.css'),'utf8');
 const app=fs.readFileSync(path.join(__dirname,'../js/mobile-app.js'),'utf8');
+const html=fs.readFileSync(path.join(__dirname,'../movil/index.html'),'utf8');
 assert.match(css,/\.m-view\{[^}]*overflow-x:hidden;[^}]*overflow-y:auto/);
 assert.match(css,/\.m-page\{[^}]*min-width:0;[^}]*max-width:100%/);
 assert.match(css,/\.m-form-grid\{[^}]*min-width:0;[^}]*max-width:100%/);
@@ -86,5 +87,16 @@ assert.match(css,/@media\(max-width:360px\)[\s\S]*?\.m-alert-description,\.m-ale
 assert.match(app,/id="mobileAlertFilters"[^>]*aria-label="Filtrar avisos"/);
 assert.match(app,/id="mobileAlertResultCount"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
 assert.match(app,/data-action="alert-more"/);
+assert.match(html,/id="mobileAdd"[^>]*aria-haspopup="dialog"[^>]*aria-controls="mobileWaActionSheet"[^>]*aria-expanded="false"/);
+assert.match(css,/\.m-camera-live\{[^}]*height:clamp\(330px,52dvh,470px\);[^}]*isolation:isolate/);
+assert.match(css,/\.m-camera-live video\{[^}]*position:absolute;[^}]*width:100%;height:100%;[^}]*object-fit:cover/);
+assert.match(css,/\.m-camera-guide\{[^}]*position:absolute;[^}]*inset:9% 7% 11%;[^}]*pointer-events:none/);
+assert.match(css,/\.m-camera-actions,\.m-camera-fallbacks\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+assert.match(css,/\.m-library-page,\.m-library-editor,\.m-chooser-page\{[^}]*min-width:0;max-width:100%/);
+assert.match(css,/\.m-library-actions\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.match(app,/id="mobileCameraGuide"/);assert.match(app,/Nombre y apellidos/);assert.match(app,/data-action="capture-photo"/);
+assert.match(app,/case 'choose-contact':view\.innerHTML=renderContactChooser/);
+assert.match(app,/case 'templates':view\.innerHTML=renderMobileTemplateLibrary/);
+assert.match(app,/case 'labels':view\.innerHTML=renderMobileLabelLibrary/);
 
 console.log('mobile horizontal layout guard: ok');

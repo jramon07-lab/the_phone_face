@@ -12,15 +12,22 @@
 
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
-    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',alertFilter:'all',alertLimit:40,contactQuery:'',contactFilter:'all',contactLimit:60,opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
+    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',alertFilter:'all',alertLimit:40,contactQuery:'',contactFilter:'all',contactLimit:60,opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',cameraError:'',cameraPaused:false,
     agenda:{date:'',rows:[],loading:false,loaded:false,error:'',requestId:0},
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
+    library:{templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:60},
     whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
   let mobileWaRefreshTimer=null;
   let contactSearchTimer=null;
   let opportunitySearchTimer=null;
   let mobileWaSheetTrigger=null;
+  let mobileCameraStream=null;
+  let mobileCameraRequestId=0;
+  let mobileCameraStarting=false;
+  let mobileCameraCapturing=false;
+  let mobileTemplateRequestId=0;
+  let mobileLabelRequestId=0;
 
   const field=(data,...names)=>{
     for(const name of names){const value=data?.[name];if(value!==undefined&&value!==null&&clean(value)!=='')return value;}
@@ -199,8 +206,8 @@
     finally{button.disabled=false;button.textContent='Entrar';}
   }
   async function signOut(){
-    stopMobileWaRefresh();
-    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    stopMobileWaRefresh();stopGuidedCamera();mobileTemplateRequestId+=1;mobileLabelRequestId+=1;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=null;state.scanUrl='';state.draft=null;
+    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -272,7 +279,7 @@
 
   function render(){
     if(!state.user||byId('mobileApp').classList.contains('hidden'))return;
-    const current=route();setActiveNav(current.parts[0]);
+    const current=route();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
     const view=byId('mobileView');
     try{
       switch(current.parts[0]){
@@ -286,10 +293,16 @@
         case 'agenda':view.innerHTML=renderAgenda();bindAgendaDate();ensureAgendaDayLoaded(agendaSelectedDate());break;
         case 'new-task':view.innerHTML=renderNewTask(current.parts[1]);break;
         case 'new-contact-opportunity':view.innerHTML=renderContactOpportunity(current.parts[1]);break;
+        case 'choose-contact':view.innerHTML=renderContactChooser(current.parts[1]);bindContactChooser();break;
+        case 'assign-label':view.innerHTML=renderContactChooser('label',current.parts[1]);bindContactChooser();ensureMobileLabelsLoaded();break;
+        case 'templates':view.innerHTML=renderMobileTemplateLibrary();bindMobileLibraryFilters();ensureMobileTemplatesLoaded();break;
+        case 'template-edit':view.innerHTML=renderMobileTemplateEditor(current.parts[1]);ensureMobileTemplatesLoaded();break;
+        case 'labels':view.innerHTML=renderMobileLabelLibrary();bindMobileLibraryFilters();ensureMobileLabelsLoaded();break;
+        case 'label-edit':view.innerHTML=renderMobileLabelEditor(current.parts[1]);ensureMobileLabelsLoaded();break;
         case 'whatsapp':view.innerHTML=renderMobileWhatsApp();initMobileWhatsAppList();break;
         case 'whatsapp-chat':view.innerHTML=renderMobileWhatsAppChat(safeDecode(current.parts[1]));initMobileWhatsAppChat(safeDecode(current.parts[1]));break;
         case 'alerts':view.innerHTML=renderAlerts();break;
-        case 'scan':view.innerHTML=renderScan();break;
+        case 'scan':stopGuidedCamera();view.innerHTML=renderScan();initGuidedCamera();break;
         case 'detected':ensureDraft();view.innerHTML=renderDetected();break;
         case 'new-opportunity':ensureDraft();view.innerHTML=renderOpportunityForm();break;
         case 'review':ensureDraft();view.innerHTML=renderReview();break;
@@ -303,7 +316,7 @@
     }catch(error){view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
   }
   function setActiveNav(name){
-    const group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||name==='new-contact-opportunity'?'opportunities':['scan','detected','new-opportunity','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name;
+    const quickOrigin=route().query.get('origin')==='quick',group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
   }
@@ -410,6 +423,120 @@
   function bindContactFilters(){
     const input=byId('mobileContactSearch');if(!input)return;
     input.oninput=()=>{state.contactQuery=input.value;state.contactLimit=CONTACT_PAGE_SIZE;clearTimeout(contactSearchTimer);contactSearchTimer=setTimeout(updateContactResults,120);};
+  }
+
+  function mobileTemplateCategory(template){return clean(template?.category)||'Sin categoría';}
+  function mobileTemplateCategories(){return [...new Set(state.library.templates.map(mobileTemplateCategory))].sort((a,b)=>a.localeCompare(b,'es'));}
+  function mobileFilteredTemplates(){const query=state.library.templateQuery,category=state.library.templateCategory;return state.library.templates.filter(template=>(!category||mobileTemplateCategory(template)===category)&&mobileWaMatchesFilter([template.name,template.text,template.shortcut,mobileTemplateCategory(template)],query));}
+  function mobileTemplateById(id){return state.library.templates.find(template=>String(template.id)===String(id));}
+  function renderMobileTemplateFilters(){return `<div class="m-library-filters"><label class="m-field"><span>Buscar</span><input id="mobileTemplateSearch" class="m-input" type="search" value="${esc(state.library.templateQuery)}" placeholder="Nombre, contenido o atajo" autocomplete="off"></label><label class="m-field"><span>Categoría</span><select id="mobileTemplateCategory" class="m-select"><option value="">Todas las categorías</option>${mobileTemplateCategories().map(category=>`<option value="${esc(category)}"${state.library.templateCategory===category?' selected':''}>${esc(category)}</option>`).join('')}</select></label></div>`;}
+  function renderMobileTemplateRows(){
+    const rows=mobileFilteredTemplates();
+    if(state.library.templatesLoading&&!state.library.templatesLoaded)return skeleton();
+    if(state.library.templatesError&&!state.library.templates.length)return `<div class="m-duplicate warn">${esc(state.library.templatesError)}</div><button class="m-secondary m-library-full" data-action="reload-templates" type="button">Reintentar</button>`;
+    if(!rows.length)return empty(state.library.templates.length?'Sin resultados':'Todavía no hay plantillas',state.library.templates.length?'Prueba con otra búsqueda o categoría.':'Crea la primera plantilla desde el botón +.');
+    return `<div class="m-library-list">${rows.map(template=>`<article class="m-library-card"><div class="m-library-card-head"><span class="m-library-badge">${esc(mobileTemplateCategory(template))}</span>${template.shortcut?`<small>${esc(template.shortcut)}</small>`:''}</div><h2>${esc(template.name||'Plantilla')}</h2><p>${esc(template.text||'')}</p><div class="m-library-actions"><button class="m-secondary" data-action="copy-template" data-id="${esc(template.id)}" type="button">Copiar</button><button class="m-secondary" data-action="edit-template" data-id="${esc(template.id)}" type="button">Editar</button><button class="m-danger" data-action="delete-template" data-id="${esc(template.id)}" type="button">Eliminar</button></div></article>`).join('')}</div>`;
+  }
+  function renderMobileTemplateLibrary(){
+    if(!has('can_manage_templates'))return `<div class="m-page">${pageHead('Plantillas')}${empty('Acceso restringido','No tienes permiso para gestionar plantillas.')}</div>`;
+    const count=mobileFilteredTemplates().length;
+    return `<div class="m-page m-library-page">${pageHead('Plantillas','home','<button class="m-back" data-action="new-template" type="button" aria-label="Nueva plantilla">＋</button>')}<p class="m-subtitle m-library-subtitle">Biblioteca de WhatsApp sincronizada con el CRM.</p>${renderMobileTemplateFilters()}<p id="mobileTemplateResultCount" class="m-library-count" aria-live="polite">${count} ${count===1?'plantilla':'plantillas'}</p><div id="mobileTemplateResults">${renderMobileTemplateRows()}</div></div>`;
+  }
+  function updateMobileTemplateResults(){const count=mobileFilteredTemplates().length,countNode=byId('mobileTemplateResultCount'),list=byId('mobileTemplateResults');if(countNode)countNode.textContent=`${count} ${count===1?'plantilla':'plantillas'}`;if(list)list.innerHTML=renderMobileTemplateRows();}
+  async function loadMobileTemplates(force=false){
+    if(!has('can_manage_templates')||state.library.templatesLoading||(!force&&state.library.templatesLoaded))return;
+    const requestId=++mobileTemplateRequestId;state.library.templatesLoading=true;state.library.templatesError='';
+    try{const {data,error}=await client.rpc('wa_list_templates');if(requestId!==mobileTemplateRequestId)return;if(error)throw error;state.library.templates=Array.isArray(data)?data.map(row=>({id:row.id,name:clean(row.name)||'Plantilla',text:String(row.body||''),category:clean(row.category),shortcut:clean(row.shortcut)})):[];if(state.library.templateCategory&&!mobileTemplateCategories().includes(state.library.templateCategory))state.library.templateCategory='';state.library.templatesLoaded=true;}
+    catch(error){if(requestId!==mobileTemplateRequestId)return;state.library.templatesError=error?.message||'No se pudieron cargar las plantillas.';state.library.templatesLoaded=true;}
+    finally{if(requestId===mobileTemplateRequestId){state.library.templatesLoading=false;if(['templates','template-edit'].includes(route().parts[0]))render();}}
+  }
+  function ensureMobileTemplatesLoaded(){if(!state.library.templatesLoaded&&!state.library.templatesLoading)loadMobileTemplates();}
+  function renderMobileTemplateEditor(id='new'){
+    if(!has('can_manage_templates'))return `<div class="m-page">${pageHead('Plantilla','templates')}${empty('Acceso restringido','No tienes permiso para gestionar plantillas.')}</div>`;
+    if(!state.library.templatesLoaded)return `<div class="m-page">${pageHead('Plantilla','templates')}${skeleton()}</div>`;
+    const isNew=!id||id==='new',template=isNew?null:mobileTemplateById(id);if(!isNew&&!template)return `<div class="m-page">${pageHead('Plantilla no encontrada','templates')}${empty('No disponible','Actualiza la biblioteca y vuelve a intentarlo.')}</div>`;
+    return `<div class="m-page m-library-editor">${pageHead(isNew?'Nueva plantilla':'Editar plantilla','templates')}<div class="m-form-grid"><label class="m-field"><span>Nombre</span><input id="mobileTemplateName" class="m-input" value="${esc(template?.name||'')}" placeholder="Ej.: Confirmación de cita"></label><label class="m-field"><span>Categoría</span><input id="mobileTemplateEditCategory" class="m-input" value="${esc(template?.category||'')}" placeholder="Ej.: Atención"></label><label class="m-field"><span>Atajo (opcional)</span><input id="mobileTemplateShortcut" class="m-input" value="${esc(template?.shortcut||'')}" placeholder="Ej.: /cita"></label><div class="m-library-vars"><strong>Insertar dato del contacto</strong><div><button class="m-secondary" data-action="insert-template-variable" data-token="{nombre}" type="button">Nombre</button><button class="m-secondary" data-action="insert-template-variable" data-token="{nombre_completo}" type="button">Nombre completo</button><button class="m-secondary" data-action="insert-template-variable" data-token="{dni}" type="button">DNI / NIF</button><button class="m-secondary" data-action="insert-template-variable" data-token="{telefono}" type="button">Teléfono</button></div></div><label class="m-field"><span>Contenido</span><textarea id="mobileTemplateBody" class="m-textarea m-library-body" placeholder="Escribe el mensaje…">${esc(template?.text||'')}</textarea></label></div><button class="m-primary m-library-full" data-action="save-template" data-id="${esc(template?.id||'')}" type="button">${isNew?'Guardar plantilla':'Guardar cambios'}</button><p id="mobileTemplateMsg" class="m-form-msg"></p></div>`;
+  }
+  function insertMobileTemplateVariable(token){const input=byId('mobileTemplateBody');if(!input)return;const start=Number.isFinite(input.selectionStart)?input.selectionStart:input.value.length,end=Number.isFinite(input.selectionEnd)?input.selectionEnd:start;input.setRangeText(String(token||''),start,end,'end');input.focus();}
+  async function saveMobileTemplate(id=''){
+    const msg=byId('mobileTemplateMsg');if(!has('can_manage_templates')){if(msg)msg.textContent='No tienes permiso para guardar plantillas.';return;}
+    const name=clean(byId('mobileTemplateName')?.value),body=clean(byId('mobileTemplateBody')?.value),category=clean(byId('mobileTemplateEditCategory')?.value),shortcut=clean(byId('mobileTemplateShortcut')?.value),current=id?mobileTemplateById(id):null;
+    if(!name||!body){if(msg)msg.textContent='Escribe el nombre y el contenido.';return;}
+    const button=document.querySelector('[data-action="save-template"]');if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
+    try{const returnToLibrary=route().query.get('from')==='templates'&&history.length>1,{error}=await client.rpc('wa_upsert_template',{p_id:current?.id||null,p_name:name,p_body:body,p_category:category||null,p_shortcut:shortcut||null});if(error)throw error;state.library.templatesLoaded=false;await loadMobileTemplates(true);if(returnToLibrary)history.back();else go('templates',true);toast('Plantilla guardada y sincronizada.','success');}
+    catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar la plantilla.';}
+    finally{if(button)button.disabled=false;}
+  }
+  async function deleteMobileTemplate(id){const template=mobileTemplateById(id);if(!template||!has('can_manage_templates')||!confirm(`¿Eliminar la plantilla "${template.name}"?`))return;try{const {error}=await client.rpc('wa_delete_template',{p_id:template.id});if(error)throw error;state.library.templates=state.library.templates.filter(row=>String(row.id)!==String(id));if(state.library.templateCategory&&!mobileTemplateCategories().includes(state.library.templateCategory))state.library.templateCategory='';render();toast('Plantilla eliminada.','success');}catch(error){toast(error?.message||'No se pudo eliminar la plantilla.','error');}}
+  async function copyMobileTemplate(id){const template=mobileTemplateById(id);if(!template)return;try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(template.text);else{const input=document.createElement('textarea');input.value=template.text;input.className='m-visually-hidden';document.body.appendChild(input);input.select();if(!document.execCommand('copy'))throw new Error('No se pudo copiar.');input.remove();}toast('Plantilla copiada.','success');}catch(_){toast('No se pudo copiar la plantilla.','error');}}
+
+  function mobileLabelCategory(label){return clean(state.library.labelCategories[String(label?.id)])||clean(label?.category)||mobileWaInferLabelCategory(label?.name);}
+  function mobileLabelCategories(){return [...new Set(state.library.labels.map(mobileLabelCategory))].sort((a,b)=>a.localeCompare(b,'es'));}
+  function mobileFilteredLabels(){const query=state.library.labelQuery,category=state.library.labelCategory;return state.library.labels.filter(label=>(!category||mobileLabelCategory(label)===category)&&mobileWaMatchesFilter([label.name,mobileLabelCategory(label)],query));}
+  function mobileLabelById(id){return state.library.labels.find(label=>String(label.id)===String(id));}
+  function renderMobileLabelFilters(){return `<div class="m-library-filters"><label class="m-field"><span>Buscar</span><input id="mobileLabelSearch" class="m-input" type="search" value="${esc(state.library.labelQuery)}" placeholder="Nombre de etiqueta" autocomplete="off"></label><label class="m-field"><span>Categoría</span><select id="mobileLabelCategory" class="m-select"><option value="">Todas las categorías</option>${mobileLabelCategories().map(category=>`<option value="${esc(category)}"${state.library.labelCategory===category?' selected':''}>${esc(category)}</option>`).join('')}</select></label></div>`;}
+  function renderMobileLabelRows(){
+    const rows=mobileFilteredLabels();
+    if(state.library.labelsLoading&&!state.library.labelsLoaded)return skeleton();
+    if(state.library.labelsError&&!state.library.labels.length)return `<div class="m-duplicate warn">${esc(state.library.labelsError)}</div><button class="m-secondary m-library-full" data-action="reload-labels" type="button">Reintentar</button>`;
+    if(!rows.length)return empty(state.library.labels.length?'Sin resultados':'Todavía no hay etiquetas',state.library.labels.length?'Prueba con otra búsqueda o categoría.':'Crea la primera etiqueta desde el botón +.');
+    return `<div class="m-library-list">${rows.map(label=>{const count=Number(state.library.labelCounts[String(label.id)]||0);return `<article class="m-library-card m-label-card"><div class="m-library-card-head"><span class="m-library-badge">${esc(mobileLabelCategory(label))}</span><small>${count} ${count===1?'contacto':'contactos'}</small></div><h2>${esc(label.name||'Etiqueta')}</h2><div class="m-library-actions"><button class="m-primary" data-action="assign-label" data-id="${esc(label.id)}" type="button"${has('can_view_database')&&state.contacts.length?'':' disabled'}>Asignar</button><button class="m-secondary" data-action="edit-label" data-id="${esc(label.id)}" type="button">Editar</button><button class="m-danger" data-action="delete-label" data-id="${esc(label.id)}" type="button">Eliminar</button></div></article>`;}).join('')}</div>`;
+  }
+  function renderMobileLabelLibrary(){
+    if(!has('can_manage_labels'))return `<div class="m-page">${pageHead('Etiquetas')}${empty('Acceso restringido','No tienes permiso para gestionar etiquetas.')}</div>`;
+    const count=mobileFilteredLabels().length;
+    return `<div class="m-page m-library-page">${pageHead('Etiquetas','home','<button class="m-back" data-action="new-label" type="button" aria-label="Nueva etiqueta">＋</button>')}<p class="m-subtitle m-library-subtitle">Organiza y asigna etiquetas sin salir de la aplicación.</p>${renderMobileLabelFilters()}<p id="mobileLabelResultCount" class="m-library-count" aria-live="polite">${count} ${count===1?'etiqueta':'etiquetas'}</p><div id="mobileLabelResults">${renderMobileLabelRows()}</div></div>`;
+  }
+  function updateMobileLabelResults(){const count=mobileFilteredLabels().length,countNode=byId('mobileLabelResultCount'),list=byId('mobileLabelResults');if(countNode)countNode.textContent=`${count} ${count===1?'etiqueta':'etiquetas'}`;if(list)list.innerHTML=renderMobileLabelRows();}
+  async function loadMobileLabels(force=false){
+    if(!has('can_manage_labels')||state.library.labelsLoading||(!force&&state.library.labelsLoaded))return;
+    const requestId=++mobileLabelRequestId;state.library.labelsLoading=true;state.library.labelsError='';
+    try{const [labels,counts,categories]=await Promise.all([client.rpc('crm_list_labels'),client.from('crm_contact_labels').select('label_id'),loadMobileWaLabelCategories()]);if(requestId!==mobileLabelRequestId)return;if(labels.error)throw labels.error;state.library.labels=Array.isArray(labels.data)?labels.data.map(row=>({id:row.id,name:clean(row.name)||'Etiqueta',category:clean(row.category)})):[];state.library.labelCounts={};if(!counts.error)(counts.data||[]).forEach(row=>{const id=String(row.label_id||'');if(id)state.library.labelCounts[id]=(state.library.labelCounts[id]||0)+1;});state.library.labelCategories=categories||{};if(state.library.labelCategory&&!mobileLabelCategories().includes(state.library.labelCategory))state.library.labelCategory='';state.library.labelsLoaded=true;}
+    catch(error){if(requestId!==mobileLabelRequestId)return;state.library.labelsError=error?.message||'No se pudieron cargar las etiquetas.';state.library.labelsLoaded=true;}
+    finally{if(requestId===mobileLabelRequestId){state.library.labelsLoading=false;if(['labels','label-edit','assign-label'].includes(route().parts[0]))render();}}
+  }
+  function ensureMobileLabelsLoaded(){if(!state.library.labelsLoaded&&!state.library.labelsLoading)loadMobileLabels();}
+  function renderMobileLabelEditor(id='new'){
+    if(!has('can_manage_labels'))return `<div class="m-page">${pageHead('Etiqueta','labels')}${empty('Acceso restringido','No tienes permiso para gestionar etiquetas.')}</div>`;
+    if(!state.library.labelsLoaded)return `<div class="m-page">${pageHead('Etiqueta','labels')}${skeleton()}</div>`;
+    const isNew=!id||id==='new',label=isNew?null:mobileLabelById(id);if(!isNew&&!label)return `<div class="m-page">${pageHead('Etiqueta no encontrada','labels')}${empty('No disponible','Actualiza las etiquetas y vuelve a intentarlo.')}</div>`;
+    const categories=['Vodafone','Orange','MásMóvil','Yoigo','Otras',...mobileLabelCategories()].filter((value,index,list)=>list.indexOf(value)===index);
+    return `<div class="m-page m-library-editor">${pageHead(isNew?'Nueva etiqueta':'Editar etiqueta','labels')}<div class="m-form-grid"><label class="m-field"><span>Nombre</span><input id="mobileLabelName" class="m-input" value="${esc(label?.name||'')}" placeholder="Ej.: Renovación, VIP"></label><label class="m-field"><span>Categoría</span><input id="mobileLabelEditCategory" class="m-input" list="mobileLabelCategoryList" value="${esc(label?mobileLabelCategory(label):'')}" placeholder="Ej.: Vodafone"><datalist id="mobileLabelCategoryList">${categories.map(category=>`<option value="${esc(category)}"></option>`).join('')}</datalist></label></div><button class="m-primary m-library-full" data-action="save-label" data-id="${esc(label?.id||'')}" type="button">${isNew?'Crear etiqueta':'Guardar cambios'}</button><p id="mobileLabelMsg" class="m-form-msg"></p></div>`;
+  }
+  async function saveMobileLabelCategories(categories){const {error}=await client.from('app_settings').upsert({key:'crm_label_categories_v1',value:categories},{onConflict:'key'});if(error)throw error;}
+  async function saveMobileLabel(id=''){
+    const msg=byId('mobileLabelMsg');if(!has('can_manage_labels')){if(msg)msg.textContent='No tienes permiso para guardar etiquetas.';return;}
+    const name=clean(byId('mobileLabelName')?.value),category=clean(byId('mobileLabelEditCategory')?.value)||'Otras',current=id?mobileLabelById(id):null;if(!name){if(msg)msg.textContent='Escribe el nombre de la etiqueta.';return;}
+    const button=document.querySelector('[data-action="save-label"]');if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
+    try{const returnToLibrary=route().query.get('from')==='labels'&&history.length>1;let labelId=current?.id||'';if(current){if(clean(current.name)!==name){const {error}=await client.rpc('crm_rename_label',{p_id:current.id,p_name:name});if(error)throw error;}}else{const created=await client.rpc('crm_create_label',{p_name:name});if(created.error)throw created.error;const listed=await client.rpc('crm_list_labels');if(listed.error)throw listed.error;labelId=(listed.data||[]).find(label=>foldText(label.name)===foldText(name))?.id||'';if(!labelId)throw new Error('La etiqueta se creó, pero no se pudo identificar para guardar su categoría.');}const categories={...state.library.labelCategories,[String(labelId)]:category};await saveMobileLabelCategories(categories);state.library.labelsLoaded=false;await loadMobileLabels(true);if(returnToLibrary)history.back();else go('labels',true);toast('Etiqueta guardada y sincronizada.','success');}
+    catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar la etiqueta.';}
+    finally{if(button)button.disabled=false;}
+  }
+  async function deleteMobileLabel(id){const label=mobileLabelById(id);if(!label||!has('can_manage_labels')||!confirm(`¿Eliminar la etiqueta "${label.name}"? Se quitará también de todos los contactos.`))return;try{const {error}=await client.rpc('crm_delete_label',{p_id:label.id});if(error)throw error;const categories={...state.library.labelCategories};delete categories[String(label.id)];await saveMobileLabelCategories(categories).catch(()=>{});state.library.labels=state.library.labels.filter(row=>String(row.id)!==String(id));state.library.labelCategories=categories;if(state.library.labelCategory&&!mobileLabelCategories().includes(state.library.labelCategory))state.library.labelCategory='';render();toast('Etiqueta eliminada.','success');}catch(error){toast(error?.message||'No se pudo eliminar la etiqueta.','error');}}
+  function bindMobileLibraryFilters(){
+    const current=route().parts[0];if(current==='templates'){const search=byId('mobileTemplateSearch'),category=byId('mobileTemplateCategory');if(search)search.oninput=()=>{state.library.templateQuery=search.value;updateMobileTemplateResults();};if(category)category.onchange=()=>{state.library.templateCategory=category.value;updateMobileTemplateResults();};}
+    if(current==='labels'){const search=byId('mobileLabelSearch'),category=byId('mobileLabelCategory');if(search)search.oninput=()=>{state.library.labelQuery=search.value;updateMobileLabelResults();};if(category)category.onchange=()=>{state.library.labelCategory=category.value;updateMobileLabelResults();};}
+  }
+
+  function contactChooserPermission(kind){if(!has('can_view_database'))return false;if(kind==='task')return has('can_manage_agenda');if(kind==='opportunity')return has('can_view_sales')&&has('can_edit_sales')&&state.board.stages.length>0;if(kind==='label')return has('can_manage_labels');return false;}
+  function contactChooserModel(){const rows=(state.contacts||[]).filter(contact=>contactMatchesSearch(contact,state.library.contactQuery));return {rows,shown:rows.slice(0,Math.max(CONTACT_PAGE_SIZE,state.library.contactLimit||CONTACT_PAGE_SIZE)),activity:contactActivityIndex()};}
+  function contactChooserCard(contact,kind,labelId,activity){
+    const stats=activity.get(String(contact.id))||{opportunities:0,pendingTasks:0},label=kind==='task'?'Crear tarea':kind==='opportunity'?'Crear oportunidad':'Asignar etiqueta';
+    const action=kind==='label'?`data-action="assign-label-contact" data-contact-id="${esc(contact.id)}" data-label-id="${esc(labelId)}"`:`data-action="route" data-route="${kind==='task'?'new-task':'new-contact-opportunity'}/${esc(contact.id)}?origin=quick"`;
+    return `<button class="m-list-card m-contact-card m-chooser-card" ${action} type="button" aria-label="${esc(label)} para ${esc(contact.fullName)}"><span class="m-list-row"><span class="m-avatar">${esc(initials(contact))}</span><span class="m-list-main"><strong>${esc(contact.fullName)}</strong><small>${esc(contact.email||'Sin correo electrónico')}</small></span><span class="m-chevron" aria-hidden="true">›</span></span><span class="m-contact-meta"><span><small>Teléfono</small><b>${esc(contact.phone||'—')}</b></span><span><small>DNI / NIF</small><b>${esc(contact.dni||'—')}</b></span></span><span class="m-contact-activity"><span>◇ ${stats.opportunities} ventas abiertas</span><span>▣ ${stats.pendingTasks} tareas pendientes</span></span></button>`;
+  }
+  function renderContactChooserRows(kind,labelId){const model=contactChooserModel();if(model.shown.length)return `<div class="m-list">${model.shown.map(contact=>contactChooserCard(contact,kind,labelId,model.activity)).join('')}</div>${model.shown.length<model.rows.length?`<button class="m-secondary m-contact-more" data-action="chooser-more" type="button">Mostrar ${Math.min(CONTACT_PAGE_SIZE,model.rows.length-model.shown.length)} más</button>`:''}`;if(!state.contacts.length)return `${empty('No hay contactos','Para continuar necesitas crear primero un contacto.')}${has('can_create_database')&&has('can_view_database')?'<button class="m-primary m-library-full" data-action="manual-contact" type="button">Crear contacto</button>':''}`;return empty('Sin resultados','Prueba con otro nombre, DNI, teléfono o correo.');}
+  function renderContactChooser(kind,labelId=''){
+    const valid=['task','opportunity','label'].includes(kind);if(!valid||!contactChooserPermission(kind)){const reason=kind==='opportunity'&&!state.board.stages.length?'No hay columnas de ventas configuradas.':'No tienes permiso o la acción ya no está disponible.';return `<div class="m-page">${pageHead('Elegir contacto','home')}${empty('No disponible',reason)}</div>`;}if(kind==='label'&&!state.library.labelsLoaded)return `<div class="m-page">${pageHead('Elegir contacto','labels')}${skeleton()}</div>`;
+    const label=kind==='label'?mobileLabelById(labelId):null;if(kind==='label'&&!label)return `<div class="m-page">${pageHead('Elegir contacto','labels')}${empty('Etiqueta no encontrada','Actualiza las etiquetas y vuelve a intentarlo.')}</div>`;
+    const model=contactChooserModel(),noun=kind==='task'?'una tarea':kind==='opportunity'?'una oportunidad':`la etiqueta “${label.name}”`;
+    return `<div class="m-page m-contacts-page m-chooser-page">${pageHead('Elegir contacto',kind==='label'?'labels':'home')}<p class="m-subtitle m-library-subtitle">Selecciona el contacto para ${kind==='label'?'asignar':'crear'} ${esc(noun)}.</p><div class="m-search"><input id="mobileChooserSearch" class="m-input" type="search" value="${esc(state.library.contactQuery)}" placeholder="Nombre, DNI, teléfono o correo" autocomplete="off" aria-label="Buscar contacto"></div><p id="mobileChooserCount" class="m-contact-result-count" aria-live="polite">${model.rows.length} ${model.rows.length===1?'contacto':'contactos'}</p><div id="mobileChooserList">${renderContactChooserRows(kind,labelId)}</div></div>`;
+  }
+  function updateContactChooserResults(kind,labelId){const model=contactChooserModel(),count=byId('mobileChooserCount'),list=byId('mobileChooserList');if(count)count.textContent=`${model.rows.length} ${model.rows.length===1?'contacto':'contactos'}`;if(list)list.innerHTML=renderContactChooserRows(kind,labelId);}
+  function bindContactChooser(){const input=byId('mobileChooserSearch'),current=route(),kind=current.parts[0]==='assign-label'?'label':current.parts[1],labelId=current.parts[0]==='assign-label'?current.parts[1]:'';if(!input)return;input.oninput=()=>{state.library.contactQuery=input.value;state.library.contactLimit=CONTACT_PAGE_SIZE;clearTimeout(contactSearchTimer);contactSearchTimer=setTimeout(()=>updateContactChooserResults(kind,labelId),120);};}
+  async function assignMobileLabelContact(contactId,labelId,button){
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),label=mobileLabelById(labelId);if(!contact||!label||!contactChooserPermission('label')){toast('No se puede asignar esta etiqueta.','error');return;}const returnToLibrary=route().query.get('from')==='labels'&&history.length>1;if(button)button.disabled=true;
+    try{const current=await client.rpc('crm_get_contact_labels',{p_contact_id:contact.id});if(current.error)throw current.error;const ids=[...new Set((current.data||[]).map(row=>String(row.id??row.label_id??row.value??'')).filter(Boolean).concat([String(label.id)]))];const save=await client.rpc('crm_set_contact_labels',{p_contact_id:contact.id,p_label_ids:ids});if(save.error)throw save.error;state.library.labelCounts[String(label.id)]=Number(state.library.labelCounts[String(label.id)]||0)+((current.data||[]).some(row=>String(row.id??row.label_id??row.value??'')===String(label.id))?0:1);if(returnToLibrary)history.back();else go('labels',true);toast(`Etiqueta asignada a ${contact.fullName}.`,'success');}catch(error){toast(error?.message||'No se pudo asignar la etiqueta.','error');if(button)button.disabled=false;}
   }
 
   function relatedOpportunities(id){return state.board.opportunities.filter(opp=>String(opp.record_id||opp.contact_id||'')===String(id));}
@@ -624,18 +751,19 @@
     try{const {error}=await client.from('agenda_items').update({status:'completed'}).eq('id',id).select('id').single();if(error)throw error;await refreshData({silent:true});render();toast('Tarea completada.','success');}catch(error){toast(error?.message||'No se pudo completar.','error');}
   }
   function renderNewTask(contactId){
-    const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
     const next=new Date(Date.now()+86400000);next.setMinutes(next.getMinutes()-next.getTimezoneOffset());
-    const back=mobileWaReturnPath(contactId);
+    const back=mobileWaReturnPath(contactId,'task');
     return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Asunto</span><input id="newTaskTitle" class="m-input" placeholder="Llamar al cliente"></label><label class="m-field"><span>Fecha y hora</span><input id="newTaskStarts" class="m-input" type="datetime-local" value="${next.toISOString().slice(0,16)}"></label><label class="m-field"><span>Notas</span><textarea id="newTaskNotes" class="m-textarea"></textarea></label></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
   }
   async function saveTask(contactId){
-    const contact=state.contacts.find(row=>String(row.id)===String(contactId));const title=clean(byId('newTaskTitle').value),starts=byId('newTaskStarts').value;
-    if(!contact||!title||!starts){byId('mobileTaskMsg').textContent='Escribe un asunto y una fecha.';return;}
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),msg=byId('mobileTaskMsg');if(!contact||!has('can_manage_agenda')){if(msg)msg.textContent='No tienes permiso o el contacto ya no existe.';return;}const title=clean(byId('newTaskTitle')?.value),starts=byId('newTaskStarts')?.value;
+    if(!title||!starts){if(msg)msg.textContent='Escribe un asunto y una fecha.';return;}
+    const back=mobileWaReturnPath(contact.id,'task');
     const button=document.querySelector('[data-action="save-task"]');button.disabled=true;byId('mobileTaskMsg').textContent='Guardando…';
     try{
       const row={title,description:clean(byId('newTaskNotes').value)||null,customer_name:contact.fullName||null,customer_phone:contact.phone||null,starts_at:new Date(starts).toISOString(),reminder_at:null,assigned_to:state.user.id,related_record_id:contact.id,status:'pending',reminder_minutes:[],notify_in_app:true,notify_email:false,sync_google_calendar:false,whatsapp_enabled:false};
-      const {error}=await client.from('agenda_items').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});const back=mobileWaReturnPath(contact.id);if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='tasks';go(`contact/${contact.id}`);}toast('Tarea creada y sincronizada.','success');
+      const {error}=await client.from('agenda_items').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='tasks';go(`contact/${contact.id}`,back==='choose-contact/task');}toast('Tarea creada y sincronizada.','success');
     }catch(error){byId('mobileTaskMsg').textContent=error?.message||'No se pudo crear la tarea.';}
     finally{button.disabled=false;}
   }
@@ -644,9 +772,9 @@
     const chatId=clean(route().query.get('chat'));return /^[^/?#]+@(c\.us|g\.us|lid)$/i.test(chatId)?chatId:'';
   }
   function mobileWaChatPath(chatId){return `whatsapp-chat/${encodeURIComponent(String(chatId||''))}`;}
-  function mobileWaReturnPath(contactId){const chatId=mobileWaQueryChatId();return chatId?mobileWaChatPath(chatId):`contact/${contactId}`;}
+  function mobileWaReturnPath(contactId,kind=''){const chatId=mobileWaQueryChatId();if(chatId)return mobileWaChatPath(chatId);if(route().query.get('origin')==='quick'&&['task','opportunity'].includes(kind))return `choose-contact/${kind}`;return `contact/${contactId}`;}
   function renderContactOpportunity(contactId){
-    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),back=mobileWaReturnPath(contactId);
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),back=mobileWaReturnPath(contactId,'opportunity');
     if(!contact||!has('can_view_sales')||!has('can_edit_sales'))return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
     if(!state.board.stages.length)return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('Sin columnas','Crea primero una columna en el Panel de ventas del CRM.')}</div>`;
     return `<div class="m-page">${pageHead('Nueva oportunidad',back)}<p class="m-subtitle" style="margin-bottom:16px">Oportunidad para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="contactOppTitle" class="m-input" value="${esc(`Oportunidad - ${contact.fullName}`)}"></label><label class="m-field"><span>Columna / Estado</span><select id="contactOppStage" class="m-select">${state.board.stages.map(stage=>`<option value="${esc(stage.id)}">${esc(stage.name)}</option>`).join('')}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="contactOppDate" class="m-input" type="date"></label><label class="m-field"><span>Importe (opcional)</span><input id="contactOppAmount" class="m-input" inputmode="decimal" placeholder="0,00"></label><label class="m-field"><span>Notas</span><textarea id="contactOppNotes" class="m-textarea"></textarea></label></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="save-contact-opportunity" data-contact-id="${esc(contactId)}">Crear oportunidad</button><p id="mobileContactOppMsg" class="m-form-msg"></p></div>`;
@@ -656,10 +784,10 @@
     if(!contact||!has('can_view_sales')||!has('can_edit_sales')){if(msg)msg.textContent='No tienes permiso o el contacto ya no existe.';return;}
     if(!title||!stage){if(msg)msg.textContent='Escribe un nombre y selecciona una columna.';return;}
     const rawAmount=clean(byId('contactOppAmount')?.value).replace(',','.'),amount=rawAmount===''?0:Number(rawAmount);if(!Number.isFinite(amount)){if(msg)msg.textContent='El importe no es válido.';return;}
-    const button=document.querySelector('[data-action="save-contact-opportunity"]');if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
+    const back=mobileWaReturnPath(contact.id,'opportunity'),button=document.querySelector('[data-action="save-contact-opportunity"]');if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
     try{
       const row={pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:contact.id,title,client_name:contact.fullName||null,phone:contact.phone||null,amount,expected_date:byId('contactOppDate')?.value||null,owner_user_id:state.user.id,notes:clean(byId('contactOppNotes')?.value)||null};
-      const {error}=await client.from('sales_opportunities').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});const back=mobileWaReturnPath(contact.id);if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='opportunities';go(`contact/${contact.id}`);}toast('Oportunidad creada y sincronizada.','success');
+      const {error}=await client.from('sales_opportunities').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='opportunities';go(`contact/${contact.id}`,back==='choose-contact/opportunity');}toast('Oportunidad creada y sincronizada.','success');
     }catch(error){if(msg)msg.textContent=error?.message||'No se pudo crear la oportunidad.';}
     finally{if(button)button.disabled=false;}
   }
@@ -703,14 +831,60 @@
     state.draft={contact:{first:'',last:'',dni:'',phone:'',email:'',bank:'',observations:'',notes:''},opportunity:{title:'',stageId:firstStage?.id||'',expectedDate:'',amount:'',notes:'',reminder:true},includeOpportunity:true,duplicates:[]};
   }
   function resetDraft(){
+    stopGuidedCamera();
     if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);
-    state.scanFile=null;state.scanUrl='';state.ocrDebugText='';state.draft=null;state.createdContactId=null;state.createdOpportunityId=null;state.creationError=null;state.creating=false;ensureDraft();
+    state.scanFile=null;state.scanUrl='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.draft=null;state.createdContactId=null;state.createdOpportunityId=null;state.creationError=null;state.creating=false;ensureDraft();
+  }
+  function stopGuidedCamera(){
+    mobileCameraRequestId+=1;mobileCameraStarting=false;mobileCameraCapturing=false;
+    if(mobileCameraStream){mobileCameraStream.getTracks?.().forEach(track=>track.stop());mobileCameraStream=null;}
+    const video=byId('mobileCameraPreview');if(video){video.onloadedmetadata=null;video.srcObject=null;}
+  }
+  function guidedCameraCrop(videoWidth,videoHeight,stageWidth,stageHeight,frame){
+    const vw=Math.max(1,Number(videoWidth)||1),vh=Math.max(1,Number(videoHeight)||1),sw=Math.max(1,Number(stageWidth)||1),sh=Math.max(1,Number(stageHeight)||1),scale=Math.max(sw/vw,sh/vh),shownWidth=vw*scale,shownHeight=vh*scale,offsetX=(shownWidth-sw)/2,offsetY=(shownHeight-sh)/2;
+    const x=Math.max(0,Math.min(vw-1,(Number(frame?.x||0)+offsetX)/scale)),y=Math.max(0,Math.min(vh-1,(Number(frame?.y||0)+offsetY)/scale));
+    const width=Math.max(1,Math.min(vw-x,Number(frame?.width||sw)/scale)),height=Math.max(1,Math.min(vh-y,Number(frame?.height||sh)/scale));
+    return {x,y,width,height};
+  }
+  function setGuidedCameraStatus(message,ready=false){
+    const status=byId('mobileCameraStatus'),button=byId('mobileCapturePhoto');if(status)status.textContent=message;if(button)button.disabled=!ready;
+  }
+  function guidedCameraErrorMessage(error){const name=String(error?.name||'');if(name==='NotAllowedError'||name==='SecurityError')return 'No se ha permitido usar la cámara.';if(name==='NotFoundError'||name==='OverconstrainedError')return 'No se ha encontrado una cámara disponible.';if(name==='NotReadableError'||name==='AbortError')return 'La cámara está ocupada por otra aplicación.';return error?.message||'No se pudo abrir la cámara.';}
+  async function startGuidedCamera(){
+    if(!has('can_create_database')||!has('can_view_database')||state.scanFile||route().parts[0]!=='scan'||document.hidden)return;
+    const video=byId('mobileCameraPreview');if(!video)return;
+    if(mobileCameraStream){video.srcObject=mobileCameraStream;const retryPlayback=video.play?.();if(retryPlayback?.catch)await retryPlayback.catch(()=>{});if(video.videoWidth&&video.videoHeight)setGuidedCameraStatus('Coloca los datos dentro del recuadro y pulsa “Hacer foto”.',true);return;}if(mobileCameraStarting)return;
+    if(typeof navigator==='undefined'||!navigator.mediaDevices?.getUserMedia){state.cameraError='La cámara integrada no está disponible en este navegador.';setGuidedCameraStatus(`${state.cameraError} Usa “Cámara del móvil”.`);return;}
+    const requestId=++mobileCameraRequestId;mobileCameraStarting=true;state.cameraError='';setGuidedCameraStatus('Abriendo la cámara trasera…');
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+      if(requestId!==mobileCameraRequestId||route().parts[0]!=='scan'||state.scanFile){stream.getTracks?.().forEach(track=>track.stop());return;}
+      mobileCameraStream=stream;video.srcObject=stream;stream.getTracks?.().forEach(track=>track.addEventListener?.('ended',()=>{if(mobileCameraStream===stream){mobileCameraStream=null;setGuidedCameraStatus('La cámara se ha detenido. Pulsa “Activar cámara” para continuar.');}}));const playback=video.play?.();if(playback?.catch)await playback.catch(()=>{});
+      const ready=()=>{if(requestId===mobileCameraRequestId&&mobileCameraStream===stream&&byId('mobileCameraPreview')===video)setGuidedCameraStatus('Coloca los datos dentro del recuadro y pulsa “Hacer foto”.',true);};
+      if(video.videoWidth&&video.videoHeight)ready();else video.onloadedmetadata=ready;
+    }catch(error){
+      if(requestId!==mobileCameraRequestId)return;state.cameraError=guidedCameraErrorMessage(error);setGuidedCameraStatus(`${state.cameraError} Puedes reintentar o usar “Cámara del móvil”.`);
+    }finally{if(requestId===mobileCameraRequestId)mobileCameraStarting=false;}
+  }
+  function initGuidedCamera(){if(!has('can_create_database')||!has('can_view_database')||state.scanFile||state.cameraPaused){stopGuidedCamera();return;}startGuidedCamera();}
+  async function captureGuidedPhoto(){
+    if(mobileCameraCapturing)return;const video=byId('mobileCameraPreview'),stage=byId('mobileCameraStage'),guide=byId('mobileCameraGuide');
+    if(!mobileCameraStream||!video?.videoWidth||!video?.videoHeight||!stage||!guide){toast('La cámara todavía no está preparada.','error');return;}
+    const requestId=mobileCameraRequestId,button=byId('mobileCapturePhoto');mobileCameraCapturing=true;if(button)button.disabled=true;
+    try{const stageRect=stage.getBoundingClientRect(),guideRect=guide.getBoundingClientRect(),crop=guidedCameraCrop(video.videoWidth,video.videoHeight,stageRect.width,stageRect.height,{x:guideRect.left-stageRect.left,y:guideRect.top-stageRect.top,width:guideRect.width,height:guideRect.height});const canvas=document.createElement('canvas'),resize=Math.min(1,1800/Math.max(crop.width,crop.height));canvas.width=Math.max(1,Math.round(crop.width*resize));canvas.height=Math.max(1,Math.round(crop.height*resize));const context=canvas.getContext('2d');if(!context)throw new Error('No se pudo preparar la foto.');context.drawImage(video,crop.x,crop.y,crop.width,crop.height,0,0,canvas.width,canvas.height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));if(requestId!==mobileCameraRequestId)return;if(!blob)throw new Error('No se pudo capturar la foto.');const file=typeof File==='function'?new File([blob],`contacto-${Date.now()}.jpg`,{type:'image/jpeg'}):blob;stopGuidedCamera();await handleImage(file);}catch(error){toast(error?.message||'No se pudo capturar la foto.','error');}
+    finally{mobileCameraCapturing=false;if(route().parts[0]==='scan'&&!state.scanFile&&mobileCameraStream&&button)button.disabled=false;}
+  }
+  function repeatGuidedPhoto(){
+    if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=null;state.scanUrl='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;go('scan');
   }
   function renderScan(){
-    return `<div class="m-page">${pageHead('Escanear contacto','home')}<div class="m-camera-stage">${state.scanUrl?`<img src="${esc(state.scanUrl)}" alt="Documento seleccionado">`:'<div class="m-camera-placeholder"><span>▧</span><strong>Fotografía el documento o la pantalla</strong><p>La imagen se procesa en el teléfono y no se guarda en el CRM.</p></div>'}</div><div class="m-camera-actions"><button class="m-primary" data-action="camera">Cámara</button><button class="m-secondary" data-action="gallery">Fototeca</button></div>${state.scanFile?'<button class="m-primary" style="width:100%;margin-top:12px" data-action="analyse-scan">Detectar datos</button>':'<button class="m-ghost" style="width:100%;margin-top:8px" data-action="manual-contact">Escribir datos manualmente</button>'}<div id="mobileOcrProgress"></div></div>`;
+    if(!has('can_create_database')||!has('can_view_database'))return `<div class="m-page">${pageHead('Escanear contacto','home')}${empty('Acceso restringido','No tienes permiso para crear contactos.')}</div>`;
+    const targets='<div class="m-camera-targets"><strong>Incluye dentro del recuadro</strong><div><span>Nombre y apellidos</span><span>DNI / NIF</span><span>Teléfono</span></div><small>La foto se procesa en este dispositivo y no se guarda en el CRM.</small></div>';
+    if(state.scanFile)return `<div class="m-page m-scan-page">${pageHead('Revisar foto','home')}<div class="m-camera-stage m-camera-review"><img src="${esc(state.scanUrl)}" alt="Foto del contacto preparada para revisar"></div>${targets}<div class="m-camera-actions"><button class="m-secondary" data-action="repeat-photo" type="button">Repetir foto</button><button class="m-primary" data-action="analyse-scan" type="button">Usar foto</button></div><button class="m-ghost m-camera-gallery" data-action="gallery" type="button">Elegir otra de Fototeca</button><div id="mobileOcrProgress"></div></div>`;
+    return `<div class="m-page m-scan-page">${pageHead('Escanear contacto','home')}<p class="m-subtitle m-camera-intro">Coloca dentro del recuadro el documento o la pantalla completa donde aparecen estos datos.</p><div id="mobileCameraStage" class="m-camera-stage m-camera-live"><video id="mobileCameraPreview" autoplay playsinline muted aria-label="Vista previa de la cámara"></video><div id="mobileCameraGuide" class="m-camera-guide" aria-hidden="true"><i></i><i></i><i></i><i></i><span>Datos del contacto</span></div></div>${targets}<p id="mobileCameraStatus" class="m-camera-status" role="status" aria-live="polite">${esc(state.cameraPaused?'La cámara se ha detenido. Pulsa “Activar cámara” para continuar.':state.cameraError||'Abriendo la cámara trasera…')}</p><div class="m-camera-actions"><button id="mobileCapturePhoto" class="m-primary" data-action="capture-photo" type="button" disabled>Hacer foto</button><button class="m-secondary" data-action="start-camera" type="button">Activar cámara</button></div><div class="m-camera-fallbacks"><button class="m-secondary" data-action="camera" type="button">Cámara del móvil</button><button class="m-secondary" data-action="gallery" type="button">Fototeca</button></div><button class="m-ghost m-camera-gallery" data-action="manual-contact" type="button">Escribir datos manualmente</button></div>`;
   }
   async function handleImage(file){
-    if(!file)return;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.ocrDebugText='';state.scanFile=file;state.scanUrl=URL.createObjectURL(file);go('scan');
+    if(!file)return;stopGuidedCamera();if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.scanFile=file;state.scanUrl=URL.createObjectURL(file);go('scan');
   }
   async function analyseScan(){
     if(!state.scanFile)return;
@@ -1014,6 +1188,17 @@
   }
   function mobileWaSheetChatId(){const root=byId('mobileWaActionSheet'),chatId=clean(root?.dataset?.chatId);return chatId&&chatId===String(state.whatsapp.selectedId||'')?chatId:'';}
   function mobileWaActionOption(action,icon,title,detail,enabled=true){return `<button class="m-wa-sheet-option" data-action="${esc(action)}" type="button"${enabled?'':' disabled'}><span class="m-wa-sheet-icon" aria-hidden="true">${esc(icon)}</span><span><b>${esc(title)}</b><small>${esc(detail)}</small></span><i aria-hidden="true">›</i></button>`;}
+  function renderMobileQuickActions(){
+    const canCreate=has('can_create_database')&&has('can_view_database'),hasContacts=state.contacts.length>0;
+    const canOpportunity=has('can_view_database')&&has('can_view_sales')&&has('can_edit_sales')&&hasContacts&&state.board.stages.length>0;
+    const canTask=has('can_view_database')&&has('can_manage_agenda')&&hasContacts;
+    const opportunityHint=!has('can_view_database')||!has('can_view_sales')||!has('can_edit_sales')?'No tienes permiso para crear oportunidades':!hasContacts?'Crea primero un contacto':!state.board.stages.length?'No hay columnas de ventas configuradas':'Elige el contacto y completa los datos';
+    const taskHint=!has('can_view_database')||!has('can_manage_agenda')?'No tienes permiso para crear tareas':!hasContacts?'Crea primero un contacto':'Elige el contacto y programa la tarea';
+    return `<div class="m-wa-sheet-options">${mobileWaActionOption('quick-scan','▧','Escanear contacto',canCreate?'Haz una foto dentro del marco guiado':'No tienes permiso para crear contactos',canCreate)}${mobileWaActionOption('quick-manual','＋','Crear contacto manualmente',canCreate?'Escribe y revisa todos los datos':'No tienes permiso para crear contactos',canCreate)}${mobileWaActionOption('quick-opportunity','◇','Nueva oportunidad',opportunityHint,canOpportunity)}${mobileWaActionOption('quick-task','▣','Nueva tarea',taskHint,canTask)}${mobileWaActionOption('quick-templates','▤','Plantillas',has('can_manage_templates')?'Abre la biblioteca móvil':'No tienes permiso para gestionar plantillas',has('can_manage_templates'))}${mobileWaActionOption('quick-labels','◆','Etiquetas',has('can_manage_labels')?'Organiza y asigna etiquetas':'No tienes permiso para gestionar etiquetas',has('can_manage_labels'))}</div>`;
+  }
+  function openMobileQuickActions(trigger){
+    if(route().parts[0]==='scan'){stopGuidedCamera();setGuidedCameraStatus('La cámara se ha detenido. Pulsa “Activar cámara” para continuar.');}mobileWaSheetTrigger=trigger||null;if(trigger)trigger.setAttribute('aria-expanded','true');setMobileWaSheet('quick-actions','Crear y gestionar',renderMobileQuickActions(),'');
+  }
   function renderMobileWaActions(){
     const chatId=state.whatsapp.selectedId,contact=mobileWaFindContact(chatId),linked=!!contact,linkHint=linked?contact.fullName:'Primero crea o vincula el contacto';
     return `<div class="m-wa-sheet-options">${mobileWaActionOption('wa-choose-file','⌁','Foto o archivo','Envía una imagen, vídeo, audio o documento')}${mobileWaActionOption('wa-show-templates','▤','Usar plantilla',has('can_manage_templates')?'Prepara un texto guardado':'No tienes permiso para usar plantillas',has('can_manage_templates'))}${mobileWaActionOption('wa-create-task','▣','Crear tarea',linked?(has('can_manage_agenda')?`Vinculada a ${linkHint}`:'No tienes permiso para crear tareas'):linkHint,linked&&has('can_manage_agenda'))}${mobileWaActionOption('wa-create-opportunity','◇','Crear oportunidad',linked?(has('can_view_sales')&&has('can_edit_sales')?`Vinculada a ${linkHint}`:'No tienes permiso para crear oportunidades'):linkHint,linked&&has('can_view_sales')&&has('can_edit_sales'))}${mobileWaActionOption('wa-show-labels','◆','Añadir etiqueta',linked?(has('can_manage_labels')?`Gestiona las etiquetas de ${linkHint}`:'No tienes permiso para gestionar etiquetas'):linkHint,linked&&has('can_manage_labels'))}</div>`;
@@ -1166,7 +1351,7 @@
 
   function bindStaticEvents(){
     byId('mobileLoginForm').addEventListener('submit',signIn);
-    byId('mobileBrand').onclick=()=>go('home');byId('mobileAlerts').onclick=()=>{state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;go('alerts');};byId('mobileMenu').onclick=()=>go('more');byId('mobileAdd').onclick=()=>{resetDraft();go('scan');};
+    byId('mobileBrand').onclick=()=>go('home');byId('mobileAlerts').onclick=()=>{state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;go('alerts');};byId('mobileMenu').onclick=()=>go('more');byId('mobileAdd').onclick=event=>openMobileQuickActions(event.currentTarget);
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.onclick=()=>go(button.dataset.mobileRoute));
     byId('mobileCameraInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
     byId('mobileGalleryInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
@@ -1178,8 +1363,8 @@
     document.addEventListener('keydown',handleMobileWaSheetKeydown);
     addEventListener('hashchange',()=>{closeMobileWaSheet(false);render();});
     addEventListener('pageshow',()=>{if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);});
-    document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMobileWaRefresh();return;}if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);const current=route();if(current.parts[0]==='whatsapp')loadMobileWaChats({silent:true,light:true});else if(current.parts[0]==='whatsapp-chat')loadMobileWaHistory(safeDecode(current.parts[1]),{silent:true});});
-    addEventListener('pagehide',stopMobileWaRefresh);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMobileWaRefresh();if(route().parts[0]==='scan'){state.cameraPaused=true;stopGuidedCamera();setGuidedCameraStatus('La cámara se ha detenido. Pulsa “Activar cámara” para continuar.');}return;}if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);const current=route();if(current.parts[0]==='whatsapp')loadMobileWaChats({silent:true,light:true});else if(current.parts[0]==='whatsapp-chat')loadMobileWaHistory(safeDecode(current.parts[1]),{silent:true});});
+    addEventListener('pagehide',()=>{stopMobileWaRefresh();stopGuidedCamera();});
   }
   async function handleViewClick(event){
     const target=event.target.closest('[data-action]');if(!target)return;event.preventDefault();const action=target.dataset.action;
@@ -1190,10 +1375,19 @@
       go(destination);
     }
     if(action==='back')goBack(target.dataset.fallback||'home');
+    if(action==='quick-scan'){closeMobileWaSheet(false);resetDraft();go('scan');}
+    if(action==='quick-manual'){closeMobileWaSheet(false);resetDraft();go('detected');}
+    if(action==='quick-opportunity'){closeMobileWaSheet(false);state.library.contactQuery='';state.library.contactLimit=CONTACT_PAGE_SIZE;go('choose-contact/opportunity');}
+    if(action==='quick-task'){closeMobileWaSheet(false);state.library.contactQuery='';state.library.contactLimit=CONTACT_PAGE_SIZE;go('choose-contact/task');}
+    if(action==='quick-templates'){closeMobileWaSheet(false);go('templates');}
+    if(action==='quick-labels'){closeMobileWaSheet(false);go('labels');}
     if(action==='start-scan'){resetDraft();go('scan');}
     if(action==='manual-contact'){resetDraft();go('detected');}
     if(action==='camera')byId('mobileCameraInput').click();
     if(action==='gallery')byId('mobileGalleryInput').click();
+    if(action==='start-camera'){state.cameraPaused=false;startGuidedCamera();}
+    if(action==='capture-photo')captureGuidedPhoto();
+    if(action==='repeat-photo')repeatGuidedPhoto();
     if(action==='analyse-scan')analyseScan();
     if(action==='check-duplicates')checkDuplicates();
     if(action==='continue-detected')continueDetected();
@@ -1213,6 +1407,7 @@
     if(action==='alert-more'){state.alertLimit+=ALERT_PAGE_SIZE;updateAlertResults();}
     if(action==='contact-filter'){state.contactFilter=CONTACT_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.contactLimit=CONTACT_PAGE_SIZE;updateContactResults();}
     if(action==='contact-more'){state.contactLimit+=CONTACT_PAGE_SIZE;updateContactResults();}
+    if(action==='chooser-more'){state.library.contactLimit+=CONTACT_PAGE_SIZE;const current=route(),kind=current.parts[0]==='assign-label'?'label':current.parts[1],labelId=current.parts[0]==='assign-label'?current.parts[1]:'';updateContactChooserResults(kind,labelId);}
     if(action==='opportunity-filter'){state.opportunityFilter=OPPORTUNITY_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';updateOpportunityResults();}
     if(action==='wa-filter'){state.whatsapp.filter=MOBILE_WA_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.whatsapp.limit=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
     if(action==='wa-more'){state.whatsapp.limit+=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
@@ -1232,6 +1427,20 @@
     if(action==='wa-save-labels')saveMobileWaLabels();
     if(action==='wa-load-media')loadMobileWaMedia(target.dataset.id);
     if(action==='wa-create-contact')startContactFromMobileWa(target.dataset.chatId);
+    if(action==='new-template')go('template-edit/new?from=templates');
+    if(action==='edit-template')go(`template-edit/${target.dataset.id}?from=templates`);
+    if(action==='insert-template-variable')insertMobileTemplateVariable(target.dataset.token);
+    if(action==='save-template')saveMobileTemplate(target.dataset.id);
+    if(action==='delete-template')deleteMobileTemplate(target.dataset.id);
+    if(action==='copy-template')copyMobileTemplate(target.dataset.id);
+    if(action==='reload-templates'){state.library.templatesLoaded=false;loadMobileTemplates(true);}
+    if(action==='new-label')go('label-edit/new?from=labels');
+    if(action==='edit-label')go(`label-edit/${target.dataset.id}?from=labels`);
+    if(action==='save-label')saveMobileLabel(target.dataset.id);
+    if(action==='delete-label')deleteMobileLabel(target.dataset.id);
+    if(action==='reload-labels'){state.library.labelsLoaded=false;loadMobileLabels(true);}
+    if(action==='assign-label'){state.library.contactQuery='';state.library.contactLimit=CONTACT_PAGE_SIZE;go(`assign-label/${target.dataset.id}?from=labels`);}
+    if(action==='assign-label-contact')assignMobileLabelContact(target.dataset.contactId,target.dataset.labelId,target);
     if(action==='save-contact')saveContact(target.dataset.id);
     if(action==='save-task')saveTask(target.dataset.contactId);
     if(action==='save-contact-opportunity')saveContactOpportunity(target.dataset.contactId);
