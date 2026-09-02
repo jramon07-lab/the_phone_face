@@ -4,6 +4,7 @@ const path=require('node:path');
 
 const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
 const desktop=read('js/modules/system-monitoring.js');
+const statusCore=read('js/modules/system-status-core.js');
 const mobile=read('js/mobile-system-monitor.js');
 const app=read('js/mobile-app.js');
 const index=read('index.html');
@@ -24,6 +25,9 @@ assert.match(desktop,/crm_report_system_event/);
 assert.match(desktop,/crm_system_health_snapshot/);
 assert.match(desktop,/crm_cleanup_system_events/);
 assert.match(desktop,/SAFE_CACHE_NAME/);
+assert.match(desktop,/item\.module==='isolation-test'&&item\.error==='fallo-controlado'/);
+assert.match(statusCore,/isExpectedSystemProbe/);
+assert.match(statusCore,/api\.github\.com\/repos\/jramon07-lab\/the_phone_face\/actions\/runs/);
 assert.match(desktop,/Siempre protegido:<\/b> contactos, oportunidades, tareas, agenda, chats, archivos de clientes, plantillas, usuarios, sesiones y configuración/);
 assert.doesNotMatch(desktop,/localStorage\.clear\s*\(/);
 assert.doesNotMatch(desktop,/sessionStorage\.clear\s*\(/);
