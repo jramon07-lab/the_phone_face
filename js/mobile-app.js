@@ -12,11 +12,12 @@
 
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
-    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
+    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',contactQuery:'',contactFilter:'all',contactLimit:60,opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
     whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
   let mobileWaRefreshTimer=null;
+  let contactSearchTimer=null;
   let opportunitySearchTimer=null;
   let mobileWaSheetTrigger=null;
 
@@ -57,6 +58,8 @@
   const safeDecode=value=>{try{return decodeURIComponent(String(value||''));}catch(_){return String(value||'');}};
   const todayKey=(value=Date.now())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const TASK_FILTERS=['all','pending','today','overdue','completed'];
+  const CONTACT_FILTERS=['all','opportunities','tasks','untracked','incomplete'];
+  const CONTACT_PAGE_SIZE=60;
   const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
   const MOBILE_WA_FILTERS=['all','unread','contacts','groups'];
   const MOBILE_WA_PAGE_SIZE=60;
@@ -193,7 +196,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();
-    clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -236,7 +239,7 @@
     try{
       switch(current.parts[0]){
         case 'home':view.innerHTML=renderHome();break;
-        case 'contacts':view.innerHTML=renderContacts();bindSearch();break;
+        case 'contacts':view.innerHTML=renderContacts();bindContactFilters();break;
         case 'contact':view.innerHTML=renderContact(current.parts[1]);break;
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
         case 'opportunities':view.innerHTML=renderOpportunities();bindOpportunityFilters();break;
@@ -291,26 +294,69 @@
     </div>`;
   }
 
-  function contactCard(contact){
-    return `<button class="m-list-card" data-action="route" data-route="contact/${esc(contact.id)}"><span class="m-list-row"><span class="m-avatar">${esc(initials(contact))}</span><span class="m-list-main"><strong>${esc(contact.fullName)}</strong><small>${esc(contact.phone||contact.dni||contact.email||'Sin datos de contacto')}</small></span><span class="m-chevron">›</span></span></button>`;
+  function contactActivityIndex(){
+    const rows=new Map(),stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage]));
+    const activity=id=>{const key=String(id||'');if(!key)return null;if(!rows.has(key))rows.set(key,{opportunities:0,pendingTasks:0});return rows.get(key);};
+    (state.board.opportunities||[]).forEach(opp=>{const item=activity(opp?.record_id||opp?.contact_id);if(item&&!opportunityIsClosed(opp,stages.get(String(opp?.stage_id))))item.opportunities+=1;});
+    (state.tasks||[]).forEach(task=>{const item=activity(task?.related_record_id);if(item&&taskIsPending(task))item.pendingTasks+=1;});
+    return rows;
+  }
+  function contactMatchesSearch(contact,query=''){
+    const term=foldText(query);if(!term)return true;
+    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.dni,contact?.phone,contact?.email].filter(Boolean).join(' '));
+    const numericMatch=termDigits.length>=3&&[contact?.dni,contact?.phone].some(value=>digits(value).includes(termDigits));
+    return text.includes(term)||numericMatch;
+  }
+  function contactMatchesFilter(contact,filter='all',activity=new Map()){
+    const active=CONTACT_FILTERS.includes(filter)?filter:'all',stats=activity.get(String(contact?.id))||{opportunities:0,pendingTasks:0};
+    if(active==='opportunities')return stats.opportunities>0;
+    if(active==='tasks')return stats.pendingTasks>0;
+    if(active==='untracked')return stats.opportunities===0&&stats.pendingTasks===0;
+    if(active==='incomplete')return !clean(contact?.phone)||!clean(contact?.dni);
+    return true;
+  }
+  function contactFilterCounts(contacts,activity){
+    const rows=contacts||[];
+    return {all:rows.length,opportunities:rows.filter(contact=>contactMatchesFilter(contact,'opportunities',activity)).length,tasks:rows.filter(contact=>contactMatchesFilter(contact,'tasks',activity)).length,untracked:rows.filter(contact=>contactMatchesFilter(contact,'untracked',activity)).length,incomplete:rows.filter(contact=>contactMatchesFilter(contact,'incomplete',activity)).length};
+  }
+  function contactListModel(query=state.contactQuery,filter=state.contactFilter){
+    const activity=contactActivityIndex(),base=(state.contacts||[]).filter(contact=>contactMatchesSearch(contact,query));
+    const active=CONTACT_FILTERS.includes(filter)?filter:'all',rows=base.filter(contact=>contactMatchesFilter(contact,active,activity));
+    return {activity,base,rows,counts:contactFilterCounts(base,activity),active};
+  }
+  function contactCard(contact,activity=new Map()){
+    const stats=activity.get(String(contact.id))||{opportunities:0,pendingTasks:0};
+    return `<button class="m-list-card m-contact-card" data-action="route" data-route="contact/${esc(contact.id)}" type="button"><span class="m-list-row"><span class="m-avatar">${esc(initials(contact))}</span><span class="m-list-main"><strong>${esc(contact.fullName)}</strong>${contact.email?`<small>${esc(contact.email)}</small>`:'<small>Sin correo electrónico</small>'}</span><span class="m-chevron" aria-hidden="true">›</span></span><span class="m-contact-meta"><span><small>Teléfono</small><b>${esc(contact.phone||'—')}</b></span><span><small>DNI / NIF</small><b>${esc(contact.dni||'—')}</b></span></span><span class="m-contact-activity"><span>◇ ${stats.opportunities} ${stats.opportunities===1?'venta abierta':'ventas abiertas'}</span><span>▣ ${stats.pendingTasks} ${stats.pendingTasks===1?'tarea pendiente':'tareas pendientes'}</span></span></button>`;
+  }
+  function renderContactFilters(counts,active=state.contactFilter){
+    const options=[['all','Todos'],['opportunities','Con ventas'],['tasks','Con tareas'],['untracked','Sin seguimiento'],['incomplete','Incompletos']];
+    return options.map(([key,label])=>`<button class="m-contact-filter ${active===key?'active':''}" data-action="contact-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
+  }
+  function contactRowsHtml(model){
+    const shown=model.rows.slice(0,Math.max(CONTACT_PAGE_SIZE,state.contactLimit||CONTACT_PAGE_SIZE));
+    if(shown.length)return `<div class="m-list">${shown.map(contact=>contactCard(contact,model.activity)).join('')}</div>${shown.length<model.rows.length?`<button class="m-secondary m-contact-more" data-action="contact-more" type="button">Mostrar ${Math.min(CONTACT_PAGE_SIZE,model.rows.length-shown.length)} más</button>`:''}`;
+    if(!(state.contacts||[]).length)return empty('No hay contactos','Crea el primero desde el botón +.');
+    if(!model.base.length)return empty('Sin resultados','Prueba con otro nombre, DNI, teléfono o correo.');
+    return empty('Sin contactos en este filtro','Prueba con otro filtro.');
+  }
+  function contactResultText(model){
+    const shown=Math.min(model.rows.length,Math.max(CONTACT_PAGE_SIZE,state.contactLimit||CONTACT_PAGE_SIZE));
+    return shown<model.rows.length?`Mostrando ${shown} de ${model.rows.length} contactos`:`${model.rows.length} ${model.rows.length===1?'contacto':'contactos'}`;
   }
   function renderContacts(){
     if(!has('can_view_database'))return `<div class="m-page">${pageHead('Contactos')}${empty('Acceso restringido','No tienes permiso para ver contactos.')}</div>`;
-    return `<div class="m-page">${pageHead('Contactos','home','<button class="m-back" data-action="manual-contact" aria-label="Nuevo contacto">＋</button>')}
-      <div class="m-search"><input id="mobileContactSearch" class="m-input" placeholder="Nombre, DNI o teléfono" autocomplete="off"></div>
-      <div id="mobileContactsList" class="m-list">${state.contacts.length?state.contacts.slice(0,200).map(contactCard).join(''):empty('No hay contactos','Crea el primero desde el botón +.')}</div>
-    </div>`;
+    const model=contactListModel();
+    return `<div class="m-page m-contacts-page">${pageHead('Contactos','home','<button class="m-back" data-action="manual-contact" aria-label="Nuevo contacto">＋</button>')}<div class="m-search m-contact-search"><input id="mobileContactSearch" class="m-input" type="search" value="${esc(state.contactQuery)}" placeholder="Nombre, DNI, teléfono o correo" autocomplete="off" aria-label="Buscar contactos"></div><div id="mobileContactFilters" class="m-contact-filters" role="group" aria-label="Filtrar contactos">${renderContactFilters(model.counts,model.active)}</div><p id="mobileContactResultCount" class="m-contact-result-count" aria-live="polite" aria-atomic="true">${contactResultText(model)}</p><div id="mobileContactsList">${contactRowsHtml(model)}</div></div>`;
   }
-  function bindSearch(){
+  function updateContactResults(){
+    const model=contactListModel(),filters=byId('mobileContactFilters'),count=byId('mobileContactResultCount'),list=byId('mobileContactsList');
+    if(filters)filters.innerHTML=renderContactFilters(model.counts,model.active);
+    if(count)count.textContent=contactResultText(model);
+    if(list)list.innerHTML=contactRowsHtml(model);
+  }
+  function bindContactFilters(){
     const input=byId('mobileContactSearch');if(!input)return;
-    input.oninput=()=>{
-      const value=clean(input.value).toLowerCase(),valueDigits=digits(value);
-      const rows=state.contacts.filter(contact=>{
-        const hay=`${contact.fullName} ${contact.dni} ${contact.phone} ${contact.email}`.toLowerCase();
-        return !value||hay.includes(value)||(valueDigits.length>=3&&digits(hay).includes(valueDigits));
-      }).slice(0,200);
-      byId('mobileContactsList').innerHTML=rows.length?rows.map(contactCard).join(''):empty('Sin resultados','Prueba con otro nombre, DNI o teléfono.');
-    };
+    input.oninput=()=>{state.contactQuery=input.value;state.contactLimit=CONTACT_PAGE_SIZE;clearTimeout(contactSearchTimer);contactSearchTimer=setTimeout(updateContactResults,120);};
   }
 
   function relatedOpportunities(id){return state.board.opportunities.filter(opp=>String(opp.record_id||opp.contact_id||'')===String(id));}
@@ -1006,6 +1052,8 @@
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
     if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
+    if(action==='contact-filter'){state.contactFilter=CONTACT_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.contactLimit=CONTACT_PAGE_SIZE;updateContactResults();}
+    if(action==='contact-more'){state.contactLimit+=CONTACT_PAGE_SIZE;updateContactResults();}
     if(action==='opportunity-filter'){state.opportunityFilter=OPPORTUNITY_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';updateOpportunityResults();}
     if(action==='wa-filter'){state.whatsapp.filter=MOBILE_WA_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.whatsapp.limit=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
     if(action==='wa-more'){state.whatsapp.limit+=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
