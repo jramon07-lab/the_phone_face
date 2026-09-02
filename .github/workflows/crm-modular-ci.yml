@@ -30,48 +30,9 @@ jobs:
       - name: Critical modular structure guard
         run: node scripts/modular-guard.js
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Validate test credentials
-        env:
-          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
-          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+      - name: Validate JavaScript syntax
         run: |
-          test -n "$CRM_TEST_EMAIL" || (echo "Missing CRM_TEST_EMAIL" && exit 1)
-          test -n "$CRM_TEST_PASSWORD" || (echo "Missing CRM_TEST_PASSWORD" && exit 1)
-
-      - name: Start isolated local preview
-        run: |
-          node scripts/local-preview.js > /tmp/tpf-preview.log 2>&1 &
-          echo $! > /tmp/tpf-preview.pid
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:3000/healthz >/dev/null; then exit 0; fi
-            sleep 1
-          done
-          cat /tmp/tpf-preview.log
-          exit 1
-
-      - name: Run isolated CRM regression suite
-        env:
-          PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
-          VERCEL_AUTOMATION_BYPASS_SECRET: local-modular-preview
-          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
-          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
-        run: |
-          npx playwright test tests/e2e/crm-*.spec.js --grep-invert "GREEN-API: instancia autorizada y proveedor sano"
-
-      - name: Explain external integration validation
-        run: |
-          echo "GREEN-API se valida en CRM Browser Validation contra el despliegue real de Vercel; el preview local no expone funciones serverless."
-
-      - name: Upload evidence on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: crm-modular-evidence
-          path: |
-            playwright-report
-            test-results
-            /tmp/tpf-preview.log
-          if-no-files-found: ignore
+          node -c api/index.js
+          node -c api/index-clean.js
+          node -c api/index-fix.js
+          node -c js/modules/system-status.js

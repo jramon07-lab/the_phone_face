@@ -26,8 +26,8 @@ test('CRM principal, móvil e integraciones críticas están operativos', async 
   await expect(page.locator('#tpfWaTemplatesV3Nav')).toBeVisible({timeout:15000});
   await expect(page.getByText('Plantillas WhatsApp',{exact:true})).toHaveCount(1);
   await page.locator('#tpfWaTemplatesV3Nav').click();
-  await expect(page.locator('#view-wa-templates-library')).toBeVisible({timeout:15000});
-  await expect(page.locator('#view-wa-templates-library .tpfTplSearch')).toBeVisible();
+  await expect(page.locator('#view-wa-templates-v3')).toBeVisible({timeout:15000});
+  await expect(page.locator('#view-wa-templates-v3 .tv3Search')).toBeVisible();
 
   await page.goto('/movil/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('#mobileBoot')).toBeHidden({timeout:15000});
