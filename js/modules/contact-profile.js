@@ -25,7 +25,6 @@
   function ensureStyles(){
     if(byId('tpfContactProfileProtectionStyles'))return;
     const s=document.createElement('style');s.id='tpfContactProfileProtectionStyles';s.textContent=`
-      body:has(#contactModal:not(.hidden)) .referenceSidebar{pointer-events:none!important}
       #contactModal:not(.hidden){z-index:50000!important;pointer-events:auto!important}
       #contactLabelsModal:not(.hidden),#waQuickModal:not(.hidden),#waTemplateModal:not(.hidden){z-index:60000!important;pointer-events:auto!important}
       #contactModal.tpf-contact-readonly input[readonly],#contactModal.tpf-contact-readonly textarea[readonly]{opacity:1!important;color:#344054!important;background:#f7f9fc!important;cursor:default!important;-webkit-text-fill-color:#344054!important}
@@ -373,6 +372,14 @@
       };
 
       document.addEventListener('click',e=>{
+        const sideNav=e.target?.closest?.('.referenceSidebar .nav');
+        if(sideNav&&!modal()?.classList.contains('hidden')){
+          setTimeout(()=>{
+            modal()?.classList.add('hidden');
+            byId('cpTaskPage')?.classList.add('hidden');
+            byId('cpTaskDetailPage')?.classList.add('hidden');
+          },0);
+        }
         protectContactFieldEvent(e);
         const edit=e.target?.closest?.('#tpfContactEditToggle');
         if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateModalEdit();return;}
