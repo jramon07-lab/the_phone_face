@@ -11,11 +11,13 @@ const SAFE_CACHE_NAME=/^(tpf|the[-_ ]?phone[-_ ]?face|workbox)/i;
 const INTERNAL_RPC=/crm_(?:report|list|set|cleanup|delete|clear)[\w]*system_event|crm_system_health_snapshot/i;
 let rows=[],health=null,green={state:null,health:null},loading=false,lastAction='',searchTimer=null,storageInfo=null;
 const sentAt=new Map();
+const recoveredAt=new Map();
 
 function isAdmin(){try{return !!perms?.is_admin}catch(_){return false}}
 function route(){return `${location.pathname}${location.hash||''}`.split('?')[0].slice(0,180)}
 function version(){return String($('tpfBuildBadge')?.dataset?.tpfCommit||'').trim().slice(0,80)}
 function device(){const ua=navigator.userAgent||'';if(/iphone|ipad|ipod/i.test(ua))return'iOS';if(/android/i.test(ua))return'Android';if(/windows/i.test(ua))return'Windows';if(/macintosh|mac os/i.test(ua))return'macOS';if(/linux/i.test(ua))return'Linux';return'Desconocido'}
+function isTestRuntime(){const host=String(location.hostname||'').toLowerCase();return navigator.webdriver===true||version().toLowerCase()==='local'||host==='localhost'||host==='127.0.0.1'||host==='::1'}
 function redactString(value){return String(value??'')
   .replace(/([?&](?:token|key|code|password|secret|access_token|refresh_token)=)[^&#\s]+/gi,'$1[REDACTADO]')
   .replace(/(authorization\s*:\s*bearer\s+)[^\s]+/gi,'$1[REDACTADO]')
@@ -37,16 +39,30 @@ function payload(input={}){const message=redactString(input.message||input.error
 }}
 async function report(input={}){
   if(typeof sb==='undefined'||!sb?.rpc)return false;
+  if(isTestRuntime())return true;
   const data=payload(input),joined=`${data.p_message} ${data.p_detail}`;if(INTERNAL_RPC.test(joined))return false;
   const key=simpleHash(`${data.p_source}|${data.p_module}|${data.p_severity}|${data.p_message}|${data.p_route}`),now=Date.now();if(now-Number(sentAt.get(key)||0)<30000)return true;sentAt.set(key,now);
   try{const {error}=await sb.rpc('crm_report_system_event',data);if(error)throw error;return true}catch(_){return false}
 }
 window.tpfReportSystemEvent=report;
 
+async function resolveRecoveredRequest(recovery={}){
+  const target=String(recovery.url||''),recoveryRoute=String(recovery.route||''),recoveredAt=Date.parse(recovery.recoveredAt||'');if(!target||!recoveryRoute||!Number.isFinite(recoveredAt)||!isAdmin()||isTestRuntime()||typeof sb==='undefined'||!sb?.rpc)return;
+  const build=version(),currentDevice=device();if(!build)return;
+  const key=`${target}|${build}|${currentDevice}`,now=Date.now();if(now-Number(recoveredAt.get(key)||0)<30000)return;recoveredAt.set(key,now);
+  try{
+    const {data,error}=await sb.rpc('crm_list_system_events',{p_days:7,p_limit:50,p_status:'active',p_search:target});if(error)return;
+    const matches=(data||[]).filter(item=>item?.status==='active'&&item?.source==='desktop'&&item?.severity!=='critical'&&item?.message===target&&item?.route===recoveryRoute&&item?.app_version===build&&item?.device===currentDevice&&Date.parse(item?.last_seen_at||'')<=recoveredAt);
+    for(const item of matches){const failedAgain=readLocalErrors().some(row=>{const type=String(row?.type||'').toLowerCase();return row?.message===target&&(type==='red'||type.startsWith('http '))});if(failedAgain)break;await sb.rpc('crm_set_system_event_status',{p_id:Number(item.id),p_status:'resolved'})}
+    if(matches.length&&!$('view-system')?.classList.contains('hidden'))setTimeout(loadAll,50);
+  }catch(_){}
+}
+
 function readLocalErrors(){try{const data=JSON.parse(localStorage.getItem(LOCAL_ERROR_KEY)||'[]');return Array.isArray(data)?data:[]}catch(_){return[]}}
 async function flushLocalErrors(){for(const item of readLocalErrors().slice(0,60).reverse()){if(wasSynced(item)||INTERNAL_RPC.test(`${item?.message||''} ${item?.detail||''}`))continue;if(await report({type:item.type,message:item.message,detail:item.detail}))markSynced(item)}}
 function capture(){
   addEventListener('tpf:system-error',event=>{const item=event.detail||{};report({type:item.type,message:item.message,detail:item.detail}).then(ok=>{if(ok)markSynced(item)})});
+  addEventListener('tpf:system-request-recovered',event=>resolveRecoveredRequest(event.detail||{}));
   addEventListener('tpf:module-error',event=>{const item=event.detail||{};if(item.module==='isolation-test'&&item.error==='fallo-controlado')return;report({source:'desktop',module:item.module||'Módulo',message:item.error||'Error interno del módulo',detail:item.context||'',severity:'error'})});
   addEventListener('error',event=>{const target=event.target;if(target&&target!==window&&(target.src||target.href)){report({message:'No se pudo cargar un recurso del CRM',detail:target.src||target.href,module:'Recursos',severity:'error'})}},true);
   document.addEventListener('click',event=>{const target=event.target?.closest?.('button,[data-view],[data-action],a');if(target)lastAction=(target.getAttribute('aria-label')||target.textContent||target.dataset?.view||target.dataset?.action||'').trim().replace(/\s+/g,' ').slice(0,100)},true);
