@@ -151,6 +151,7 @@
     const node=byId('mobileToast');node.textContent=message;node.className=`m-toast ${type}`.trim();
     clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.classList.add('hidden'),3600);
   }
+  window.TPFMobileToast=toast;
   function setLoginMessage(message){byId('mobileLoginMsg').textContent=message||'';}
   function showLogin(message=''){
     byId('mobileBoot').classList.add('hidden');byId('mobileApp').classList.add('hidden');byId('mobileLogin').classList.remove('hidden');setLoginMessage(message);
@@ -187,7 +188,7 @@
     try{
       await client.rpc('bootstrap_user_permissions');
       const {data,error}=await client.rpc('current_user_permissions');if(error)throw error;
-      state.perms=data||{};showApp();
+      state.perms=data||{};window.TPFMobileSystem?.start(client,state.perms);showApp();
       await refreshData({silent:true});
       if(!location.hash)go('home',true);else render();
     }catch(error){
@@ -207,7 +208,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();stopGuidedCamera();mobileTemplateRequestId+=1;mobileLabelRequestId+=1;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=null;state.scanUrl='';state.draft=null;
-    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);window.TPFMobileSystem?.stop();await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -309,14 +310,16 @@
         case 'creating':view.innerHTML=renderCreating();break;
         case 'success':view.innerHTML=renderSuccess();break;
         case 'more':view.innerHTML=renderMore();break;
+        case 'system':if(!state.perms?.is_admin){go('more',true);break}view.innerHTML=window.TPFMobileSystem?.render?.()||empty('Estado no disponible','Recarga la aplicación.');window.TPFMobileSystem?.refresh();break;
         default:view.innerHTML=renderHome();
       }
       if(!['whatsapp','whatsapp-chat'].includes(current.parts[0]))stopMobileWaRefresh();
       view.scrollTop=current.parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0;
-    }catch(error){view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
+    }catch(error){window.TPFMobileSystem?.report?.({type:'JavaScript',module:'Interfaz móvil',message:'No se pudo abrir una pantalla',detail:error?.message||''});view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
   }
+  window.TPFMobileRerender=render;
   function setActiveNav(name){
-    const quickOrigin=route().query.get('origin')==='quick',group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name;
+    const quickOrigin=route().query.get('origin')==='quick',group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name==='system'?'more':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
   }
@@ -1342,7 +1345,7 @@
   }
 
   function renderMore(){
-    return `<div class="m-page">${pageHead('Más','home')}<div class="m-info-card">${infoRow('Usuario',state.perms?.display_name||state.user?.email)}${infoRow('Sincronización','Mismo CRM y misma base de datos')}${infoRow('Última actualización',state.lastRefresh?dateTime(state.lastRefresh):'—')}</div><div class="m-action-stack" style="margin-top:14px"><button class="m-secondary" data-action="refresh">↻ Actualizar datos</button><button class="m-secondary" data-action="open-desktop">Abrir CRM completo</button><button class="m-danger" data-action="logout">Cerrar sesión</button></div></div>`;
+    return `<div class="m-page">${pageHead('Más','home')}<div class="m-info-card">${infoRow('Usuario',state.perms?.display_name||state.user?.email)}${infoRow('Sincronización','Mismo CRM y misma base de datos')}${infoRow('Última actualización',state.lastRefresh?dateTime(state.lastRefresh):'—')}</div><div class="m-action-stack" style="margin-top:14px">${state.perms?.is_admin?'<button class="m-secondary" data-action="route" data-route="system">● Estado del sistema</button>':''}<button class="m-secondary" data-action="refresh">↻ Actualizar datos</button><button class="m-secondary" data-action="open-desktop">Abrir CRM completo</button><button class="m-danger" data-action="logout">Cerrar sesión</button></div></div>`;
   }
 
   function handleMobileWaSheetKeydown(event){
@@ -1368,6 +1371,7 @@
   }
   async function handleViewClick(event){
     const target=event.target.closest('[data-action]');if(!target)return;event.preventDefault();const action=target.dataset.action;
+    if(action.startsWith('system-')){await window.TPFMobileSystem?.handle?.(action,target);return;}
     if(action==='route'){
       const destination=String(target.dataset.route||''),current=route().parts[0];
       if(destination.startsWith('whatsapp-chat/'))state.whatsapp.listScroll=Number(byId('mobileView')?.scrollTop||0);

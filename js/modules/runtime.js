@@ -2,8 +2,8 @@
 'use strict';
 if(window.TPFModules&&window.TPFModules.version>=2)return;
 const states=new Map(),errs=[];
-function emit(name,state,detail=''){const x={name,state,detail:String(detail||''),at:new Date().toISOString()};states.set(name,x);return x}
-function report(name,e,c=''){console.error('[TPF:'+name+']',c,e);const item={module:name,error:String(e?.message||e||'Error'),context:String(c||''),at:new Date().toISOString()};errs.push(item);if(errs.length>100)errs.shift();return emit(name,'error',item.error)}
+function emit(name,state,detail=''){const x={name,state,detail:String(detail||''),at:new Date().toISOString()};states.set(name,x);try{window.dispatchEvent(new CustomEvent('tpf:module-status',{detail:x}))}catch(_){}return x}
+function report(name,e,c=''){console.error('[TPF:'+name+']',c,e);const item={module:name,error:String(e?.message||e||'Error'),context:String(c||''),at:new Date().toISOString()};errs.push(item);if(errs.length>100)errs.shift();try{window.dispatchEvent(new CustomEvent('tpf:module-error',{detail:item}))}catch(_){}return emit(name,'error',item.error)}
 function register(name,d={}){emit(name,'loading');try{d.install?.(api);return emit(name,'ready')}catch(e){return report(name,e,'install')}}
 function guard(name,fn){return typeof fn==='function'?function(...a){try{return fn.apply(this,a)}catch(e){report(name,e)}}:fn}
 const api={version:2,register,guard,wrapGlobals:()=>[],report,emit,status:()=>[...states.values()],errors:()=>[...errs],clearErrors:()=>{errs.length=0}};window.TPFModules=api;emit('runtime','ready');

@@ -26,6 +26,9 @@ test('Estado del sistema: respeta permisos y carga diagnóstico cuando procede',
     await expect(page.locator('#systemCheckedAt')).not.toHaveText('—', { timeout: 15000 });
     await expect(page.locator('#systemBanner')).not.toContainText('Comprobando', { timeout: 15000 });
     await expect(page.locator('#systemExportDiagnostic')).toBeVisible();
+    await expect(page.locator('#tpfOperationalChecks')).toBeVisible();
+    await expect(page.locator('#tpfIncidentRegistry')).toBeVisible();
+    await expect(page.locator('#tpfMaintenanceCard')).toBeVisible();
   } else {
     await expect(nav).toBeHidden();
     await expect(page.locator('#view-system')).toHaveClass(/hidden/);
