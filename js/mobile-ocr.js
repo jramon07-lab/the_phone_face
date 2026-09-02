@@ -17,10 +17,11 @@
   }
 
   function tidy(value){return String(value||'').replace(/[|]/g,'I').replace(/\s+/g,' ').trim();}
+  function fold(value){return tidy(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();}
   function normalizePhone(value){
     const digits=String(value||'').replace(/\D/g,'');
-    if(digits.length===11&&digits.startsWith('34'))return digits.slice(2);
-    return digits.length>=9?digits.slice(-9):digits;
+    if(/^34[6789]\d{8}$/.test(digits))return digits.slice(2);
+    return /^[6789]\d{8}$/.test(digits)?digits:'';
   }
   function validDni(candidate){
     const value=String(candidate||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
@@ -29,19 +30,60 @@
     if(/^[A-Z]\d{7}[A-Z0-9]$/.test(value))return value;
     return '';
   }
+  const FIELD_LABEL=/\b(?:DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
+  const NAME_BLOCKED=/\b(?:MYCRM|BUSQUEDA|BUSCAR|CRITERIO|DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CLIENTE|MULTIMARCA|FECHA|DIRECCION|NACIMIENTO|NACIONALIDAD|DATOS|COMPARTIDOS|SUSCRIPCION|DISPOSITIVO|SINFIN|ILIMITADOS|CONV|GB)\b/i;
+  const NAME_START=/\b(?:BUSQUEDA|BUSCAR)\b/i;
+  const NAME_END=/\b(?:DATOS\s+COMPARTIDOS|SUSCRIPCION|DISPOSITIVO)\b/i;
+
+  function lineDni(line){
+    const compact=fold(line).replace(/[^A-Z0-9]/g,'');
+    return validDni(compact);
+  }
+  function linePhone(line){
+    return normalizePhone(line);
+  }
+  function valueAfterLabel(lines,label,valueFromLine){
+    for(let index=0;index<lines.length;index+=1){
+      const current=fold(lines[index]);
+      if(!label.test(current))continue;
+      const inline=valueFromLine(current.replace(new RegExp(label.source,'ig'),''));
+      if(inline)return inline;
+      for(let offset=1;offset<=2&&index+offset<lines.length;offset+=1){
+        const next=lines[index+offset];
+        if(FIELD_LABEL.test(fold(next)))break;
+        const value=valueFromLine(next);
+        if(value)return value;
+      }
+    }
+    return '';
+  }
+  function cleanNameLine(line){
+    const words=tidy(line).match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:['-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*/g)||[];
+    return words.filter(word=>word.length>=2).join(' ');
+  }
+  function plausibleName(line){
+    const value=cleanNameLine(line);
+    const folded=fold(value);
+    if(!value||NAME_BLOCKED.test(folded)||/\d/.test(value))return false;
+    if(!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$/.test(value))return false;
+    const words=value.split(/\s+/).filter(Boolean);
+    if(words.length<2||words.length>5||words.join('').length<6)return false;
+    const letters=value.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g)||[];
+    const upper=value.match(/[A-ZÁÉÍÓÚÜÑ]/g)||[];
+    return upper.length/Math.max(letters.length,1)>=0.65;
+  }
   function nameFromLines(lines){
-    const blocked=/DNI|NIF|DOCUMENT|CRITERIO|MISIDN|FIJO|MOVIL|TEL[EÉ]FONO|CLIENTE|BUSQUEDA|MULTIMARCA|FECHA|DIRECCI[OÓ]N|NACIMIENTO|NACIONALIDAD/i;
-    const candidates=lines.map(tidy).filter(line=>{
-      if(!line||blocked.test(line)||/\d{3,}/.test(line))return false;
-      const words=line.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]/g,'').trim().split(/\s+/).filter(Boolean);
-      return words.length>=2&&words.length<=6&&words.join('').length>=6;
-    });
-    const best=candidates.sort((a,b)=>{
-      const au=(a.match(/[A-ZÁÉÍÓÚÜÑ]/g)||[]).length/Math.max(a.replace(/\s/g,'').length,1);
-      const bu=(b.match(/[A-ZÁÉÍÓÚÜÑ]/g)||[]).length/Math.max(b.replace(/\s/g,'').length,1);
-      return bu-au||b.length-a.length;
-    })[0]||'';
-    return best.toLowerCase().replace(/(^|[\s'-])([a-záéíóúüñ])/g,(m,p,c)=>p+c.toUpperCase());
+    const clean=lines.map(tidy);
+    const anchors=clean.map((line,index)=>NAME_START.test(fold(line))?index:-1).filter(index=>index>=0);
+    for(let anchor=anchors.length-1;anchor>=0;anchor-=1){
+      const index=anchors[anchor];
+      for(let offset=1;offset<=12&&index+offset<clean.length;offset+=1){
+        const candidate=cleanNameLine(clean[index+offset]);
+        if(NAME_END.test(fold(candidate)))break;
+        if(plausibleName(candidate))return candidate;
+      }
+    }
+    return '';
   }
   function splitName(full){
     const words=tidy(full).split(' ').filter(Boolean);
@@ -50,11 +92,11 @@
   }
   function extract(text){
     const raw=String(text||'');
-    const compact=raw.toUpperCase().replace(/[\s.\-_/]/g,'');
-    const dniMatches=compact.match(/(?:[XYZ]\d{7}[A-Z]|\d{8}[A-Z]|[ABCDEFGHJNPQRSUVW]\d{7}[A-Z0-9])/g)||[];
-    const phoneMatches=raw.match(/(?:\+?34[\s.\-]*)?(?:[6789](?:[\s.\-]*\d){8})/g)||[];
-    const fullName=nameFromLines(raw.split(/\r?\n/));
-    return {dni:dniMatches.map(validDni).find(Boolean)||'',phone:normalizePhone(phoneMatches[0]||''),fullName,...splitName(fullName),rawText:raw};
+    const lines=raw.split(/\r?\n/);
+    const dni=valueAfterLabel(lines,/\b(?:DOCUMENTO|DNI|NIF)\b/i,lineDni);
+    const phone=valueAfterLabel(lines,/\b(?:MSISDN|MSIDN|FIJO|MOVIL|TELEFONO)\b/i,linePhone);
+    const fullName=nameFromLines(lines);
+    return {dni,phone,fullName,...splitName(fullName),rawText:raw};
   }
 
   async function recognize(file,onProgress){
