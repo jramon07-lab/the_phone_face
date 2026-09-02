@@ -28,6 +28,8 @@ test('Estado del sistema: respeta permisos y carga diagnóstico cuando procede',
     await expect(page.locator('#systemExportDiagnostic')).toBeVisible();
     await expect(page.locator('#tpfOperationalChecks')).toBeVisible();
     await expect(page.locator('#tpfIncidentRegistry')).toBeVisible();
+    await expect(page.locator('#tpfIncidentStatus')).toHaveValue('active');
+    await expect(page.locator('#tpfCleanCentral')).toHaveText('Vaciar historial cerrado');
     await expect(page.locator('#tpfMaintenanceCard')).toBeVisible();
   } else {
     await expect(nav).toBeHidden();
