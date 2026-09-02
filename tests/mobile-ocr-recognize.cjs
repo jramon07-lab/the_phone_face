@@ -5,8 +5,8 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'../js/mobile-ocr.js'),'utf8');
 
-function harness(texts,{failSecond=false}={}){
-  const calls={canvases:[],closed:0,recognize:[],parameters:[],terminated:0,workers:0};
+function harness(texts,{failSecond=false,failCrop=false}={}){
+  const calls={canvases:[],closed:0,draws:[],recognize:[],parameters:[],terminated:0,workers:0};
   let logger=()=>{};
   const worker={
     async setParameters(value){calls.parameters.push(value);},
@@ -26,15 +26,15 @@ function harness(texts,{failSecond=false}={}){
       assert.equal(tag,'canvas');
       const canvas={
         width:0,height:0,
-        getContext(){return {fillStyle:'',imageSmoothingEnabled:false,imageSmoothingQuality:'',fillRect(){},drawImage(){}};},
-        toBlob(callback){callback(new Blob(['jpeg'],{type:'image/jpeg'}));}
+        getContext(){return {fillStyle:'',imageSmoothingEnabled:false,imageSmoothingQuality:'',fillRect(){},drawImage(...args){calls.draws.push(args);}};},
+        toBlob(callback){callback(failCrop&&calls.canvases.length===2?null:new Blob(['jpeg'],{type:'image/jpeg'}));}
       };
       calls.canvases.push(canvas);
       return canvas;
     }
   };
   const api={
-    OEM:{LSTM_ONLY:1},PSM:{AUTO:'3',SINGLE_COLUMN:'4'},
+    OEM:{LSTM_ONLY:1},PSM:{AUTO:'3',SINGLE_COLUMN:'4',SPARSE_TEXT:'11'},
     async createWorker(_language,_oem,options){calls.workers+=1;logger=options.logger;return worker;}
   };
   const context={
@@ -81,19 +81,24 @@ Msisdn/Fijo
   assert.equal(calls.workers,1);
   assert.equal(calls.recognize.length,2);
   assert.equal(calls.recognize[0].input.name,'contacto.jpg');
-  assert.strictEqual(calls.recognize[0].input,calls.recognize[1].input);
-  assert.equal(JSON.stringify(calls.recognize.map(call=>call.options)),'[{},{"rectangle":{"left":21,"top":288,"width":941,"height":634}}]');
+  assert.notStrictEqual(calls.recognize[0].input,calls.recognize[1].input);
+  assert.equal(calls.recognize[1].input.name,'contacto-documento.jpg');
+  assert.equal(JSON.stringify(calls.recognize.map(call=>call.options)),'[{},{}]');
   assert.equal(JSON.stringify(calls.parameters),'[{"tessedit_pageseg_mode":"3"},{"tessedit_pageseg_mode":"4"}]');
   assert.equal(calls.terminated,1);
   assert.equal(calls.closed,1);
-  assert.equal(calls.canvases.length,1);
+  assert.equal(calls.canvases.length,2);
   assert.ok(calls.canvases.every(canvas=>canvas.width===1&&canvas.height===1));
+  assert.equal(JSON.stringify(calls.draws[1].slice(1)),'[21,288,941,634,0,0,1800,1213]');
   assert.ok(progress.every((value,index)=>index===0||value>=progress[index-1]));
   assert.equal(progress.at(-1),1);
 
   const prepared=await ocr.prepareImageForOcr(file);
   assert.ok(prepared instanceof File);
   assert.equal(prepared.name,'contacto.jpg');
+  assert.equal(calls.canvases.length,3);
+  assert.equal(calls.canvases[2].width,1);
+  assert.equal(calls.canvases[2].height,1);
 
   const fast=harness([`${formRaw}\nBÚSQUEDA\nMARIA VANESA CORTES\nDatos compartidos`]);
   const fastResult=await fast.ocr.recognize(file);
@@ -107,6 +112,24 @@ Msisdn/Fijo
   assert.equal(partialResult.dni,'');
   assert.equal(partialResult.fullName,'Maria Vanesa Cortes');
   assert.equal(partial.calls.terminated,1);
+
+  const cropFallback=harness([iphoneRaw,formRaw],{failCrop:true});
+  const fallbackResult=await cropFallback.ocr.recognize(file);
+  assert.equal(fallbackResult.dni,'43161930S');
+  assert.strictEqual(cropFallback.calls.recognize[0].input,cropFallback.calls.recognize[1].input);
+  assert.equal(JSON.stringify(cropFallback.calls.recognize.map(call=>call.options)),'[{},{}]');
+  assert.equal(JSON.stringify(cropFallback.calls.parameters),'[{"tessedit_pageseg_mode":"3"},{"tessedit_pageseg_mode":"11"}]');
+  assert.ok(cropFallback.calls.canvases.every(canvas=>canvas.width===1&&canvas.height===1));
+  assert.equal(cropFallback.calls.terminated,1);
+
+  const emptyCropRetry=harness([iphoneRaw,'',formRaw]);
+  const retryResult=await emptyCropRetry.ocr.recognize(file);
+  assert.equal(retryResult.dni,'43161930S');
+  assert.equal(retryResult.phone,'858718773');
+  assert.equal(emptyCropRetry.calls.recognize.length,3);
+  assert.strictEqual(emptyCropRetry.calls.recognize[0].input,emptyCropRetry.calls.recognize[2].input);
+  assert.equal(JSON.stringify(emptyCropRetry.calls.parameters),'[{"tessedit_pageseg_mode":"3"},{"tessedit_pageseg_mode":"4"},{"tessedit_pageseg_mode":"11"}]');
+  assert.equal(emptyCropRetry.calls.terminated,1);
 
   console.log('mobile OCR recognition flow: ok');
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -78,11 +78,11 @@
     const bottom=Math.max(top+1,Math.min(height,Math.ceil(height*(topRatio+heightRatio))));
     return {left,top,width:right-left,height:bottom-top};
   }
-  async function prepareOcrSource(file,onProgress){
+  async function prepareOcrSource(file,onProgress,withFormCrop){
     if(!file||typeof file.size!=='number')throw new Error('Selecciona una imagen válida.');
     if(file.type&&!String(file.type).toLowerCase().startsWith('image/'))throw new Error('El archivo seleccionado no es una imagen.');
     report(onProgress,'preparing image',0.03);
-    let decoded,canvas;
+    let decoded,canvas,formCanvas;
     try{
       decoded=await decodeImage(file);
       const maxSide=1800;
@@ -96,20 +96,46 @@
       context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
       context.drawImage(decoded.source,0,0,width,height);
       const jpeg=await canvasJpeg(canvas,.9);
+      // Libera el lienzo grande antes de preparar el recorte: en iPhone evita
+      // mantener dos superficies completas a la vez.
+      canvas.width=1;canvas.height=1;
+
+      let formInput=null;
+      if(withFormCrop){
+        try{
+          const sourceRect=ratioRect(decoded.width,decoded.height,.02,.20,.87,.44);
+          const formScale=Math.min(2,maxSide/Math.max(sourceRect.width,sourceRect.height));
+          const formWidth=Math.max(1,Math.round(sourceRect.width*formScale));
+          const formHeight=Math.max(1,Math.round(sourceRect.height*formScale));
+          if(formWidth<200||formHeight<120)throw new Error('El recorte del documento es demasiado pequeño.');
+          formCanvas=document.createElement('canvas');formCanvas.width=formWidth;formCanvas.height=formHeight;
+          const formContext=formCanvas.getContext('2d',{alpha:false});
+          if(!formContext)throw new Error('No se pudo crear el recorte del documento.');
+          formContext.fillStyle='#fff';formContext.fillRect(0,0,formWidth,formHeight);
+          formContext.imageSmoothingEnabled=true;formContext.imageSmoothingQuality='high';
+          formContext.drawImage(decoded.source,sourceRect.left,sourceRect.top,sourceRect.width,sourceRect.height,0,0,formWidth,formHeight);
+          const formJpeg=await canvasJpeg(formCanvas,.92);
+          if(!formJpeg.size)throw new Error('El recorte del documento está vacío.');
+          formInput=jpegInput(formJpeg,file,'-documento');
+        }catch(cropError){
+          // La lectura general sigue siendo válida si Safari no puede crear el
+          // recorte; recognize() conserva un último fallback sobre toda la foto.
+          console.warn('[TPF OCR] prepare document crop',String(cropError?.message||cropError||'').trim());
+        }
+      }
       report(onProgress,'image prepared',0.08);
       return {
         input:jpegInput(jpeg,file,''),
-        // Esta zona contiene las etiquetas Criterio / Documento / teléfono.
-        // La etiqueta mantiene la extracción segura y evita confundir IDs.
-        formRect:ratioRect(width,height,.02,.20,.87,.44)
+        formInput
       };
     }finally{
       decoded?.release?.();
       if(canvas){canvas.width=1;canvas.height=1;}
+      if(formCanvas){formCanvas.width=1;formCanvas.height=1;}
     }
   }
   async function prepareImageForOcr(file,onProgress){
-    return (await prepareOcrSource(file,onProgress)).input;
+    return (await prepareOcrSource(file,onProgress,false)).input;
   }
 
   function tidy(value){return String(value||'').replace(/[|]/g,'I').replace(/\s+/g,' ').trim();}
@@ -300,7 +326,7 @@
     let pass='loading';
     let lastProgress=0;
     try{
-      const prepared=await prepareOcrSource(file,onProgress);
+      const prepared=await prepareOcrSource(file,onProgress,true);
       phase='reader';report(onProgress,'loading reader',0.1);
       const api=await load();
       phase='recognition';
@@ -330,9 +356,20 @@
       try{
         pass='document';lastProgress=Math.max(lastProgress,.6);
         report(onProgress,'checking contact fields',lastProgress);
-        await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SINGLE_COLUMN||'4'});
-        const formResult=await worker.recognize(prepared.input,{rectangle:prepared.formRect},output);
-        const merged=mergeResults(primary,extract(formResult?.data?.text||''));
+        await worker.setParameters({tessedit_pageseg_mode:prepared.formInput?(api.PSM?.SINGLE_COLUMN||'4'):(api.PSM?.SPARSE_TEXT||'11')});
+        const formResult=prepared.formInput
+          ?await worker.recognize(prepared.formInput,{},output)
+          :await worker.recognize(prepared.input,{},output);
+        const formText=String(formResult?.data?.text||'');
+        let supplement=extract(formText);
+        // Si Safari decodifica el JPEG pero devuelve una lectura totalmente
+        // vacía, queda un último intento disperso sobre la imagen completa.
+        if(prepared.formInput&&!supplement.dni&&!formText.trim()){
+          await worker.setParameters({tessedit_pageseg_mode:api.PSM?.SPARSE_TEXT||'11'});
+          const sparseResult=await worker.recognize(prepared.input,{},output);
+          supplement=mergeResults(supplement,extract(sparseResult?.data?.text||''));
+        }
+        const merged=mergeResults(primary,supplement);
         report(onProgress,'recognition complete',1);
         return merged;
       }catch(supplementError){
@@ -352,5 +389,5 @@
   }
 
   window.TPFMobileOCR={recognize,extract,prepareImageForOcr};
-  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-crop';
+  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-physical-crop';
 })();
