@@ -14,9 +14,10 @@
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
     loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',scanFile:null,scanUrl:'',ocrDebugText:'',
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
-    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:''}
+    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelsLoading:false,labelsSaving:false,labelsError:''}
   };
   let mobileWaRefreshTimer=null;
+  let mobileWaSheetTrigger=null;
 
   const field=(data,...names)=>{
     for(const name of names){const value=data?.[name];if(value!==undefined&&value!==null&&clean(value)!=='')return value;}
@@ -135,7 +136,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();
-    await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:''};location.hash='';showLogin();
+    closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -185,6 +186,7 @@
         case 'opportunity':view.innerHTML=renderOpportunity(current.parts[1]);break;
         case 'tasks':view.innerHTML=renderTasks();break;
         case 'new-task':view.innerHTML=renderNewTask(current.parts[1]);break;
+        case 'new-contact-opportunity':view.innerHTML=renderContactOpportunity(current.parts[1]);break;
         case 'whatsapp':view.innerHTML=renderMobileWhatsApp();initMobileWhatsAppList();break;
         case 'whatsapp-chat':view.innerHTML=renderMobileWhatsAppChat(safeDecode(current.parts[1]));initMobileWhatsAppChat(safeDecode(current.parts[1]));break;
         case 'alerts':view.innerHTML=renderAlerts();break;
@@ -202,7 +204,7 @@
     }catch(error){view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
   }
   function setActiveNav(name){
-    const group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'?'opportunities':['scan','detected','new-opportunity','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name;
+    const group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||name==='new-contact-opportunity'?'opportunities':['scan','detected','new-opportunity','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
   }
@@ -343,9 +345,10 @@
     try{const {error}=await client.from('agenda_items').update({status:'completed'}).eq('id',id).select('id').single();if(error)throw error;await refreshData({silent:true});render();toast('Tarea completada.','success');}catch(error){toast(error?.message||'No se pudo completar.','error');}
   }
   function renderNewTask(contactId){
-    const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',`contact/${contactId}`)}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
     const next=new Date(Date.now()+86400000);next.setMinutes(next.getMinutes()-next.getTimezoneOffset());
-    return `<div class="m-page">${pageHead('Nueva tarea',`contact/${contactId}`)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Asunto</span><input id="newTaskTitle" class="m-input" placeholder="Llamar al cliente"></label><label class="m-field"><span>Fecha y hora</span><input id="newTaskStarts" class="m-input" type="datetime-local" value="${next.toISOString().slice(0,16)}"></label><label class="m-field"><span>Notas</span><textarea id="newTaskNotes" class="m-textarea"></textarea></label></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
+    const back=mobileWaReturnPath(contactId);
+    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Asunto</span><input id="newTaskTitle" class="m-input" placeholder="Llamar al cliente"></label><label class="m-field"><span>Fecha y hora</span><input id="newTaskStarts" class="m-input" type="datetime-local" value="${next.toISOString().slice(0,16)}"></label><label class="m-field"><span>Notas</span><textarea id="newTaskNotes" class="m-textarea"></textarea></label></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
   }
   async function saveTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));const title=clean(byId('newTaskTitle').value),starts=byId('newTaskStarts').value;
@@ -353,9 +356,33 @@
     const button=document.querySelector('[data-action="save-task"]');button.disabled=true;byId('mobileTaskMsg').textContent='Guardando…';
     try{
       const row={title,description:clean(byId('newTaskNotes').value)||null,customer_name:contact.fullName||null,customer_phone:contact.phone||null,starts_at:new Date(starts).toISOString(),reminder_at:null,assigned_to:state.user.id,related_record_id:contact.id,status:'pending',reminder_minutes:[],notify_in_app:true,notify_email:false,sync_google_calendar:false,whatsapp_enabled:false};
-      const {error}=await client.from('agenda_items').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});state.profileTab='tasks';go(`contact/${contact.id}`);toast('Tarea creada y sincronizada.','success');
+      const {error}=await client.from('agenda_items').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});const back=mobileWaReturnPath(contact.id);if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='tasks';go(`contact/${contact.id}`);}toast('Tarea creada y sincronizada.','success');
     }catch(error){byId('mobileTaskMsg').textContent=error?.message||'No se pudo crear la tarea.';}
     finally{button.disabled=false;}
+  }
+
+  function mobileWaQueryChatId(){
+    const chatId=clean(route().query.get('chat'));return /^[^/?#]+@(c\.us|g\.us|lid)$/i.test(chatId)?chatId:'';
+  }
+  function mobileWaChatPath(chatId){return `whatsapp-chat/${encodeURIComponent(String(chatId||''))}`;}
+  function mobileWaReturnPath(contactId){const chatId=mobileWaQueryChatId();return chatId?mobileWaChatPath(chatId):`contact/${contactId}`;}
+  function renderContactOpportunity(contactId){
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),back=mobileWaReturnPath(contactId);
+    if(!contact||!has('can_view_sales')||!has('can_edit_sales'))return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
+    if(!state.board.stages.length)return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('Sin columnas','Crea primero una columna en el Panel de ventas del CRM.')}</div>`;
+    return `<div class="m-page">${pageHead('Nueva oportunidad',back)}<p class="m-subtitle" style="margin-bottom:16px">Oportunidad para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="contactOppTitle" class="m-input" value="${esc(`Oportunidad - ${contact.fullName}`)}"></label><label class="m-field"><span>Columna / Estado</span><select id="contactOppStage" class="m-select">${state.board.stages.map(stage=>`<option value="${esc(stage.id)}">${esc(stage.name)}</option>`).join('')}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="contactOppDate" class="m-input" type="date"></label><label class="m-field"><span>Importe (opcional)</span><input id="contactOppAmount" class="m-input" inputmode="decimal" placeholder="0,00"></label><label class="m-field"><span>Notas</span><textarea id="contactOppNotes" class="m-textarea"></textarea></label></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="save-contact-opportunity" data-contact-id="${esc(contactId)}">Crear oportunidad</button><p id="mobileContactOppMsg" class="m-form-msg"></p></div>`;
+  }
+  async function saveContactOpportunity(contactId){
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),title=clean(byId('contactOppTitle')?.value),stageId=byId('contactOppStage')?.value,stage=state.board.stages.find(row=>String(row.id)===String(stageId)),msg=byId('mobileContactOppMsg');
+    if(!contact||!has('can_view_sales')||!has('can_edit_sales')){if(msg)msg.textContent='No tienes permiso o el contacto ya no existe.';return;}
+    if(!title||!stage){if(msg)msg.textContent='Escribe un nombre y selecciona una columna.';return;}
+    const rawAmount=clean(byId('contactOppAmount')?.value).replace(',','.'),amount=rawAmount===''?0:Number(rawAmount);if(!Number.isFinite(amount)){if(msg)msg.textContent='El importe no es válido.';return;}
+    const button=document.querySelector('[data-action="save-contact-opportunity"]');if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
+    try{
+      const row={pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:contact.id,title,client_name:contact.fullName||null,phone:contact.phone||null,amount,expected_date:byId('contactOppDate')?.value||null,owner_user_id:state.user.id,notes:clean(byId('contactOppNotes')?.value)||null};
+      const {error}=await client.from('sales_opportunities').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});const back=mobileWaReturnPath(contact.id);if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='opportunities';go(`contact/${contact.id}`);}toast('Oportunidad creada y sincronizada.','success');
+    }catch(error){if(msg)msg.textContent=error?.message||'No se pudo crear la oportunidad.';}
+    finally{if(button)button.disabled=false;}
   }
 
   function renderAlerts(){
@@ -672,11 +699,69 @@
     if(has('can_create_database')&&has('can_view_database'))return `<span>No está en Contactos</span><button class="m-secondary" data-action="wa-create-contact" data-chat-id="${esc(chat.id)}" type="button">Crear contacto</button>`;
     return '<span>No está vinculado a Contactos.</span>';
   }
+  function mobileWaSheetFrame(title,body){
+    return `<button class="m-wa-sheet-backdrop" data-action="wa-close-sheet" type="button" aria-label="Cerrar acciones"></button><section class="m-wa-sheet" role="dialog" aria-modal="true" aria-labelledby="mobileWaSheetTitle"><div class="m-wa-sheet-head"><h2 id="mobileWaSheetTitle">${esc(title)}</h2><button class="m-wa-sheet-close" data-action="wa-close-sheet" type="button" aria-label="Cerrar">×</button></div>${body}</section>`;
+  }
+  function setMobileWaSheet(kind,title,body,chatId=state.whatsapp.selectedId){
+    const root=byId('mobileWaActionSheet');if(!root)return;root.dataset.kind=kind;root.dataset.chatId=String(chatId||'');root.innerHTML=mobileWaSheetFrame(title,body);root.classList.remove('hidden');root.setAttribute('aria-hidden','false');const app=byId('mobileApp');if(app)app.inert=true;setTimeout(()=>root.querySelector('.m-wa-sheet-close,[data-action]:not(:disabled)')?.focus(),0);
+  }
+  function closeMobileWaSheet(restoreFocus=true){
+    const root=byId('mobileWaActionSheet');if(!root)return;root.classList.add('hidden');root.setAttribute('aria-hidden','true');root.innerHTML='';delete root.dataset.kind;delete root.dataset.chatId;const app=byId('mobileApp');if(app)app.inert=false;const trigger=mobileWaSheetTrigger;mobileWaSheetTrigger=null;if(trigger)trigger.setAttribute('aria-expanded','false');if(restoreFocus&&trigger?.focus)setTimeout(()=>trigger.focus(),0);
+  }
+  function mobileWaSheetChatId(){const root=byId('mobileWaActionSheet'),chatId=clean(root?.dataset?.chatId);return chatId&&chatId===String(state.whatsapp.selectedId||'')?chatId:'';}
+  function mobileWaActionOption(action,icon,title,detail,enabled=true){return `<button class="m-wa-sheet-option" data-action="${esc(action)}" type="button"${enabled?'':' disabled'}><span class="m-wa-sheet-icon" aria-hidden="true">${esc(icon)}</span><span><b>${esc(title)}</b><small>${esc(detail)}</small></span><i aria-hidden="true">›</i></button>`;}
+  function renderMobileWaActions(){
+    const chatId=state.whatsapp.selectedId,contact=mobileWaFindContact(chatId),linked=!!contact,linkHint=linked?contact.fullName:'Primero crea o vincula el contacto';
+    return `<div class="m-wa-sheet-options">${mobileWaActionOption('wa-choose-file','⌁','Foto o archivo','Envía una imagen, vídeo, audio o documento')}${mobileWaActionOption('wa-show-templates','▤','Usar plantilla',has('can_manage_templates')?'Prepara un texto guardado':'No tienes permiso para usar plantillas',has('can_manage_templates'))}${mobileWaActionOption('wa-create-task','▣','Crear tarea',linked?(has('can_manage_agenda')?`Vinculada a ${linkHint}`:'No tienes permiso para crear tareas'):linkHint,linked&&has('can_manage_agenda'))}${mobileWaActionOption('wa-create-opportunity','◇','Crear oportunidad',linked?(has('can_view_sales')&&has('can_edit_sales')?`Vinculada a ${linkHint}`:'No tienes permiso para crear oportunidades'):linkHint,linked&&has('can_view_sales')&&has('can_edit_sales'))}${mobileWaActionOption('wa-show-labels','◆','Añadir etiqueta',linked?(has('can_manage_labels')?`Gestiona las etiquetas de ${linkHint}`:'No tienes permiso para gestionar etiquetas'):linkHint,linked&&has('can_manage_labels'))}</div>`;
+  }
+  function openMobileWaActions(trigger){
+    if(!state.whatsapp.selectedId||state.whatsapp.sending)return;mobileWaSheetTrigger=trigger||null;if(trigger)trigger.setAttribute('aria-expanded','true');setMobileWaSheet('actions','Acciones del chat',renderMobileWaActions());
+  }
+  function renderMobileWaTemplatesSheet(){
+    if(state.whatsapp.templatesLoading)return '<div class="m-wa-sheet-loading">Cargando plantillas…</div>';
+    if(state.whatsapp.templatesError)return `<div class="m-duplicate warn">${esc(state.whatsapp.templatesError)}</div><button class="m-secondary m-wa-sheet-full" data-action="wa-show-templates" type="button">Reintentar</button>`;
+    if(!state.whatsapp.templates.length)return '<div class="m-wa-sheet-empty">No tienes plantillas guardadas.</div>';
+    return `<div class="m-wa-template-list">${state.whatsapp.templates.map((template,index)=>`<button class="m-wa-template-row" data-action="wa-use-template" data-index="${index}" type="button"><span><b>${esc(template.name||'Plantilla')}</b><small>${esc(template.category||'Sin categoría')}</small><em>${esc(template.text||'')}</em></span><i aria-hidden="true">›</i></button>`).join('')}</div><p class="m-wa-sheet-note">La plantilla se prepara en el mensaje. Tú decides cuándo enviarla.</p>`;
+  }
+  async function openMobileWaTemplates(){
+    const chatId=mobileWaSheetChatId()||state.whatsapp.selectedId;if(!chatId||!has('can_manage_templates'))return;state.whatsapp.templatesLoading=true;state.whatsapp.templatesError='';setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);
+    try{const {data,error}=await client.rpc('wa_list_templates');if(error)throw error;state.whatsapp.templates=(Array.isArray(data)?data:[]).map(row=>({id:row.id,name:row.name||'Plantilla',text:row.body||'',category:row.category||'',shortcut:row.shortcut||''})).filter(row=>clean(row.text));}
+    catch(error){state.whatsapp.templates=[];state.whatsapp.templatesError=error?.message||'No se pudieron cargar las plantillas.';}
+    finally{state.whatsapp.templatesLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='templates'&&root.dataset.chatId===chatId)setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);}
+  }
+  function resolveMobileWaTemplate(text,chatId){
+    const chat=mobileWaSelectedChat(chatId),contact=mobileWaFindContact(chatId),fullName=clean(contact?.fullName||chat?.name),first=clean(contact?.first||fullName.split(/\s+/)[0]),dni=clean(contact?.dni),phone=clean(contact?.phone||mobileWaNormalizePhone(chatId));
+    return String(text||'').replace(/\{\{contacto\.nombre_completo\}\}/gi,fullName).replace(/\{\{contacto\.nombre\}\}/gi,first).replace(/\{\{contacto\.telefono\}\}/gi,phone).replace(/\{\{contacto\.(?:dni|dni \/ nif|nif)\}\}/gi,dni).replace(/\{nombre_completo\}/gi,fullName).replace(/\{nombre\}/gi,first).replace(/\{dni\}/gi,dni).replace(/\{telefono\}/gi,phone);
+  }
+  function useMobileWaTemplate(index){
+    const chatId=mobileWaSheetChatId(),template=state.whatsapp.templates[Number(index)];if(!chatId||!template)return;const input=byId('mobileWaComposer');if(!input)return;input.value=resolveMobileWaTemplate(template.text,chatId).slice(0,4096);closeMobileWaSheet(false);input.focus?.();input.setSelectionRange?.(input.value.length,input.value.length);toast('Plantilla preparada. Revísala y pulsa Enviar.','success');
+  }
+  function renderMobileWaLabelsSheet(contact){
+    if(state.whatsapp.labelsLoading)return '<div class="m-wa-sheet-loading">Cargando etiquetas…</div>';
+    if(state.whatsapp.labelsError)return `<div class="m-duplicate warn">${esc(state.whatsapp.labelsError)}</div><button class="m-secondary m-wa-sheet-full" data-action="wa-show-labels" type="button">Reintentar</button>`;
+    const selected=new Set(state.whatsapp.labelIds.map(String)),choices=state.whatsapp.labels.length?`<div class="m-wa-label-list">${state.whatsapp.labels.map(label=>`<label class="m-wa-label-row"><input type="checkbox" value="${esc(label.id)}" ${selected.has(String(label.id))?'checked':''}><span>${esc(label.name||'Etiqueta')}</span></label>`).join('')}</div>`:'<div class="m-wa-sheet-empty">No hay etiquetas creadas.</div>';
+    return `<p class="m-wa-sheet-contact">Contacto: <b>${esc(contact.fullName)}</b></p>${choices}<button class="m-primary m-wa-sheet-full" data-action="wa-save-labels" type="button"${state.whatsapp.labelsSaving?' disabled':''}>${state.whatsapp.labelsSaving?'Guardando…':'Guardar etiquetas'}</button><p id="mobileWaLabelsMsg" class="m-form-msg">${esc(state.whatsapp.labelsError)}</p>`;
+  }
+  async function openMobileWaLabels(){
+    const chatId=mobileWaSheetChatId()||state.whatsapp.selectedId,contact=mobileWaFindContact(chatId);if(!chatId||!contact||!has('can_manage_labels'))return;state.whatsapp.labelsLoading=true;state.whatsapp.labelsError='';setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);
+    try{const [labels,assigned]=await Promise.all([client.rpc('crm_list_labels'),client.rpc('crm_get_contact_labels',{p_contact_id:contact.id})]);if(labels.error)throw labels.error;if(assigned.error)throw assigned.error;state.whatsapp.labels=(Array.isArray(labels.data)?labels.data:[]).map(row=>({id:row.id,name:row.name||'Etiqueta'})).sort((a,b)=>a.name.localeCompare(b.name,'es'));state.whatsapp.labelIds=(Array.isArray(assigned.data)?assigned.data:[]).map(row=>String(row.id??row.label_id??row.value??'')).filter(Boolean);}
+    catch(error){state.whatsapp.labels=[];state.whatsapp.labelIds=[];state.whatsapp.labelsError=error?.message||'No se pudieron cargar las etiquetas.';}
+    finally{state.whatsapp.labelsLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='labels'&&root.dataset.chatId===chatId)setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);}
+  }
+  async function saveMobileWaLabels(){
+    const chatId=mobileWaSheetChatId(),contact=mobileWaFindContact(chatId),root=byId('mobileWaActionSheet');if(!chatId||!contact||!has('can_manage_labels')||root?.dataset?.kind!=='labels')return;const ids=[...(root.querySelectorAll('.m-wa-label-row input:checked')||[])].map(input=>String(input.value)),previousIds=[...state.whatsapp.labelIds];state.whatsapp.labelIds=ids;state.whatsapp.labelsSaving=true;state.whatsapp.labelsError='';setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);
+    try{const {error}=await client.rpc('crm_set_contact_labels',{p_contact_id:contact.id,p_label_ids:ids});if(error)throw error;state.whatsapp.labelIds=ids;closeMobileWaSheet();toast('Etiquetas actualizadas en todo el CRM.','success');}
+    catch(error){state.whatsapp.labelIds=previousIds;state.whatsapp.labelsError=error?.message||'No se pudieron guardar las etiquetas.';}
+    finally{state.whatsapp.labelsSaving=false;const current=byId('mobileWaActionSheet');if(current&&!current.classList.contains('hidden')&&current.dataset.kind==='labels'&&current.dataset.chatId===chatId)setMobileWaSheet('labels','Etiquetas del contacto',renderMobileWaLabelsSheet(contact),chatId);}
+  }
+  function openMobileWaLinkedAction(type){
+    const chatId=mobileWaSheetChatId(),contact=mobileWaFindContact(chatId);if(!chatId||!contact){closeMobileWaSheet(false);toast('Primero crea o vincula el contacto.','error');return;}const allowed=type==='task'?has('can_manage_agenda'):has('can_view_sales')&&has('can_edit_sales');if(!allowed)return;closeMobileWaSheet(false);const query=`?chat=${encodeURIComponent(chatId)}`;go(type==='task'?`new-task/${contact.id}${query}`:`new-contact-opportunity/${contact.id}${query}`);
+  }
   function renderMobileWhatsAppChat(chatId){
     if(!has('can_use_whatsapp'))return `<div class="m-page">${pageHead('WhatsApp','home')}${empty('Acceso restringido','No tienes permiso para utilizar WhatsApp.')}</div>`;
     if(!chatId)return `<div class="m-page">${pageHead('WhatsApp','whatsapp')}${empty('Chat no encontrado','Vuelve a la lista de conversaciones.')}</div>`;
     const chat=mobileWaSelectedChat(chatId),id=String(chat.id||''),phone=id.includes('@g.us')?'Grupo':id.includes('@lid')?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`,sameChat=String(state.whatsapp.selectedId)===String(chatId),busy=state.whatsapp.sending?' disabled':'',busyText=state.whatsapp.sending?'Hay un envío en curso…':'';
-    return `<div class="m-page m-wa-chat-page"><div class="m-wa-chat-head"><button class="m-back" data-action="wa-back-list" type="button" aria-label="Volver a conversaciones">‹</button><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-title"><strong>${esc(mobileWaChatName(chat))}</strong><small>${esc(phone)}</small></span><button class="m-back m-wa-refresh" data-action="wa-refresh-chat" type="button" aria-label="Actualizar chat">↻</button></div><div class="m-wa-contact-link">${renderMobileWaContactAction(chat)}</div><div id="mobileWaMessages" class="m-wa-messages" aria-live="polite">${sameChat?renderMobileWaMessages():skeleton()}</div><div class="m-wa-composer"><button class="m-secondary m-wa-attach" data-action="wa-attach" type="button" aria-label="Adjuntar foto o archivo"${busy}>＋</button><textarea id="mobileWaComposer" class="m-textarea" rows="1" maxlength="4096" placeholder="Escribe un mensaje"${busy}></textarea><button id="mobileWaSend" class="m-primary" data-action="wa-send" type="button"${busy}>Enviar</button><small id="mobileWaComposerMsg" class="m-form-msg">${esc(busyText)}</small></div></div>`;
+    return `<div class="m-page m-wa-chat-page"><div class="m-wa-chat-head"><button class="m-back" data-action="wa-back-list" type="button" aria-label="Volver a conversaciones">‹</button><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-title"><strong>${esc(mobileWaChatName(chat))}</strong><small>${esc(phone)}</small></span><button class="m-back m-wa-refresh" data-action="wa-refresh-chat" type="button" aria-label="Actualizar chat">↻</button></div><div class="m-wa-contact-link">${renderMobileWaContactAction(chat)}</div><div id="mobileWaMessages" class="m-wa-messages" aria-live="polite">${sameChat?renderMobileWaMessages():skeleton()}</div><div class="m-wa-composer"><button class="m-secondary m-wa-attach" data-action="wa-attach" type="button" aria-label="Abrir acciones del chat" aria-haspopup="dialog" aria-controls="mobileWaActionSheet" aria-expanded="false"${busy}>＋</button><textarea id="mobileWaComposer" class="m-textarea" rows="1" maxlength="4096" placeholder="Escribe un mensaje"${busy}></textarea><button id="mobileWaSend" class="m-primary" data-action="wa-send" type="button"${busy}>Enviar</button><small id="mobileWaComposerMsg" class="m-form-msg">${esc(busyText)}</small></div></div>`;
   }
   function updateMobileWaMessagesDom({scrollBottom=false}={}){
     const box=byId('mobileWaMessages');if(!box)return;const previousTop=box.scrollTop,nearBottom=box.scrollHeight-box.scrollTop-box.clientHeight<90;box.innerHTML=renderMobileWaMessages();if(scrollBottom||nearBottom)setTimeout(()=>{box.scrollTop=box.scrollHeight;},20);else box.scrollTop=previousTop;
@@ -723,9 +808,9 @@
     finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
   }
   const mobileWaFileDataUrl=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('No se pudo leer el archivo.'));reader.readAsDataURL(file);});
-  async function sendMobileWaFile(file){
+  async function sendMobileWaFile(file,originChatId=''){
     if(!file||state.whatsapp.sending)return;if(file.size>2500000){toast('El archivo supera el límite de 2,5 MB.','error');return;}
-    const chatId=state.whatsapp.selectedId;if(!chatId)return;setMobileWaSending(true,'Enviando archivo…',chatId);
+    const chatId=clean(originChatId||state.whatsapp.selectedId),current=route();if(!chatId)return;if(chatId!==String(state.whatsapp.selectedId||'')||current.parts[0]!=='whatsapp-chat'||safeDecode(current.parts[1])!==chatId){toast('No se envió el archivo porque cambiaste de conversación.','error');return;}setMobileWaSending(true,'Enviando archivo…',chatId);
     try{const dataUrl=await mobileWaFileDataUrl(file);await mobileWaApi('sendfile',{chatId,fileName:file.name||'archivo',mimeType:file.type||'application/octet-stream',dataUrl});toast('Archivo enviado.','success');await loadMobileWaHistory(chatId,{silent:true,scrollBottom:true});}
     catch(error){const ambiguous=!error?.status;toast(ambiguous?'No se pudo confirmar el archivo. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar el archivo.'),'error');}
     finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
@@ -748,15 +833,21 @@
     return `<div class="m-page">${pageHead('Más','home')}<div class="m-info-card">${infoRow('Usuario',state.perms?.display_name||state.user?.email)}${infoRow('Sincronización','Mismo CRM y misma base de datos')}${infoRow('Última actualización',state.lastRefresh?dateTime(state.lastRefresh):'—')}</div><div class="m-action-stack" style="margin-top:14px"><button class="m-secondary" data-action="refresh">↻ Actualizar datos</button><button class="m-secondary" data-action="open-desktop">Abrir CRM completo</button><button class="m-danger" data-action="logout">Cerrar sesión</button></div></div>`;
   }
 
+  function handleMobileWaSheetKeydown(event){
+    const root=byId('mobileWaActionSheet');if(!root||root.classList.contains('hidden'))return;if(event.key==='Escape'){event.preventDefault();closeMobileWaSheet();return;}if(event.key!=='Tab')return;const focusable=[...root.querySelectorAll('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')];if(!focusable.length)return;const first=focusable[0],last=focusable[focusable.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  }
+
   function bindStaticEvents(){
     byId('mobileLoginForm').addEventListener('submit',signIn);
     byId('mobileBrand').onclick=()=>go('home');byId('mobileAlerts').onclick=()=>go('alerts');byId('mobileMenu').onclick=()=>go('more');byId('mobileAdd').onclick=()=>{resetDraft();go('scan');};
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.onclick=()=>go(button.dataset.mobileRoute));
     byId('mobileCameraInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
     byId('mobileGalleryInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
-    byId('mobileWhatsAppFileInput').onchange=event=>{sendMobileWaFile(event.target.files?.[0]);event.target.value='';};
+    byId('mobileWhatsAppFileInput').onchange=event=>{const chatId=state.whatsapp.pendingFileChatId;state.whatsapp.pendingFileChatId='';sendMobileWaFile(event.target.files?.[0],chatId);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
-    addEventListener('hashchange',render);
+    byId('mobileWaActionSheet').addEventListener('click',handleViewClick);
+    document.addEventListener('keydown',handleMobileWaSheetKeydown);
+    addEventListener('hashchange',()=>{closeMobileWaSheet(false);render();});
     addEventListener('pageshow',()=>{if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMobileWaRefresh();return;}if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);const current=route();if(current.parts[0]==='whatsapp')loadMobileWaChats({silent:true,light:true});else if(current.parts[0]==='whatsapp-chat')loadMobileWaHistory(safeDecode(current.parts[1]),{silent:true});});
     addEventListener('pagehide',stopMobileWaRefresh);
@@ -792,11 +883,20 @@
     if(action==='wa-back-list')go('whatsapp',true);
     if(action==='wa-refresh-chat')loadMobileWaHistory(state.whatsapp.selectedId,{scrollBottom:false});
     if(action==='wa-send')sendMobileWaMessage();
-    if(action==='wa-attach')byId('mobileWhatsAppFileInput').click();
+    if(action==='wa-attach')openMobileWaActions(target);
+    if(action==='wa-close-sheet')closeMobileWaSheet();
+    if(action==='wa-choose-file'){const chatId=mobileWaSheetChatId();if(!chatId)return;state.whatsapp.pendingFileChatId=chatId;closeMobileWaSheet(false);byId('mobileWhatsAppFileInput').click();}
+    if(action==='wa-show-templates')openMobileWaTemplates();
+    if(action==='wa-use-template')useMobileWaTemplate(target.dataset.index);
+    if(action==='wa-create-task')openMobileWaLinkedAction('task');
+    if(action==='wa-create-opportunity')openMobileWaLinkedAction('opportunity');
+    if(action==='wa-show-labels')openMobileWaLabels();
+    if(action==='wa-save-labels')saveMobileWaLabels();
     if(action==='wa-load-media')loadMobileWaMedia(target.dataset.id);
     if(action==='wa-create-contact')startContactFromMobileWa(target.dataset.chatId);
     if(action==='save-contact')saveContact(target.dataset.id);
     if(action==='save-task')saveTask(target.dataset.contactId);
+    if(action==='save-contact-opportunity')saveContactOpportunity(target.dataset.contactId);
     if(action==='complete-task')completeTask(target.dataset.id);
     if(action==='refresh')refreshData();
     if(action==='logout')signOut();

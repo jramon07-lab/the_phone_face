@@ -12,7 +12,8 @@ window.__mobileWhatsAppTest={
   mobileWaPreview,mobileWaFilterCounts,mobileWaFilteredChats,mobileWaFindContact,
   renderHome,renderMobileWhatsApp,renderMobileWaFilters,renderMobileWaListBody,
   renderMobileWaMessages,renderMobileWhatsAppChat,mobileWaApi,
-  updateMobileWaMessagesDom,loadMobileWaHistory,sendMobileWaMessage,sendMobileWaFile
+  updateMobileWaMessagesDom,loadMobileWaHistory,sendMobileWaMessage,sendMobileWaFile,
+  renderMobileWaActions,renderMobileWaTemplatesSheet,resolveMobileWaTemplate,renderMobileWaLabelsSheet
 };
 })();`);
 assert.notEqual(testSource,source,'No se pudo preparar mobile-app.js para la prueba');
@@ -109,6 +110,18 @@ async function run(){
   assert.equal(api.mobileWaFindContact('1203630@g.us'),null);
   assert.equal(api.mobileWaFindContact('123456789012345@lid'),null);
 
+  api.state.contacts=[{id:'contact-1',first:'María',last:'López',fullName:'María López',phone:'695661409',dni:'12345678Z'}];
+  api.state.whatsapp.selectedId='34695661409@c.us';
+  api.state.perms={is_admin:true};
+  const actions=api.renderMobileWaActions();
+  for(const label of ['Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
+  assert.doesNotMatch(actions,/data-action="wa-create-task"[^>]* disabled/);
+  assert.equal(api.resolveMobileWaTemplate('Hola {nombre}. {nombre_completo} · {dni} · {telefono}','34695661409@c.us'),'Hola María. María López · 12345678Z · 695661409');
+  api.state.whatsapp.templates=[{name:'Saludo',category:'Atención',text:'Hola {nombre}'}];api.state.whatsapp.templatesLoading=false;api.state.whatsapp.templatesError='';
+  assert.match(api.renderMobileWaTemplatesSheet(),/Saludo/);assert.match(api.renderMobileWaTemplatesSheet(),/Tú decides cuándo enviarla/);
+  api.state.whatsapp.labels=[{id:'label-1',name:'Cliente VIP'}];api.state.whatsapp.labelIds=['label-1'];api.state.whatsapp.labelsLoading=false;api.state.whatsapp.labelsError='';
+  assert.match(api.renderMobileWaLabelsSheet(api.state.contacts[0]),/value="label-1" checked/);
+
   const fetchCalls=[];
   fetchImpl=async(url,options)=>{fetchCalls.push({url,options});return response(200,{ok:true,chats:[]});};
   await api.mobileWaApi('summary');
@@ -165,6 +178,7 @@ async function run(){
   assert.equal((limited.match(/class="m-wa-chat-row/g)||[]).length,60);
   assert.match(limited,/Mostrar más \(1\)/);
   assert.match(api.renderMobileWhatsAppChat('34695661409@c.us'),/maxlength="4096"/);
+  assert.match(api.renderMobileWhatsAppChat('34695661409@c.us'),/aria-haspopup="dialog" aria-controls="mobileWaActionSheet" aria-expanded="false"/);
   assert.match(api.renderMobileWhatsAppChat('123456789012345@lid'),/Contacto de WhatsApp/);
   assert.doesNotMatch(api.renderMobileWhatsAppChat('123456789012345@lid'),/Crear contacto/);
   api.state.whatsapp.sending=true;
@@ -214,6 +228,7 @@ async function run(){
   assert.match(source,/page==='whatsapp-chat'\?20000:180000/);
   assert.match(source,/if\(action==='wa-back-list'\)go\('whatsapp',true\)/);
   assert.match(htmlSource,/id="mobileWhatsAppFileInput"[^>]*accept="image\/\*,video\/\*,audio\/\*,\.pdf,\.doc,\.docx,\.xls,\.xlsx,\.txt"/);
+  assert.match(htmlSource,/id="mobileWaActionSheet"[^>]*aria-hidden="true"/);
 
   console.log('mobile WhatsApp UI and safeguards: ok');
 }
