@@ -85,6 +85,69 @@
     const bottom=Math.max(top+1,Math.min(height,Math.ceil(height*(topRatio+heightRatio))));
     return {left,top,width:right-left,height:bottom-top};
   }
+  function classifyOpportunityColor(pixels,width,height){
+    if(!pixels||!Number.isFinite(width)||!Number.isFinite(height)||width<1||height<1)return null;
+    const total=width*height;
+    if(pixels.length<total*4)return null;
+    const tileSize=8,tileColumns=Math.ceil(width/tileSize);
+    const scores={yoigo:0,masmovil:0};
+    const tiles={yoigo:new Map(),masmovil:new Map()};
+    for(let y=0;y<height;y+=1){
+      for(let x=0;x<width;x+=1){
+        const offset=(y*width+x)*4;
+        if(pixels[offset+3]<200)continue;
+        const red=pixels[offset]/255,green=pixels[offset+1]/255,blue=pixels[offset+2]/255;
+        const high=Math.max(red,green,blue),low=Math.min(red,green,blue),delta=high-low;
+        const saturation=high?delta/high:0;
+        if(high<.32||saturation<.45||delta===0)continue;
+        let hue;
+        if(high===red)hue=60*(((green-blue)/delta)%6);
+        else if(high===green)hue=60*(((blue-red)/delta)+2);
+        else hue=60*(((red-green)/delta)+4);
+        if(hue<0)hue+=360;
+        let key='';
+        if(hue>=38&&hue<=75&&high>=.42)key='masmovil';
+        else if(hue>=270&&hue<=345)key='yoigo';
+        if(!key)continue;
+        scores[key]+=1;
+        const tile=Math.floor(y/tileSize)*tileColumns+Math.floor(x/tileSize);
+        tiles[key].set(tile,(tiles[key].get(tile)||0)+1);
+      }
+    }
+    const ranked=['yoigo','masmovil'].map(key=>({
+      key,count:scores[key],coverage:scores[key]/total,
+      strongTiles:[...tiles[key].values()].filter(count=>count>=16).length
+    })).sort((left,right)=>right.count-left.count);
+    const winner=ranked[0],runnerUp=ranked[1];
+    if(winner.coverage<.012||winner.strongTiles<2)return null;
+    if(runnerUp.count&&winner.count/runnerUp.count<2.2)return null;
+    const titles={yoigo:'REVISION YOIGO',masmovil:'REVISION MASMOVIL'};
+    return {
+      key:winner.key,title:titles[winner.key],
+      confidence:Math.min(1,Math.max(0,(winner.coverage-.012)/.06)),
+      coverage:winner.coverage
+    };
+  }
+  function detectOpportunityColor(source,width,height){
+    let canvas;
+    try{
+      const maxSide=128,scale=Math.min(1,maxSide/Math.max(width,height));
+      const sampleWidth=Math.max(1,Math.round(width*scale));
+      const sampleHeight=Math.max(1,Math.round(height*scale));
+      canvas=document.createElement('canvas');canvas.width=sampleWidth;canvas.height=sampleHeight;
+      const context=canvas.getContext('2d',{alpha:false});
+      if(!context||typeof context.getImageData!=='function')return null;
+      context.fillStyle='#fff';context.fillRect(0,0,sampleWidth,sampleHeight);
+      context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
+      context.drawImage(source,0,0,sampleWidth,sampleHeight);
+      return classifyOpportunityColor(context.getImageData(0,0,sampleWidth,sampleHeight).data,sampleWidth,sampleHeight);
+    }catch(error){
+      console.warn('[TPF OCR] color suggestion',String(error?.message||error||''));
+      return null;
+    }finally{
+      if(canvas){canvas.width=1;canvas.height=1;}
+    }
+  }
   async function prepareOcrSource(file,onProgress){
     if(!file||typeof file.size!=='number')throw new Error('Selecciona una imagen válida.');
     if(file.type&&!String(file.type).toLowerCase().startsWith('image/'))throw new Error('El archivo seleccionado no es una imagen.');
@@ -102,9 +165,10 @@
       context.fillStyle='#fff';context.fillRect(0,0,width,height);
       context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
       context.drawImage(decoded.source,0,0,width,height);
+      const opportunitySuggestion=detectOpportunityColor(decoded.source,decoded.width,decoded.height);
       const jpeg=await canvasJpeg(canvas,.9);
       report(onProgress,'image prepared',0.08);
-      return {input:jpegInput(jpeg,file,'')};
+      return {input:jpegInput(jpeg,file,''),opportunitySuggestion};
     }finally{
       decoded?.release?.();
       if(canvas){canvas.width=1;canvas.height=1;}
@@ -329,12 +393,12 @@
   function completeContact(result){
     return Boolean(result?.dni&&result?.phone&&result?.fullName);
   }
-  function diagnosticResult(result,sections){
+  function diagnosticResult(result,sections,opportunitySuggestion=null){
     const rawText=sections.map(section=>{
       const value=String(section.text||'').trim();
       return `${section.title}\n${value||section.note||'[sin texto reconocido]'}`;
     }).join('\n\n');
-    return {...result,rawText};
+    return {...result,rawText,opportunitySuggestion};
   }
 
   async function recognize(file,onProgress){
@@ -372,7 +436,7 @@
       const sections=[{title:'LECTURA GENERAL (PSM3)',text:primary.rawText}];
       if(completeContact(primary)){
         report(onProgress,'recognition complete',1);
-        return diagnosticResult(primary,sections);
+        return diagnosticResult(primary,sections,prepared.opportunitySuggestion);
       }
 
       // Solo se buscan campos ausentes. El segundo pase conserva las etiquetas
@@ -414,7 +478,7 @@
         }
       }
       report(onProgress,'recognition complete',1);
-      return diagnosticResult(merged,sections);
+      return diagnosticResult(merged,sections,prepared.opportunitySuggestion);
     }catch(error){
       const message=String(error?.message||engineError||(typeof error==='string'?error:'')).trim();
       console.warn('[TPF OCR]',phase,message);
@@ -426,6 +490,6 @@
     }
   }
 
-  window.TPFMobileOCR={recognize,extract,prepareImageForOcr};
-  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-form-fallback';
+  window.TPFMobileOCR={recognize,extract,prepareImageForOcr,classifyOpportunityColor};
+  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone-color-opportunity';
 })();

@@ -30,11 +30,16 @@ function harness(texts,{failSecond=false,failFormEncode=false,pngFormEncodeFails
       assert.equal(tag,'canvas');
       const canvas={
         width:0,height:0,
-        getContext(){return {fillStyle:'',imageSmoothingEnabled:false,imageSmoothingQuality:'',fillRect(){},drawImage(...args){calls.draws.push(args);}};},
+        getContext(){return {fillStyle:'',imageSmoothingEnabled:false,imageSmoothingQuality:'',fillRect(){},drawImage(...args){calls.draws.push(args);},getImageData(){
+          const data=new Uint8ClampedArray(canvas.width*canvas.height*4);
+          for(let offset=0;offset<data.length;offset+=4){data[offset]=255;data[offset+1]=255;data[offset+2]=255;data[offset+3]=255;}
+          return {data};
+        }};},
         toBlob(callback,type,quality){
           const canvasIndex=calls.canvases.indexOf(canvas);
           calls.blobs.push({canvasIndex,type,quality});
-          const fail=canvasIndex===1&&(failFormEncode||(pngFormEncodeFails&&type==='image/png'));
+          const formCanvas=canvas.width===1632&&canvas.height===1800;
+          const fail=formCanvas&&(failFormEncode||(pngFormEncodeFails&&type==='image/png'));
           callback(fail?null:new Blob([type],{type}));
         }
       };
@@ -103,18 +108,18 @@ Datos compartidos
   assert.equal(JSON.stringify(calls.parameters),'[{"tessedit_pageseg_mode":"3"},{"tessedit_pageseg_mode":"6"}]');
   assert.equal(calls.terminated,1);
   assert.equal(calls.closed,2);
-  assert.equal(calls.canvases.length,2);
+  assert.equal(calls.canvases.length,3);
   assert.ok(calls.canvases.every(canvas=>canvas.width===1&&canvas.height===1));
-  assert.equal(JSON.stringify(calls.draws[1].slice(1)),'[21,201,941,1038,0,0,1632,1800]');
+  assert.equal(JSON.stringify(calls.draws[2].slice(1)),'[21,201,941,1038,0,0,1632,1800]');
   assert.ok(progress.every((value,index)=>index===0||value>=progress[index-1]));
   assert.equal(progress.at(-1),1);
 
   const prepared=await ocr.prepareImageForOcr(file);
   assert.ok(prepared instanceof File);
   assert.equal(prepared.name,'contacto.jpg');
-  assert.equal(calls.canvases.length,3);
-  assert.equal(calls.canvases[2].width,1);
-  assert.equal(calls.canvases[2].height,1);
+  assert.equal(calls.canvases.length,5);
+  assert.equal(calls.canvases[4].width,1);
+  assert.equal(calls.canvases[4].height,1);
 
   const fast=harness([completeRaw]);
   const fastResult=await fast.ocr.recognize(file);
@@ -123,7 +128,7 @@ Datos compartidos
   assert.equal(fastResult.fullName,'Maria Vanesa Cortes');
   assert.match(fastResult.rawText,/LECTURA GENERAL \(PSM3\)/);
   assert.equal(fast.calls.recognize.length,1);
-  assert.equal(fast.calls.canvases.length,1);
+  assert.equal(fast.calls.canvases.length,2);
   assert.equal(fast.calls.closed,1);
   assert.equal(fast.calls.parameters.length,1);
   assert.equal(fast.calls.terminated,1);

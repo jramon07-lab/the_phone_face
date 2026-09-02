@@ -335,7 +335,7 @@
   function ensureDraft(){
     if(state.draft)return;
     const firstStage=state.board.stages[0];
-    state.draft={contact:{first:'',last:'',dni:'',phone:'',email:'',bank:'',observations:'',notes:''},opportunity:{title:'',stageId:firstStage?.id||'',expectedDate:'',amount:'',notes:'',reminder:true},duplicates:[]};
+    state.draft={contact:{first:'',last:'',dni:'',phone:'',email:'',bank:'',observations:'',notes:''},opportunity:{title:'',stageId:firstStage?.id||'',expectedDate:'',amount:'',notes:'',reminder:true},includeOpportunity:true,duplicates:[]};
   }
   function resetDraft(){
     if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);
@@ -365,7 +365,9 @@
       };
       const result=await window.TPFMobileOCR.recognize(state.scanFile,event=>{label.textContent=labels[event.status]||'Preparando el documento…';bar.style.width=`${Math.max(5,Math.round(event.progress*100))}%`;});
       state.ocrDebugText=String(result.rawText||'').trim().slice(0,6000);
-      ensureDraft();state.draft.contact={...state.draft.contact,first:result.first||'',last:result.last||'',dni:result.dni||'',phone:result.phone||''};go('detected');
+      ensureDraft();state.draft.contact={...state.draft.contact,first:result.first||'',last:result.last||'',dni:result.dni||'',phone:result.phone||''};
+      state.draft.opportunity={...state.draft.opportunity,title:result.opportunitySuggestion?.title||''};
+      go('detected');
       if(!result.first&&!result.dni&&!result.phone)toast('No se pudieron reconocer los datos. Puedes escribirlos manualmente.','error');
     }catch(error){progress.innerHTML=`<div class="m-duplicate warn">${esc(error?.message||'No se pudo leer la imagen.')} Puedes continuar escribiendo los datos.</div><button class="m-secondary" style="width:100%" data-action="manual-contact">Continuar manualmente</button>`;}
     finally{button.disabled=false;}
@@ -384,55 +386,65 @@
   async function continueDetected(){
     const contact=await captureDraftContact();if(!contact.first&&!contact.last){byId('mobileDetectedMsg').textContent='Escribe el nombre o los apellidos.';return;}
     if(!has('can_create_database')||!has('can_view_database')){byId('mobileDetectedMsg').textContent='No tienes permiso para crear y consultar contactos.';return;}
-    if(!has('can_edit_sales')||!has('can_view_sales')){byId('mobileDetectedMsg').textContent='No tienes permiso para crear y consultar oportunidades.';return;}
-    await checkDuplicates();go('new-opportunity');
+    await checkDuplicates();
+    if(!has('can_edit_sales')||!has('can_view_sales')){state.draft.includeOpportunity=false;go('review');return;}
+    state.draft.includeOpportunity=true;go('new-opportunity');
   }
   function renderOpportunityForm(){
     const contact=state.draft.contact,opp=state.draft.opportunity;if(!opp.title)opp.title=`Oportunidad - ${[contact.first,contact.last].filter(Boolean).join(' ')}`;
-    return `<div class="m-page">${pageHead('Nueva oportunidad','detected')}<p class="m-muted">El contacto se creará y quedará vinculado a esta oportunidad.</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="draftOppTitle" class="m-input" value="${esc(opp.title)}"></label><label class="m-field"><span>Columna / Estado</span><select id="draftOppStage" class="m-select">${state.board.stages.map(stage=>`<option value="${esc(stage.id)}" ${String(stage.id)===String(opp.stageId)?'selected':''}>${esc(stage.name)}</option>`).join('')}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="draftOppDate" class="m-input" type="date" value="${esc(opp.expectedDate)}"></label><label class="m-field"><span>Importe (opcional)</span><input id="draftOppAmount" class="m-input" inputmode="decimal" value="${esc(opp.amount)}" placeholder="0,00"></label><label class="m-field"><span>Notas</span><textarea id="draftOppNotes" class="m-textarea">${esc(opp.notes)}</textarea></label><div class="m-toggle-row"><span><strong>Recordatorio</strong><small style="display:block;color:var(--m-muted);margin-top:3px">2 días antes del cierre</small></span><button id="draftOppReminder" class="m-toggle ${opp.reminder?'on':''}" data-action="toggle-reminder" type="button" aria-pressed="${opp.reminder}"></button></div></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="continue-opportunity">Continuar</button><p id="mobileOpportunityMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page">${pageHead('Nueva oportunidad','detected')}<p class="m-muted">El contacto se creará y quedará vinculado a esta oportunidad. El nombre sugerido por el color se puede cambiar.</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="draftOppTitle" class="m-input" value="${esc(opp.title)}"></label><label class="m-field"><span>Columna / Estado</span><select id="draftOppStage" class="m-select">${state.board.stages.map(stage=>`<option value="${esc(stage.id)}" ${String(stage.id)===String(opp.stageId)?'selected':''}>${esc(stage.name)}</option>`).join('')}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="draftOppDate" class="m-input" type="date" value="${esc(opp.expectedDate)}"></label><label class="m-field"><span>Importe (opcional)</span><input id="draftOppAmount" class="m-input" inputmode="decimal" value="${esc(opp.amount)}" placeholder="0,00"></label><label class="m-field"><span>Notas</span><textarea id="draftOppNotes" class="m-textarea">${esc(opp.notes)}</textarea></label><div class="m-toggle-row"><span><strong>Recordatorio</strong><small style="display:block;color:var(--m-muted);margin-top:3px">2 días antes del cierre</small></span><button id="draftOppReminder" class="m-toggle ${opp.reminder?'on':''}" data-action="toggle-reminder" type="button" aria-pressed="${opp.reminder}"></button></div></div><div class="m-opportunity-actions"><button class="m-primary" data-action="continue-opportunity">Guardar oportunidad</button><button class="m-secondary" data-action="skip-opportunity">No quiero oportunidad</button><p id="mobileOpportunityMsg" class="m-form-msg"></p></div></div>`;
   }
   function captureDraftOpportunity(){
     state.draft.opportunity={...state.draft.opportunity,title:clean(byId('draftOppTitle').value),stageId:byId('draftOppStage').value,expectedDate:byId('draftOppDate').value,amount:clean(byId('draftOppAmount').value),notes:clean(byId('draftOppNotes').value),reminder:byId('draftOppReminder').classList.contains('on')};return state.draft.opportunity;
   }
-  function continueOpportunity(){const opp=captureDraftOpportunity();if(!opp.title){byId('mobileOpportunityMsg').textContent='Escribe el nombre de la oportunidad.';return;}if(!opp.stageId){byId('mobileOpportunityMsg').textContent='Selecciona una columna.';return;}go('review');}
+  function continueOpportunity(){
+    if(!has('can_edit_sales')||!has('can_view_sales')){byId('mobileOpportunityMsg').textContent='No tienes permiso para crear oportunidades.';return;}
+    const opp=captureDraftOpportunity();if(!opp.title){byId('mobileOpportunityMsg').textContent='Escribe el nombre de la oportunidad.';return;}if(!opp.stageId){byId('mobileOpportunityMsg').textContent='Selecciona una columna.';return;}state.draft.includeOpportunity=true;go('review');
+  }
+  function skipOpportunity(){captureDraftOpportunity();state.draft.includeOpportunity=false;go('review');}
   function renderReview(){
-    const contact=state.draft.contact,opp=state.draft.opportunity,fullName=[contact.first,contact.last].filter(Boolean).join(' '),stage=state.board.stages.find(row=>String(row.id)===String(opp.stageId));
-    return `<div class="m-page">${pageHead('Confirmar creación','new-opportunity')}<div class="m-review-section"><h2>Contacto</h2><div class="m-review-card"><div class="m-review-person"><div class="m-avatar">${esc(initials({fullName}))}</div><div><strong>${esc(fullName)}</strong><div class="m-muted" style="font-size:.75rem;margin-top:4px">DNI / NIF: ${esc(contact.dni||'—')}<br>Teléfono: ${esc(contact.phone||'—')}</div></div></div></div></div><div class="m-review-section"><h2>Oportunidad</h2><div class="m-review-card"><div class="m-review-lines"><div class="m-review-line"><span>Nombre</span><b>${esc(opp.title)}</b></div><div class="m-review-line"><span>Estado</span><b>${esc(stage?.name||'—')}</b></div><div class="m-review-line"><span>Cierre previsto</span><b>${esc(opp.expectedDate?date(opp.expectedDate):'—')}</b></div><div class="m-review-line"><span>Importe</span><b>${esc(opp.amount?money(Number(opp.amount.replace(',','.'))):'—')}</b></div><div class="m-review-line"><span>Responsable</span><b>${esc(state.perms?.display_name||state.user?.email||'Usuario')}</b></div></div></div></div><button class="m-primary" style="width:100%" data-action="create-all">Confirmar y crear</button><button class="m-secondary" style="width:100%;margin-top:10px" data-action="route" data-route="detected">Editar datos</button></div>`;
+    const contact=state.draft.contact,opp=state.draft.opportunity,includeOpportunity=state.draft.includeOpportunity!==false,fullName=[contact.first,contact.last].filter(Boolean).join(' '),stage=state.board.stages.find(row=>String(row.id)===String(opp.stageId));
+    const opportunityReview=includeOpportunity?`<div class="m-review-section"><h2>Oportunidad</h2><div class="m-review-card"><div class="m-review-lines"><div class="m-review-line"><span>Nombre</span><b>${esc(opp.title)}</b></div><div class="m-review-line"><span>Estado</span><b>${esc(stage?.name||'—')}</b></div><div class="m-review-line"><span>Cierre previsto</span><b>${esc(opp.expectedDate?date(opp.expectedDate):'—')}</b></div><div class="m-review-line"><span>Importe</span><b>${esc(opp.amount?money(Number(opp.amount.replace(',','.'))):'—')}</b></div><div class="m-review-line"><span>Responsable</span><b>${esc(state.perms?.display_name||state.user?.email||'Usuario')}</b></div></div></div></div>`:'<div class="m-duplicate">Se creará únicamente el contacto, sin oportunidad.</div>';
+    const back=has('can_edit_sales')&&has('can_view_sales')?'new-opportunity':'detected';
+    return `<div class="m-page">${pageHead('Confirmar creación',back)}<div class="m-review-section"><h2>Contacto</h2><div class="m-review-card"><div class="m-review-person"><div class="m-avatar">${esc(initials({fullName}))}</div><div><strong>${esc(fullName)}</strong><div class="m-muted" style="font-size:.75rem;margin-top:4px">DNI / NIF: ${esc(contact.dni||'—')}<br>Teléfono: ${esc(contact.phone||'—')}</div></div></div></div></div>${opportunityReview}<button class="m-primary" style="width:100%" data-action="create-all">${includeOpportunity?'Confirmar y crear':'Crear solo contacto'}</button><button class="m-secondary" style="width:100%;margin-top:10px" data-action="route" data-route="detected">Editar datos</button></div>`;
   }
   function renderCreating(){
-    const error=state.creationError;
-    return `<div class="m-page"><div class="m-create-progress"><div><div class="m-create-visual"><div class="m-avatar">${esc(initials({fullName:[state.draft?.contact?.first,state.draft?.contact?.last].filter(Boolean).join(' ')}))}</div></div><h1>${error?'Falta terminar':'Creando…'}</h1><div class="m-step-list"><div id="createContactStep" class="m-step ${state.createdContactId?'done':'active'}"><i>${state.createdContactId?'✓':'1'}</i><span>Creando contacto</span></div><div id="createOpportunityStep" class="m-step ${state.createdOpportunityId?'done':state.createdContactId&&!error?'active':error?'error':''}"><i>${state.createdOpportunityId?'✓':'2'}</i><span>Creando oportunidad</span></div><div id="createSyncStep" class="m-step ${state.createdOpportunityId?'done':''}"><i>${state.createdOpportunityId?'✓':'3'}</i><span>Sincronizando con el CRM</span></div></div>${error?`<p class="m-form-msg" style="margin-top:18px">${esc(error)}</p><button class="m-primary" style="width:100%;margin-top:8px" data-action="retry-creation">Reintentar oportunidad</button>${state.createdContactId?`<button class="m-secondary" style="width:100%;margin-top:8px" data-action="route" data-route="contact/${esc(state.createdContactId)}">Ver contacto creado</button>`:''}`:''}</div></div></div>`;
+    const error=state.creationError,includeOpportunity=state.draft?.includeOpportunity!==false,readyForSync=includeOpportunity?state.createdOpportunityId:state.createdContactId;
+    const opportunityStep=includeOpportunity?`<div id="createOpportunityStep" class="m-step ${state.createdOpportunityId?'done':state.createdContactId&&!error?'active':error?'error':''}"><i>${state.createdOpportunityId?'✓':'2'}</i><span>Creando oportunidad</span></div>`:'';
+    return `<div class="m-page"><div class="m-create-progress"><div><div class="m-create-visual"><div class="m-avatar">${esc(initials({fullName:[state.draft?.contact?.first,state.draft?.contact?.last].filter(Boolean).join(' ')}))}</div></div><h1>${error?'Falta terminar':'Creando…'}</h1><div class="m-step-list"><div id="createContactStep" class="m-step ${state.createdContactId?'done':'active'}"><i>${state.createdContactId?'✓':'1'}</i><span>Creando contacto</span></div>${opportunityStep}<div id="createSyncStep" class="m-step ${readyForSync?'done':''}"><i>${readyForSync?'✓':includeOpportunity?'3':'2'}</i><span>Sincronizando con el CRM</span></div></div>${error?`<p class="m-form-msg" style="margin-top:18px">${esc(error)}</p><button class="m-primary" style="width:100%;margin-top:8px" data-action="retry-creation">Reintentar</button>${state.createdContactId?`<button class="m-secondary" style="width:100%;margin-top:8px" data-action="route" data-route="contact/${esc(state.createdContactId)}">Ver contacto creado</button>`:''}`:''}</div></div></div>`;
   }
   function setCreationStep(id,status){const node=byId(id);if(!node)return;node.className=`m-step ${status}`;const icon=node.querySelector('i');icon.textContent=status==='done'?'✓':status==='error'?'!':'•';}
   async function performCreation(){
     if(state.creating)return;state.creating=true;state.creationError=null;go('creating');await new Promise(resolve=>setTimeout(resolve,80));
-    const contact=state.draft.contact,opp=state.draft.opportunity,fullName=[contact.first,contact.last].filter(Boolean).join(' ');
+    const contact=state.draft.contact,opp=state.draft.opportunity,includeOpportunity=state.draft.includeOpportunity!==false,fullName=[contact.first,contact.last].filter(Boolean).join(' ');
     try{
       if(!state.createdContactId){
         setCreationStep('createContactStep','active');
         const data={'NOMBRE':contact.first,'APELLIDOS':contact.last,'NOMBRE Y APELLIDOS':fullName,'TELÉFONO':contact.phone,'DNI / NIF':contact.dni,'DNI':contact.dni,'EMAIL':contact.email,'BANCO':contact.bank,'NOTAS':contact.notes,'OBSERVACIONES':contact.observations};
         const result=await client.from('records').insert({source_sheet:CONTACT_SOURCE,data}).select('id').single();if(result.error)throw result.error;state.createdContactId=result.data.id;setCreationStep('createContactStep','done');
       }
-      if(!state.createdOpportunityId){
+      if(includeOpportunity&&!state.createdOpportunityId){
         setCreationStep('createOpportunityStep','active');const stage=state.board.stages.find(row=>String(row.id)===String(opp.stageId));if(!stage)throw new Error('La columna seleccionada ya no existe.');
         const amount=opp.amount===''?null:Number(String(opp.amount).replace(',','.'));if(amount!==null&&!Number.isFinite(amount))throw new Error('El importe no es válido.');
         const result=await client.from('sales_opportunities').insert({pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:state.createdContactId,title:opp.title,client_name:fullName||null,phone:contact.phone||null,amount,expected_date:opp.expectedDate||null,owner_user_id:state.user.id,notes:opp.notes||null}).select('id').single();if(result.error)throw result.error;state.createdOpportunityId=result.data.id;setCreationStep('createOpportunityStep','done');
       }
       setCreationStep('createSyncStep','active');
-      if(opp.reminder&&opp.expectedDate&&has('can_manage_agenda')){
+      if(includeOpportunity&&opp.reminder&&opp.expectedDate&&has('can_manage_agenda')){
         const remind=new Date(`${opp.expectedDate}T09:00:00`);remind.setDate(remind.getDate()-2);
         const task={title:`Seguimiento · ${opp.title}`,description:`Recordatorio previo al cierre de la oportunidad ${opp.title}`,customer_name:fullName||null,customer_phone:contact.phone||null,starts_at:remind.toISOString(),reminder_at:null,assigned_to:state.user.id,related_record_id:state.createdContactId,status:'pending',reminder_minutes:[],notify_in_app:true,notify_email:false,sync_google_calendar:false,whatsapp_enabled:false};
         const result=await client.from('agenda_items').insert(task);if(result.error)toast('Contacto y oportunidad creados; el recordatorio no pudo guardarse.','error');
       }
       await refreshData({silent:true});setCreationStep('createSyncStep','done');state.creating=false;setTimeout(()=>go('success'),280);
     }catch(error){
-      state.creationError=state.createdContactId&&!state.createdOpportunityId?`El contacto está creado, pero falta la oportunidad: ${error?.message||'error desconocido'}`:(error?.message||'No se pudo completar la creación.');
+      state.creationError=includeOpportunity&&state.createdContactId&&!state.createdOpportunityId?`El contacto está creado, pero falta la oportunidad: ${error?.message||'error desconocido'}`:(error?.message||'No se pudo completar la creación.');
       if(state.createdContactId){setCreationStep('createContactStep','done');await refreshData({silent:true});}
-      setCreationStep(state.createdContactId?'createOpportunityStep':'createContactStep','error');state.creating=false;render();
+      const failedStep=!state.createdContactId?'createContactStep':includeOpportunity&&!state.createdOpportunityId?'createOpportunityStep':'createSyncStep';
+      setCreationStep(failedStep,'error');state.creating=false;render();
     }
   }
   function renderSuccess(){
-    return `<div class="m-page"><div class="m-success"><div class="m-success-check">✓</div><h1>Contacto y oportunidad creados</h1><p>Ya están vinculados y disponibles en el CRM del ordenador y en el móvil.</p><div class="m-success-actions"><button class="m-primary" data-action="route" data-route="contact/${esc(state.createdContactId||'')}">Ver contacto</button><button class="m-secondary" data-action="route" data-route="opportunity/${esc(state.createdOpportunityId||'')}">Ver oportunidad</button><button class="m-ghost" data-action="finish-flow">Ir al inicio</button></div></div></div>`;
+    const includeOpportunity=state.draft?.includeOpportunity!==false;
+    return `<div class="m-page"><div class="m-success"><div class="m-success-check">✓</div><h1>${includeOpportunity?'Contacto y oportunidad creados':'Contacto creado'}</h1><p>${includeOpportunity?'Ya están vinculados y disponibles':'Ya está disponible'} en el CRM del ordenador y en el móvil.</p><div class="m-success-actions"><button class="m-primary" data-action="route" data-route="contact/${esc(state.createdContactId||'')}">Ver contacto</button>${includeOpportunity?`<button class="m-secondary" data-action="route" data-route="opportunity/${esc(state.createdOpportunityId||'')}">Ver oportunidad</button>`:''}<button class="m-ghost" data-action="finish-flow">Ir al inicio</button></div></div></div>`;
   }
 
   function renderMore(){
@@ -463,6 +475,7 @@
     if(action==='continue-detected')continueDetected();
     if(action==='toggle-reminder'){target.classList.toggle('on');target.setAttribute('aria-pressed',target.classList.contains('on'));}
     if(action==='continue-opportunity')continueOpportunity();
+    if(action==='skip-opportunity')skipOpportunity();
     if(action==='create-all')performCreation();
     if(action==='retry-creation')performCreation();
     if(action==='finish-flow'){resetDraft();go('home');}
