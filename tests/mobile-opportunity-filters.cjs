@@ -43,16 +43,28 @@ api.state.board={
 };
 
 const opportunities=api.state.board.opportunities;
-assert.deepEqual(JSON.parse(JSON.stringify(api.opportunityFilterCounts(opportunities,fixedNow))),{all:6,today:1,overdue:1,upcoming:1,closed:2});
+assert.deepEqual(JSON.parse(JSON.stringify(api.opportunityFilterCounts(opportunities,fixedNow))),{all:6,today:1,overdue:1,upcoming:1,month:3,closed:2});
 assert.deepEqual(Array.from(api.filterOpportunities(opportunities,'today',fixedNow),row=>row.id),['today']);
 assert.deepEqual(Array.from(api.filterOpportunities(opportunities,'overdue',fixedNow),row=>row.id),['overdue']);
 assert.deepEqual(Array.from(api.filterOpportunities(opportunities,'upcoming',fixedNow),row=>row.id),['upcoming']);
+assert.deepEqual(Array.from(api.filterOpportunities(opportunities,'month',fixedNow),row=>row.id),['today','overdue','upcoming']);
 assert.deepEqual(Array.from(api.filterOpportunities(opportunities,'closed',fixedNow),row=>row.id),['won','lost']);
 assert.equal(api.filterOpportunities(opportunities,'desconocido',fixedNow).length,6);
 assert.equal(api.opportunityIsClosed({status:'CERRADA'}),true);
 assert.equal(api.opportunityIsClosed({status:'open'}),false);
 assert.equal(api.opportunityIsClosed({status:'open'},{name:'Ganada'}),true,'Una columna terminal debe contar como cerrada');
 assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-09-10'},'closed',fixedNow,{name:'Cerrada'}),true);
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-09-30'},'month',fixedNow),true);
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-08-31'},'month',fixedNow),false);
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-10-01'},'month',fixedNow),false);
+assert.equal(api.opportunityMatchesFilter({status:'won',expected_date:'2026-09-15'},'month',fixedNow),false);
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-09-15'},'month',fixedNow,{name:'Ganada'}),false);
+const decemberNow=new Date('2026-12-15T12:00:00+01:00').getTime();
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-12-31'},'month',decemberNow),true);
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2027-01-01'},'month',decemberNow),false);
+const octoberMadridNow=new Date('2026-09-30T22:30:00Z').getTime();
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-10-01'},'month',octoberMadridNow),true);
+assert.equal(api.opportunityMatchesFilter({status:'open',expected_date:'2026-09-30'},'month',octoberMadridNow),false);
 assert.deepEqual(JSON.parse(JSON.stringify(api.opportunityDisplayState({status:'open',expected_date:'2026-09-10'},fixedNow,{name:'Ganada'}))),{label:'Ganada',tone:'green'});
 assert.equal(api.opportunityIsClosed({status:'cancelled'}),true);
 
@@ -69,13 +81,15 @@ assert.equal(api.opportunityMatchesSearch(opportunities[2],'no existe',searchCon
 
 let model=api.opportunityListModel('', 'stage-1', 'all', fixedNow);
 assert.deepEqual(Array.from(model.rows,row=>row.id),['today','overdue']);
-assert.deepEqual(JSON.parse(JSON.stringify(model.counts)),{all:2,today:1,overdue:1,upcoming:0,closed:0});
+assert.deepEqual(JSON.parse(JSON.stringify(model.counts)),{all:2,today:1,overdue:1,upcoming:0,month:2,closed:0});
 model=api.opportunityListModel('12345678Z','stage-1','today',fixedNow);
 assert.deepEqual(Array.from(model.rows,row=>row.id),['today']);
 
 const filterHtml=api.renderOpportunityFilters(api.opportunityFilterCounts(opportunities,fixedNow),'upcoming');
-for(const label of ['Todas','Hoy','Vencidas','Próximas','Cerradas'])assert.match(filterHtml,new RegExp(`>${label}<`));
+for(const label of ['Todas','Hoy','Vencidas','Próximas','Este mes','Cerradas'])assert.match(filterHtml,new RegExp(`>${label}<`));
 assert.match(filterHtml,/data-action="opportunity-filter" data-filter="upcoming"[^>]*aria-pressed="true"/);
+const monthFilterHtml=api.renderOpportunityFilters(api.opportunityFilterCounts(opportunities,fixedNow),'month');
+assert.match(monthFilterHtml,/data-action="opportunity-filter" data-filter="month"[^>]*aria-pressed="true"/);
 
 const card=api.opportunityListCard(opportunities[0],searchContext,fixedNow);
 assert.match(card,/data-route="opportunity\/today"/);
@@ -86,12 +100,13 @@ assert.match(card,/Columna \/ estado/);
 assert.match(card,/Próximo/);
 
 api.state.opportunityQuery='';api.state.opportunityStage='';api.state.opportunityFilter='all';
-const target={dataset:{action:'opportunity-filter',filter:'overdue'}};
+const target={dataset:{action:'opportunity-filter',filter:'month'}};
 api.handleViewClick({target:{closest(){return target;}},preventDefault(){}});
-assert.equal(api.state.opportunityFilter,'overdue');
+assert.equal(api.state.opportunityFilter,'month');
 assert.match(nodes.mobileOpportunitiesList.innerHTML,/Revisión atrasada/);
-assert.doesNotMatch(nodes.mobileOpportunitiesList.innerHTML,/Renovación fibra|Cambio móvil|Venta ganada/);
-assert.equal(nodes.mobileOpportunityResultCount.textContent,'1 oportunidad');
-assert.match(nodes.mobileOpportunityFilters.innerHTML,/data-filter="overdue"[^>]*aria-pressed="true"/);
+assert.match(nodes.mobileOpportunitiesList.innerHTML,/Renovación fibra|Cambio móvil/);
+assert.doesNotMatch(nodes.mobileOpportunitiesList.innerHTML,/Venta ganada|Venta perdida|Pendiente sin fecha/);
+assert.equal(nodes.mobileOpportunityResultCount.textContent,'3 oportunidades');
+assert.match(nodes.mobileOpportunityFilters.innerHTML,/data-filter="month"[^>]*aria-pressed="true"/);
 
 console.log('mobile opportunity filters: ok');

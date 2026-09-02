@@ -20,7 +20,8 @@ assert.match(css,/\.m-opportunities-page\{[^}]*min-width:0;[^}]*max-width:100%/)
 assert.match(css,/\.m-opportunity-stage\{[^}]*min-width:0;[^}]*max-width:100%/);
 assert.match(css,/\.m-opportunity-filters\{[^}]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\);[^}]*min-width:0;[^}]*max-width:100%/);
 assert.match(css,/\.m-opportunity-filter\{[^}]*grid-column:span 2;[^}]*min-width:0;[^}]*overflow:hidden;[^}]*white-space:nowrap/);
-assert.match(css,/\.m-opportunity-filter:nth-child\(n\+4\)\{grid-column:span 3\}/);
+assert.doesNotMatch(css,/\.m-opportunity-filter:nth-child/);
+assert.match(app,/\['month','Este mes'\]/);
 assert.match(css,/\.m-opportunity-card\{[^}]*min-width:0;[^}]*max-width:100%;[^}]*overflow:hidden/);
 assert.match(css,/\.m-opportunity-card \.m-list-row\{[^}]*grid-template-columns:42px minmax\(0,1fr\) auto;[^}]*min-width:0;[^}]*max-width:100%/);
 assert.match(css,/\.m-opportunity-meta\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\);[^}]*min-width:0;[^}]*max-width:100%/);

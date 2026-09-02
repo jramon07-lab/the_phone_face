@@ -57,7 +57,7 @@
   const safeDecode=value=>{try{return decodeURIComponent(String(value||''));}catch(_){return String(value||'');}};
   const todayKey=(value=Date.now())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const TASK_FILTERS=['all','pending','today','overdue','completed'];
-  const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','closed'];
+  const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
   const MOBILE_WA_FILTERS=['all','unread','contacts','groups'];
   const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
@@ -94,12 +94,13 @@
     if(active==='today')return key===today;
     if(active==='overdue')return !!key&&key<today;
     if(active==='upcoming')return !!key&&key>today;
+    if(active==='month')return !!key&&key.slice(0,7)===today.slice(0,7);
     return true;
   }
   const filterOpportunities=(opportunities,filter='all',now=Date.now(),stages=null)=>(opportunities||[]).filter(opp=>opportunityMatchesFilter(opp,filter,now,stages?.get?.(String(opp?.stage_id))));
   function opportunityFilterCounts(opportunities,now=Date.now(),stages=null){
     const rows=opportunities||[];
-    return {all:rows.length,today:filterOpportunities(rows,'today',now,stages).length,overdue:filterOpportunities(rows,'overdue',now,stages).length,upcoming:filterOpportunities(rows,'upcoming',now,stages).length,closed:filterOpportunities(rows,'closed',now,stages).length};
+    return {all:rows.length,today:filterOpportunities(rows,'today',now,stages).length,overdue:filterOpportunities(rows,'overdue',now,stages).length,upcoming:filterOpportunities(rows,'upcoming',now,stages).length,month:filterOpportunities(rows,'month',now,stages).length,closed:filterOpportunities(rows,'closed',now,stages).length};
   }
   function opportunityContactIndex(contacts=state.contacts){
     const byId=new Map(),byPhone=new Map(),byName=new Map();
@@ -395,7 +396,7 @@
     return `<button class="m-list-card m-opportunity-card" data-action="route" data-route="opportunity/${esc(opp.id)}" type="button"><span class="m-list-row"><span class="m-avatar">◇</span><span class="m-list-main"><strong>${esc(opp.title||'Oportunidad')}</strong><small>${esc(clientName)}${phone?` · ${esc(phone)}`:''}</small></span><span class="m-badge ${display.tone}">${display.label}</span></span><span class="m-opportunity-meta"><span><small>Cierre</small><b>${esc(opportunityDateLabel(opp))}</b></span><span><small>Importe</small><b>${opp.amount!=null?esc(money(opp.amount)):'Sin importe'}</b></span><span class="wide"><small>Columna / estado</small><b>${esc(stage?.name||'Sin columna')}</b></span></span></button>`;
   }
   function renderOpportunityFilters(counts,active=state.opportunityFilter){
-    const options=[['all','Todas'],['today','Hoy'],['overdue','Vencidas'],['upcoming','Próximas'],['closed','Cerradas']];
+    const options=[['all','Todas'],['today','Hoy'],['overdue','Vencidas'],['upcoming','Próximas'],['month','Este mes'],['closed','Cerradas']];
     return options.map(([key,label])=>`<button class="m-opportunity-filter ${active===key?'active':''}" data-action="opportunity-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
   }
   function opportunityRowsHtml(model){
