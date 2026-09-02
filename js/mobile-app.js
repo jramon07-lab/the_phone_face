@@ -13,8 +13,10 @@
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
     loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',scanFile:null,scanUrl:'',ocrDebugText:'',
-    draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false
+    draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
+    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:''}
   };
+  let mobileWaRefreshTimer=null;
 
   const field=(data,...names)=>{
     for(const name of names){const value=data?.[name];if(value!==undefined&&value!==null&&clean(value)!=='')return value;}
@@ -50,8 +52,11 @@
   const money=value=>new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(Number(value||0));
   const date=value=>{if(!value)return 'Sin fecha';const d=new Date(value);return Number.isNaN(d.getTime())?'Sin fecha':d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});};
   const dateTime=value=>{if(!value)return 'Sin fecha';const d=new Date(value);return Number.isNaN(d.getTime())?'Sin fecha':d.toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
+  const safeDecode=value=>{try{return decodeURIComponent(String(value||''));}catch(_){return String(value||'');}};
   const todayKey=(value=Date.now())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const TASK_FILTERS=['all','pending','today','overdue','completed'];
+  const MOBILE_WA_FILTERS=['all','unread','contacts','groups'];
+  const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
   const taskIsPending=task=>taskStatus(task)==='pending';
   const taskIsCompleted=task=>taskStatus(task)==='completed';
@@ -129,7 +134,8 @@
     finally{button.disabled=false;button.textContent='Entrar';}
   }
   async function signOut(){
-    await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';location.hash='';showLogin();
+    stopMobileWaRefresh();
+    await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -179,6 +185,8 @@
         case 'opportunity':view.innerHTML=renderOpportunity(current.parts[1]);break;
         case 'tasks':view.innerHTML=renderTasks();break;
         case 'new-task':view.innerHTML=renderNewTask(current.parts[1]);break;
+        case 'whatsapp':view.innerHTML=renderMobileWhatsApp();initMobileWhatsAppList();break;
+        case 'whatsapp-chat':view.innerHTML=renderMobileWhatsAppChat(safeDecode(current.parts[1]));initMobileWhatsAppChat(safeDecode(current.parts[1]));break;
         case 'alerts':view.innerHTML=renderAlerts();break;
         case 'scan':view.innerHTML=renderScan();break;
         case 'detected':ensureDraft();view.innerHTML=renderDetected();break;
@@ -189,11 +197,12 @@
         case 'more':view.innerHTML=renderMore();break;
         default:view.innerHTML=renderHome();
       }
-      view.scrollTop=0;
+      if(!['whatsapp','whatsapp-chat'].includes(current.parts[0]))stopMobileWaRefresh();
+      view.scrollTop=current.parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0;
     }catch(error){view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
   }
   function setActiveNav(name){
-    const group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'?'opportunities':['scan','detected','new-opportunity','review','creating','success'].includes(name)?'add':name;
+    const group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'?'opportunities':['scan','detected','new-opportunity','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
   }
@@ -212,7 +221,7 @@
         <button class="m-quick" data-action="route" data-route="opportunities"><span>◇</span><small>Oportunidades</small></button>
         <button class="m-quick" data-action="route" data-route="tasks"><span>▣</span><small>Tareas</small></button>
         <button class="m-quick" data-action="open-desktop"><span>◷</span><small>Agenda</small></button>
-        <button class="m-quick" data-action="open-desktop"><span>◉</span><small>WhatsApp</small></button>
+        <button class="m-quick" data-action="route" data-route="whatsapp"><span>◉</span><small>WhatsApp</small></button>
         <button class="m-quick" data-action="open-desktop"><span>▤</span><small>Plantillas</small></button>
       </div>
       <h2 class="m-section-title">Acciones rápidas</h2>
@@ -472,6 +481,269 @@
     return `<div class="m-page"><div class="m-success"><div class="m-success-check">✓</div><h1>${includeOpportunity?'Contacto y oportunidad creados':'Contacto creado'}</h1><p>${includeOpportunity?'Ya están vinculados y disponibles':'Ya está disponible'} en el CRM del ordenador y en el móvil.</p><div class="m-success-actions"><button class="m-primary" data-action="route" data-route="contact/${esc(state.createdContactId||'')}">Ver contacto</button>${includeOpportunity?`<button class="m-secondary" data-action="route" data-route="opportunity/${esc(state.createdOpportunityId||'')}">Ver oportunidad</button>`:''}<button class="m-ghost" data-action="finish-flow">Ir al inicio</button></div></div></div>`;
   }
 
+  function mobileWaNormalizePhone(value){
+    const raw=String(value||'').trim();
+    if(raw.includes('@')&&!/@c\.us$/i.test(raw))return '';
+    return raw.replace(/@.*$/,'').replace(/\D/g,'');
+  }
+  function mobileWaPhoneVariants(value){
+    const phone=mobileWaNormalizePhone(value),variants=new Set();
+    if(phone)variants.add(phone);
+    if(phone.startsWith('34')&&phone.length>9)variants.add(phone.slice(2));
+    if(phone.length===9)variants.add(`34${phone}`);
+    if(phone.length>=9)variants.add(phone.slice(-9));
+    return variants;
+  }
+  function mobileWaChatName(chat){
+    const id=String(chat?.id||'');
+    return clean(chat?.name)||mobileWaNormalizePhone(id)||(id.includes('@g.us')?'Grupo de WhatsApp':'Contacto de WhatsApp');
+  }
+  function mobileWaInitials(chat){
+    const parts=mobileWaChatName(chat).split(/\s+/).filter(Boolean);
+    return ((parts[0]?.[0]||'W')+(parts.length>1?(parts.at(-1)?.[0]||''):'')).toUpperCase();
+  }
+  function mobileWaUnread(chat){
+    for(const value of [chat?.unreadCount,chat?.unreadMessagesCount,chat?.unreadMessages,chat?.countUnread,chat?.unread]){
+      const count=Number(value);if(Number.isFinite(count)&&count>0)return Math.floor(count);
+    }
+    return 0;
+  }
+  function mobileWaMessageText(message){
+    const data=message?.messageData||{};
+    const value=data?.textMessageData?.textMessage||data?.extendedTextMessageData?.text||data?.fileMessageData?.caption||message?.textMessage||message?.extendedTextMessage?.text||message?.caption||message?.message||'';
+    const text=clean(value);
+    if(/^(GREEN_API_(TOKEN|INSTANCE_ID|ID_INSTANCE|IDINSTANCE|API_TOKEN|TOKEN_INSTANCE|API_URL|MEDIA_URL))$/i.test(text))return '';
+    if(/^process\.env\./i.test(text)||/GREEN-API no está disponible en esta función de Vercel/i.test(text))return '';
+    return text;
+  }
+  function mobileWaMessageDirection(message){
+    const type=String(message?.type||message?.typeMessage||message?.typeWebhook||'').toLowerCase();
+    if(type.includes('outgoing')||message?.outgoing===true)return 'out';
+    return 'in';
+  }
+  const mobileWaMessageTimestamp=message=>message?.timestamp||message?.sendAt||message?.time||message?.createdAt||0;
+  function mobileWaMediaInfo(message){
+    const data=message?.messageData||{},file=data?.fileMessageData||message?.fileMessageData||{};
+    const type=String(data?.typeMessage||message?.typeMessage||message?.messageType||message?.typeWebhook||'').toLowerCase();
+    const mime=String(file?.mimeType||message?.mimeType||'').toLowerCase();
+    const url=clean(file?.downloadUrl||file?.urlFile||message?.downloadUrl||message?.urlFile||data?.downloadUrl||data?.urlFile);
+    const name=clean(file?.fileName||message?.fileName)||'archivo';
+    let kind='';
+    if(type.includes('image')||type.includes('sticker')||mime.startsWith('image/'))kind='image';
+    else if(type.includes('video')||mime.startsWith('video/'))kind='video';
+    else if(type.includes('audio')||type.includes('voice')||mime.startsWith('audio/'))kind='audio';
+    else if(type.includes('document')||type.includes('file')||url)kind='document';
+    return {kind,mime,url,name};
+  }
+  function mobileWaPreview(chat){
+    const message=chat?._lastMessage||chat?.lastMessage||null,text=mobileWaMessageText(message);
+    if(text)return text;
+    const kind=mobileWaMediaInfo(message).kind;
+    if(kind==='image')return '📷 Foto';if(kind==='video')return '🎥 Vídeo';if(kind==='audio')return '🎵 Audio';if(kind==='document')return '📎 Documento';
+    return String(chat?.id||'').includes('@g.us')?'Grupo':'Sin mensajes recientes';
+  }
+  function mobileWaTime(value){
+    if(!value)return '';
+    const number=Number(value),dateValue=new Date(number>0&&number<1e12?number*1000:value);if(Number.isNaN(dateValue.getTime()))return '';
+    const now=new Date();return dateValue.toDateString()===now.toDateString()?dateValue.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):dateValue.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});
+  }
+  function mobileWaChatTimestamp(chat){return Number(mobileWaMessageTimestamp(chat?._lastMessage||chat?.lastMessage)||chat?.lastMessageTime||chat?.lastMessageTimestamp||chat?.timestamp||chat?.lastActivityTime||0);}
+  function mobileWaSortedChats(chats=state.whatsapp.chats){
+    return [...(chats||[])].filter(chat=>chat?.id).sort((a,b)=>mobileWaChatTimestamp(b)-mobileWaChatTimestamp(a)||mobileWaChatName(a).localeCompare(mobileWaChatName(b),'es'));
+  }
+  function mobileWaFilterCounts(chats=state.whatsapp.chats){
+    const rows=chats||[];return {all:rows.length,unread:rows.filter(chat=>mobileWaUnread(chat)>0).length,contacts:rows.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:rows.filter(chat=>String(chat.id||'').includes('@g.us')).length};
+  }
+  function mobileWaFilteredChats(){
+    const query=clean(state.whatsapp.query).toLowerCase(),queryDigits=digits(query),filter=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
+    return mobileWaSortedChats().filter(chat=>{
+      const group=String(chat.id||'').includes('@g.us');
+      if(filter==='unread'&&mobileWaUnread(chat)<1)return false;
+      if(filter==='contacts'&&group)return false;if(filter==='groups'&&!group)return false;
+      const haystack=`${mobileWaChatName(chat)} ${mobileWaNormalizePhone(chat.id)}`.toLowerCase();
+      return !query||haystack.includes(query)||(queryDigits.length>=3&&digits(haystack).includes(queryDigits));
+    });
+  }
+  function mobileWaFindContact(chatId){
+    if(String(chatId||'').includes('@')&&!/@c\.us$/i.test(String(chatId||'')))return null;
+    const wanted=mobileWaPhoneVariants(chatId);if(!wanted.size)return null;
+    return state.contacts.find(contact=>{const variants=mobileWaPhoneVariants(contact.phone);return [...wanted].some(value=>variants.has(value));})||null;
+  }
+  function mobileWaStatus(){
+    const value=String(state.whatsapp.providerState||'').toLowerCase();
+    if(value==='authorized')return {label:'WhatsApp conectado',className:'ok'};
+    if(value==='blocked'||value==='notauthorized')return {label:'WhatsApp sin conexión',className:'error'};
+    if(state.whatsapp.loadingChats&&!state.whatsapp.loaded)return {label:'Conectando…',className:'loading'};
+    return {label:'Sincronización disponible',className:'warn'};
+  }
+  function renderMobileWaStatus(){
+    const status=mobileWaStatus(),sync=state.whatsapp.lastSync?` · ${mobileWaTime(state.whatsapp.lastSync)}`:'';
+    return `<span class="m-wa-status ${status.className}"><i></i>${esc(status.label+sync)}</span>`;
+  }
+  function renderMobileWaFilters(){
+    const counts=mobileWaFilterCounts(),active=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
+    const options=[['all','Todos'],['unread','No leídos'],['contacts','Contactos'],['groups','Grupos']];
+    return options.map(([key,label])=>`<button class="m-wa-filter ${active===key?'active':''}" data-action="wa-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
+  }
+  function renderMobileWaChatRow(chat){
+    const name=mobileWaChatName(chat),id=String(chat.id||''),group=id.includes('@g.us'),lid=id.includes('@lid'),unread=mobileWaUnread(chat),time=mobileWaTime(mobileWaChatTimestamp(chat));
+    const kind=group?'Grupo':lid?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`;
+    return `<button class="m-wa-chat-row ${unread?'unread':''}" data-action="route" data-route="whatsapp-chat/${esc(encodeURIComponent(id))}" type="button"><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-main"><span class="m-wa-chat-top"><strong>${esc(name)}</strong><time>${esc(time)}</time></span><span class="m-wa-chat-bottom"><small>${esc(mobileWaPreview(chat))}</small>${unread?`<b>${unread>99?'99+':unread}</b>`:''}</span><span class="m-wa-chat-kind">${esc(kind)}</span></span></button>`;
+  }
+  function renderMobileWaListBody(){
+    if(state.whatsapp.loadingChats&&!state.whatsapp.loaded)return skeleton();
+    if(state.whatsapp.error&&!state.whatsapp.loaded)return `<div class="m-duplicate warn">${esc(state.whatsapp.error)}</div><button class="m-secondary" style="width:100%" data-action="wa-refresh">Reintentar</button>`;
+    const all=mobileWaFilteredChats(),rows=all.slice(0,state.whatsapp.limit),warning=state.whatsapp.error?`<div class="m-duplicate warn">${esc(state.whatsapp.error)}</div>`:'';
+    if(!rows.length)return `${warning}${empty(state.whatsapp.chats.length?'Sin resultados':'Sin conversaciones',state.whatsapp.chats.length?'Prueba otro texto o filtro.':'No se han encontrado chats de WhatsApp.')}`;
+    const more=all.length>rows.length?`<button class="m-secondary m-wa-more" data-action="wa-more" type="button">Mostrar más (${all.length-rows.length})</button>`:'';
+    return `${warning}<div class="m-wa-result-count">${rows.length} de ${all.length} conversaciones</div><div class="m-wa-chat-list">${rows.map(renderMobileWaChatRow).join('')}</div>${more}`;
+  }
+  function renderMobileWhatsApp(){
+    if(!has('can_use_whatsapp'))return `<div class="m-page">${pageHead('WhatsApp','home')}${empty('Acceso restringido','No tienes permiso para utilizar WhatsApp.')}</div>`;
+    const refresh='<button class="m-back m-wa-refresh" data-action="wa-refresh" type="button" aria-label="Actualizar WhatsApp">↻</button>';
+    const head=`<div class="m-page-head"><button class="m-back" data-action="wa-back-home" type="button" aria-label="Volver al inicio">‹</button><h1>WhatsApp</h1>${refresh}</div>`;
+    return `<div class="m-page m-wa-page">${head}<div id="mobileWaStatus">${renderMobileWaStatus()}</div><div class="m-search m-wa-search"><input id="mobileWaSearch" class="m-input" value="${esc(state.whatsapp.query)}" placeholder="Buscar nombre o teléfono" autocomplete="off"></div><div id="mobileWaFilters" class="m-wa-filters" role="group" aria-label="Filtrar conversaciones">${renderMobileWaFilters()}</div><div id="mobileWaList">${renderMobileWaListBody()}</div></div>`;
+  }
+  async function mobileWaApi(action,payload={}){
+    const getActions=new Set(['state','summary','chats']);if(!getActions.has(action)&&!['file','history','send','read','sendfile'].includes(action))throw new Error('Acción móvil no permitida.');
+    const {data,error}=await client.auth.getSession();if(error)throw error;
+    const token=data?.session?.access_token;if(!token)throw new Error('La sesión ha caducado. Vuelve a entrar.');
+    const method=getActions.has(action)?'GET':'POST',controller=typeof AbortController==='function'?new AbortController():null;
+    const timer=controller?setTimeout(()=>controller.abort(),action==='summary'?30000:20000):null;
+    try{
+      const response=await fetch(`/api/mobile-green?action=${encodeURIComponent(action)}`,{method,headers:{Authorization:`Bearer ${token}`,...(method==='POST'?{'Content-Type':'application/json'}:{})},body:method==='POST'?JSON.stringify(payload||{}):undefined,cache:'no-store',signal:controller?.signal});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||result?.ok===false){const requestError=new Error(result?.error||`WhatsApp no respondió (${response.status}).`);requestError.status=response.status;throw requestError;}
+      return result;
+    }catch(error){if(error?.name==='AbortError')throw new Error('WhatsApp está tardando demasiado. Pulsa Actualizar para volver a intentarlo.');throw error;}
+    finally{if(timer)clearTimeout(timer);}
+  }
+  function updateMobileWaListDom(){
+    const status=byId('mobileWaStatus'),filters=byId('mobileWaFilters'),list=byId('mobileWaList'),button=document.querySelector('[data-action="wa-refresh"]');
+    if(status)status.innerHTML=renderMobileWaStatus();if(filters)filters.innerHTML=renderMobileWaFilters();if(list)list.innerHTML=renderMobileWaListBody();if(button)button.disabled=state.whatsapp.loadingChats;
+  }
+  async function loadMobileWaChats({silent=false,light=false}={}){
+    if(!has('can_use_whatsapp')||state.whatsapp.loadingChats)return;
+    state.whatsapp.loadingChats=true;state.whatsapp.error='';if(!silent)updateMobileWaListDom();
+    try{
+      const action=light&&state.whatsapp.loaded?'chats':'summary';
+      const [result,status]=await Promise.all([mobileWaApi(action),mobileWaApi('state').catch(()=>null)]),rows=Array.isArray(result?.chats)?result.chats.filter(chat=>chat?.id):[];
+      if(action==='chats'){
+        const previous=new Map(state.whatsapp.chats.map(chat=>[String(chat.id),chat]));
+        state.whatsapp.chats=rows.map(chat=>{const old=previous.get(String(chat.id))||{};return {...old,...chat,_lastMessage:chat?._lastMessage||chat?.lastMessage||old?._lastMessage||old?.lastMessage||null};});
+      }else state.whatsapp.chats=rows;
+      state.whatsapp.loaded=true;state.whatsapp.lastSync=Date.now();state.whatsapp.providerState=status?.state||status?.data?.stateInstance||'';
+    }catch(error){state.whatsapp.error=error?.message||'No se pudieron cargar las conversaciones.';}
+    finally{state.whatsapp.loadingChats=false;if(route().parts[0]==='whatsapp')updateMobileWaListDom();scheduleMobileWaRefresh();}
+  }
+  function initMobileWhatsAppList(){
+    if(!has('can_use_whatsapp')){stopMobileWaRefresh();return;}
+    const input=byId('mobileWaSearch');if(input)input.oninput=()=>{state.whatsapp.query=input.value;state.whatsapp.limit=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();};
+    if(!state.whatsapp.loaded&&!state.whatsapp.loadingChats)loadMobileWaChats();else scheduleMobileWaRefresh();
+  }
+  function mobileWaSafeUrl(value){try{const url=new URL(String(value||''));return url.protocol==='https:'?url.href:'';}catch(_){return '';}}
+  function renderMobileWaMedia(message){
+    const info=mobileWaMediaInfo(message);if(!info.kind)return '';
+    const url=mobileWaSafeUrl(info.url),label=info.kind==='image'?'Foto':info.kind==='video'?'Vídeo':info.kind==='audio'?'Audio':'Documento';
+    if(info.kind==='image'&&url)return `<a class="m-wa-media-link" href="${esc(url)}" target="_blank" rel="noopener"><img class="m-wa-media" src="${esc(url)}" loading="lazy" alt="Foto de WhatsApp"></a>`;
+    if(info.kind==='video'&&url)return `<video class="m-wa-media" src="${esc(url)}" controls preload="metadata"></video>`;
+    if(info.kind==='audio'&&url)return `<audio class="m-wa-audio" src="${esc(url)}" controls preload="metadata"></audio>`;
+    if(url)return `<a class="m-wa-document" href="${esc(url)}" target="_blank" rel="noopener">📎 ${esc(info.name||label)}</a>`;
+    const id=clean(message?.idMessage);return id?`<button class="m-wa-document" data-action="wa-load-media" data-id="${esc(id)}" type="button">${info.kind==='image'?'📷':info.kind==='video'?'🎥':info.kind==='audio'?'🎵':'📎'} Cargar ${esc(label.toLowerCase())}</button>`:`<span class="m-wa-document">${esc(label)}</span>`;
+  }
+  function mobileWaFallbackMessage(message){
+    const type=String(message?.messageData?.typeMessage||message?.typeMessage||message?.messageType||'').toLowerCase();
+    if(type.includes('contact'))return '👤 Contacto compartido';if(type.includes('location'))return '📍 Ubicación';if(type.includes('reaction'))return '↪ Reacción';if(type.includes('template'))return '▤ Plantilla';if(type.includes('interactive'))return '☑ Respuesta interactiva';if(type.includes('quoted'))return '↩ Mensaje citado';return type?'Mensaje de WhatsApp':'';
+  }
+  function renderMobileWaMessages(){
+    if(state.whatsapp.loadingHistory&&!state.whatsapp.messages.length)return skeleton();
+    if(state.whatsapp.historyError&&!state.whatsapp.messages.length)return `<div class="m-duplicate warn">${esc(state.whatsapp.historyError)}</div><button class="m-secondary" style="width:100%" data-action="wa-refresh-chat">Reintentar</button>`;
+    const rows=[...state.whatsapp.messages].sort((a,b)=>Number(mobileWaMessageTimestamp(a)||0)-Number(mobileWaMessageTimestamp(b)||0));
+    if(!rows.length)return empty('Sin mensajes','Todavía no hay mensajes disponibles en este chat.');
+    return rows.map(message=>{const direction=mobileWaMessageDirection(message),text=mobileWaMessageText(message),media=renderMobileWaMedia(message),fallback=mobileWaFallbackMessage(message);if(!text&&!media&&!fallback)return '';
+      return `<div class="m-wa-msg ${direction}"><div class="m-wa-bubble">${media}${text?`<div class="m-wa-text">${esc(text)}</div>`:fallback?`<div class="m-wa-text m-wa-placeholder">${esc(fallback)}</div>`:''}<time>${esc(mobileWaTime(mobileWaMessageTimestamp(message)))}</time></div></div>`;
+    }).join('')||empty('Sin mensajes','No hay mensajes de texto o archivos disponibles.');
+  }
+  function mobileWaSelectedChat(chatId=state.whatsapp.selectedId){return state.whatsapp.chats.find(chat=>String(chat.id)===String(chatId))||{id:chatId,name:mobileWaNormalizePhone(chatId)||'WhatsApp'};}
+  function renderMobileWaContactAction(chat){
+    const id=String(chat.id||''),group=id.includes('@g.us'),lid=id.includes('@lid');if(group)return '<span>Los grupos no se vinculan a una ficha.</span>';if(lid)return '<span>Este chat no muestra un teléfono verificable.</span>';
+    const contact=mobileWaFindContact(chat.id);
+    if(contact)return `<span>Contacto sincronizado</span><button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver ficha</button>`;
+    if(has('can_create_database')&&has('can_view_database'))return `<span>No está en Contactos</span><button class="m-secondary" data-action="wa-create-contact" data-chat-id="${esc(chat.id)}" type="button">Crear contacto</button>`;
+    return '<span>No está vinculado a Contactos.</span>';
+  }
+  function renderMobileWhatsAppChat(chatId){
+    if(!has('can_use_whatsapp'))return `<div class="m-page">${pageHead('WhatsApp','home')}${empty('Acceso restringido','No tienes permiso para utilizar WhatsApp.')}</div>`;
+    if(!chatId)return `<div class="m-page">${pageHead('WhatsApp','whatsapp')}${empty('Chat no encontrado','Vuelve a la lista de conversaciones.')}</div>`;
+    const chat=mobileWaSelectedChat(chatId),id=String(chat.id||''),phone=id.includes('@g.us')?'Grupo':id.includes('@lid')?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`,sameChat=String(state.whatsapp.selectedId)===String(chatId),busy=state.whatsapp.sending?' disabled':'',busyText=state.whatsapp.sending?'Hay un envío en curso…':'';
+    return `<div class="m-page m-wa-chat-page"><div class="m-wa-chat-head"><button class="m-back" data-action="wa-back-list" type="button" aria-label="Volver a conversaciones">‹</button><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-title"><strong>${esc(mobileWaChatName(chat))}</strong><small>${esc(phone)}</small></span><button class="m-back m-wa-refresh" data-action="wa-refresh-chat" type="button" aria-label="Actualizar chat">↻</button></div><div class="m-wa-contact-link">${renderMobileWaContactAction(chat)}</div><div id="mobileWaMessages" class="m-wa-messages" aria-live="polite">${sameChat?renderMobileWaMessages():skeleton()}</div><div class="m-wa-composer"><button class="m-secondary m-wa-attach" data-action="wa-attach" type="button" aria-label="Adjuntar foto o archivo"${busy}>＋</button><textarea id="mobileWaComposer" class="m-textarea" rows="1" maxlength="4096" placeholder="Escribe un mensaje"${busy}></textarea><button id="mobileWaSend" class="m-primary" data-action="wa-send" type="button"${busy}>Enviar</button><small id="mobileWaComposerMsg" class="m-form-msg">${esc(busyText)}</small></div></div>`;
+  }
+  function updateMobileWaMessagesDom({scrollBottom=false}={}){
+    const box=byId('mobileWaMessages');if(!box)return;const previousTop=box.scrollTop,nearBottom=box.scrollHeight-box.scrollTop-box.clientHeight<90;box.innerHTML=renderMobileWaMessages();if(scrollBottom||nearBottom)setTimeout(()=>{box.scrollTop=box.scrollHeight;},20);else box.scrollTop=previousTop;
+    const refresh=document.querySelector('[data-action="wa-refresh-chat"]');if(refresh)refresh.disabled=state.whatsapp.loadingHistory;
+  }
+  const mobileWaHistorySignature=messages=>(messages||[]).map(message=>{const media=mobileWaMediaInfo(message);return `${message?.idMessage||''}:${mobileWaMessageTimestamp(message)}:${mobileWaMessageDirection(message)}:${mobileWaMessageText(message)}:${media.kind}:${media.url}`;}).join('|');
+  async function loadMobileWaHistory(chatId,{silent=false,scrollBottom=false}={}){
+    if(!chatId||!has('can_use_whatsapp'))return;if(state.whatsapp.loadingHistory&&String(chatId)===String(state.whatsapp.historyLoadingId))return;
+    const requestId=Number(state.whatsapp.historyRequestId||0)+1;state.whatsapp.historyRequestId=requestId;state.whatsapp.loadingHistory=true;state.whatsapp.historyLoadingId=chatId;state.whatsapp.historyError='';if(!silent)updateMobileWaMessagesDom();
+    try{
+      const result=await mobileWaApi('history',{chatId,count:100}),providerMessages=Array.isArray(result?.messages)?result.messages:[],providerIds=new Set(providerMessages.map(message=>String(message?.idMessage||'')).filter(Boolean));
+      if(Number(state.whatsapp.historyRequestId)!==requestId||String(state.whatsapp.selectedId)!==String(chatId))return;
+      const recentLocal=state.whatsapp.messages.filter(message=>message?.__mobilePending&&!providerIds.has(String(message?.idMessage||''))&&Date.now()-Number(mobileWaMessageTimestamp(message)||0)*1000<120000),messages=[...providerMessages,...recentLocal];
+      const changed=mobileWaHistorySignature(messages)!==mobileWaHistorySignature(state.whatsapp.messages);state.whatsapp.messages=messages;if(changed||!silent)updateMobileWaMessagesDom({scrollBottom:scrollBottom||!silent});
+    }catch(error){if(Number(state.whatsapp.historyRequestId)===requestId&&String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.historyError=error?.message||'No se pudo cargar el historial.';updateMobileWaMessagesDom();}}
+    finally{if(Number(state.whatsapp.historyRequestId)!==requestId)return;state.whatsapp.loadingHistory=false;state.whatsapp.historyLoadingId='';const refresh=document.querySelector('[data-action="wa-refresh-chat"]');if(refresh)refresh.disabled=false;scheduleMobileWaRefresh();}
+  }
+  function scrollMobileWaBottom(){const box=byId('mobileWaMessages');if(box)setTimeout(()=>{box.scrollTop=box.scrollHeight;},20);}
+  function markMobileWaRead(chatId){
+    const now=Date.now(),last=Number(state.whatsapp.readAt?.[chatId]||0);if(!chatId||now-last<60000)return;
+    state.whatsapp.readAt[chatId]=now;mobileWaApi('read',{chatId}).catch(()=>{});
+  }
+  function initMobileWhatsAppChat(chatId){
+    if(!has('can_use_whatsapp')){stopMobileWaRefresh();return;}if(!chatId){go('whatsapp',true);return;}
+    const changed=String(state.whatsapp.selectedId)!==String(chatId);state.whatsapp.selectedId=chatId;
+    if(changed){state.whatsapp.messages=[];state.whatsapp.historyError='';updateMobileWaMessagesDom();}
+    const chat=state.whatsapp.chats.find(row=>String(row.id)===String(chatId));if(chat)chat.unreadCount=0;
+    const composer=byId('mobileWaComposer');if(composer)composer.onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMobileWaMessage();}};
+    if(changed||!state.whatsapp.messages.length)loadMobileWaHistory(chatId,{scrollBottom:true});else{scrollMobileWaBottom();scheduleMobileWaRefresh();}
+    markMobileWaRead(chatId);
+  }
+  function setMobileWaSending(value,message='',chatId=''){
+    state.whatsapp.sending=value;state.whatsapp.sendingChatId=value?(chatId||state.whatsapp.sendingChatId):'';const send=byId('mobileWaSend'),attach=document.querySelector('[data-action="wa-attach"]'),composer=byId('mobileWaComposer'),status=byId('mobileWaComposerMsg');
+    if(send)send.disabled=value;if(attach)attach.disabled=value;if(composer)composer.disabled=value;if(status)status.textContent=message;
+  }
+  async function sendMobileWaMessage(){
+    if(state.whatsapp.sending)return;const chatId=state.whatsapp.selectedId,input=byId('mobileWaComposer'),message=clean(input?.value);if(!chatId||!message)return;
+    setMobileWaSending(true,'Enviando…',chatId);
+    try{
+      const result=await mobileWaApi('send',{chatId,message});if(input)input.value='';
+      const local={type:'outgoing',outgoing:true,__mobilePending:true,idMessage:result?.idMessage||`local-${Date.now()}`,timestamp:Math.floor(Date.now()/1000),messageData:{typeMessage:'textMessage',textMessageData:{textMessage:message}}};
+      if(String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.messages.push(local);updateMobileWaMessagesDom({scrollBottom:true});}const chat=state.whatsapp.chats.find(row=>String(row.id)===String(chatId));if(chat)chat._lastMessage=local;toast('Mensaje enviado.','success');
+    }catch(error){const ambiguous=!error?.status;toast(ambiguous?'No se pudo confirmar el envío. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar.'),'error');}
+    finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
+  }
+  const mobileWaFileDataUrl=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('No se pudo leer el archivo.'));reader.readAsDataURL(file);});
+  async function sendMobileWaFile(file){
+    if(!file||state.whatsapp.sending)return;if(file.size>2500000){toast('El archivo supera el límite de 2,5 MB.','error');return;}
+    const chatId=state.whatsapp.selectedId;if(!chatId)return;setMobileWaSending(true,'Enviando archivo…',chatId);
+    try{const dataUrl=await mobileWaFileDataUrl(file);await mobileWaApi('sendfile',{chatId,fileName:file.name||'archivo',mimeType:file.type||'application/octet-stream',dataUrl});toast('Archivo enviado.','success');await loadMobileWaHistory(chatId,{silent:true,scrollBottom:true});}
+    catch(error){const ambiguous=!error?.status;toast(ambiguous?'No se pudo confirmar el archivo. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar el archivo.'),'error');}
+    finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
+  }
+  async function loadMobileWaMedia(idMessage){
+    const message=state.whatsapp.messages.find(row=>String(row?.idMessage)===String(idMessage));if(!message||!state.whatsapp.selectedId)return;
+    try{const result=await mobileWaApi('file',{chatId:state.whatsapp.selectedId,idMessage});if(result?.downloadUrl){message.downloadUrl=result.downloadUrl;updateMobileWaMessagesDom();}else toast('El archivo ya no está disponible.','error');}catch(error){toast(error?.message||'No se pudo cargar el archivo.','error');}
+  }
+  function startContactFromMobileWa(chatId){
+    if(!has('can_create_database')||!has('can_view_database')||!/@c\.us$/i.test(String(chatId||'')))return;const chat=mobileWaSelectedChat(chatId),phone=mobileWaNormalizePhone(chat.id),shownPhone=phone.startsWith('34')&&phone.length===11?phone.slice(2):phone;
+    const rawName=clean(chat.name)&&!/^\+?\d+$/.test(clean(chat.name))?chat.name:'',name=splitFullName(rawName);resetDraft();state.draft.contact={...state.draft.contact,first:name.first,last:name.last,phone:shownPhone};go('detected');
+  }
+  function stopMobileWaRefresh(){if(mobileWaRefreshTimer){clearTimeout(mobileWaRefreshTimer);mobileWaRefreshTimer=null;}}
+  function scheduleMobileWaRefresh(){
+    stopMobileWaRefresh();const current=route(),page=current.parts[0];if(!has('can_use_whatsapp')||!['whatsapp','whatsapp-chat'].includes(page)||document.hidden)return;
+    mobileWaRefreshTimer=setTimeout(async()=>{mobileWaRefreshTimer=null;const latest=route();if(latest.parts[0]==='whatsapp')await loadMobileWaChats({silent:true,light:true});else if(latest.parts[0]==='whatsapp-chat')await loadMobileWaHistory(safeDecode(latest.parts[1]),{silent:true});scheduleMobileWaRefresh();},page==='whatsapp-chat'?20000:180000);
+  }
+
   function renderMore(){
     return `<div class="m-page">${pageHead('Más','home')}<div class="m-info-card">${infoRow('Usuario',state.perms?.display_name||state.user?.email)}${infoRow('Sincronización','Mismo CRM y misma base de datos')}${infoRow('Última actualización',state.lastRefresh?dateTime(state.lastRefresh):'—')}</div><div class="m-action-stack" style="margin-top:14px"><button class="m-secondary" data-action="refresh">↻ Actualizar datos</button><button class="m-secondary" data-action="open-desktop">Abrir CRM completo</button><button class="m-danger" data-action="logout">Cerrar sesión</button></div></div>`;
   }
@@ -482,14 +754,21 @@
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.onclick=()=>go(button.dataset.mobileRoute));
     byId('mobileCameraInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
     byId('mobileGalleryInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
+    byId('mobileWhatsAppFileInput').onchange=event=>{sendMobileWaFile(event.target.files?.[0]);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
     addEventListener('hashchange',render);
     addEventListener('pageshow',()=>{if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);});
-    document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMobileWaRefresh();return;}if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(render);const current=route();if(current.parts[0]==='whatsapp')loadMobileWaChats({silent:true,light:true});else if(current.parts[0]==='whatsapp-chat')loadMobileWaHistory(safeDecode(current.parts[1]),{silent:true});});
+    addEventListener('pagehide',stopMobileWaRefresh);
   }
   async function handleViewClick(event){
     const target=event.target.closest('[data-action]');if(!target)return;event.preventDefault();const action=target.dataset.action;
-    if(action==='route')go(target.dataset.route);
+    if(action==='route'){
+      const destination=String(target.dataset.route||''),current=route().parts[0];
+      if(destination.startsWith('whatsapp-chat/'))state.whatsapp.listScroll=Number(byId('mobileView')?.scrollTop||0);
+      else if(destination==='whatsapp'&&current!=='whatsapp-chat')state.whatsapp.listScroll=0;
+      go(destination);
+    }
     if(action==='back')goBack(target.dataset.fallback||'home');
     if(action==='start-scan'){resetDraft();go('scan');}
     if(action==='manual-contact'){resetDraft();go('detected');}
@@ -506,6 +785,16 @@
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
     if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
+    if(action==='wa-filter'){state.whatsapp.filter=MOBILE_WA_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.whatsapp.limit=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
+    if(action==='wa-more'){state.whatsapp.limit+=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
+    if(action==='wa-refresh')loadMobileWaChats();
+    if(action==='wa-back-home')go('home',true);
+    if(action==='wa-back-list')go('whatsapp',true);
+    if(action==='wa-refresh-chat')loadMobileWaHistory(state.whatsapp.selectedId,{scrollBottom:false});
+    if(action==='wa-send')sendMobileWaMessage();
+    if(action==='wa-attach')byId('mobileWhatsAppFileInput').click();
+    if(action==='wa-load-media')loadMobileWaMedia(target.dataset.id);
+    if(action==='wa-create-contact')startContactFromMobileWa(target.dataset.chatId);
     if(action==='save-contact')saveContact(target.dataset.id);
     if(action==='save-task')saveTask(target.dataset.contactId);
     if(action==='complete-task')completeTask(target.dataset.id);
