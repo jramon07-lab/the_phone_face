@@ -103,11 +103,29 @@
     if(/^34[6789]\d{8}$/.test(digits))return digits.slice(2);
     return /^[6789]\d{8}$/.test(digits)?digits:'';
   }
+  const DNI_LETTERS='TRWAGMYFPDXBNJZSQVHLCKE';
+  function expectedDniLetter(digits){
+    return /^\d{8}$/.test(digits)?DNI_LETTERS[Number(digits)%23]:'';
+  }
+  function expectedNieLetter(prefix,digits){
+    const first={X:'0',Y:'1',Z:'2'}[prefix];
+    return first&&/^\d{7}$/.test(digits)?DNI_LETTERS[Number(first+digits)%23]:'';
+  }
   function validDni(candidate){
     const value=String(candidate||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-    if(/^[XYZ]\d{7}[A-Z]$/.test(value))return value;
-    if(/^\d{8}[A-Z]$/.test(value))return value;
-    if(/^[A-Z]\d{7}[A-Z0-9]$/.test(value))return value;
+    if(/^[XYZ]\d{7}[A-Z]$/.test(value)){
+      return value.at(-1)===expectedNieLetter(value[0],value.slice(1,8))?value:'';
+    }
+    if(/^\d{8}[A-Z]$/.test(value)){
+      return value.at(-1)===expectedDniLetter(value.slice(0,8))?value:'';
+    }
+    if(/^[ABCDEFGHJNPQRSUVW]\d{7}[A-Z0-9]$/.test(value))return value;
+
+    if(/^\d{8}$/.test(value))return value+expectedDniLetter(value);
+    if(/^\d{8}5$/.test(value)){
+      const digits=value.slice(0,8),letter=expectedDniLetter(digits);
+      return letter==='S'?digits+letter:'';
+    }
     return '';
   }
   const FIELD_LABEL=/\b(?:DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;

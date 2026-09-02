@@ -110,4 +110,43 @@ C25041122
 `);
 assert.equal(labelInsideName.dni,'');
 
+const dniSAsFive=context.window.TPFMobileOCR.extract(`
+Documento
+431619305
+`);
+assert.equal(dniSAsFive.dni,'43161930S');
+
+const dniLetterMissing=context.window.TPFMobileOCR.extract(`
+Documento
+43161930
+`);
+assert.equal(dniLetterMissing.dni,'43161930S');
+
+const wrongDniLetter=context.window.TPFMobileOCR.extract(`
+Documento
+43161930A
+`);
+assert.equal(wrongDniLetter.dni,'');
+
+const unrelatedNineDigits=context.window.TPFMobileOCR.extract(`
+Documento
+123456789
+`);
+assert.equal(unrelatedNineDigits.dni,'');
+
+const phoneAsDocument=context.window.TPFMobileOCR.extract(`
+Documento
+642284966
+`);
+assert.equal(phoneAsDocument.dni,'');
+
+const exactNie=context.window.TPFMobileOCR.extract(`
+Documento
+X1234567L
+`);
+assert.equal(exactNie.dni,'X1234567L');
+
+const noDocumentLabel=context.window.TPFMobileOCR.extract('43161930');
+assert.equal(noDocumentLabel.dni,'');
+
 console.log('mobile OCR parser: ok');
