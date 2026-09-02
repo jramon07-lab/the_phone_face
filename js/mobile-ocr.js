@@ -129,7 +129,8 @@
     }
     return '';
   }
-  const FIELD_LABEL=/\b(?:DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
+  const DOCUMENT_LABEL=/\b(?:DOCUMENT[OE]|DOCURNENTO|DNI|NIF)\b/i;
+  const FIELD_LABEL=/\b(?:DOCUMENT[OE]|DOCURNENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CRITERIO)\b/i;
   const NAME_BLOCKED=/\b(?:MYCRM|BUSQUEDA|BUSCAR|CRITERIO|DOCUMENTO|DNI|NIF|MSISDN|MSIDN|FIJO|MOVIL|TELEFONO|CLIENTE|MULTIMARCA|FECHA|DIRECCION|NACIMIENTO|NACIONALIDAD|DATOS|COMPARTIDOS|SUSCRIPCION|DISPOSITIVO|SINFIN|ILIMITADOS|CONV|GB)\b/i;
   const NAME_START=/\b(?:BUSQUEDA|BUSCAR)\b/i;
   const NAME_END=/\b(?:DATOS\s+COMPARTIDOS|SUSCRIPCION|DISPOSITIVO)\b/i;
@@ -192,7 +193,7 @@
   function extract(text){
     const raw=String(text||'');
     const lines=raw.split(/\r?\n/);
-    const dni=valueAfterLabel(lines,/\b(?:DOCUMENTO|DNI|NIF)\b/i,lineDni);
+    const dni=valueAfterLabel(lines,DOCUMENT_LABEL,lineDni);
     const phone=valueAfterLabel(lines,/\b(?:MSISDN|MSIDN|FIJO|MOVIL|TELEFONO)\b/i,linePhone);
     const fullName=nameFromLines(lines);
     return {dni,phone,fullName,...splitName(fullName),rawText:raw};

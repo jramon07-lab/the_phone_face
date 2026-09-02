@@ -125,6 +125,25 @@ assert.equal(dniSAsEight.dni,'43161930S');
 const dniSAsEightInline=context.window.TPFMobileOCR.extract('Documento: 431619308');
 assert.equal(dniSAsEightInline.dni,'43161930S');
 
+const documenteOcr=context.window.TPFMobileOCR.extract(`
+Documente
+431619308
+Msisdn/Fijo
+858718773
+BÚSQUEDA
+MARIA VANESA CORTES
+Datos compartidos
+`);
+assert.equal(documenteOcr.dni,'43161930S');
+assert.equal(documenteOcr.phone,'858718773');
+assert.equal(documenteOcr.fullName,'MARIA VANESA CORTES');
+
+const docurnentoOcr=context.window.TPFMobileOCR.extract(`
+Docurnento
+431619308
+`);
+assert.equal(docurnentoOcr.dni,'43161930S');
+
 const dniLetterMissing=context.window.TPFMobileOCR.extract(`
 Documento
 43161930
