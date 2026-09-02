@@ -354,7 +354,12 @@
     const label=progress.querySelector('.m-ocr-progress>span'),bar=progress.querySelector('.m-progress-track span');
     try{
       if(!window.TPFMobileOCR)throw new Error('El lector no está disponible.');
-      const result=await window.TPFMobileOCR.recognize(state.scanFile,event=>{label.textContent=event.status==='recognizing text'?'Leyendo el documento…':'Preparando el documento…';bar.style.width=`${Math.max(5,Math.round(event.progress*100))}%`;});
+      const labels={
+        'preparing image':'Preparando la foto…','image prepared':'Foto preparada…','loading reader':'Cargando el lector…',
+        'loading tesseract core':'Iniciando el lector…','loading language traineddata':'Cargando el idioma…',
+        'initializing api':'Preparando el reconocimiento…','recognizing text':'Leyendo DNI, teléfono y nombre…'
+      };
+      const result=await window.TPFMobileOCR.recognize(state.scanFile,event=>{label.textContent=labels[event.status]||'Preparando el documento…';bar.style.width=`${Math.max(5,Math.round(event.progress*100))}%`;});
       ensureDraft();state.draft.contact={...state.draft.contact,first:result.first||'',last:result.last||'',dni:result.dni||'',phone:result.phone||''};go('detected');
       if(!result.first&&!result.dni&&!result.phone)toast('No se pudieron reconocer los datos. Puedes escribirlos manualmente.','error');
     }catch(error){progress.innerHTML=`<div class="m-duplicate warn">${esc(error?.message||'No se pudo leer la imagen.')} Puedes continuar escribiendo los datos.</div><button class="m-secondary" style="width:100%" data-action="manual-contact">Continuar manualmente</button>`;}

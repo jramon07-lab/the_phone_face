@@ -2,6 +2,22 @@
   "version": 2,
   "routes": [
     {
+      "src": "^/ocr-assets/tesseract-5\\.1\\.1/tesseract\\.min\\.js$",
+      "dest": "/api/ocr-asset?asset=tesseract"
+    },
+    {
+      "src": "^/ocr-assets/tesseract-5\\.1\\.1/worker\\.min\\.js$",
+      "dest": "/api/ocr-asset?asset=worker"
+    },
+    {
+      "src": "^/ocr-assets/tesseract-5\\.1\\.1/tesseract-core-lstm\\.wasm\\.js$",
+      "dest": "/api/ocr-asset?asset=core"
+    },
+    {
+      "src": "^/ocr-assets/tesseract-5\\.1\\.1/spa\\.traineddata\\.gz$",
+      "dest": "/api/ocr-asset?asset=spa"
+    },
+    {
       "src": "^/movil/?$",
       "dest": "/movil/index.html"
     },

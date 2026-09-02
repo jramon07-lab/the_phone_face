@@ -1,6 +1,13 @@
 (function(){
   'use strict';
-  const SCRIPT='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  const ASSET_ROOT='/ocr-assets/tesseract-5.1.1';
+  const SCRIPT=`${ASSET_ROOT}/tesseract.min.js`;
+  const ENGINE_OPTIONS=Object.freeze({
+    workerPath:`${ASSET_ROOT}/worker.min.js`,
+    corePath:`${ASSET_ROOT}/tesseract-core-lstm.wasm.js`,
+    langPath:ASSET_ROOT,
+    workerBlobURL:false
+  });
   let loader=null;
 
   function load(){
@@ -12,8 +19,81 @@
       script.onload=()=>window.Tesseract?resolve(window.Tesseract):reject(new Error('No se pudo iniciar el lector.'));
       script.onerror=()=>reject(new Error('No se pudo descargar el lector del documento.'));
       document.head.appendChild(script);
-    });
+    }).catch(error=>{loader=null;throw error;});
     return loader;
+  }
+
+  function report(onProgress,status,progress){
+    if(typeof onProgress==='function')onProgress({status,progress:Number(progress||0)});
+  }
+  function decodeImage(file){
+    if(typeof createImageBitmap==='function'){
+      return (async()=>{
+        try{
+          let bitmap;
+          try{bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});}
+          catch(_){bitmap=await createImageBitmap(file);}
+          if(bitmap.width&&bitmap.height){
+            return {source:bitmap,width:bitmap.width,height:bitmap.height,release:()=>bitmap.close?.()};
+          }
+          bitmap.close?.();
+        }catch(_){/* Safari antiguo o HEIC: se prueba con Image. */}
+        return decodeImageWithElement(file);
+      })();
+    }
+    return decodeImageWithElement(file);
+  }
+  function decodeImageWithElement(file){
+    const url=URL.createObjectURL(file);
+    return new Promise((resolve,reject)=>{
+      const image=new Image();
+      image.decoding='async';
+      image.style.imageOrientation='from-image';
+      image.onload=()=>{
+        if(!image.naturalWidth||!image.naturalHeight){
+          URL.revokeObjectURL(url);
+          reject(new Error('La imagen no tiene dimensiones válidas.'));
+          return;
+        }
+        resolve({source:image,width:image.naturalWidth,height:image.naturalHeight,release:()=>URL.revokeObjectURL(url)});
+      };
+      image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('El iPhone no pudo decodificar esta foto.'));};
+      image.src=url;
+    });
+  }
+  function canvasJpeg(canvas,quality){
+    return new Promise((resolve,reject)=>canvas.toBlob(blob=>{
+      if(blob)resolve(blob);else reject(new Error('No se pudo convertir la foto a JPEG.'));
+    },'image/jpeg',quality));
+  }
+  async function prepareImageForOcr(file,onProgress){
+    if(!file||typeof file.size!=='number')throw new Error('Selecciona una imagen válida.');
+    if(file.type&&!String(file.type).toLowerCase().startsWith('image/'))throw new Error('El archivo seleccionado no es una imagen.');
+    report(onProgress,'preparing image',0.03);
+    let decoded,canvas;
+    try{
+      decoded=await decodeImage(file);
+      const maxSide=1800;
+      const scale=Math.min(1,maxSide/Math.max(decoded.width,decoded.height));
+      const width=Math.max(1,Math.round(decoded.width*scale));
+      const height=Math.max(1,Math.round(decoded.height*scale));
+      canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+      const context=canvas.getContext('2d',{alpha:false});
+      if(!context)throw new Error('El navegador no pudo preparar la foto.');
+      context.fillStyle='#fff';context.fillRect(0,0,width,height);
+      context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
+      context.drawImage(decoded.source,0,0,width,height);
+      const jpeg=await canvasJpeg(canvas,.9);
+      report(onProgress,'image prepared',0.08);
+      if(typeof File==='function'){
+        const base=String(file.name||'captura').replace(/\.[^.]+$/,'');
+        return new File([jpeg],`${base}.jpg`,{type:'image/jpeg',lastModified:file.lastModified||Date.now()});
+      }
+      return jpeg;
+    }finally{
+      decoded?.release?.();
+      if(canvas){canvas.width=1;canvas.height=1;}
+    }
   }
 
   function tidy(value){return String(value||'').replace(/[|]/g,'I').replace(/\s+/g,' ').trim();}
@@ -100,14 +180,32 @@
   }
 
   async function recognize(file,onProgress){
-    const api=await load();
-    const result=await api.recognize(file,'spa',{logger:event=>{
-      if(typeof onProgress==='function'&&event?.status){
-        onProgress({status:event.status,progress:Number(event.progress||0)});
-      }
-    }});
-    return extract(result?.data?.text||'');
+    let phase='image';
+    let worker=null;
+    let engineError='';
+    try{
+      const input=await prepareImageForOcr(file,onProgress);
+      phase='reader';report(onProgress,'loading reader',0.1);
+      const api=await load();
+      phase='recognition';
+      worker=await api.createWorker('spa',api.OEM?.LSTM_ONLY||1,{
+        ...ENGINE_OPTIONS,
+        logger:event=>{if(event?.status)report(onProgress,event.status,event.progress);},
+        errorHandler:error=>{engineError=String(error?.message||error||'').trim();}
+      });
+      const result=await worker.recognize(input,{}, {text:true,blocks:false,hocr:false,tsv:false});
+      return extract(result?.data?.text||'');
+    }catch(error){
+      const message=String(error?.message||engineError||(typeof error==='string'?error:'')).trim();
+      console.warn('[TPF OCR]',phase,message);
+      if(phase==='image')throw new Error(message||'El iPhone no pudo preparar esta foto.');
+      if(phase==='reader')throw new Error('No se pudo iniciar el lector en el iPhone. Pulsa «Detectar datos» para reintentar.');
+      throw new Error('No se pudo completar la lectura en el iPhone. Pulsa «Detectar datos» para reintentar.');
+    }finally{
+      if(worker)await worker.terminate().catch(()=>{});
+    }
   }
 
-  window.TPFMobileOCR={recognize,extract};
+  window.TPFMobileOCR={recognize,extract,prepareImageForOcr};
+  if(document.documentElement)document.documentElement.dataset.ocrReady='tesseract-5.1.1-iphone';
 })();
