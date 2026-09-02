@@ -12,7 +12,7 @@
 
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
-    loading:false,lastRefresh:0,profileTab:'summary',scanFile:null,scanUrl:'',ocrDebugText:'',
+    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',scanFile:null,scanUrl:'',ocrDebugText:'',
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false
   };
 
@@ -50,7 +50,25 @@
   const money=value=>new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(Number(value||0));
   const date=value=>{if(!value)return 'Sin fecha';const d=new Date(value);return Number.isNaN(d.getTime())?'Sin fecha':d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric'});};
   const dateTime=value=>{if(!value)return 'Sin fecha';const d=new Date(value);return Number.isNaN(d.getTime())?'Sin fecha':d.toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
-  const todayKey=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+  const todayKey=(value=Date.now())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+  const TASK_FILTERS=['all','pending','today','overdue','completed'];
+  const taskStatus=task=>String(task?.status||'pending').toLowerCase();
+  const taskIsPending=task=>taskStatus(task)==='pending';
+  const taskIsCompleted=task=>taskStatus(task)==='completed';
+  const taskDateKey=task=>{const value=new Date(task?.starts_at||'');return Number.isNaN(value.getTime())?'':todayKey(value);};
+  const taskIsOverdue=(task,now=Date.now())=>{const value=new Date(task?.starts_at||'').getTime();return taskIsPending(task)&&Number.isFinite(value)&&value<Number(now);};
+  function taskMatchesFilter(task,filter='all',now=Date.now()){
+    if(filter==='pending')return taskIsPending(task);
+    if(filter==='today')return taskIsPending(task)&&taskDateKey(task)===todayKey(now);
+    if(filter==='overdue')return taskIsOverdue(task,now);
+    if(filter==='completed')return taskIsCompleted(task);
+    return true;
+  }
+  const filterTasks=(tasks,filter='all',now=Date.now())=>(tasks||[]).filter(task=>taskMatchesFilter(task,TASK_FILTERS.includes(filter)?filter:'all',now));
+  function taskFilterCounts(tasks,now=Date.now()){
+    const rows=tasks||[];
+    return {all:rows.length,pending:filterTasks(rows,'pending',now).length,today:filterTasks(rows,'today',now).length,overdue:filterTasks(rows,'overdue',now).length,completed:filterTasks(rows,'completed',now).length};
+  }
 
   function toast(message,type=''){
     const node=byId('mobileToast');node.textContent=message;node.className=`m-toast ${type}`.trim();
@@ -299,10 +317,17 @@
     const overdue=String(task.status)==='pending'&&task.starts_at&&new Date(task.starts_at).getTime()<Date.now();
     return `<article class="m-list-card m-task-card"><div class="m-list-row"><span class="m-avatar">▣</span><span class="m-list-main"><strong>${esc(task.title||'Tarea')}</strong><small>${esc(task.customer_name||'Sin contacto')} · ${esc(dateTime(task.starts_at))}</small></span><span class="m-badge ${String(task.status)==='completed'?'':overdue?'red':'amber'}">${String(task.status)==='completed'?'Completada':overdue?'Vencida':'Pendiente'}</span></div>${task.description?`<p class="m-muted" style="font-size:.75rem;margin:10px 0 0">${esc(task.description)}</p>`:''}${String(task.status)==='pending'&&has('can_manage_agenda')?`<div class="m-task-actions"><button class="m-secondary" data-action="complete-task" data-id="${esc(task.id)}">Marcar completada</button>${task.related_record_id?`<button class="m-secondary" data-action="route" data-route="contact/${esc(task.related_record_id)}">Ver contacto</button>`:''}</div>`:''}</article>`;
   }
+  function renderTaskFilters(counts,active=state.taskFilter){
+    const options=[['all','Todas'],['pending','Pendientes'],['today','Hoy'],['overdue','Vencidas'],['completed','Completadas']];
+    return `<div class="m-task-filters" role="group" aria-label="Filtrar tareas">${options.map(([key,label])=>`<button class="m-task-filter ${active===key?'active':''}" data-action="task-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('')}</div>`;
+  }
   function renderTasks(){
     if(!has('can_view_agenda')&&!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Tareas')}${empty('Acceso restringido','No tienes permiso para ver tareas.')}</div>`;
-    const rows=[...state.tasks].sort((a,b)=>String(a.starts_at||'').localeCompare(String(b.starts_at||'')));
-    return `<div class="m-page">${pageHead('Tareas','home')}${rows.length?`<div class="m-list">${rows.map(taskCard).join('')}</div>`:empty('Sin tareas','No hay tareas pendientes ni completadas.')}</div>`;
+    const allRows=[...state.tasks].sort((a,b)=>String(a.starts_at||'').localeCompare(String(b.starts_at||'')));
+    const active=TASK_FILTERS.includes(state.taskFilter)?state.taskFilter:'all';
+    const now=Date.now(),rows=filterTasks(allRows,active,now),filters=renderTaskFilters(taskFilterCounts(allRows,now),active);
+    const content=rows.length?`<div class="m-list">${rows.map(taskCard).join('')}</div>`:empty(allRows.length?'Sin tareas en este filtro':'Sin tareas',allRows.length?'Prueba con otro filtro.':'No hay tareas pendientes ni completadas.');
+    return `<div class="m-page">${pageHead('Tareas','home')}${filters}${content}</div>`;
   }
   async function completeTask(id){
     if(!has('can_manage_agenda')||!confirm('¿Marcar esta tarea como completada?'))return;
@@ -480,6 +505,7 @@
     if(action==='retry-creation')performCreation();
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
+    if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
     if(action==='save-contact')saveContact(target.dataset.id);
     if(action==='save-task')saveTask(target.dataset.contactId);
     if(action==='complete-task')completeTask(target.dataset.id);
