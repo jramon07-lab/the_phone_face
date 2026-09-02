@@ -12,11 +12,12 @@
 
   const state={
     user:null,perms:null,contacts:[],board:{stages:[],opportunities:[],fields:[]},tasks:[],
-    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',scanFile:null,scanUrl:'',ocrDebugText:'',
+    loading:false,lastRefresh:0,profileTab:'summary',taskFilter:'all',opportunityQuery:'',opportunityFilter:'all',opportunityStage:'',scanFile:null,scanUrl:'',ocrDebugText:'',
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
     whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
   let mobileWaRefreshTimer=null;
+  let opportunitySearchTimer=null;
   let mobileWaSheetTrigger=null;
 
   const field=(data,...names)=>{
@@ -56,6 +57,7 @@
   const safeDecode=value=>{try{return decodeURIComponent(String(value||''));}catch(_){return String(value||'');}};
   const todayKey=(value=Date.now())=>{const d=new Date(value);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   const TASK_FILTERS=['all','pending','today','overdue','completed'];
+  const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','closed'];
   const MOBILE_WA_FILTERS=['all','unread','contacts','groups'];
   const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
@@ -74,6 +76,60 @@
   function taskFilterCounts(tasks,now=Date.now()){
     const rows=tasks||[];
     return {all:rows.length,pending:filterTasks(rows,'pending',now).length,today:filterTasks(rows,'today',now).length,overdue:filterTasks(rows,'overdue',now).length,completed:filterTasks(rows,'completed',now).length};
+  }
+  const foldText=value=>clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const opportunityDateKey=opp=>{const value=clean(opp?.expected_date).slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(value)?value:'';};
+  const opportunityStageLooksClosed=stage=>/(ganad|perdid|cerrad|cancelad|rechazad|finalizad|completad|won|lost|closed|completed)/.test(foldText(stage?.name||stage));
+  function opportunityIsClosed(opp,stage=null){
+    const status=foldText(opp?.status||'open');
+    return ['won','lost','closed','completed','canceled','cancelled','rejected','ganada','ganado','perdida','perdido','cerrada','cerrado','completada','completado','cancelada','cancelado','rechazada','rechazado'].includes(status)||opportunityStageLooksClosed(stage);
+  }
+  function opportunityMatchesFilter(opp,filter='all',now=Date.now(),stage=null){
+    const active=OPPORTUNITY_FILTERS.includes(filter)?filter:'all';
+    if(active==='all')return true;
+    const closed=opportunityIsClosed(opp,stage);
+    if(active==='closed')return closed;
+    if(closed)return false;
+    const key=opportunityDateKey(opp),today=todayKey(now);
+    if(active==='today')return key===today;
+    if(active==='overdue')return !!key&&key<today;
+    if(active==='upcoming')return !!key&&key>today;
+    return true;
+  }
+  const filterOpportunities=(opportunities,filter='all',now=Date.now(),stages=null)=>(opportunities||[]).filter(opp=>opportunityMatchesFilter(opp,filter,now,stages?.get?.(String(opp?.stage_id))));
+  function opportunityFilterCounts(opportunities,now=Date.now(),stages=null){
+    const rows=opportunities||[];
+    return {all:rows.length,today:filterOpportunities(rows,'today',now,stages).length,overdue:filterOpportunities(rows,'overdue',now,stages).length,upcoming:filterOpportunities(rows,'upcoming',now,stages).length,closed:filterOpportunities(rows,'closed',now,stages).length};
+  }
+  function opportunityContactIndex(contacts=state.contacts){
+    const byId=new Map(),byPhone=new Map(),byName=new Map();
+    const addUnique=(map,key,contact)=>{if(!key)return;if(!map.has(key))map.set(key,contact);else map.set(key,null);};
+    (contacts||[]).forEach(contact=>{
+      if(contact?.id)byId.set(String(contact.id),contact);
+      addUnique(byPhone,digits(contact?.phone).slice(-9),contact);
+      addUnique(byName,foldText(contact?.fullName),contact);
+    });
+    return {byId,byPhone,byName};
+  }
+  function opportunityContact(opp,index=opportunityContactIndex()){
+    const id=clean(opp?.record_id||opp?.contact_id);if(id&&index.byId.has(id))return index.byId.get(id);
+    const phone=digits(opp?.phone).slice(-9);if(phone&&index.byPhone.get(phone))return index.byPhone.get(phone);
+    const name=foldText(opp?.client_name);return name&&index.byName.get(name)||null;
+  }
+  function opportunityMatchesSearch(opp,query='',context={}){
+    const term=foldText(query);if(!term)return true;
+    const contact=opportunityContact(opp,context.contacts||opportunityContactIndex());
+    const stage=context.stages?.get(String(opp?.stage_id));
+    const hay=foldText([opp?.title,opp?.client_name,opp?.phone,opp?.notes,stage?.name,contact?.fullName,contact?.dni,contact?.phone,contact?.email].filter(Boolean).join(' '));
+    const termDigits=digits(query),hayDigits=digits(hay);
+    return hay.includes(term)||(termDigits.length>=3&&hayDigits.includes(termDigits));
+  }
+  function opportunityListModel(query=state.opportunityQuery,stageId=state.opportunityStage,filter=state.opportunityFilter,now=Date.now()){
+    const context={contacts:opportunityContactIndex(),stages:new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage]))};
+    const base=(state.board.opportunities||[]).filter(opp=>(!stageId||String(opp.stage_id)===String(stageId))&&opportunityMatchesSearch(opp,query,context));
+    const active=OPPORTUNITY_FILTERS.includes(filter)?filter:'all';
+    const rows=filterOpportunities(base,active,now,context.stages).sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')));
+    return {context,base,rows,counts:opportunityFilterCounts(base,now,context.stages),active};
   }
 
   function toast(message,type=''){
@@ -136,7 +192,7 @@
   }
   async function signOut(){
     stopMobileWaRefresh();
-    closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function refreshData({silent=false}={}){
@@ -182,7 +238,7 @@
         case 'contacts':view.innerHTML=renderContacts();bindSearch();break;
         case 'contact':view.innerHTML=renderContact(current.parts[1]);break;
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
-        case 'opportunities':view.innerHTML=renderOpportunities();break;
+        case 'opportunities':view.innerHTML=renderOpportunities();bindOpportunityFilters();break;
         case 'opportunity':view.innerHTML=renderOpportunity(current.parts[1]);break;
         case 'tasks':view.innerHTML=renderTasks();break;
         case 'new-task':view.innerHTML=renderNewTask(current.parts[1]);break;
@@ -313,10 +369,58 @@
     const stage=state.board.stages.find(row=>String(row.id)===String(opp.stage_id));
     return `<button class="m-list-card" data-action="route" data-route="opportunity/${esc(opp.id)}"><span class="m-list-row"><span class="m-avatar">◇</span><span class="m-list-main"><strong>${esc(opp.title||'Oportunidad')}</strong><small>${esc(opp.client_name||'Sin contacto')} · ${esc(stage?.name||'Sin columna')}</small></span><span class="m-chevron">›</span></span></button>`;
   }
+  function opportunityDisplayState(opp,now=Date.now(),stage=null){
+    const status=foldText(opp?.status||'open'),stageName=foldText(stage?.name||stage);
+    if(opportunityIsClosed(opp,stage)){
+      if(['won','ganada','ganado'].includes(status)||/ganad|won/.test(stageName))return {label:'Ganada',tone:'green'};
+      if(['lost','perdida','perdido','canceled','cancelled','rejected','cancelada','cancelado','rechazada','rechazado'].includes(status)||/perdid|cancelad|rechazad|lost/.test(stageName))return {label:'Perdida',tone:'red'};
+      return {label:'Cerrada',tone:'green'};
+    }
+    const key=opportunityDateKey(opp),today=todayKey(now);
+    if(!key)return {label:'Sin fecha',tone:'neutral'};
+    if(key<today)return {label:'Vencida',tone:'red'};
+    if(key===today)return {label:'Hoy',tone:'amber'};
+    return {label:'Próxima',tone:'purple'};
+  }
+  function opportunityDateLabel(opp){
+    const key=opportunityDateKey(opp);if(!key)return 'Sin fecha';
+    const [year,month,day]=key.split('-');return `${day}/${month}/${year}`;
+  }
+  function opportunityListCard(opp,context,now=Date.now()){
+    const stage=context.stages.get(String(opp.stage_id));
+    const contact=opportunityContact(opp,context.contacts);
+    const clientName=clean(opp.client_name)||clean(contact?.fullName)||'Sin contacto';
+    const phone=clean(opp.phone)||clean(contact?.phone);
+    const display=opportunityDisplayState(opp,now,stage);
+    return `<button class="m-list-card m-opportunity-card" data-action="route" data-route="opportunity/${esc(opp.id)}" type="button"><span class="m-list-row"><span class="m-avatar">◇</span><span class="m-list-main"><strong>${esc(opp.title||'Oportunidad')}</strong><small>${esc(clientName)}${phone?` · ${esc(phone)}`:''}</small></span><span class="m-badge ${display.tone}">${display.label}</span></span><span class="m-opportunity-meta"><span><small>Cierre</small><b>${esc(opportunityDateLabel(opp))}</b></span><span><small>Importe</small><b>${opp.amount!=null?esc(money(opp.amount)):'Sin importe'}</b></span><span class="wide"><small>Columna / estado</small><b>${esc(stage?.name||'Sin columna')}</b></span></span></button>`;
+  }
+  function renderOpportunityFilters(counts,active=state.opportunityFilter){
+    const options=[['all','Todas'],['today','Hoy'],['overdue','Vencidas'],['upcoming','Próximas'],['closed','Cerradas']];
+    return options.map(([key,label])=>`<button class="m-opportunity-filter ${active===key?'active':''}" data-action="opportunity-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
+  }
+  function opportunityRowsHtml(model){
+    if(model.rows.length)return model.rows.map(opp=>opportunityListCard(opp,model.context)).join('');
+    if(!(state.board.opportunities||[]).length)return empty('Sin oportunidades','Todavía no hay oportunidades creadas.');
+    if(!model.base.length)return empty('Sin resultados','Prueba con otra búsqueda o columna.');
+    return empty('Sin oportunidades en este filtro','Prueba con otro filtro de fecha o estado.');
+  }
   function renderOpportunities(){
     if(!has('can_view_sales')&&!has('can_edit_sales'))return `<div class="m-page">${pageHead('Oportunidades')}${empty('Acceso restringido','No tienes permiso para ver ventas.')}</div>`;
-    const rows=[...state.board.opportunities].sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')));
-    return `<div class="m-page">${pageHead('Oportunidades','home')}${rows.length?`<div class="m-list">${rows.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Todavía no hay oportunidades creadas.')}</div>`;
+    const model=opportunityListModel();
+    const stageOptions=(state.board.stages||[]).map(stage=>`<option value="${esc(stage.id)}" ${String(state.opportunityStage)===String(stage.id)?'selected':''}>${esc(stage.name)}</option>`).join('');
+    return `<div class="m-page m-opportunities-page">${pageHead('Oportunidades','home')}<div class="m-search m-opportunity-search"><input id="mobileOpportunitySearch" class="m-input" type="search" value="${esc(state.opportunityQuery)}" placeholder="Oportunidad, contacto, DNI o teléfono" autocomplete="off" aria-label="Buscar oportunidades"></div><label class="m-opportunity-stage"><span>Columna / estado</span><select id="mobileOpportunityStage" class="m-select" aria-label="Filtrar por columna"><option value="">Todas las columnas</option>${stageOptions}</select></label><div id="mobileOpportunityFilters" class="m-opportunity-filters" role="group" aria-label="Filtrar oportunidades">${renderOpportunityFilters(model.counts,model.active)}</div><p id="mobileOpportunityResultCount" class="m-opportunity-result-count" aria-live="polite" aria-atomic="true">${model.rows.length} ${model.rows.length===1?'oportunidad':'oportunidades'}</p><div id="mobileOpportunitiesList" class="m-list">${opportunityRowsHtml(model)}</div></div>`;
+  }
+  function updateOpportunityResults(){
+    const model=opportunityListModel();
+    const filters=byId('mobileOpportunityFilters'),count=byId('mobileOpportunityResultCount'),list=byId('mobileOpportunitiesList');
+    if(filters)filters.innerHTML=renderOpportunityFilters(model.counts,model.active);
+    if(count)count.textContent=`${model.rows.length} ${model.rows.length===1?'oportunidad':'oportunidades'}`;
+    if(list)list.innerHTML=opportunityRowsHtml(model);
+  }
+  function bindOpportunityFilters(){
+    const search=byId('mobileOpportunitySearch'),stage=byId('mobileOpportunityStage');
+    if(search)search.oninput=()=>{state.opportunityQuery=search.value;clearTimeout(opportunitySearchTimer);opportunitySearchTimer=setTimeout(updateOpportunityResults,120);};
+    if(stage)stage.onchange=()=>{state.opportunityStage=stage.value;updateOpportunityResults();};
   }
   function renderOpportunity(id){
     const opp=state.board.opportunities.find(row=>String(row.id)===String(id));if(!opp)return `<div class="m-page">${pageHead('Oportunidad','opportunities')}${empty('No encontrada','Actualiza e inténtalo de nuevo.')}</div>`;
@@ -901,6 +1005,7 @@
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
     if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
+    if(action==='opportunity-filter'){state.opportunityFilter=OPPORTUNITY_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';updateOpportunityResults();}
     if(action==='wa-filter'){state.whatsapp.filter=MOBILE_WA_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';state.whatsapp.limit=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
     if(action==='wa-more'){state.whatsapp.limit+=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
     if(action==='wa-refresh')loadMobileWaChats();
