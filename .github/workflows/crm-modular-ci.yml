@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - work/crm-modular-20260826
+      - tmp/contact-profile-recover-20260901
 
 permissions:
   contents: read
