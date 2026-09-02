@@ -125,6 +125,26 @@ assert.equal(dniSAsEight.dni,'43161930S');
 const dniSAsEightInline=context.window.TPFMobileOCR.extract('Documento: 431619308');
 assert.equal(dniSAsEightInline.dni,'43161930S');
 
+const duplicatedFinalGlyph=context.window.TPFMobileOCR.extract(`
+Documento
+4316193058
+Msisdn/Fijo
+858718773
+`);
+assert.equal(duplicatedFinalGlyph.dni,'43161930S');
+
+for(const duplicated of ['43161930SS','431619308S','4316193088','43I6I93OO8']){
+  assert.equal(context.window.TPFMobileOCR.extract(`Documento\n${duplicated}\nMsisdn/Fijo\n858718773`).dni,'43161930S');
+}
+
+const documentaOcr=context.window.TPFMobileOCR.extract(`
+Documenta
+4316193058
+Msisdn/Fijo
+858718773
+`);
+assert.equal(documentaOcr.dni,'43161930S');
+
 const documenteOcr=context.window.TPFMobileOCR.extract(`
 Documente
 431619308
@@ -157,6 +177,21 @@ Datos compartidos
 `);
 assert.equal(structuralDni.dni,'43161930S');
 assert.equal(structuralDni.phone,'858718773');
+
+const distortedFirstPhoneAndDocument=context.window.TPFMobileOCR.extract(`
+Criterio
+Msisdr/Fij0
+Docurnenlo
+4316193058
+Msisdn/Fijo
+858718773
+BÚSQUEDA
+MARIA VANESA CORTES
+Datos compartidos
+`);
+assert.equal(distortedFirstPhoneAndDocument.dni,'43161930S');
+assert.equal(distortedFirstPhoneAndDocument.phone,'858718773');
+assert.equal(distortedFirstPhoneAndDocument.fullName,'MARIA VANESA CORTES');
 
 const bodyZeroAsLetter=context.window.TPFMobileOCR.extract(`
 Documento
@@ -193,6 +228,22 @@ Msisdn/Fijo
 642284966
 `);
 assert.equal(structuralPhonesOnly.dni,'');
+
+const longNumericDocumentNoise=context.window.TPFMobileOCR.extract(`
+Documento
+1234567890
+Msisdn/Fijo
+858718773
+`);
+assert.equal(longNumericDocumentNoise.dni,'');
+
+const extendedPhoneNoise=context.window.TPFMobileOCR.extract(`
+Documento
+6422849660
+Msisdn/Fijo
+858718773
+`);
+assert.equal(extendedPhoneNoise.dni,'');
 
 const structuralLongId=context.window.TPFMobileOCR.extract(`
 YGC25041122282164
