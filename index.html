@@ -62,7 +62,7 @@
 
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
-<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-02">
+<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-03">
 <link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
 </head>
 <body>
@@ -729,7 +729,7 @@
     <div class="agendaToolbar card">
       <div class="agendaViewSwitch"><button id="agendaListView" class="active">☷ Lista</button><button id="agendaCalendarView">▦ Calendario</button></div>
       <label class="agendaSearch">⌕ <input id="agendaSearch" placeholder="Buscar asunto, cliente o teléfono"></label>
-      <select id="agendaFilter" aria-label="Filtrar recordatorios"><option value="pending">Pendientes</option><option value="today">Hoy</option><option value="tomorrow">Mañana</option><option value="week">Próximos 7 días</option><option value="month">Este mes</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="all">Todos</option></select>
+      <select id="agendaFilter" aria-label="Filtrar recordatorios"><option value="pending">Pendientes</option><option value="today">Hoy</option><option value="tomorrow">Mañana</option><option value="week">Esta semana</option><option value="month">Este mes</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="all">Todos</option></select>
       <button id="agendaRefresh" class="secondary">↻ Actualizar</button>
     </div>
     <div class="agendaWorkspace">
@@ -739,7 +739,7 @@
         <table class="hidden"><tbody id="agendaRows"></tbody></table>
         <div id="agendaEmpty" class="agendaEmpty">No hay recordatorios con estos filtros.</div>
       </main>
-      <aside id="agendaCreateCard" class="agendaComposer card">
+      <aside id="agendaCreateCard" class="agendaComposer card" aria-hidden="true">
         <div class="agendaComposerHead"><div><span class="agendaEyebrow">NUEVO</span><h3>Crear recordatorio</h3></div><button id="agendaCloseCreate" aria-label="Cerrar">×</button></div>
         <label>Tipo</label><div id="agendaTypeChoices" class="agendaTypes"></div><button id="agendaManageTypes" class="agendaManage">＋ Gestionar tipos</button>
         <label for="agendaTitle">Asunto</label><input id="agendaTitle" placeholder="¿Qué tienes que hacer?">
@@ -1489,7 +1489,7 @@
 <script src="/js/core/00-bootstrap.js"></script>
 <script src="/js/modules/contacts-sales-core.js"></script>
 <script src="/js/modules/whatsapp-scheduling-core.js"></script>
-<script src="/js/modules/agenda-core.js?v=20260903-02"></script>
+<script src="/js/modules/agenda-core.js?v=20260903-03"></script>
 <script src="/js/core/20-main.js"></script>
 <script src="/js/modules/whatsapp-green-core.js"></script>
 <script src="/js/modules/automations-core.js"></script>
