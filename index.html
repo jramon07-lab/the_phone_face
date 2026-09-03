@@ -62,6 +62,7 @@
 
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
+<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-01">
 </head>
 <body>
 
@@ -713,79 +714,43 @@
    </section>
 
 
-   <section id="view-agenda" class="hidden">
-    <div class="card">
-      <div class="row" style="align-items:center">
-        <div>
-          <h2>Agenda y recordatorios <span style="display:inline-block;margin-left:8px;padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#1267ed;font-size:11px;font-weight:800;vertical-align:middle">Agenda v2</span></h2>
-          <div class="small">Crea tareas, llamadas y citas. Se guardan online y aparecen en todos tus dispositivos.</div>
-        </div>
-        <select id="agendaFilter" style="max-width:210px">
-          <option value="pending">Pendientes</option>
-          <option value="today">Hoy</option>
-          <option value="week">Próximos 7 días</option>
-          <option value="completed">Completados</option>
-          <option value="all">Todos</option>
-        </select>
-      </div>
+   <section id="view-agenda" class="hidden agendaPro">
+    <header class="agendaHeader">
+      <div><span class="agendaEyebrow">ORGANIZACIÓN</span><h2>Agenda y recordatorios</h2><p>Todo lo que tienes que hacer, ordenado y disponible en todos tus dispositivos.</p></div>
+      <button id="agendaOpenCreate" class="primary">＋ Nuevo recordatorio</button>
+    </header>
+    <div class="agendaStats" id="agendaStats">
+      <button data-agenda-filter="today"><span>Hoy</span><b id="agendaStatToday">0</b><small>recordatorios</small></button>
+      <button data-agenda-filter="pending"><span>Pendientes</span><b id="agendaStatPending">0</b><small>por completar</small></button>
+      <button data-agenda-filter="overdue"><span>Vencidos</span><b id="agendaStatOverdue">0</b><small>requieren atención</small></button>
+      <button data-agenda-filter="completed"><span>Completados</span><b id="agendaStatCompleted">0</b><small>finalizados</small></button>
     </div>
-
-    <div class="card" id="agendaCreateCard">
-      <h3>Nuevo recordatorio</h3>
-      <div class="row">
-        <input id="agendaTitle" placeholder="Asunto / tarea">
-        <input id="agendaCustomer" placeholder="Cliente">
-        <input id="agendaPhone" placeholder="Teléfono">
-      </div>
-      <div class="row">
-        <div>
-          <label class="small">Fecha y hora</label>
-          <input id="agendaStarts" type="datetime-local">
-        </div>
-        <div>
-          <label class="small">Avisarme desde</label>
-          <input id="agendaReminder" type="datetime-local">
-        </div>
-      </div>
-      <textarea id="agendaDescription" placeholder="Notas"></textarea>
-
-      <div class="card" style="margin-top:10px;padding:12px">
-        <b>Avisos</b>
-        <div class="row" style="margin-top:8px">
-          <label><input type="checkbox" class="agendaReminderPreset" value="10" style="width:auto"> 10 min antes</label>
-          <label><input type="checkbox" class="agendaReminderPreset" value="30" style="width:auto"> 30 min antes</label>
-          <label><input type="checkbox" class="agendaReminderPreset" value="60" style="width:auto"> 1 hora antes</label>
-          <label><input type="checkbox" class="agendaReminderPreset" value="120" style="width:auto"> 2 horas antes</label>
-          <label><input type="checkbox" class="agendaReminderPreset" value="1440" style="width:auto"> 1 día antes</label>
-        </div>
-        <div class="row" style="margin-top:8px">
-          <label><input id="agendaNotifyApp" type="checkbox" checked style="width:auto"> Aviso en The Phone Face</label>
-          <label><input id="agendaNotifyEmail" type="checkbox" style="width:auto"> Email</label>
-          <label><input id="agendaSyncGoogle" type="checkbox" style="width:auto"> Añadir a Google Calendar</label>
-        </div>
-      </div>
-
-      <button id="agendaSave" class="primary">Guardar recordatorio</button>
-      <span id="agendaMsg" class="small"></span>
+    <div class="agendaToolbar card">
+      <div class="agendaViewSwitch"><button id="agendaListView" class="active">☷ Lista</button><button id="agendaCalendarView">▦ Calendario</button></div>
+      <label class="agendaSearch">⌕ <input id="agendaSearch" placeholder="Buscar asunto, cliente o teléfono"></label>
+      <select id="agendaFilter"><option value="pending">Pendientes</option><option value="today">Hoy</option><option value="week">Esta semana</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="all">Todos</option></select>
+      <button id="agendaRefresh" class="secondary">↻ Actualizar</button>
     </div>
-
-    <div class="card">
-      <div class="row" style="align-items:center">
-        <h3 style="margin:0">Mis recordatorios</h3>
-        <button id="agendaRefresh" class="secondary" style="max-width:160px">Actualizar</button>
-      </div>
-      <div class="scroll" style="margin-top:10px">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th><th>Asunto</th><th>Cliente</th><th>Teléfono</th><th>Notas</th><th>Estado</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="agendaRows"></tbody>
-        </table>
-      </div>
-      <div id="agendaEmpty" class="small" style="padding:16px 0">No hay recordatorios.</div>
+    <div class="agendaWorkspace">
+      <main class="agendaMain card">
+        <div id="agendaList"></div>
+        <div id="agendaCalendar" class="hidden"></div>
+        <table class="hidden"><tbody id="agendaRows"></tbody></table>
+        <div id="agendaEmpty" class="agendaEmpty">No hay recordatorios con estos filtros.</div>
+      </main>
+      <aside id="agendaCreateCard" class="agendaComposer card">
+        <div class="agendaComposerHead"><div><span class="agendaEyebrow">NUEVO</span><h3>Crear recordatorio</h3></div><button id="agendaCloseCreate" aria-label="Cerrar">×</button></div>
+        <label>Tipo</label><div id="agendaTypeChoices" class="agendaTypes"></div><button id="agendaManageTypes" class="agendaManage">＋ Gestionar tipos</button>
+        <label for="agendaTitle">Asunto</label><input id="agendaTitle" placeholder="¿Qué tienes que hacer?">
+        <label for="agendaCustomer">Cliente</label><div class="agendaCustomerLookup"><input id="agendaCustomer" placeholder="Buscar por nombre, teléfono o DNI"><div id="agendaCustomerResults"></div></div>
+        <label for="agendaPhone">Teléfono</label><input id="agendaPhone" placeholder="Teléfono">
+        <div class="agendaTwo"><div><label for="agendaStarts">Fecha y hora</label><input id="agendaStarts" type="datetime-local"></div><div><label for="agendaReminder">Avisarme desde</label><input id="agendaReminder" type="datetime-local"></div></div>
+        <label for="agendaDescription">Notas</label><textarea id="agendaDescription" placeholder="Añade detalles útiles"></textarea>
+        <details class="agendaOptions"><summary>Opciones de aviso</summary><div class="agendaPresets"><label><input type="checkbox" class="agendaReminderPreset" value="10"> 10 min</label><label><input type="checkbox" class="agendaReminderPreset" value="30"> 30 min</label><label><input type="checkbox" class="agendaReminderPreset" value="60"> 1 hora</label><label><input type="checkbox" class="agendaReminderPreset" value="1440"> 1 día</label></div><label><input id="agendaNotifyApp" type="checkbox" checked> Aviso en The Phone Face</label><label><input id="agendaNotifyEmail" type="checkbox"> Email</label><label><input id="agendaSyncGoogle" type="checkbox"> Google Calendar</label></details>
+        <button id="agendaSave" class="primary agendaSave">Guardar recordatorio</button><span id="agendaMsg" class="small"></span>
+      </aside>
     </div>
+    <div id="agendaTypeModal" class="agendaModal hidden"><div class="card"><div class="agendaComposerHead"><div><span class="agendaEyebrow">PERSONALIZAR</span><h3>Tipos de recordatorio</h3></div><button id="agendaCloseTypes">×</button></div><p class="small">Crea tus propias categorías. Se sincronizan en todos tus dispositivos.</p><div id="agendaTypeList"></div><div class="agendaTypeNew"><input id="agendaNewTypeName" placeholder="Ej. Renovación"><select id="agendaNewTypeIcon"><option>✓</option><option>☎</option><option>◷</option><option>💬</option><option>📄</option><option>€</option><option>🔧</option></select><input id="agendaNewTypeColor" type="color" value="#155eef"><button id="agendaAddType" class="primary">Añadir</button></div></div></div>
    </section>
 
 

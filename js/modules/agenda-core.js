@@ -1,115 +1,41 @@
-/* TPF physical module split · generated from app-core.js */
-function fmtAgendaDate(value){
-  if(!value)return "";
-  const d=new Date(value);
-  return d.toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-}
-function agendaStatusLabel(s){
-  return s==="completed"?"Completado":s==="cancelled"?"Cancelado":"Pendiente";
-}
-
-function whatsappDigits(phone){
-  let p=String(phone||"").replace(/\D/g,"");
-  if(p.startsWith("00"))p=p.slice(2);
-  if(p.length===9)p="34"+p;
-  return p;
-}
-function whatsappDue(row){
-  if(!row?.whatsapp_enabled)return false;
-  const when=row.whatsapp_scheduled_at||row.starts_at;
-  if(!when)return true;
-  return new Date(when).getTime()<=Date.now();
-}
-window.sendAgendaWhatsapp=(id)=>{
-  const row=(window.__agendaRows||[]).find(x=>String(x.id)===String(id));
-  if(!row)return;
-  const p=whatsappDigits(row.whatsapp_phone||row.customer_phone);
-  if(!p){alert("Esta tarea no tiene teléfono de WhatsApp.");return}
-  const text=String(row.whatsapp_message||"").trim();
-  const url="https://wa.me/"+p+(text?"?text="+encodeURIComponent(text):"");
-  window.open(url,"_blank","noopener,noreferrer");
-};
-
-async function loadAgenda(){
-  if(!(perms?.is_admin||perms?.can_view_agenda||perms?.can_manage_agenda))return;
-  let q=sb.from("agenda_items").select("*").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").order("starts_at",{ascending:true}).limit(300);
-  const filter=$("agendaFilter")?.value||"pending";
-  const now=new Date();
-  if(filter==="pending") q=q.eq("status","pending");
-  if(filter==="completed") q=q.eq("status","completed");
-  if(filter==="today"){
-    const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-    const end=new Date(start);end.setDate(end.getDate()+1);
-    q=q.gte("starts_at",start.toISOString()).lt("starts_at",end.toISOString());
-  }
-  if(filter==="week"){
-    const end=new Date(now);end.setDate(end.getDate()+7);
-    q=q.gte("starts_at",now.toISOString()).lte("starts_at",end.toISOString()).eq("status","pending");
-  }
-  const {data,error}=await q;
-  if(error){$("agendaRows").innerHTML=`<tr><td colspan="7">${esc(error.message)}</td></tr>`;return}
-  const rows=data||[];
-  window.__agendaRows=rows;
-  $("agendaEmpty").style.display=rows.length?"none":"block";
-  $("agendaRows").innerHTML=rows.map(a=>`<tr>
-    <td>${esc(fmtAgendaDate(a.starts_at))}</td>
-    <td><b>${esc(a.title)}</b></td>
-    <td>${esc(a.customer_name||"")}</td>
-    <td>${esc(a.customer_phone||"")}</td>
-    <td>${esc(a.description||"")}</td>
-    <td>${esc(agendaStatusLabel(a.status))}</td>
-    <td>
-      <button class="secondary" onclick="openAgendaItem('${a.id}')">Abrir</button>
-      <button class="secondary" onclick="editAgendaItem('${a.id}')">Editar</button>
-      ${a.status==="pending"?`<button class="secondary" onclick="completeAgenda('${a.id}')">Completar</button> `:""}
-      ${a.status==="pending"?`<button class="secondary" onclick="cancelAgenda('${a.id}')">Cancelar</button> `:""}
-      ${(perms?.is_admin||perms?.can_manage_agenda)?`<button class="danger" onclick="deleteAgenda('${a.id}')">Eliminar</button>`:""}
-    </td>
-  </tr>`).join("");
-}
-$("agendaFilter").onchange=loadAgenda;
-$("agendaRefresh").onclick=loadAgenda;
-
-$("agendaSave").onclick=async()=>{
-  const __btn=$("agendaSave"); const __msg=$("agendaMsg"); tpfSetSaving(__btn,__msg);
-  if(!(perms?.is_admin||perms?.can_manage_agenda)){alert("No tienes permiso para crear recordatorios.");return}
-  const title=$("agendaTitle").value.trim();
-  const starts=$("agendaStarts").value;
-  if(!title||!starts){$("agendaMsg").textContent="Escribe un asunto y una fecha/hora.";return}
-  const {data:{user}}=await sb.auth.getUser();
-  const mins=selectedAgendaReminderMinutes();
-  const row={
-    title,
-    description:$("agendaDescription").value.trim()||null,
-    customer_name:$("agendaCustomer").value.trim()||null,
-    customer_phone:$("agendaPhone").value.trim()||null,
-    starts_at:new Date(starts).toISOString(),
-    reminder_at:$("agendaReminder").value?new Date($("agendaReminder").value).toISOString():null,
-    assigned_to:user?.id||null,
-    status:"pending",
-    reminder_minutes:mins,
-    notify_in_app:$("agendaNotifyApp")?.checked??true,
-    notify_email:$("agendaNotifyEmail")?.checked??false,
-    sync_google_calendar:$("agendaSyncGoogle")?.checked??false
-  };
-  const {error}=await sb.from("agenda_items").insert(row);
-  if(error){tpfShowSaveError(__btn,__msg,error);return;}
-  $("agendaMsg").textContent="Recordatorio guardado";
-  ["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>$(id).value="");
-  loadAgenda();
-  tpfResetSaving(__btn,__msg,"Recordatorio guardado.");
-};
-
-window.completeAgenda=async(id)=>{
-  const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);
-  if(error)alert(error.message);else loadAgenda();
-};
-window.cancelAgenda=async(id)=>{
-  const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);
-  if(error)alert(error.message);else loadAgenda();
-};
-window.deleteAgenda=async(id)=>{
-  if(!confirm("¿Eliminar este recordatorio?"))return;
-  const {error}=await sb.from("agenda_items").delete().eq("id",id);
-  if(error)alert(error.message);else loadAgenda();
-};
+/* Agenda Pro — compatible with the existing agenda_items model. */
+const AGENDA_DEFAULT_TYPES=[{name:"Tarea",icon:"✓",color:"#155eef"},{name:"Llamada",icon:"☎",color:"#7f56d9"},{name:"Cita",icon:"◷",color:"#eaaa08"},{name:"WhatsApp",icon:"💬",color:"#16a34a"}];
+let agendaTypes=[...AGENDA_DEFAULT_TYPES],agendaSelectedType="Tarea",agendaSearchTimer;
+function fmtAgendaDate(v){return v?new Date(v).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):""}
+function agendaStatusLabel(s){return s==="completed"?"Completado":s==="cancelled"?"Cancelado":"Pendiente"}
+function whatsappDigits(phone){let p=String(phone||"").replace(/\D/g,"");if(p.startsWith("00"))p=p.slice(2);if(p.length===9)p="34"+p;return p}
+function whatsappDue(row){if(!row?.whatsapp_enabled)return false;const when=row.whatsapp_scheduled_at||row.starts_at;return !when||new Date(when)<=new Date()}
+function dayKey(v){const d=new Date(v);return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate()}
+function startDay(d=new Date()){return new Date(d.getFullYear(),d.getMonth(),d.getDate())}
+function isToday(v){return dayKey(v)===dayKey(new Date())}
+function isOverdue(r){return r.status==="pending"&&new Date(r.starts_at)<new Date()}
+function typeFor(r){return agendaTypes.find(t=>t.name.toLowerCase()===String(r.agenda_type||"Tarea").toLowerCase())||AGENDA_DEFAULT_TYPES[0]}
+async function loadAgendaTypes(){const {data}=await sb.from("app_settings").select("value").eq("key","agenda_types").maybeSingle();const a=Array.isArray(data?.value)?data.value.filter(t=>t?.name&&t?.icon&&t?.color).slice(0,30):[];agendaTypes=a.length?a:[...AGENDA_DEFAULT_TYPES];if(!agendaTypes.some(t=>t.name===agendaSelectedType))agendaSelectedType=agendaTypes[0].name;renderTypeChoices();renderTypeManager()}
+async function saveAgendaTypes(){const {error}=await sb.from("app_settings").upsert({key:"agenda_types",value:agendaTypes,updated_at:new Date().toISOString()},{onConflict:"key"});if(error)throw error;renderTypeChoices();renderTypeManager();loadAgenda()}
+function renderTypeChoices(){const e=$("agendaTypeChoices");if(e)e.innerHTML=agendaTypes.map(t=>`<button type="button" data-type="${esc(t.name)}" class="${t.name===agendaSelectedType?"active":""}" style="--type-color:${esc(t.color)}">${esc(t.icon)} ${esc(t.name)}</button>`).join("")}
+function renderTypeManager(){const e=$("agendaTypeList");if(e)e.innerHTML=agendaTypes.map((t,i)=>`<div class="agendaTypeRow"><span class="agendaTypeDot" style="background:${esc(t.color)}">${esc(t.icon)}</span><b>${esc(t.name)}</b><button class="secondary" data-remove-type="${i}" ${agendaTypes.length<2?"disabled":""}>Quitar</button></div>`).join("")}
+window.sendAgendaWhatsapp=id=>{const r=(window.__agendaRows||[]).find(x=>String(x.id)===String(id));if(!r)return;const p=whatsappDigits(r.whatsapp_phone||r.customer_phone);if(!p)return alert("Esta tarea no tiene teléfono de WhatsApp.");window.open("https://wa.me/"+p+(r.whatsapp_message?"?text="+encodeURIComponent(r.whatsapp_message):""),"_blank","noopener,noreferrer")};
+function visibleRows(rows){const q=String($("agendaSearch")?.value||"").trim().toLowerCase();return q?rows.filter(r=>[r.title,r.customer_name,r.customer_phone,r.description,r.agenda_type].some(v=>String(v||"").toLowerCase().includes(q))):rows}
+function groupName(r){const d=startDay(new Date(r.starts_at)),t=startDay(),m=new Date(t);m.setDate(t.getDate()+1);return +d===+t?"Hoy":+d===+m?"Mañana":d<t?"Vencidos":"Próximos"}
+function renderItem(a){const t=typeFor(a),d=new Date(a.starts_at),state=a.status==="completed"?"completed":isOverdue(a)?"overdue":"";return `<article class="agendaItem"><time class="agendaTime">${d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</time><span class="agendaTypeIcon" style="--type-color:${esc(t.color)}">${esc(t.icon)}</span><div class="agendaItemTitle"><b>${esc(a.title)}</b><small>${esc(t.name)}${a.description?" · "+esc(a.description):""}</small></div><div class="agendaItemPerson"><b>${esc(a.customer_name||"Sin cliente")}</b><small>${esc(a.customer_phone||"")}</small></div><div><span class="agendaBadge ${state}">${state==="overdue"?"Vencido":agendaStatusLabel(a.status)}</span><div class="agendaActions"><button data-open-agenda="${esc(a.id)}">Abrir</button>${a.status==="pending"?`<button class="agendaDone" data-complete-agenda="${esc(a.id)}">✓ Completar</button>`:""}<button data-more-agenda="${esc(a.id)}">•••</button></div></div></article>`}
+function renderList(rows){const groups=rows.reduce((a,r)=>((a[groupName(r)]||=[]).push(r),a),{});$("agendaList").innerHTML=["Vencidos","Hoy","Mañana","Próximos"].filter(k=>groups[k]?.length).map(k=>`<section class="agendaGroup"><h3 class="agendaGroupTitle">${k}<span>${groups[k].length} recordatorio${groups[k].length===1?"":"s"}</span></h3>${groups[k].map(renderItem).join("")}</section>`).join("")}
+function renderCalendar(rows){const n=new Date(),f=new Date(n.getFullYear(),n.getMonth(),1),s=new Date(f);s.setDate(f.getDate()-((f.getDay()+6)%7));let days="";for(let i=0;i<42;i++){const d=new Date(s);d.setDate(s.getDate()+i);const rs=rows.filter(r=>dayKey(r.starts_at)===dayKey(d));days+=`<div class="agendaDay ${d.getMonth()!==n.getMonth()?"muted":""} ${isToday(d)?"today":""}"><b>${d.getDate()}</b>${rs.slice(0,3).map(r=>`<span class="agendaDayEvent">${new Date(r.starts_at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})} ${esc(r.title)}</span>`).join("")}${rs.length>3?`<small>+${rs.length-3} más</small>`:""}</div>`}$("agendaCalendar").innerHTML=`<h3 class="agendaMonthTitle">${n.toLocaleDateString("es-ES",{month:"long",year:"numeric"})}</h3><div class="agendaCalendarGrid">${["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map(x=>`<div class="agendaCalendarHead">${x}</div>`).join("")}${days}</div>`}
+function updateStats(a){$("agendaStatToday").textContent=a.filter(r=>isToday(r.starts_at)).length;$("agendaStatPending").textContent=a.filter(r=>r.status==="pending").length;$("agendaStatOverdue").textContent=a.filter(isOverdue).length;$("agendaStatCompleted").textContent=a.filter(r=>r.status==="completed").length}
+async function loadAgenda(){if(!(perms?.is_admin||perms?.can_view_agenda||perms?.can_manage_agenda))return;let q=sb.from("agenda_items").select("*").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").order("starts_at",{ascending:true}).limit(300),filter=$("agendaFilter")?.value||"pending",now=new Date();if(filter==="pending")q=q.eq("status","pending");if(filter==="completed")q=q.eq("status","completed");if(filter==="today"){const s=startDay(now),e=new Date(s);e.setDate(e.getDate()+1);q=q.gte("starts_at",s.toISOString()).lt("starts_at",e.toISOString())}if(filter==="week"){const e=new Date(now);e.setDate(e.getDate()+7);q=q.gte("starts_at",startDay(now).toISOString()).lte("starts_at",e.toISOString()).eq("status","pending")}if(filter==="overdue")q=q.eq("status","pending").lt("starts_at",now.toISOString());const [one,two]=await Promise.all([q,sb.from("agenda_items").select("id,status,starts_at").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").limit(1000)]);if(one.error){$("agendaList").innerHTML=`<div class="agendaEmpty">${esc(one.error.message)}</div>`;return}const rows=visibleRows(one.data||[]);window.__agendaRows=one.data||[];updateStats(two.data||[]);$("agendaEmpty").style.display=rows.length?"none":"block";renderList(rows);renderCalendar(rows)}
+$("agendaFilter").onchange=loadAgenda;$("agendaRefresh").onclick=loadAgenda;$("agendaSearch").oninput=()=>{clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(loadAgenda,180)};
+$("agendaListView").onclick=()=>{$("agendaList").classList.remove("hidden");$("agendaCalendar").classList.add("hidden");$("agendaListView").classList.add("active");$("agendaCalendarView").classList.remove("active")};
+$("agendaCalendarView").onclick=()=>{$("agendaList").classList.add("hidden");$("agendaCalendar").classList.remove("hidden");$("agendaCalendarView").classList.add("active");$("agendaListView").classList.remove("active")};
+$("agendaOpenCreate").onclick=()=>$("agendaCreateCard").classList.add("open");$("agendaCloseCreate").onclick=()=>$("agendaCreateCard").classList.remove("open");
+$("agendaStats").onclick=e=>{const b=e.target.closest("[data-agenda-filter]");if(b){$("agendaFilter").value=b.dataset.agendaFilter;loadAgenda()}};
+$("agendaTypeChoices").onclick=e=>{const b=e.target.closest("[data-type]");if(b){agendaSelectedType=b.dataset.type;renderTypeChoices()}};
+$("agendaManageTypes").onclick=()=>$("agendaTypeModal").classList.remove("hidden");$("agendaCloseTypes").onclick=()=>$("agendaTypeModal").classList.add("hidden");
+$("agendaAddType").onclick=async()=>{const name=$("agendaNewTypeName").value.trim();if(!name)return;if(agendaTypes.some(t=>t.name.toLowerCase()===name.toLowerCase()))return alert("Ese tipo ya existe.");agendaTypes.push({name,icon:$("agendaNewTypeIcon").value,color:$("agendaNewTypeColor").value});await saveAgendaTypes();$("agendaNewTypeName").value=""};
+$("agendaTypeList").onclick=async e=>{const b=e.target.closest("[data-remove-type]");if(b){agendaTypes.splice(Number(b.dataset.removeType),1);await saveAgendaTypes()}};
+$("agendaList").onclick=e=>{const a=e.target.closest("[data-open-agenda]"),c=e.target.closest("[data-complete-agenda]"),m=e.target.closest("[data-more-agenda]");if(a)return openAgendaItem(a.dataset.openAgenda);if(c)return completeAgenda(c.dataset.completeAgenda);if(m){document.querySelector(".agendaPopMenu")?.remove();const id=m.dataset.moreAgenda,menu=document.createElement("div");menu.className="agendaPopMenu";menu.innerHTML='<button data-agenda-edit>Editar</button><button data-agenda-cancel>Cancelar recordatorio</button><button class="danger" data-agenda-delete>Eliminar</button>';document.body.appendChild(menu);const box=m.getBoundingClientRect();menu.style.left=Math.min(box.left,innerWidth-210)+"px";menu.style.top=(box.bottom+5)+"px";menu.onclick=ev=>{if(ev.target.closest("[data-agenda-edit]"))editAgendaItem(id);if(ev.target.closest("[data-agenda-cancel]"))cancelAgenda(id);if(ev.target.closest("[data-agenda-delete]"))deleteAgenda(id);menu.remove()}}};
+$("agendaCustomer").oninput=()=>{clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(async()=>{const q=$("agendaCustomer").value.trim(),box=$("agendaCustomerResults");if(q.length<2){box.innerHTML="";return}const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:8});box.__rows=data||[];box.innerHTML=(data||[]).map((r,i)=>{const d=r.data||{},name=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"Cliente",phone=d["TELÉFONO"]||d.TELEFONO||"",dni=d["DNI / NIF"]||d.DNI||"";return `<button type="button" class="agendaCustomerResult" data-customer-result="${i}"><b>${esc(name)}</b><small>${esc(phone)} ${esc(dni)}</small></button>`}).join("")},220)};
+$("agendaCustomerResults").onclick=e=>{const b=e.target.closest("[data-customer-result]");if(!b)return;const r=$("agendaCustomerResults").__rows[Number(b.dataset.customerResult)]||{},d=r.data||{};$("agendaCustomer").value=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"";$("agendaPhone").value=d["TELÉFONO"]||d.TELEFONO||"";$("agendaCustomerResults").innerHTML=""};
+$("agendaSave").onclick=async()=>{const btn=$("agendaSave"),msg=$("agendaMsg");tpfSetSaving(btn,msg);if(!(perms?.is_admin||perms?.can_manage_agenda)){alert("No tienes permiso para crear recordatorios.");return tpfResetSaving(btn,msg)}const title=$("agendaTitle").value.trim(),starts=$("agendaStarts").value;if(!title||!starts){msg.textContent="Escribe un asunto y una fecha/hora.";return tpfResetSaving(btn,msg)}const {data:{user}}=await sb.auth.getUser(),row={title,agenda_type:agendaSelectedType,description:$("agendaDescription").value.trim()||null,customer_name:$("agendaCustomer").value.trim()||null,customer_phone:$("agendaPhone").value.trim()||null,starts_at:new Date(starts).toISOString(),reminder_at:$("agendaReminder").value?new Date($("agendaReminder").value).toISOString():null,assigned_to:user?.id||null,status:"pending",reminder_minutes:selectedAgendaReminderMinutes(),notify_in_app:$("agendaNotifyApp")?.checked??true,notify_email:$("agendaNotifyEmail")?.checked??false,sync_google_calendar:$("agendaSyncGoogle")?.checked??false};const {error}=await sb.from("agenda_items").insert(row);if(error)return tpfShowSaveError(btn,msg,error);["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>$(id).value="");$("agendaCreateCard").classList.remove("open");await loadAgenda();tpfResetSaving(btn,msg,"Recordatorio guardado.")};
+window.completeAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
+window.cancelAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
+window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))return;const {error}=await sb.from("agenda_items").delete().eq("id",id);if(error)alert(error.message);else loadAgenda()};
+loadAgendaTypes().catch(renderTypeChoices);
