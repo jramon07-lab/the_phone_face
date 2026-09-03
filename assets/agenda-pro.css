@@ -2,3 +2,16 @@
 @media(max-width:1050px){.agendaWorkspace{grid-template-columns:1fr}.agendaComposer{position:static;display:none}.agendaComposer.open{display:block}.agendaStats{grid-template-columns:1fr 1fr}.agendaToolbar{flex-wrap:wrap}.agendaSearch{min-width:240px}.agendaItem{grid-template-columns:65px 35px minmax(150px,1fr) auto}.agendaItemPerson{display:none}}
 @media(max-width:650px){.agendaHeader{align-items:flex-start}.agendaHeader h2{font-size:23px}.agendaStats{gap:8px}.agendaStats button{padding:11px}.agendaStats b{font-size:21px}.agendaToolbar>*{flex:1}.agendaToolbar .agendaSearch{flex-basis:100%}.agendaItem{grid-template-columns:54px 32px 1fr}.agendaItemPerson{display:none}.agendaActions{grid-column:3}.agendaCalendarGrid{overflow-x:auto}.agendaDay{min-width:86px}.agendaTypeNew{grid-template-columns:1fr 58px 48px}.agendaTypeNew button{grid-column:1/-1}.agendaComposer{padding:14px}.agendaTwo{grid-template-columns:1fr}}
 .agendaPopMenu{position:fixed;z-index:10010;width:205px;background:#fff;border:1px solid #e6e9ef;border-radius:10px;box-shadow:0 14px 35px #1018282c;padding:6px}.agendaPopMenu button{display:block;width:100%;border:0;background:#fff;text-align:left;padding:9px;border-radius:7px}.agendaPopMenu button:hover{background:#f6f8fb}.agendaPopMenu button.danger{color:#c43227}
+
+/* Agenda fullscreen composer v2 */
+.agendaWorkspace{display:block!important;grid-template-columns:none!important}
+.agendaMain{width:100%;min-width:0;min-height:0;box-sizing:border-box}
+.agendaComposer{display:none!important}
+.agendaComposer.open{display:block!important;position:fixed!important;inset:0!important;z-index:10060!important;overflow-y:auto!important;width:auto!important;max-width:none!important;max-height:100dvh!important;margin:0!important;border:0!important;border-radius:0!important;background:#fff!important;box-shadow:none!important;padding:clamp(18px,4vw,48px) max(18px,calc((100vw - 980px)/2))!important}
+.agendaComposer.open .agendaComposerHead{position:sticky;top:0;z-index:2;background:#fff;padding:10px 0 14px;margin-top:-10px;border-bottom:1px solid var(--ap-line)}
+.agendaComposer.open .agendaComposerHead h3{font-size:26px;margin-bottom:2px}
+.agendaComposer.open .agendaComposerHead>button{width:44px;height:44px;border-radius:10px;background:var(--ap-soft);font-size:24px}
+.agendaComposer.open .agendaSave{width:auto;min-width:210px;padding-left:24px;padding-right:24px}
+.agendaModal{z-index:10090}
+body.agendaComposerOpen{overflow:hidden}
+@media(max-width:650px){.agendaComposer.open{padding:14px!important}.agendaComposer.open .agendaComposerHead h3{font-size:22px}.agendaComposer.open .agendaSave{width:100%}}
