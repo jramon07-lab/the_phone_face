@@ -16,3 +16,44 @@
 .agendaModal{z-index:10090}
 body.agendaComposerOpen{overflow:hidden}
 @media(max-width:650px){.agendaComposer.open{padding:14px!important}.agendaComposer.open .agendaComposerHead h3{font-size:22px}.agendaComposer.open .agendaSave{width:100%}}
+
+/* Agenda control center v4 */
+.agendaHeader #agendaOpenCreate{display:none}
+.agendaToolbar{position:sticky!important;top:0!important;z-index:50!important;display:block!important;padding:12px!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(16,24,40,.08)}
+.agendaToolbarMain{display:flex;align-items:flex-end;gap:10px;min-width:0}
+.agendaToolbarMain .agendaViewSwitch{flex:0 0 auto}
+.agendaToolbarMain .agendaSearch{flex:1 1 320px;min-width:220px;height:42px;box-sizing:border-box;background:#fff}
+.agendaStatusFilter{display:grid!important;gap:4px;margin:0!important;flex:0 0 180px;font-size:11px!important;color:var(--ap-muted);font-weight:700}
+.agendaStatusFilter span{line-height:1}
+.agendaStatusFilter select{width:100%!important;height:42px;margin:0!important;background:#fff}
+.agendaToolbarMain #agendaRefresh,.agendaCreateCta{height:42px;flex:0 0 auto}
+.agendaCreateCta{min-width:145px;font-weight:800;box-shadow:0 6px 14px rgba(21,94,239,.2)}
+.agendaQuickRow{display:flex;align-items:center;gap:9px;margin-top:11px;padding-top:10px;border-top:1px solid var(--ap-line);min-width:0}
+.agendaQuickLabel{font-size:12px;font-weight:800;color:#344054;flex:0 0 auto}
+.agendaQuickFilters{display:flex;gap:6px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.agendaQuickFilters::-webkit-scrollbar{display:none}
+.agendaQuickFilters button{width:auto!important;border:1px solid var(--ap-line);background:#fff;color:#475467;border-radius:999px;padding:7px 12px;font-weight:700;white-space:nowrap}
+.agendaQuickFilters button:hover{border-color:#9db7ee;color:var(--ap-blue)}
+.agendaQuickFilters button.active{border-color:var(--ap-blue);background:#eef4ff;color:var(--ap-blue);box-shadow:inset 0 0 0 1px rgba(21,94,239,.08)}
+.agendaFilterSummary{margin-left:auto;color:var(--ap-muted);font-size:11px;font-weight:700;white-space:nowrap}
+body.agendaDetailOpen{overflow:hidden}
+#contactModal.tpfTaskStandalone #cpTaskPage,#contactModal.tpfTaskStandalone #cpTaskDetailPage{display:block!important}
+@media(max-width:1120px){
+  .agendaToolbarMain{flex-wrap:wrap}
+  .agendaToolbarMain .agendaSearch{order:3;flex-basis:100%}
+  .agendaQuickRow{align-items:flex-start;flex-wrap:wrap}
+  .agendaFilterSummary{width:100%;margin-left:0}
+}
+@media(max-width:650px){
+  .agendaToolbar{padding:9px!important}
+  .agendaToolbarMain{display:grid;grid-template-columns:1fr auto;align-items:end}
+  .agendaToolbarMain .agendaViewSwitch{grid-column:1}
+  .agendaCreateCta{grid-column:2;min-width:0}
+  .agendaToolbarMain .agendaSearch{grid-column:1/-1;order:initial;min-width:0}
+  .agendaStatusFilter{grid-column:1;min-width:0}
+  .agendaToolbarMain #agendaRefresh{grid-column:2}
+  .agendaQuickRow{display:block}
+  .agendaQuickLabel{display:block;margin-bottom:7px}
+  .agendaQuickFilters{padding-bottom:2px}
+  .agendaFilterSummary{display:block;margin-top:8px}
+}
