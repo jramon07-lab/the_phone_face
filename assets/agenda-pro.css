@@ -4,6 +4,7 @@
 .agendaPopMenu{position:fixed;z-index:10010;width:205px;background:#fff;border:1px solid #e6e9ef;border-radius:10px;box-shadow:0 14px 35px #1018282c;padding:6px}.agendaPopMenu button{display:block;width:100%;border:0;background:#fff;text-align:left;padding:9px;border-radius:7px}.agendaPopMenu button:hover{background:#f6f8fb}.agendaPopMenu button.danger{color:#c43227}
 
 /* Agenda fullscreen composer v2 */
+#view-agenda.agendaPro{max-width:none!important;width:100%!important;margin:0!important}
 .agendaWorkspace{display:block!important;grid-template-columns:none!important}
 .agendaMain{width:100%;min-width:0;min-height:0;box-sizing:border-box}
 .agendaComposer{display:none!important}
