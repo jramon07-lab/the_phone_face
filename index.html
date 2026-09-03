@@ -62,7 +62,7 @@
 
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
-<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-04">
+<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-05">
 <link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
 </head>
 <body>
@@ -729,7 +729,7 @@
     <div class="agendaToolbar card">
       <div class="agendaToolbarMain">
         <div class="agendaViewSwitch"><button id="agendaListView" class="active" type="button">☷ Lista</button><button id="agendaCalendarView" type="button">▦ Calendario</button></div>
-        <label class="agendaSearch">⌕ <input id="agendaSearch" placeholder="Buscar asunto, cliente o teléfono"></label>
+        <label class="agendaSearch" for="agendaSearch"><span class="agendaSearchIcon" aria-hidden="true">⌕</span><input id="agendaSearch" type="search" placeholder="Buscar por asunto, cliente, teléfono o DNI…" autocomplete="off" aria-label="Buscar tareas por asunto, cliente, teléfono o DNI"></label>
         <label class="agendaStatusFilter"><span>Estado</span><select id="agendaFilter" aria-label="Filtrar por estado"><option value="pending">Pendientes</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="cancelled">Cancelados</option><option value="all">Todos los estados</option></select></label>
         <button id="agendaRefresh" class="secondary" type="button">↻ Actualizar</button>
         <button id="agendaOpenCreateToolbar" class="primary agendaCreateCta" type="button">＋ Crear tarea</button>

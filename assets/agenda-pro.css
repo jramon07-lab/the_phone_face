@@ -57,3 +57,54 @@ body.agendaDetailOpen{overflow:hidden}
   .agendaQuickFilters{padding-bottom:2px}
   .agendaFilterSummary{display:block;margin-top:8px}
 }
+
+/* Agenda compact polish v5 */
+.agendaStats{gap:10px;margin-bottom:11px}
+.agendaStats button{min-height:72px;padding:10px 14px;border-radius:12px;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.agendaStats button:hover{box-shadow:0 5px 16px rgba(16,24,40,.07);transform:translateY(-1px)}
+.agendaStats span{font-size:12px;font-weight:700;color:#475467}
+.agendaStats b{font-size:22px;line-height:1;margin:4px 0 3px}
+.agendaStats small{font-size:11px}
+.agendaToolbar{padding:10px!important;margin-bottom:10px!important}
+.agendaToolbarMain{align-items:center;gap:8px}
+.agendaToolbarMain .agendaSearch{flex:1 1 360px;max-width:540px;min-width:260px;height:38px;padding:0 11px;gap:9px;border-color:#dfe4ec;border-radius:8px}
+.agendaSearchIcon{display:grid;place-items:center;flex:0 0 18px;width:18px;height:18px;color:#667085;font-size:16px;line-height:1;transform:translateY(-1px)}
+.agendaSearch input{height:36px!important;min-height:0!important;margin:0!important;padding:0!important;font-size:14px!important;background:transparent!important}
+.agendaSearch input::placeholder{color:#7b8494;opacity:1}
+.agendaSearch input::-webkit-search-cancel-button{cursor:pointer}
+.agendaStatusFilter{flex-basis:165px}
+.agendaStatusFilter select,.agendaToolbarMain #agendaRefresh,.agendaCreateCta{height:38px}
+.agendaCreateCta{min-width:132px;padding:0 13px;font-size:13px}
+.agendaViewSwitch button{padding:7px 11px;font-size:13px}
+.agendaQuickRow{margin-top:9px;padding-top:8px}
+.agendaQuickFilters button{padding:6px 11px;font-size:12px}
+.agendaMain{padding:4px 16px 2px!important;margin-bottom:8px!important;box-shadow:0 2px 10px rgba(16,24,40,.035)!important}
+.agendaGroup{margin:7px 0 14px}
+.agendaGroup:last-child{margin-bottom:4px}
+.agendaGroupTitle{margin-bottom:5px;font-size:12px}
+.agendaItem{grid-template-columns:66px 34px minmax(140px,1fr) minmax(120px,.7fr) 190px;gap:10px;padding:10px 4px;min-height:62px}
+.agendaTime{font-size:16px}
+.agendaTypeIcon{width:30px;height:30px;border-radius:9px;font-size:14px}
+.agendaItemTitle b,.agendaItemPerson b{font-size:13px}
+.agendaItemTitle small,.agendaItemPerson small{font-size:11px;margin-top:2px}
+.agendaItemState{justify-self:end;display:grid;justify-items:end;gap:3px;width:190px}
+.agendaBadge{padding:3px 7px;font-size:10px}
+.agendaActions{align-items:center;justify-content:flex-end;gap:3px;width:100%;min-height:29px}
+.agendaActions button{height:29px;display:inline-flex;align-items:center;justify-content:center;padding:5px 7px;font-size:12px;line-height:1}
+.agendaActions button[data-open-agenda]{min-width:43px}
+.agendaActions .agendaDone{min-width:88px}
+.agendaActions .agendaMore{width:31px;padding-left:4px;padding-right:4px;font-size:14px}
+.agendaEmpty{padding:34px 10px}
+@media(max-width:1120px){
+  .agendaToolbarMain .agendaSearch{max-width:none}
+  .agendaItem{grid-template-columns:62px 32px minmax(140px,1fr) 185px}
+  .agendaItemState{width:185px}
+}
+@media(max-width:650px){
+  .agendaStats button{min-height:66px;padding:9px 11px}
+  .agendaStats b{font-size:20px}
+  .agendaToolbarMain .agendaSearch{height:38px;min-width:0}
+  .agendaItem{grid-template-columns:50px 30px minmax(0,1fr);padding:10px 2px}
+  .agendaItemState{grid-column:3;width:100%;justify-items:start;margin-top:2px}
+  .agendaActions{justify-content:flex-start}
+}
