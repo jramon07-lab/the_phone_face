@@ -237,6 +237,12 @@ window.openContact=async(id)=>{
 };
 $("contactClose").onclick=async()=>{if(!await tpfBackExactly())$("contactModal").classList.add("hidden")};
 function openWaQuick(prefill={}){
+  window.__tpfWaQuickContext={
+    phone:prefill.phone||"",
+    name:prefill.name||"",
+    dni:prefill.dni||"",
+    contactId:prefill.contactId||null
+  };
   $("waQuickProgramId").value=prefill.programId||"";
   $("waQuickPhone").value=prefill.phone||"";
   $("waQuickMessage").value=prefill.message||"";

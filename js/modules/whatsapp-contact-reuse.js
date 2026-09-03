@@ -13,7 +13,8 @@ const state=window.__tpfWhatsappContactConnectorState||(window.__tpfWhatsappCont
   taskSyncAgain:false,
   captureBound:false,
   registered:false,
-  taskOrigin:null
+  taskOrigin:null,
+  profileOrigin:null
 });
 
 function stop(e){
@@ -95,17 +96,24 @@ function ensureTaskModeStyles(){
       width:100%!important;
       max-width:none!important;
     }
+    #tpfWaTasksList .cpTaskActions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:7px!important;flex-wrap:wrap!important}
+    #tpfWaTasksList .cpTaskActions button{width:auto!important;white-space:nowrap!important}
+    #tpfWaTasksList .tpfWaFocusedTaskToggle{color:#16733d!important;background:#eaf8ef!important;border-color:#cdebd8!important}
+    #tpfWaTasksList .tpfWaFocusedTaskDelete{color:#b42318!important}
   `;
   document.head.appendChild(style);
 }
-function rememberTaskOrigin(){
+function currentChatId(){
   let chatId='';
   try{chatId=String(waLiveState?.selected?.id||'')}catch(_){}
-  state.taskOrigin={chatId};
+  return chatId
 }
-function enterTaskMode(){
+function rememberTaskOrigin(returnTo='chat'){
+  state.taskOrigin={chatId:state.taskOrigin?.chatId||currentChatId(),returnTo};
+}
+function enterTaskMode(returnTo='chat'){
   ensureTaskModeStyles();
-  rememberTaskOrigin();
+  rememberTaskOrigin(returnTo);
   $('contactModal')?.classList.add('tpf-wa-task-mode');
 }
 function leaveTaskMode(){
@@ -115,6 +123,7 @@ function leaveTaskMode(){
 async function backToWhatsapp(e){
   stop(e);
   const origin=state.taskOrigin;
+  window.TPFAgendaComposer?.close?.({silent:true});
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
   $('tpfWaTasksPage')?.classList.add('hidden');
@@ -135,9 +144,24 @@ async function backToWhatsapp(e){
     }
   }
 }
+async function backProfileToWhatsapp(e){
+  stop(e);const origin=state.profileOrigin;state.profileOrigin=null;
+  hideContactModal();
+  const waView=$('view-whatsapplive');
+  if(waView?.classList.contains('hidden')){
+    const nav=document.querySelector('.nav[data-view="whatsapplive"]');
+    if(nav){nav.dataset.tpfBackNavigation='1';nav.click();delete nav.dataset.tpfBackNavigation}
+    await new Promise(resolve=>setTimeout(resolve,80))
+  }
+  if(origin?.chatId&&currentChatId()!==origin.chatId&&typeof window.selectWhatsAppChat==='function')try{await window.selectWhatsAppChat(origin.chatId)}catch(_){}
+}
+async function backFromTaskDetail(e){
+  if(state.taskOrigin?.returnTo!=='tasks')return backToWhatsapp(e);
+  stop(e);$('cpTaskDetailPage')?.classList.add('hidden');state.taskOrigin.returnTo='chat';await showFocusedTasksPage()
+}
 function revealTaskDetail(){
   detachTaskDetail();
-  enterTaskMode();
+  enterTaskMode(state.taskOrigin?.returnTo||'chat');
   $('cpTaskPage')?.classList.add('hidden');
   showContactModal();
   $('cpTaskDetailPage')?.classList.remove('hidden');
@@ -180,7 +204,9 @@ async function relatedTasks(){
       if(item.whatsapp_enabled||norm(item.title)==='whatsapp programado')return false;
       const itemPhone=digits(item.customer_phone||item.phone||'');
       const itemName=norm(item.customer_name||item.client_name||'');
-      return String(item.related_record_id||'')===String(c.id)||(phone&&itemPhone===phone)||(name&&itemName===name);
+      const relatedId=String(item.related_record_id||'').trim();
+      if(relatedId)return relatedId===String(c.id);
+      return (phone&&itemPhone===phone)||(name&&itemName===name);
     });
   }catch(err){
     console.warn('WhatsApp tareas del contacto',err);
@@ -264,6 +290,8 @@ async function openProfile(e){
   const c=contact();
   if(!c)return alert('Primero vincula este chat con un contacto.');
   hideFocusedTasks();
+  if(typeof window.openWaMatchedContact==='function')return window.openWaMatchedContact();
+  state.profileOrigin={chatId:currentChatId()};
   if(typeof window.openContact==='function')await window.openContact(c.id);
 }
 async function openEdit(e){
@@ -272,8 +300,12 @@ async function openEdit(e){
   const c=contact();
   if(!c)return alert('Primero vincula este chat con un contacto.');
   hideFocusedTasks();
-  if(typeof window.openContact!=='function')return;
-  await window.openContact(c.id);
+  if(typeof window.openWaMatchedContact==='function')await window.openWaMatchedContact();
+  else{
+    if(typeof window.openContact!=='function')return;
+    state.profileOrigin={chatId:currentChatId()};
+    await window.openContact(c.id);
+  }
   $('tpfContactEditToggle')?.click();
 }
 async function createOpportunity(e){
@@ -297,31 +329,53 @@ async function createOpportunity(e){
     requestAnimationFrame(reveal);
   }
 }
-function createTask(e){
+function contactTaskPrefill(extra={}){
+  const c=contact(),d=c?.data||{},name=String(d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||d.CLIENTE||'Contacto').trim();
+  const chatPhone=typeof waNormalizePhone==='function'?waNormalizePhone(currentChatId()):currentChatId(),phone=digits(d['TELÉFONO']||d.TELEFONO||d.PHONE||d.MOVIL||chatPhone);
+  return {overlay:true,type:'Tarea',title:extra.title||('Llamar a '+name),description:extra.description||'',customerName:name,phone,contactId:c?.id||'',startsAt:extra.startsAt||new Date(Date.now()+60*60*1000)}
+}
+async function restoreTaskOrigin(){
+  const c=contact();
+  if(c&&typeof loadWaContactSideData==='function'){
+    const phone=typeof waNormalizePhone==='function'?waNormalizePhone(currentChatId()):currentChatId();
+    try{await loadWaContactSideData(c,phone)}catch(_){}
+  }
+  if(state.taskOrigin?.returnTo==='tasks'){
+    state.taskOrigin.returnTo='chat';
+    await showFocusedTasksPage();
+    return
+  }
+  await backToWhatsapp()
+}
+function createTask(e,extra={}){
   stop(e);
   if(!requireContact())return;
-  detachTaskDetail();
+  const fromList=!!e?.target?.closest?.('#tpfWaTasksPage');
+  rememberTaskOrigin(fromList?'tasks':'chat');
   hideFocusedTasks();
   hideContactModal();
+  $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
-  enterTaskMode();
-  if(typeof openContactTaskPage==='function'){
-    openContactTaskPage();
-    showContactModal();
-    $('cpTaskPage')?.classList.remove('hidden');
-  }
+  const open=window.openAgendaComposer||window.TPFAgendaComposer?.open;
+  if(typeof open!=='function'){state.taskOrigin=null;return alert('No está disponible el compositor de Agenda.')}
+  open(contactTaskPrefill(extra),{overlay:true,onSaved:restoreTaskOrigin,onCancel:restoreTaskOrigin});
 }
-async function openTask(id,e){
+async function openTask(id,e,returnTo){
   stop(e);
   if(!id||!requireContact())return;
+  const target=returnTo||(e?.target?.closest?.('#tpfWaTasksPage')?'tasks':'chat');
   detachTaskDetail();
   hideFocusedTasks();
   hideContactModal();
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
-  enterTaskMode();
+  enterTaskMode(target);
   if(typeof window.openContactTaskDetail==='function'){
+    const historyLength=Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null;
     await window.openContactTaskDetail(String(id));
+    if(historyLength!=null&&window.__TPF_HISTORY.length>historyLength){
+      window.__TPF_HISTORY.splice(historyLength);
+    }
     revealTaskDetail();
     requestAnimationFrame(revealTaskDetail);
     setTimeout(revealTaskDetail,40);
@@ -346,20 +400,57 @@ function ensureTasksPage(){
 async function viewTasks(e){
   stop(e);
   if(!requireContact())return;
+  rememberTaskOrigin('chat');
+  await showFocusedTasksPage();
+}
+async function refreshFocusedTaskSurfaces(){
+  try{if(typeof loadAgenda==='function')await loadAgenda()}catch(_){}
+  try{if(typeof renderContactProfile==='function')await renderContactProfile()}catch(_){}
+  scheduleTaskSync(20);
+}
+async function toggleFocusedTask(task,e){
+  stop(e);if(!task?.id)return;
+  const next=task.status==='completed'||task.status==='cancelled'?'pending':'completed';
+  try{
+    const {error}=await sb.from('agenda_items').update({status:next}).eq('id',task.id);if(error)throw error;
+    const c=contact();if(c&&typeof logContactActivity==='function')await logContactActivity(c.id,next==='completed'?'task_done':'task_reopened',next==='completed'?'Tarea completada':'Tarea reabierta',task.title||'');
+    await refreshFocusedTaskSurfaces();await renderFocusedTasks()
+  }catch(err){alert(err?.message||'No se pudo actualizar la tarea.')}
+}
+async function deleteFocusedTask(task,e){
+  stop(e);if(!task?.id||!confirm(`¿Eliminar "${task.title||'Tarea'}"? Se enviará a la Papelera.`))return false;
+  try{
+    if(typeof archiveToTrash==='function'){const saved=await archiveToTrash('agenda',task.id,task.title||'Tarea',{agenda:task});if(!saved)throw new Error('No se pudo guardar la tarea en la Papelera.')}
+    const {error}=await sb.from('agenda_items').delete().eq('id',task.id);if(error)throw error;
+    const c=contact();if(c&&typeof logContactActivity==='function')await logContactActivity(c.id,'task_deleted','Tarea eliminada',task.title||'');
+    await refreshFocusedTaskSurfaces();await renderFocusedTasks();return true
+  }catch(err){alert(err?.message||'No se pudo eliminar la tarea.');return false}
+}
+async function renderFocusedTasks(){
+  const list=$('tpfWaTasksList');if(!list)return;
+  const tasks=await relatedTasks();
+  list.innerHTML=tasks.length?tasks.map(task=>{
+    const completed=task.status==='completed',cancelled=task.status==='cancelled';
+    const status=completed?'Completada':cancelled?'Cancelada':'Pendiente';
+    const toggle=completed||cancelled?'Reabrir':'Completar';
+    return `<div class="cpTaskWrap" data-task-id="${esc(task.id)}"><button class="cpTask cpTaskButton" type="button"><b>${esc(task.title||task.subject||'Tarea')}</b><span>${task.starts_at?esc(new Date(task.starts_at).toLocaleString('es-ES')):''}</span><small>${status}</small></button><div class="cpTaskActions"><button class="tpfWaFocusedTaskEdit" type="button">Abrir / editar</button><button class="tpfWaFocusedTaskToggle" type="button">${toggle}</button><button class="tpfWaFocusedTaskDelete dangerText" type="button">Eliminar</button></div></div>`
+  }).join(''):'<div class="cpEmpty">No hay tareas.</div>';
+  list.querySelectorAll('[data-task-id]').forEach(row=>{
+    const task=tasks.find(item=>String(item.id)===String(row.dataset.taskId));if(!task)return;
+    row.querySelector('.cpTaskButton').onclick=event=>openTask(task.id,event,'tasks');
+    row.querySelector('.tpfWaFocusedTaskEdit').onclick=event=>openTask(task.id,event,'tasks');
+    row.querySelector('.tpfWaFocusedTaskToggle').onclick=event=>toggleFocusedTask(task,event);
+    row.querySelector('.tpfWaFocusedTaskDelete').onclick=event=>deleteFocusedTask(task,event);
+  })
+}
+async function showFocusedTasksPage(){
   detachTaskDetail();
   const page=ensureTasksPage();
   if(!page)return;
-  const tasks=await relatedTasks();
-  const list=$('tpfWaTasksList');
-  list.innerHTML=tasks.length?tasks.map(task=>`<div class="cpTaskWrap" data-task-id="${esc(task.id)}"><button class="cpTask cpTaskButton" type="button"><b>${esc(task.title||task.subject||'Tarea')}</b><span>${task.starts_at?esc(new Date(task.starts_at).toLocaleString('es-ES')):''}</span><small>${task.status==='completed'?'Completada':'Pendiente'}</small></button><div class="cpTaskActions"><button class="tpfWaFocusedTaskEdit" type="button">Editar</button></div></div>`).join(''):'<div class="cpEmpty">No hay tareas.</div>';
-  list.querySelectorAll('[data-task-id]').forEach(row=>{
-    const id=row.dataset.taskId;
-    row.querySelector('.cpTaskButton').onclick=event=>openTask(id,event);
-    row.querySelector('.tpfWaFocusedTaskEdit').onclick=event=>openTask(id,event);
-  });
+  await renderFocusedTasks();
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
-  enterTaskMode();
+  enterTaskMode('chat');
   showContactModal();
   page.classList.remove('hidden');
   page.querySelector('.cpTaskPageBody')?.scrollTo?.({top:0});
@@ -418,7 +509,30 @@ function observePanels(){
 async function capture(e){
   const target=e.target;
   if(!target?.closest)return;
-  if(state.taskOrigin&&target.closest('#cpTaskBack,#cpTaskDetailBack,#tpfWaTasksBack'))return backToWhatsapp(e);
+  if(state.taskOrigin&&target.closest('#cpTaskDelete')){
+    stop(e);
+    let task=null;
+    try{task=typeof currentContactTask!=='undefined'?currentContactTask:null}catch(_){}
+    if(!task)return;
+    const returnTo=state.taskOrigin.returnTo;
+    if(!await deleteFocusedTask(task))return;
+    try{currentContactTask=null}catch(_){}
+    $('cpTaskDetailPage')?.classList.add('hidden');
+    if(returnTo==='tasks')await showFocusedTasksPage();
+    else await backToWhatsapp();
+    return;
+  }
+  if(state.profileOrigin&&target.closest('#contactClose'))return backProfileToWhatsapp(e);
+  if(state.taskOrigin&&target.closest('#cpTaskDetailBack'))return backFromTaskDetail(e);
+  if(state.taskOrigin&&target.closest('#cpTaskBack,#tpfWaTasksBack'))return backToWhatsapp(e);
+  if(target.closest('#waMsgTask')){
+    const description=(()=>{try{return typeof waMessageText==='function'?waMessageText(waSelectedActionMessage)||'':''}catch(_){return''}})();
+    $('waMsgActionModal')?.classList.add('hidden');return createTask(e,{title:'Seguimiento WhatsApp',description})
+  }
+  if(target.closest('#waMsgReminder')){
+    const description=(()=>{try{return typeof waMessageText==='function'?waMessageText(waSelectedActionMessage)||'':''}catch(_){return''}})();
+    $('waMsgActionModal')?.classList.add('hidden');return createTask(e,{title:'Recordatorio WhatsApp',description,startsAt:new Date(Date.now()+24*60*60*1000)})
+  }
   if(target.closest('#waSideOpenContact'))return openProfile(e);
   if(target.closest('#waSideEditContact'))return openEdit(e);
   if(target.closest('#waSideNewOpp'))return createOpportunity(e);

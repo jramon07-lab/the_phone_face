@@ -28,6 +28,7 @@ if($("cpScheduleWhatsapp")){
 
 $("waQuickClose").onclick=$("waQuickCancel").onclick=()=>{
   $("waQuickProgramId").value="";
+  window.__tpfWaQuickContext=null;
   $("waQuickModal").classList.add("hidden");
 };
 

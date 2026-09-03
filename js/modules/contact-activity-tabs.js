@@ -120,7 +120,9 @@
       const fromWhatsapp=e.target?.closest?.('#waSideNewTask,#waSideViewTasks,#waSideTasks .waTaskCard,#waSideTasks .waSideItem,#waSideTasks [data-task-id],#waSideTasks [data-agenda-id]');
       if(fromWhatsapp)rememberWaOrigin();
       const back=e.target?.closest?.('#contactClose,#cpTaskBack,#cpTaskDetailBack,#tpfWaTasksBack');
-      if(back&&waOrigin){backToWhatsapp(e);return;}
+      const connectorOwnsTasks=!!window.__tpfWhatsappContactConnectorState?.taskOrigin;
+      if(back&&waOrigin&&!connectorOwnsTasks){backToWhatsapp(e);return;}
+      if(back&&connectorOwnsTasks)waOrigin=null;
       const tab=e.target?.closest?.('#contactModal .cpTabs [data-tpf-activity-tab], #contactModal .cpTabs > *');
       if(tab){const text=String(tab.dataset.tpfActivityTab||tab.textContent||'').trim().toLowerCase();const key=text==='todos'?'todos':text==='notas'?'notas':text==='oportunidades'?'oportunidades':text==='tareas'?'tareas':'';if(key){e.preventDefault();e.stopPropagation();select(key);return;}}
       if(e.target?.closest?.('[onclick*="openContact"], [data-contact-id]'))setTimeout(queueFilter,60);

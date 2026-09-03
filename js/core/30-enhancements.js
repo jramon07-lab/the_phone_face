@@ -669,9 +669,7 @@ renderSales=function(){
           chatId:null,
           contactId:(typeof currentContact!=="undefined" ? currentContact?.id : null)||null
         };
-      }else if(finalOrigin.type!=="whatsapp" && finalOrigin.type!=="contact"){
-        finalOrigin={type:"generic",chatId:null,contactId:null};
-      }
+      }else finalOrigin={type:"generic",chatId:null,contactId:null};
     }catch(_){}
   }
 
@@ -686,14 +684,24 @@ renderSales=function(){
   const oldOpenCard=window.openOpportunityCard;
   if(typeof oldOpenCard==="function"){
     window.openOpportunityCard=function(id){
-      if(finalOrigin.type==="generic")captureFinalOrigin();
+      captureFinalOrigin();
       return oldOpenCard.call(this,id);
     };
   }
 
   async function finalReturn(){
+    if(!byId("oppDetailModal")?.classList.contains("hidden") && typeof window.tpfCloseOpportunityCard==="function"){
+      await window.tpfCloseOpportunityCard();
+      return;
+    }
+
     byId("opportunityFullPage")?.classList.add("hidden");
     byId("oppDetailModal")?.classList.add("hidden");
+
+    if(typeof tpfBackExactly==="function"){
+      const restored=await tpfBackExactly();
+      if(restored)return;
+    }
 
     if(finalOrigin.type==="whatsapp"){
       if(byId("view-whatsapplive")?.classList.contains("hidden")){
@@ -713,9 +721,7 @@ renderSales=function(){
       return;
     }
 
-    try{
-      if(typeof tpfBackExactly==="function")await tpfBackExactly();
-    }catch(_){}
+    // Nothing to restore: both overlays are already closed.
   }
 
   async function finalRefreshEverywhere(){
@@ -1116,6 +1122,11 @@ renderSales=function(){
       byId("contactModal")?.classList.add("hidden");
     };
   }
+
+  document.addEventListener("click",e=>{
+    const nav=e.target?.closest?.('.nav[data-view]');
+    if(nav && nav.dataset.view!=="whatsapplive")contactReturnToWhatsApp=null;
+  },true);
 
   async function refreshOpportunityViews(){
     try{if(typeof loadSales==="function")await loadSales()}catch(_){}
@@ -1587,7 +1598,7 @@ renderSales=function(){
       const rows=await fetchWaTasks(), expired=rows.filter(taskExpired).length;
       if(byId("waSideTaskCount"))byId("waSideTaskCount").textContent=String(rows.length);
       box.innerHTML=rows.length?`<div class="waTaskSummary"><div class="waTaskStat"><span>Pendientes</span><b>${rows.length}</b></div><div class="waTaskStat expired"><span>Vencidas</span><b>${expired}</b></div></div>${rows.map(taskCard).join("")}`:'<div class="small">Sin tareas pendientes</div>';
-      byId("waSideViewTasks")?.classList.toggle("hidden",rows.length===0);
+      byId("waSideViewTasks")?.classList.toggle("hidden",!(typeof waLiveState!=="undefined"&&waLiveState?.contact));
     }catch(err){console.warn("Tareas WhatsApp",err)}
   }
   async function refreshTasks(){

@@ -1,6 +1,6 @@
 /* Agenda Pro — compatible with the existing agenda_items model. */
 const AGENDA_DEFAULT_TYPES=[{name:"Tarea",icon:"✓",color:"#155eef"},{name:"Llamada",icon:"☎",color:"#7f56d9"},{name:"Cita",icon:"◷",color:"#eaaa08"},{name:"WhatsApp",icon:"💬",color:"#16a34a"}];
-let agendaTypes=[...AGENDA_DEFAULT_TYPES],agendaSelectedType="Tarea",agendaSearchTimer,agendaDateFilter="all";
+let agendaTypes=[...AGENDA_DEFAULT_TYPES],agendaSelectedType="Tarea",agendaSearchTimer,agendaDateFilter="all",agendaComposerContext=null,agendaComposerMounts=[];
 function fmtAgendaDate(v){return v?new Date(v).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):""}
 function agendaStatusLabel(s){return s==="completed"?"Completado":s==="cancelled"?"Cancelado":"Pendiente"}
 function whatsappDigits(phone){let p=String(phone||"").replace(/\D/g,"");if(p.startsWith("00"))p=p.slice(2);if(p.length===9)p="34"+p;return p}
@@ -12,8 +12,40 @@ function isOverdue(r){return r.status==="pending"&&new Date(r.starts_at)<new Dat
 function typeFor(r){return agendaTypes.find(t=>t.name.toLowerCase()===String(r.agenda_type||"Tarea").toLowerCase())||AGENDA_DEFAULT_TYPES[0]}
 async function loadAgendaTypes(){const {data}=await sb.from("app_settings").select("value").eq("key","agenda_types").maybeSingle();const a=Array.isArray(data?.value)?data.value.filter(t=>t?.name&&t?.icon&&t?.color).slice(0,30):[];agendaTypes=a.length?a:[...AGENDA_DEFAULT_TYPES];if(!agendaTypes.some(t=>t.name===agendaSelectedType))agendaSelectedType=agendaTypes[0].name;renderTypeChoices();renderTypeManager()}
 async function saveAgendaTypes(){const {error}=await sb.from("app_settings").upsert({key:"agenda_types",value:agendaTypes,updated_at:new Date().toISOString()},{onConflict:"key"});if(error)throw error;renderTypeChoices();renderTypeManager();loadAgenda()}
-function renderTypeChoices(){const e=$("agendaTypeChoices");if(e)e.innerHTML=agendaTypes.map(t=>`<button type="button" data-type="${esc(t.name)}" class="${t.name===agendaSelectedType?"active":""}" style="--type-color:${esc(t.color)}">${esc(t.icon)} ${esc(t.name)}</button>`).join("")}
+function renderTypeChoices(){const e=$("agendaTypeChoices");if(e)e.innerHTML=agendaTypes.map(t=>`<button type="button" data-type="${esc(t.name)}" class="${t.name===agendaSelectedType?"active":""}" style="--type-color:${esc(t.color)}">${esc(t.icon)} ${esc(t.name)}</button>`).join("");renderAgendaCreateDetails()}
 function renderTypeManager(){const e=$("agendaTypeList");if(e)e.innerHTML=agendaTypes.map((t,i)=>`<div class="agendaTypeRow"><span class="agendaTypeDot" style="background:${esc(t.color)}">${esc(t.icon)}</span><b>${esc(t.name)}</b><button class="secondary" data-remove-type="${i}" ${agendaTypes.length<2?"disabled":""}>Quitar</button></div>`).join("")}
+function agendaTypeKey(value){return agendaSearchText(value).replace(/\s+/g,"")}
+function ensureAgendaCreateDetails(){
+  let host=$("agendaCreateDetails");
+  if(host)return host;
+  const choices=$("agendaTypeChoices");
+  if(!choices)return null;
+  host=document.createElement("div");host.id="agendaCreateDetails";host.className="agendaCreateDetails";
+  choices.insertAdjacentElement("afterend",host);
+  return host
+}
+function renderAgendaCreateDetails(meta={}){
+  const host=ensureAgendaCreateDetails();if(!host)return;
+  const key=agendaTypeKey(agendaSelectedType);
+  if(key==="tarea")host.innerHTML='<div class="agendaTwo"><div><label for="agendaCreatePriority">Prioridad</label><select id="agendaCreatePriority"><option value="normal">Normal</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></div></div>';
+  else if(key==="llamada")host.innerHTML='<div class="agendaTwo"><div><label for="agendaCreateDuration">Duración prevista</label><select id="agendaCreateDuration"><option value="15">15 minutos</option><option value="30">30 minutos</option><option value="45">45 minutos</option><option value="60">1 hora</option></select></div><div><label for="agendaCreateResult">Resultado</label><select id="agendaCreateResult"><option value="">Pendiente de llamar</option><option value="answered">Atendida</option><option value="no_answer">No contesta</option><option value="callback">Volver a llamar</option></select></div></div>';
+  else if(key==="cita")host.innerHTML='<div class="agendaTwo"><div><label for="agendaCreateDuration">Duración</label><select id="agendaCreateDuration"><option value="30">30 minutos</option><option value="60">1 hora</option><option value="90">1 hora y media</option><option value="120">2 horas</option></select></div><div><label for="agendaCreateLocation">Lugar</label><input id="agendaCreateLocation" placeholder="Tienda, dirección o videollamada"></div></div>';
+  else if(key==="whatsapp")host.innerHTML='<label for="agendaCreateWhatsappMessage">Mensaje de WhatsApp</label><textarea id="agendaCreateWhatsappMessage" rows="4" placeholder="Mensaje que se enviará"></textarea>';
+  else host.innerHTML=`<label for="agendaCreateCustom">Información de ${esc(agendaSelectedType)}</label><textarea id="agendaCreateCustom" rows="3" placeholder="Añade los datos específicos de este tipo"></textarea>`;
+  const set=(id,value)=>{const node=$(id);if(node&&value!=null)node.value=String(value)};
+  set("agendaCreatePriority",meta.priority||"normal");set("agendaCreateDuration",meta.duration||"30");
+  set("agendaCreateResult",meta.result||"");set("agendaCreateLocation",meta.location||"");
+  set("agendaCreateWhatsappMessage",meta.whatsapp_message||"");set("agendaCreateCustom",meta.custom||"")
+}
+function agendaCreateMeta(){
+  const value=id=>$(id)?.value?.trim?.()||"";
+  const meta={priority:value("agendaCreatePriority"),duration:value("agendaCreateDuration"),result:value("agendaCreateResult"),location:value("agendaCreateLocation"),whatsapp_message:value("agendaCreateWhatsappMessage"),custom:value("agendaCreateCustom")};
+  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==""))
+}
+function selectAgendaType(type,meta={}){
+  const wanted=String(type||"").trim(),found=agendaTypes.find(t=>agendaTypeKey(t.name)===agendaTypeKey(wanted));
+  agendaSelectedType=found?.name||agendaTypes[0]?.name||"Tarea";renderTypeChoices();renderAgendaCreateDetails(meta)
+}
 window.sendAgendaWhatsapp=id=>{const r=(window.__agendaRows||[]).find(x=>String(x.id)===String(id));if(!r)return;const p=whatsappDigits(r.whatsapp_phone||r.customer_phone);if(!p)return alert("Esta tarea no tiene teléfono de WhatsApp.");window.open("https://wa.me/"+p+(r.whatsapp_message?"?text="+encodeURIComponent(r.whatsapp_message):""),"_blank","noopener,noreferrer")};
 function agendaSearchText(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
 function agendaSearchDigits(v){return String(v||"").replace(/\D/g,"").slice(-9)}
@@ -78,18 +110,64 @@ $("agendaSearch").oninput=()=>{clearTimeout(agendaSearchTimer);agendaSearchTimer
 $("agendaQuickFilters").onclick=e=>{const b=e.target.closest("[data-agenda-period]");if(!b)return;agendaDateFilter=b.dataset.agendaPeriod;loadAgenda()};
 $("agendaListView").onclick=()=>{$("agendaList").classList.remove("hidden");$("agendaCalendar").classList.add("hidden");$("agendaListView").classList.add("active");$("agendaCalendarView").classList.remove("active")};
 $("agendaCalendarView").onclick=()=>{$("agendaList").classList.add("hidden");$("agendaCalendar").classList.remove("hidden");$("agendaCalendarView").classList.add("active");$("agendaListView").classList.remove("active")};
-function setAgendaComposer(open){const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}}
-$("agendaOpenCreate").onclick=()=>setAgendaComposer(true);$("agendaOpenCreateToolbar").onclick=()=>setAgendaComposer(true);$("agendaCloseCreate").onclick=()=>setAgendaComposer(false);document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("agendaCreateCard")?.classList.contains("open"))setAgendaComposer(false)});
+function agendaLocalDateTime(value){const d=value instanceof Date?value:new Date(value);if(Number.isNaN(d.getTime()))return"";const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+function mountAgendaComposerOverlay(enable){
+  if(enable&&!agendaComposerMounts.length){
+    [$("agendaCreateCard"),$("agendaTypeModal")].filter(Boolean).forEach(node=>{agendaComposerMounts.push({node,parent:node.parentNode,next:node.nextSibling});document.body.appendChild(node)});
+    $("agendaCreateCard")?.setAttribute("data-agenda-overlay","true")
+  }else if(!enable&&agendaComposerMounts.length){
+    agendaComposerMounts.splice(0).forEach(({node,parent,next})=>{if(parent)parent.insertBefore(node,next&&next.parentNode===parent?next:null)});
+    $("agendaCreateCard")?.removeAttribute("data-agenda-overlay")
+  }
+}
+function setAgendaComposer(open){const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}else{$("agendaTypeModal")?.classList.add("hidden");mountAgendaComposerOverlay(false)}}
+function resetAgendaComposer(){
+  ["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>{const node=$(id);if(node)node.value=""});
+  delete $("agendaCustomer")?.dataset.contactId;document.querySelectorAll(".agendaReminderPreset").forEach(box=>box.checked=false);
+  if($("agendaNotifyApp"))$("agendaNotifyApp").checked=true;if($("agendaNotifyEmail"))$("agendaNotifyEmail").checked=false;if($("agendaSyncGoogle"))$("agendaSyncGoogle").checked=false;
+  selectAgendaType("Tarea",{});$("agendaStarts")?.__tpfSyncFromHidden?.();$("agendaReminder")?.__tpfSyncFromHidden?.()
+}
+function fillAgendaComposer(prefill={}){
+  resetAgendaComposer();
+  const set=(id,value)=>{const node=$(id);if(node&&value!=null)node.value=String(value)};
+  set("agendaTitle",prefill.title||"");set("agendaDescription",prefill.description||prefill.notes||"");
+  set("agendaCustomer",prefill.customerName||prefill.customer_name||"");set("agendaPhone",prefill.phone||prefill.customerPhone||prefill.customer_phone||"");
+  set("agendaStarts",prefill.startsAt||prefill.starts_at?agendaLocalDateTime(prefill.startsAt||prefill.starts_at):agendaLocalDateTime(new Date(Date.now()+60*60*1000)));
+  set("agendaReminder",prefill.reminderAt||prefill.reminder_at?agendaLocalDateTime(prefill.reminderAt||prefill.reminder_at):"");
+  const contactId=prefill.contactId||prefill.related_record_id;if(contactId)$("agendaCustomer").dataset.contactId=String(contactId);
+  if($("agendaNotifyApp"))$("agendaNotifyApp").checked=prefill.notifyInApp??prefill.notify_in_app??true;
+  if($("agendaNotifyEmail"))$("agendaNotifyEmail").checked=prefill.notifyEmail??prefill.notify_email??false;
+  if($("agendaSyncGoogle"))$("agendaSyncGoogle").checked=prefill.syncGoogle??prefill.sync_google_calendar??false;
+  const minutes=new Set((prefill.reminderMinutes||prefill.reminder_minutes||[]).map(String));document.querySelectorAll(".agendaReminderPreset").forEach(box=>box.checked=minutes.has(String(box.value)));
+  selectAgendaType(prefill.type||prefill.agenda_type||"Tarea",prefill.meta||prefill.agenda_meta||{});
+  $("agendaStarts")?.__tpfSyncFromHidden?.();$("agendaReminder")?.__tpfSyncFromHidden?.()
+}
+function runAgendaComposerCallback(name,payload){const fn=agendaComposerContext?.[name];agendaComposerContext=null;if(typeof fn==="function")Promise.resolve(fn(payload)).catch(err=>console.warn("Agenda: retorno del compositor",err))}
+function closeAgendaComposer(){setAgendaComposer(false);runAgendaComposerCallback("onCancel")}
+window.openAgendaComposer=(prefill={},returnOrigin={})=>{agendaComposerContext=returnOrigin||{};if(prefill.overlay||returnOrigin?.overlay)mountAgendaComposerOverlay(true);fillAgendaComposer(prefill);setAgendaComposer(true);return true};
+window.TPFAgendaComposer={open:window.openAgendaComposer,close(options={}){if(options.silent){agendaComposerContext=null;setAgendaComposer(false)}else closeAgendaComposer()},selectType:selectAgendaType};
+$("agendaOpenCreate").onclick=()=>{agendaComposerContext=null;fillAgendaComposer({});setAgendaComposer(true)};$("agendaOpenCreateToolbar").onclick=()=>{agendaComposerContext=null;fillAgendaComposer({});setAgendaComposer(true)};$("agendaCloseCreate").onclick=closeAgendaComposer;document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("agendaCreateCard")?.classList.contains("open"))closeAgendaComposer()});
 $("agendaStats").onclick=e=>{const b=e.target.closest("[data-agenda-filter]");if(!b)return;const value=b.dataset.agendaFilter;if(value==="today"){agendaDateFilter="today";$("agendaFilter").value="all"}else{agendaDateFilter="all";$("agendaFilter").value=value}loadAgenda()};
 document.querySelectorAll('.nav[data-view="agenda"]').forEach(n=>n.addEventListener("click",()=>{if(window.__TPF_RESTORING)return;requestAnimationFrame(()=>{const sc=document.querySelector(".referenceWorkspace main");if(sc)sc.scrollTop=0})}));
-$("agendaTypeChoices").onclick=e=>{const b=e.target.closest("[data-type]");if(b){agendaSelectedType=b.dataset.type;renderTypeChoices()}};
+$("agendaTypeChoices").onclick=e=>{const b=e.target.closest("[data-type]");if(b)selectAgendaType(b.dataset.type,{})};
 $("agendaManageTypes").onclick=()=>$("agendaTypeModal").classList.remove("hidden");$("agendaCloseTypes").onclick=()=>$("agendaTypeModal").classList.add("hidden");
 $("agendaAddType").onclick=async()=>{const name=$("agendaNewTypeName").value.trim();if(!name)return;if(agendaTypes.some(t=>t.name.toLowerCase()===name.toLowerCase()))return alert("Ese tipo ya existe.");agendaTypes.push({name,icon:$("agendaNewTypeIcon").value,color:$("agendaNewTypeColor").value});await saveAgendaTypes();$("agendaNewTypeName").value=""};
 $("agendaTypeList").onclick=async e=>{const b=e.target.closest("[data-remove-type]");if(b){agendaTypes.splice(Number(b.dataset.removeType),1);await saveAgendaTypes()}};
 $("agendaList").onclick=e=>{const a=e.target.closest("[data-open-agenda]"),c=e.target.closest("[data-complete-agenda]"),m=e.target.closest("[data-more-agenda]");if(a)return openAgendaItem(a.dataset.openAgenda);if(c)return completeAgenda(c.dataset.completeAgenda);if(m){document.querySelector(".agendaPopMenu")?.remove();const id=m.dataset.moreAgenda,menu=document.createElement("div");menu.className="agendaPopMenu";menu.innerHTML='<button data-agenda-edit>Editar</button><button data-agenda-cancel>Cancelar recordatorio</button><button class="danger" data-agenda-delete>Eliminar</button>';document.body.appendChild(menu);const box=m.getBoundingClientRect();menu.style.left=Math.min(box.left,innerWidth-210)+"px";menu.style.top=(box.bottom+5)+"px";menu.onclick=ev=>{if(ev.target.closest("[data-agenda-edit]"))editAgendaItem(id);if(ev.target.closest("[data-agenda-cancel]"))cancelAgenda(id);if(ev.target.closest("[data-agenda-delete]"))deleteAgenda(id);menu.remove()}}};
 $("agendaCustomer").oninput=()=>{delete $("agendaCustomer").dataset.contactId;clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(async()=>{const q=$("agendaCustomer").value.trim(),box=$("agendaCustomerResults");if(q.length<2){box.innerHTML="";return}const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:8});box.__rows=data||[];box.innerHTML=(data||[]).map((r,i)=>{const d=r.data||{},name=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"Cliente",phone=d["TELÉFONO"]||d.TELEFONO||"",dni=d["DNI / NIF"]||d.DNI||"";return `<button type="button" class="agendaCustomerResult" data-customer-result="${i}"><b>${esc(name)}</b><small>${esc(phone)} ${esc(dni)}</small></button>`}).join("")},220)};
 $("agendaCustomerResults").onclick=e=>{const b=e.target.closest("[data-customer-result]");if(!b)return;const r=$("agendaCustomerResults").__rows[Number(b.dataset.customerResult)]||{},d=r.data||{};$("agendaCustomer").value=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"";$("agendaCustomer").dataset.contactId=r.id||"";$("agendaPhone").value=d["TELÉFONO"]||d.TELEFONO||"";$("agendaCustomerResults").innerHTML=""};
-$("agendaSave").onclick=async()=>{const btn=$("agendaSave"),msg=$("agendaMsg");tpfSetSaving(btn,msg);if(!(perms?.is_admin||perms?.can_manage_agenda)){alert("No tienes permiso para crear recordatorios.");return tpfResetSaving(btn,msg)}const title=$("agendaTitle").value.trim(),starts=$("agendaStarts").value;if(!title||!starts){msg.textContent="Escribe un asunto y una fecha/hora.";return tpfResetSaving(btn,msg)}const {data:{user}}=await sb.auth.getUser(),row={title,agenda_type:agendaSelectedType,description:$("agendaDescription").value.trim()||null,customer_name:$("agendaCustomer").value.trim()||null,customer_phone:$("agendaPhone").value.trim()||null,related_record_id:$("agendaCustomer").dataset.contactId||null,starts_at:new Date(starts).toISOString(),reminder_at:$("agendaReminder").value?new Date($("agendaReminder").value).toISOString():null,assigned_to:user?.id||null,status:"pending",reminder_minutes:selectedAgendaReminderMinutes(),notify_in_app:$("agendaNotifyApp")?.checked??true,notify_email:$("agendaNotifyEmail")?.checked??false,sync_google_calendar:$("agendaSyncGoogle")?.checked??false};const {error}=await sb.from("agenda_items").insert(row);if(error)return tpfShowSaveError(btn,msg,error);["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>$(id).value="");delete $("agendaCustomer").dataset.contactId;setAgendaComposer(false);await loadAgenda();tpfResetSaving(btn,msg,"Recordatorio guardado.")};
+$("agendaSave").onclick=async()=>{
+  const btn=$("agendaSave"),msg=$("agendaMsg");tpfSetSaving(btn,msg);
+  if(!(perms?.is_admin||perms?.can_manage_agenda)){alert("No tienes permiso para crear recordatorios.");return tpfResetSaving(btn,msg)}
+  const title=$("agendaTitle").value.trim(),starts=$("agendaStarts").value;
+  if(!title||!starts){msg.textContent="Escribe un asunto y una fecha/hora.";return tpfResetSaving(btn,msg)}
+  const {data:{user}}=await sb.auth.getUser(),meta=agendaCreateMeta(),row={title,agenda_type:agendaSelectedType,agenda_meta:meta,description:$("agendaDescription").value.trim()||null,customer_name:$("agendaCustomer").value.trim()||null,customer_phone:$("agendaPhone").value.trim()||null,related_record_id:$("agendaCustomer").dataset.contactId||null,starts_at:new Date(starts).toISOString(),reminder_at:$("agendaReminder").value?new Date($("agendaReminder").value).toISOString():null,assigned_to:user?.id||null,status:"pending",reminder_minutes:selectedAgendaReminderMinutes(),notify_in_app:$("agendaNotifyApp")?.checked??true,notify_email:$("agendaNotifyEmail")?.checked??false,sync_google_calendar:$("agendaSyncGoogle")?.checked??false};
+  if(agendaTypeKey(agendaSelectedType)==="whatsapp"){row.whatsapp_enabled=true;row.whatsapp_phone=row.customer_phone;row.whatsapp_message=meta.whatsapp_message||null;row.whatsapp_scheduled_at=row.starts_at}
+  const {data:created,error}=await sb.from("agenda_items").insert(row).select("*").single();
+  if(error)return tpfShowSaveError(btn,msg,error);
+  const callback=agendaComposerContext?.onSaved;agendaComposerContext=null;resetAgendaComposer();setAgendaComposer(false);await loadAgenda();tpfResetSaving(btn,msg,"Recordatorio guardado.");
+  if(typeof callback==="function")try{await callback(created||row)}catch(err){console.warn("Agenda: retorno tras guardar",err)}
+};
 window.completeAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
 window.cancelAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
 window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))return;const {error}=await sb.from("agenda_items").delete().eq("id",id);if(error)alert(error.message);else loadAgenda()};

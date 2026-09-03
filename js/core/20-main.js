@@ -340,6 +340,12 @@ let opportunityModalOrigin=null;
 let __oppKeepPreparedOrigin=false;
 
 function captureOpportunityModalOrigin(){
+  // The opportunity editor is an overlay. Keep a fresh snapshot for every
+  // opening instead of reusing the last section/chat that happened to open it.
+  if(typeof tpfCurrentScreen==="function"){
+    opportunityModalOrigin={type:"screen",screen:tpfCurrentScreen()};
+    return opportunityModalOrigin;
+  }
   try{
     if(!$("view-sales")?.classList.contains("hidden")){
       opportunityModalOrigin={
@@ -369,11 +375,17 @@ function captureOpportunityModalOrigin(){
   }catch(_){
     opportunityModalOrigin={type:"generic"};
   }
+  return opportunityModalOrigin;
 }
 
 async function restoreOpportunityModalOrigin(){
   const origin=opportunityModalOrigin;
   opportunityModalOrigin=null;
+
+  if(origin?.type==="screen" && origin.screen && typeof tpfRestoreScreen==="function"){
+    await tpfRestoreScreen(origin.screen);
+    return true;
+  }
 
   if(origin?.type==="sales"){
     document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
@@ -382,12 +394,12 @@ async function restoreOpportunityModalOrigin(){
     requestAnimationFrame(()=>{
       if($("salesScroll"))$("salesScroll").scrollLeft=Number(origin.left||0);
     });
-    return;
+    return true;
   }
 
   if(origin?.type==="full"){
     $("opportunityFullPage")?.classList.remove("hidden");
-    return;
+    return true;
   }
 
   if(origin?.type==="whatsapp"){
@@ -400,7 +412,7 @@ async function restoreOpportunityModalOrigin(){
     if(origin.chatId && String(waLiveState?.selected?.id||"")!==String(origin.chatId)){
       try{await selectWhatsAppChat(origin.chatId)}catch(_){}
     }
-    return;
+    return true;
   }
 
   if(origin?.type==="contact" && origin.contactId){
@@ -408,12 +420,13 @@ async function restoreOpportunityModalOrigin(){
     if(!currentContact || String(currentContact.id)!==String(origin.contactId)){
       try{await openContact(origin.contactId)}catch(_){}
     }
-    return;
+    return true;
   }
 
   try{
-    if(typeof tpfBackExactly==="function")await tpfBackExactly();
+    if(typeof tpfBackExactly==="function")return await tpfBackExactly();
   }catch(_){}
+  return false;
 }
 
 async function refreshOpportunityEverywhere(){
@@ -451,7 +464,6 @@ async function deleteOpportunityVerified(id){
 window.openOpportunityCard=(id)=>{
   if(!__oppKeepPreparedOrigin)captureOpportunityModalOrigin();
   __oppKeepPreparedOrigin=false;
-  tpfRememberScreen();
   pendingOpportunityRecordId=null;
   const o=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
   if(!o)return;
@@ -513,6 +525,8 @@ async function closeOpportunityCard(){
   $("oppDetailModal").classList.add("hidden");
   await restoreOpportunityModalOrigin();
 }
+window.tpfCloseOpportunityCard=closeOpportunityCard;
+window.tpfCaptureOpportunityOrigin=captureOpportunityModalOrigin;
 $("oppModalClose").onclick=async(e)=>{
   e?.preventDefault?.();
   e?.stopPropagation?.();
@@ -1161,10 +1175,8 @@ window.openOpportunityContact=async(contactId)=>{
 if($("oppFullBack"))$("oppFullBack").onclick=returnFromOpportunityExactly;
 if($("oppFullEdit"))$("oppFullEdit").onclick=()=>{
   if(!currentFullOpportunity)return;
-  opportunityModalOrigin={type:"full",oppId:currentFullOpportunity.id};
+  captureOpportunityModalOrigin();
   __oppKeepPreparedOrigin=true;
-  tpfRememberScreen({type:"oppView",id:currentFullOpportunity.id,mainView:tpfMainViewNow(),mainScroll:document.querySelector(".referenceWorkspace main")?.scrollTop||0,salesLeft:$("salesScroll")?.scrollLeft||0,salesTop:$("salesScroll")?.scrollTop||0,salesViewTop:$("view-sales")?.scrollTop||0});
-  window.__tpfSkipNextScreenPush=true;
   $("opportunityFullPage").classList.add("hidden");
   openOpportunityCard(currentFullOpportunity.id);
 };
@@ -2335,7 +2347,7 @@ window.__tpfNavStack = window.__tpfNavStack || [];
 window.__tpfCurrentView = window.__tpfCurrentView || "dashboard";
 
 function tpfVisibleMainView(){
-  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapp","settings","automations","users","trash"];
+  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
   return views.find(v=>!$("view-"+v)?.classList.contains("hidden")) || window.__tpfCurrentView || "dashboard";
 }
 
@@ -2530,7 +2542,7 @@ window.__tpfRestoringScreen=false;
 window.__tpfSkipNextScreenPush=false;
 
 function tpfMainViewNow(){
-  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapp","settings","automations","users","trash"];
+  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
   return views.find(v=>!$("view-"+v)?.classList.contains("hidden")) || window.__tpfCurrentView || "dashboard";
 }
 
@@ -2664,20 +2676,36 @@ window.__TPF_HISTORY = [];
 window.__TPF_RESTORING = false;
 
 function tpfMainViewId(){
-  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapp","settings","automations","users","trash"];
+  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
   return views.find(v=>{
     const el=$("view-"+v);
     return el && !el.classList.contains("hidden");
   }) || "dashboard";
 }
 
+function tpfWhatsappSnapshot(mainView){
+  if(mainView!=="whatsapplive")return {waChatId:null,waContactId:null};
+  try{
+    return {
+      waChatId:(typeof waLiveState!=="undefined" ? waLiveState?.selected?.id : null)||null,
+      waContactId:(typeof waLiveState!=="undefined" ? waLiveState?.contact?.id : null)||null
+    };
+  }catch(_){
+    return {waChatId:null,waContactId:null};
+  }
+}
+
 function tpfCurrentScreen(){
+  const mainView=tpfMainViewId();
+  const whatsapp=tpfWhatsappSnapshot(mainView);
   const base={
-    mainView:tpfMainViewId(),
+    mainView,
     mainScroll:document.querySelector(".referenceWorkspace main")?.scrollTop||0,
     salesLeft:$("salesScroll")?.scrollLeft||0,
     salesTop:$("salesScroll")?.scrollTop||0,
-    salesPageTop:$("view-sales")?.scrollTop||0
+    salesPageTop:$("view-sales")?.scrollTop||0,
+    salesMode:typeof salesCurrentView!=="undefined" ? salesCurrentView||"board" : "board",
+    ...whatsapp
   };
 
   if($("cpTaskDetailPage") && !$("cpTaskDetailPage").classList.contains("hidden")){
@@ -2699,7 +2727,7 @@ function tpfCurrentScreen(){
 }
 
 function tpfScreenKey(s){
-  return [s.type||"",s.id||"",s.contactId||"",s.mainView||""].join("|");
+  return [s.type||"",s.id||"",s.contactId||"",s.mainView||"",s.waChatId||"",s.waContactId||""].join("|");
 }
 
 function tpfPushCurrentScreen(){
@@ -2742,6 +2770,8 @@ function tpfCloseAllDetails(){
   window.__contactOpportunityReturnId=null;
   window.__taskOpenedFromAlerts=false;
   if(typeof opportunityReturnState!=="undefined")opportunityReturnState=null;
+  opportunityModalOrigin=null;
+  __oppKeepPreparedOrigin=false;
 }
 
 async function tpfShowMainView(view){
@@ -2753,12 +2783,39 @@ async function tpfShowMainView(view){
   delete nav.dataset.tpfRouterRestore;
 }
 
+async function tpfRestoreWhatsappSnapshot(s){
+  if(s?.mainView!=="whatsapplive")return;
+  const chatId=String(s.waChatId||"");
+  const contactId=String(s.waContactId||"");
+
+  if(chatId && typeof window.selectWhatsAppChat==="function"){
+    let selected="";
+    try{selected=String(waLiveState?.selected?.id||"")}catch(_){}
+    if(selected!==chatId){
+      try{await window.selectWhatsAppChat(chatId)}catch(err){console.warn("Restaurar chat de WhatsApp",err)}
+    }
+  }
+
+  if(contactId){
+    let selectedContact="";
+    try{selectedContact=String(waLiveState?.contact?.id||"")}catch(_){}
+    if(selectedContact!==contactId && typeof window.matchWaContact==="function"){
+      try{await window.matchWaContact()}catch(err){console.warn("Restaurar contacto de WhatsApp",err)}
+    }
+  }
+}
+
 async function tpfRestoreScreen(s){
   if(!s)return false;
   window.__TPF_RESTORING=true;
   try{
     tpfCloseAllDetails();
     await tpfShowMainView(s.mainView||"dashboard");
+    await tpfRestoreWhatsappSnapshot(s);
+
+    if(s.mainView==="sales" && typeof setSalesView==="function"){
+      setSalesView(s.salesMode||"board");
+    }
 
     if(s.type==="contact" && s.id){
       await openContact(s.id);
@@ -2800,6 +2857,9 @@ async function tpfRestoreScreen(s){
     window.__TPF_RESTORING=false;
   }
 }
+
+window.tpfCaptureCurrentScreen=function(){return {...tpfCurrentScreen()}};
+window.tpfRestoreCapturedScreen=async function(state){return await tpfRestoreScreen(state)};
 
 window.tpfBackExactly=async function(){
   const previous=window.__TPF_HISTORY.pop();
@@ -2870,11 +2930,10 @@ window.openSalesOpportunityContact=async function(id){
     }
 
     if(!window.__TPF_RESTORING){
-      // Aunque el cliente se pulse desde una tarjeta o modal,
-      // al volver queremos la VISTA de la oportunidad, no editar.
+      const wasEdit=$("oppDetailModal") && !$("oppDetailModal").classList.contains("hidden");
       const state={
         ...tpfCurrentScreen(),
-        type:"oppView",
+        type:wasEdit?"oppEdit":"oppView",
         id:o.id
       };
       const last=window.__TPF_HISTORY[window.__TPF_HISTORY.length-1];
@@ -2897,11 +2956,8 @@ window.openSalesOpportunityContact=async function(id){
    guardar la vista como anterior. */
 if($("oppFullEdit"))$("oppFullEdit").onclick=()=>{
   if(!currentFullOpportunity)return;
-  if(!window.__TPF_RESTORING){
-    const state={...tpfCurrentScreen(),type:"oppView",id:currentFullOpportunity.id};
-    const last=window.__TPF_HISTORY[window.__TPF_HISTORY.length-1];
-    if(!last || tpfScreenKey(last)!==tpfScreenKey(state))window.__TPF_HISTORY.push(state);
-  }
+  captureOpportunityModalOrigin();
+  __oppKeepPreparedOrigin=true;
   $("opportunityFullPage")?.classList.add("hidden");
   openOpportunityCard(currentFullOpportunity.id);
 };

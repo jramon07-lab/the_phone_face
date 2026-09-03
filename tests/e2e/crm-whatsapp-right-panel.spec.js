@@ -66,12 +66,13 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
   await page.evaluate(()=>document.getElementById('oppDetailModal')?.classList.add('hidden'));
 
   await page.locator('#waSideNewTask').click();
-  await expect(page.locator('#cpTaskPage')).toBeVisible({timeout:10000});
-  await expect(page.locator('#cpTaskTitle')).toBeEditable();
-  await page.evaluate(()=>{
-    document.getElementById('cpTaskPage')?.classList.add('hidden');
-    document.getElementById('contactModal')?.classList.add('hidden');
-  });
+  await expect(page.locator('#agendaCreateCard')).toBeVisible({timeout:10000});
+  await expect(page.locator('#agendaCreateCard')).toHaveClass(/\bopen\b/);
+  await expect(page.locator('#agendaTypeChoices [data-type]').first()).toBeVisible();
+  await expect(page.locator('#agendaTitle')).toBeEditable();
+  await expect(page.locator('#cpTaskPage')).toBeHidden();
+  await page.locator('#agendaCloseCreate').click();
+  await expect(page.locator('#view-whatsapplive')).toBeVisible({timeout:10000});
 
   if(matched.hasTask){
     const viewTasks=page.locator('#waSideViewTasks');
