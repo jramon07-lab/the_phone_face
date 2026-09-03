@@ -43,7 +43,7 @@ async function openFixed(id){
     modal?.classList.add('tpfTaskStandalone');
     const cols=document.querySelector('#contactModal .cpColumns');if(cols)cols.style.display='none';
     const top=document.querySelector('#contactModal .cpTop');if(top)top.style.display='none';
-    $('cpTaskPage')?.classList.add('hidden');
+    $('cpTaskPage')?.classList.remove('hidden');
     $('cpTaskDetailPage')?.classList.remove('hidden');
     if(typeof openContactTaskDetail==='function'){
       try{await openContactTaskDetail(id);return}catch(_){ }
@@ -72,7 +72,7 @@ function bindAgendaActions(){
     const oc=b.getAttribute('onclick')||'';
     if(!/^(abrir|editar)$/.test(txt)&&!/openAgendaItem|editAgendaItem/.test(oc))return;
     const row=b.closest('tr');
-    let id=b.dataset.id||b.dataset.agendaId||row?.dataset?.id||row?.dataset?.agendaId||'';
+    let id=b.dataset.openAgenda||b.dataset.id||b.dataset.agendaId||row?.dataset?.id||row?.dataset?.agendaId||'';
     if(!id){const m=oc.match(/(?:openAgendaItem|editAgendaItem)\(['\"]?([^'\")]+)[^)]*\)/);if(m)id=m[1]}
     if(!id)return;
     e.preventDefault();e.stopImmediatePropagation();openFixed(id);
