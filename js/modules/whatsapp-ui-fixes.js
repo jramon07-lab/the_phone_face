@@ -12,7 +12,37 @@ function ensureStyles(){if($('tpfWaUiFixStyles'))return;const s=document.createE
 function ensureCreateModal(){let back=$('tpfWaCreateBack');if(back)return back;back=document.createElement('div');back.id='tpfWaCreateBack';back.className='hidden';back.innerHTML=`<div id="tpfWaCreateCard"><div class="tpfWaCreateHead"><div><div class="small">CONTACTO</div><h2 style="margin:2px 0 0">Nuevo contacto</h2></div><button id="tpfWaCreateClose" class="secondary" type="button">← Volver</button></div><div id="tpfWaCreateGrid"><label class="tpfWaField"><span>Nombre</span><input id="tpfWaFirstName"></label><label class="tpfWaField"><span>Apellidos</span><input id="tpfWaLastName"></label><label class="tpfWaField"><span>Apodo</span><input id="tpfWaNickname" placeholder="Cómo quieres identificarlo"></label><label class="tpfWaField"><span>Teléfono</span><input id="tpfWaPhone" inputmode="tel" autocomplete="tel-national"></label><label class="tpfWaField"><span>DNI / NIF</span><input id="tpfWaDni"></label><label class="tpfWaField"><span>Correo electrónico</span><input id="tpfWaEmail" type="email"></label><label class="tpfWaField full"><span>Banco / IBAN</span><input id="tpfWaBank" maxlength="34" placeholder="ES00 0000 0000 0000 0000 0000"></label><label class="tpfWaField full"><span>Notas</span><textarea id="tpfWaNotes"></textarea></label><label class="tpfWaField full"><span>Observaciones</span><textarea id="tpfWaObs"></textarea></label></div><div id="tpfWaCreateMsg" class="small" style="margin-top:10px"></div><div class="tpfWaCreateActions"><button id="tpfWaCreateCancel" class="secondary" type="button">Cancelar</button><button id="tpfWaCreateSave" class="primary" type="button">Crear contacto</button></div></div>`;document.body.appendChild(back);back.addEventListener('click',e=>{if(e.target===back)back.classList.add('hidden')});$('tpfWaCreateClose').onclick=$('tpfWaCreateCancel').onclick=()=>back.classList.add('hidden');$('tpfWaPhone').addEventListener('change',e=>{e.target.value=localPhone(e.target.value)});$('tpfWaCreateSave').onclick=saveNewContact;return back}
 function splitName(name){const p=String(name||'').trim().split(/\s+/).filter(Boolean);if(p.length<=1)return[p[0]||'',''];return[p.shift(),p.join(' ')]}
 function selectedChat(){try{return waLiveState?.selected||null}catch(_){return null}}
-function openCreateContact(){const chat=selectedChat();if(!chat)return;const[first,last]=splitName(chat.name||'');ensureCreateModal();$('tpfWaFirstName').value=first;$('tpfWaLastName').value=last;$('tpfWaNickname').value='';$('tpfWaPhone').value=localPhone(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):chat.id);$('tpfWaDni').value='';$('tpfWaEmail').value='';$('tpfWaBank').value='';$('tpfWaNotes').value='';$('tpfWaObs').value='';$('tpfWaCreateMsg').textContent='';$('tpfWaCreateBack').classList.remove('hidden')}
+let createOrigin=null,createWatch=null;
+async function restoreCreateOrigin(){
+ const origin=createOrigin;createOrigin=null;createWatch?.disconnect();createWatch=null;
+ const back=$('tpfContactsCreateBack');if(back)delete back.dataset.origin;
+ if(origin?.chatId){
+  let selected='';try{selected=String(waLiveState?.selected?.id||'')}catch(_){}
+  if(selected!==origin.chatId&&typeof window.selectWhatsAppChat==='function')try{await window.selectWhatsAppChat(origin.chatId)}catch(_){}
+ }
+ try{await window.matchWaContact?.()}catch(_){}
+}
+function fillSharedCreate(chat){
+ const back=$('tpfContactsCreateBack');if(!back||back.classList.contains('hidden'))return false;
+ const[first,last]=splitName(chat.name||'');
+ const values={tpfCreateFirst:first,tpfCreateLast:last,tpfCreateNickname:'',tpfCreatePhone:localPhone(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):chat.id),tpfCreateDni:'',tpfCreateEmail:'',tpfCreateBank:'',tpfCreateNotes:'',tpfCreateObs:''};
+ Object.entries(values).forEach(([id,value])=>{const el=$(id);if(el)el.value=value;});
+ back.dataset.origin='whatsapp';
+ const title=back.querySelector('.tpfContactsModalHead h3');if(title)title.textContent='Agregar contacto';
+ const sub=back.querySelector('.tpfContactsModalHead .small');if(sub)sub.textContent='Crea el contacto con todos sus datos principales.';
+ return true;
+}
+function openCreateContact(){
+ const chat=selectedChat(),add=$('tpfContactsAdd'),back=$('tpfContactsCreateBack');
+ if(!chat)return;
+ if(!add||!back){alert('El creador de Contactos no está disponible.');return;}
+ createOrigin={chatId:String(chat.id||'')};
+ createWatch?.disconnect();
+ createWatch=new MutationObserver(()=>{if(back.classList.contains('hidden'))restoreCreateOrigin();else fillSharedCreate(chat)});
+ createWatch.observe(back,{attributes:true,attributeFilter:['class']});
+ add.click();
+ let tries=0;const ready=()=>{if(fillSharedCreate(chat))return;if(++tries<80)setTimeout(ready,50);else restoreCreateOrigin()};ready();
+}
 async function saveNewContact(){const btn=$('tpfWaCreateSave'),msg=$('tpfWaCreateMsg');const first=$('tpfWaFirstName').value.trim(),last=$('tpfWaLastName').value.trim(),name=[first,last].filter(Boolean).join(' ').trim(),phone=localPhone($('tpfWaPhone').value),nickname=$('tpfWaNickname').value.trim();if(!name){msg.textContent='Introduce el nombre.';return}if(!phone){msg.textContent='Introduce el teléfono.';return}$('tpfWaPhone').value=phone;btn.disabled=true;msg.textContent='Guardando…';try{const dni=$('tpfWaDni').value.trim(),payload={'NOMBRE Y APELLIDOS':name,'NOMBRE':first,'APELLIDOS':last,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':$('tpfWaEmail').value.trim(),'BANCO':$('tpfWaBank').value.trim(),'NOTAS':$('tpfWaNotes').value,'OBSERVACIONES':$('tpfWaObs').value};const {data,error}=await sb.from('records').insert({source_sheet:'BASE DE DATOS',data:payload}).select('*').single();if(error)throw error;try{waLiveState.contact=data}catch(_){}$('tpfWaCreateBack').classList.add('hidden');if(typeof matchWaContact==='function')await matchWaContact()}catch(e){msg.textContent=e?.message||'No se pudo crear el contacto.'}finally{btn.disabled=false}}
 function dt(ts){if(!ts)return'';const d=new Date(Number(ts)<1e12?Number(ts)*1000:ts);if(Number.isNaN(d.getTime()))return'';return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
 function receiptStatus(m){const raw=String(m?.__realStatus||m?.statusMessage||m?.status||m?.messageStatus||m?.receipt||'').toLowerCase();if(/read|played/.test(raw))return{txt:'✓✓',cls:'read',title:'Leído'};if(/deliv/.test(raw))return{txt:'✓✓',cls:'delivered',title:'Entregado'};if(/sent|server|pending/.test(raw))return{txt:'✓',cls:'sent',title:'Enviado'};return null}
@@ -32,6 +62,6 @@ let painting=false;function paintMeta(){let rows=[];try{rows=[...(waLiveState?.h
 function wrapRenderer(){if(typeof window.renderWaMessages!=='function'||window.renderWaMessages.__tpfUiFix)return false;const original=window.renderWaMessages;window.renderWaMessages=function(scrollBottom){original.call(this,scrollBottom);paintMeta();if(!painting){painting=true;hydrateStatuses(true).then(changed=>{if(changed)paintMeta()}).finally(()=>painting=false)}};window.renderWaMessages.__tpfUiFix=true;return true}
 function forceCreateHandler(){window.createWaContact=openCreateContact;['waCreateContactTop','waSideCreateContact'].forEach(id=>{const el=$(id);if(!el)return;if(id==='waSideCreateContact')el.classList.add('hidden');if(el.dataset.tpfCreateBound==='1')return;el.dataset.tpfCreateBound='1';el.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateContact()},true)})}
 function waViewVisible(){const v=$('view-whatsapplive');return !!v&&!v.classList.contains('hidden')}
-function install(){ensureStyles();ensureCreateModal();forceCreateHandler();if(!wrapRenderer()){let n=0;const t=setInterval(()=>{n++;forceCreateHandler();if(wrapRenderer()||n>80)clearInterval(t)},100)}document.addEventListener('click',e=>{const b=e.target?.closest?.('#waCreateContactTop');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateContact()},true);setInterval(()=>{if(!waViewVisible())return;forceCreateHandler();hydrateStatuses(false).then(ch=>{if(ch)paintMeta()})},30000)}
+function install(){ensureStyles();$('tpfWaCreateBack')?.remove();forceCreateHandler();if(!wrapRenderer()){let n=0;const t=setInterval(()=>{n++;forceCreateHandler();if(wrapRenderer()||n>80)clearInterval(t)},100)}document.addEventListener('click',e=>{const b=e.target?.closest?.('#waCreateContactTop');if(!b)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateContact()},true);setInterval(()=>{if(!waViewVisible())return;forceCreateHandler();hydrateStatuses(false).then(ch=>{if(ch)paintMeta()})},30000)}
 M.register('whatsapp-ui-fixes',{install});
 })();

@@ -112,12 +112,12 @@
     const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg');
     const first=byId('tpfCreateFirst')?.value.trim()||'',last=byId('tpfCreateLast')?.value.trim()||'';
     if(!first&&!last){if(msg)msg.textContent='Escribe el nombre o los apellidos.';return;}
-    const phone=byId('tpfCreatePhone')?.value.trim()||'',email=byId('tpfCreateEmail')?.value.trim()||'',dni=byId('tpfCreateDni')?.value.trim()||'',bank=byId('tpfCreateBank')?.value.trim()||'',notes=byId('tpfCreateNotes')?.value||'',obs=byId('tpfCreateObs')?.value||'';
+    const nickname=byId('tpfCreateNickname')?.value.trim()||'',phone=byId('tpfCreatePhone')?.value.trim()||'',email=byId('tpfCreateEmail')?.value.trim()||'',dni=byId('tpfCreateDni')?.value.trim()||'',bank=byId('tpfCreateBank')?.value.trim()||'',notes=byId('tpfCreateNotes')?.value||'',obs=byId('tpfCreateObs')?.value||'';
     if(btn)btn.disabled=true;if(msg)msg.textContent='Guardando…';
     try{
       const q=await sb.from('records').select('data').eq('id',s.id).maybeSingle();if(q.error)throw q.error;
       const d={...(q.data?.data||{})};
-      d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;d.NOTAS=notes;d.OBSERVACIONES=obs;
+      d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d.APODO=nickname;d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;d.NOTAS=notes;d.OBSERVACIONES=obs;
       const u=await sb.from('records').update({data:d}).eq('id',s.id);if(u.error)throw u.error;
       const ids=[...byId('tpfCreateLabels')?.querySelectorAll('input:checked')||[]].map(x=>x.value);
       const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:String(s.id),p_label_ids:ids});if(lr.error)throw lr.error;
@@ -141,6 +141,7 @@
     const d=c?.data||{};
     setCreateValue('tpfCreateFirst',byId('contactFirstName')?.value||recordField(d,'NOMBRE','Nombre'));
     setCreateValue('tpfCreateLast',byId('contactLastName')?.value||recordField(d,'APELLIDOS','Apellidos'));
+    setCreateValue('tpfCreateNickname',recordField(d,'APODO','Apodo','ALIAS'));
     setCreateValue('tpfCreatePhone',byId('contactPhone')?.value||recordField(d,'TELÉFONO','TELEFONO','PHONE','MOVIL'));
     setCreateValue('tpfCreateEmail',byId('contactEmail')?.value||recordField(d,'EMAIL','CORREO','CORREO ELECTRÓNICO'));
     setCreateValue('tpfCreateDni',byId('contactDni')?.value||recordField(d,'DNI / NIF','DNI','NIF'));

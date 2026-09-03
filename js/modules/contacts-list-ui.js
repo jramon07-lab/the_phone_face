@@ -6,9 +6,14 @@ const safe=v=>String(v??'');
 const esc=v=>safe(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const digits=v=>safe(v).replace(/\D/g,'');
+function localSpanishPhone(value){
+ const raw=safe(value).trim(),numeric=raw.replace(/\D/g,'');
+ const local=numeric.startsWith('0034')?numeric.slice(4):numeric.startsWith('34')?numeric.slice(2):'';
+ return /^[6789]\d{8}$/.test(local)?local:raw;
+}
 const SOURCES=['BASE DE DATOS','DATA','CONTACTOS'];
 const PAGE_SIZES=[10,25,50,100];
-const state={rows:[],filtered:[],selected:new Set(),labels:[],labelsByContact:new Map(),labelsAllLoaded:false,labelsLoadPromise:null,page:1,pageSize:25,loading:false,filters:{q:'',name:'',dni:'',phone:'',source:'',label:''}};
+const state={rows:[],filtered:[],selected:new Set(),labels:[],labelsByContact:new Map(),labelsAllLoaded:false,labelsLoadPromise:null,page:1,pageSize:25,loading:false,editingId:'',filters:{q:'',name:'',dni:'',phone:'',source:'',label:''}};
 
 function allowed(permission){
   try{return typeof perms==='undefined'||!!perms?.is_admin||!!perms?.[permission];}catch(_){return true;}
@@ -24,7 +29,7 @@ function mapRecord(r){
   const fullName=[first,last].filter(Boolean).join(' ').trim()||legacy||'Contacto';
   return {
     id:safe(r.id),source:safe(r.source_sheet||'BASE DE DATOS'),sourceRow:r.source_row??'',createdAt:r.created_at||'',updatedAt:r.updated_at||'',data:d,
-    first,last,fullName,
+    first,last,fullName,nickname:safe(field(d,'APODO','Apodo','ALIAS')).trim(),
     phone:safe(field(d,'TELÉFONO','TELEFONO','PHONE','MOVIL')).trim(),
     dni:safe(field(d,'DNI / NIF','DNI','NIF')).trim(),
     email:safe(field(d,'EMAIL','Email','email')).trim(),
@@ -87,10 +92,11 @@ function buildUi(){
 
 function buildCreateModal(){
  if(byId('tpfContactsCreateBack'))return;
- const back=document.createElement('div');back.id='tpfContactsCreateBack';back.className='tpfContactsModalBack hidden';back.innerHTML=`<div class="tpfContactsModal"><div class="tpfContactsModalHead"><div><h3>Agregar contacto</h3><div class="small">Crea el contacto con todos sus datos principales.</div></div><button id="tpfContactsCreateClose" class="secondary">← Volver</button></div><div class="tpfContactsModalBody"><div class="tpfContactsFormGrid"><label>Nombre<input id="tpfCreateFirst"></label><label>Apellidos<input id="tpfCreateLast"></label><label>Teléfono<input id="tpfCreatePhone"></label><label>Email<input id="tpfCreateEmail" type="email"></label><label>DNI / NIF<input id="tpfCreateDni"></label><label>Banco<input id="tpfCreateBank"></label><label class="full">Notas<textarea id="tpfCreateNotes" rows="3"></textarea></label><label class="full">Observaciones<textarea id="tpfCreateObs" rows="3"></textarea></label><label class="full">Etiquetas<div id="tpfCreateLabels" class="tpfContactsLabelChoices"><span class="small">Cargando etiquetas…</span></div></label></div><div id="tpfContactsCreateMsg" class="tpfContactsModalMsg"></div></div><div class="tpfContactsModalActions"><button id="tpfContactsCreateCancel" class="secondary">Cancelar</button><button id="tpfContactsCreateSave" class="primary tpfContactsPrimary">Crear contacto</button></div></div>`;document.body.appendChild(back);
+ const back=document.createElement('div');back.id='tpfContactsCreateBack';back.className='tpfContactsModalBack hidden';back.innerHTML=`<div class="tpfContactsModal"><div class="tpfContactsModalHead"><div><h3>Agregar contacto</h3><div class="small">Crea el contacto con todos sus datos principales.</div></div><button id="tpfContactsCreateClose" class="secondary">← Volver</button></div><div class="tpfContactsModalBody"><div class="tpfContactsFormGrid"><label>Nombre<input id="tpfCreateFirst"></label><label>Apellidos<input id="tpfCreateLast"></label><label>Apodo<input id="tpfCreateNickname" placeholder="Cómo quieres identificarlo"></label><label>Teléfono<input id="tpfCreatePhone" inputmode="tel" autocomplete="tel-national"></label><label>DNI / NIF<input id="tpfCreateDni"></label><label>Correo electrónico<input id="tpfCreateEmail" type="email"></label><label class="full">Banco / IBAN<input id="tpfCreateBank" maxlength="34" placeholder="ES00 0000 0000 0000 0000 0000"></label><label class="full">Notas<textarea id="tpfCreateNotes" rows="3"></textarea></label><label class="full">Observaciones<textarea id="tpfCreateObs" rows="3"></textarea></label><label class="full">Etiquetas<div id="tpfCreateLabels" class="tpfContactsLabelChoices"><span class="small">Cargando etiquetas…</span></div></label></div><div id="tpfContactsCreateMsg" class="tpfContactsModalMsg"></div></div><div class="tpfContactsModalActions"><button id="tpfContactsCreateCancel" class="secondary">Cancelar</button><button id="tpfContactsCreateSave" class="primary tpfContactsPrimary">Crear contacto</button></div></div>`;document.body.appendChild(back);
 }
 
 function bindUi(){
+ document.addEventListener('click',e=>{const pencil=e.target.closest?.('.tpfContactPencil');if(!pencil)return;const r=rowById(pencil.dataset.id||pencil.closest('[data-contact-id]')?.dataset.contactId);if(!r)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openEdit(r);},true);
  byId('tpfContactsSearch').addEventListener('input',e=>{state.filters.q=e.target.value;state.page=1;applyAndRender();});
  [['tpfFilterName','name'],['tpfFilterDni','dni'],['tpfFilterPhone','phone']].forEach(([id,key])=>byId(id).addEventListener('input',e=>{state.filters[key]=e.target.value;state.page=1;applyAndRender();}));
  byId('tpfFilterSource').addEventListener('change',e=>{state.filters.source=e.target.value;state.page=1;applyAndRender();});
@@ -110,6 +116,7 @@ function bindUi(){
  byId('tpfContactsRows').addEventListener('click',handleListAction);byId('tpfContactsRows').addEventListener('change',handleSelectionChange);byId('tpfContactsCards').addEventListener('click',handleListAction);byId('tpfContactsCards').addEventListener('change',handleSelectionChange);
  document.addEventListener('click',e=>{if(!e.target.closest('.tpfContactsExportWrap'))byId('tpfContactsExportMenu')?.classList.add('hidden');const nav=e.target.closest?.('.nav[data-view="database"]');if(nav)setTimeout(()=>{buildUi();loadContacts(false);},40);if(e.target.closest?.('#contactSave,#contactDelete,#dbSave'))setTimeout(()=>loadContacts(true),1200);},true);
  byId('tpfContactsCreateClose').onclick=closeCreate;byId('tpfContactsCreateCancel').onclick=closeCreate;byId('tpfContactsCreateBack').addEventListener('click',e=>{if(e.target===byId('tpfContactsCreateBack'))closeCreate();});byId('tpfContactsCreateSave').onclick=createContact;
+ byId('tpfCreatePhone').addEventListener('change',e=>{e.target.value=localSpanishPhone(e.target.value);});
 }
 
 async function fetchAllContacts(){
@@ -157,16 +164,40 @@ function updateBulk(){const bar=byId('tpfContactsBulk'),n=state.selected.size;ba
 function selectCurrentPage(on){currentPageRows().forEach(r=>on?state.selected.add(r.id):state.selected.delete(r.id));renderList();}
 function handleSelectionChange(e){const cb=e.target.closest('.tpfContactSelect');if(!cb)return;cb.checked?state.selected.add(cb.dataset.id):state.selected.delete(cb.dataset.id);renderList();}
 function rowById(id){return state.rows.find(x=>x.id===safe(id));}
-function handleListAction(e){const b=e.target.closest('[data-action]');if(!b)return;const r=rowById(b.dataset.id);if(!r)return;e.preventDefault();if(b.dataset.action==='open')openProfile(r);else if(b.dataset.action==='whatsapp')openWhatsapp(r,false);else if(b.dataset.action==='schedule')openWhatsapp(r,true);}
+function handleListAction(e){const b=e.target.closest('[data-action]');if(!b)return;const r=rowById(b.dataset.id);if(!r)return;e.preventDefault();if(b.dataset.action==='open')openProfile(r);else if(b.dataset.action==='edit')openEdit(r);else if(b.dataset.action==='whatsapp')openWhatsapp(r,false);else if(b.dataset.action==='schedule')openWhatsapp(r,true);}
 async function openProfile(r){try{if(typeof window.openContact==='function')await window.openContact(r.id);else if(typeof openContact==='function')await openContact(r.id);else throw new Error('La ficha de contacto no está disponible.');}catch(e){showToast(e?.message||'No se pudo abrir la ficha',true);}}
 function openWhatsapp(r,schedule){if(!r.phone)return showToast('Este contacto no tiene teléfono.',true);if(!allowed(schedule?'can_schedule_whatsapp':'can_use_whatsapp'))return showToast('No tienes permiso para esta acción.',true);const fn=window.openWaQuick||(typeof openWaQuick==='function'?openWaQuick:null);if(!fn)return showToast('WhatsApp no está disponible.',true);fn({phone:r.phone,name:r.fullName,dni:r.dni,contactId:r.id});if(schedule)setTimeout(()=>{const drop=byId('waQuickDrop');if(drop)drop.click();else byId('waQuickScheduleBox')?.classList.remove('hidden');},40);}
 function clearFilters(){state.filters={q:'',name:'',dni:'',phone:'',source:'',label:''};['tpfContactsSearch','tpfFilterName','tpfFilterDni','tpfFilterPhone'].forEach(id=>{if(byId(id))byId(id).value='';});if(byId('tpfFilterSource'))byId('tpfFilterSource').value='';if(byId('tpfFilterLabel'))byId('tpfFilterLabel').value='';state.page=1;applyAndRender();}
 function timestamp(){const d=new Date(),p=n=>safe(n).padStart(2,'0');return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;}
 function exportContacts(scope){if(!allowed('can_export_excel'))return showToast('No tienes permiso para exportar.',true);let rows=scope==='selected'?state.rows.filter(r=>state.selected.has(r.id)):scope==='filtered'?state.filtered:state.rows;if(!rows.length)return showToast('No hay contactos para exportar.',true);if(typeof XLSX==='undefined')return showToast('No se ha cargado el módulo de Excel.',true);const data=rows.map(r=>({Nombre:r.first,Apellidos:r.last,'Nombre y apellidos':r.fullName,DNI:r.dni,Teléfono:r.phone,Email:r.email,Banco:r.bank,Notas:r.notes,Observaciones:r.observations,Origen:r.source==='BASE DE DATOS'?'Contactos':r.source,Etiquetas:(state.labelsByContact.get(r.id)||[]).map(labelName).join(', ')}));const ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[18,26,34,16,16,30,20,35,35,18,32].map(wch=>({wch}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contactos');XLSX.writeFile(wb,`Contactos_ThePhoneFace_${timestamp()}.xlsx`,{compression:true});byId('tpfContactsExportMenu').classList.add('hidden');}
 
-async function openCreate(){if(!allowed('can_create_database'))return showToast('No tienes permiso para crear contactos.',true);await loadGlobalLabels();['tpfCreateFirst','tpfCreateLast','tpfCreatePhone','tpfCreateEmail','tpfCreateDni','tpfCreateBank','tpfCreateNotes','tpfCreateObs'].forEach(id=>byId(id).value='');byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=false);byId('tpfContactsCreateMsg').textContent='';byId('tpfContactsCreateBack').classList.remove('hidden');setTimeout(()=>byId('tpfCreateFirst').focus(),20);}
-function closeCreate(){byId('tpfContactsCreateBack').classList.add('hidden');}
-async function createContact(){const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg');const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),phone=byId('tpfCreatePhone').value.trim(),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';btn.disabled=true;msg.textContent='Guardando…';try{const dup=await sb.rpc('find_possible_duplicate_contact',{phone_text:phone||null,dni_text:dni||null,email_text:email||null});if(dup.error)throw dup.error;if((dup.data||[]).length&&!confirm('Hay un posible contacto duplicado. ¿Quieres crearlo igualmente?')){msg.textContent='Creación cancelada.';return;}const full=[first,last].filter(Boolean).join(' ').trim();const data={'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'TELÉFONO':phone,'DNI / NIF':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};const res=await sb.from('records').insert({source_sheet:'BASE DE DATOS',data}).select('id').single();if(res.error)throw res.error;const ids=[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value);if(ids.length){const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:res.data.id,p_label_ids:ids});if(lr.error)throw lr.error;}closeCreate();showToast('Contacto creado correctamente.');await loadContacts(true);}catch(e){msg.textContent=e?.message||'No se pudo crear el contacto.';M.report?.('contacts-list-ui',e,'createContact');}finally{btn.disabled=false;}}
+async function openCreate(){if(!allowed('can_create_database'))return showToast('No tienes permiso para crear contactos.',true);state.editingId='';await loadGlobalLabels();const back=byId('tpfContactsCreateBack');delete back.dataset.editId;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';['tpfCreateFirst','tpfCreateLast','tpfCreateNickname','tpfCreatePhone','tpfCreateEmail','tpfCreateDni','tpfCreateBank','tpfCreateNotes','tpfCreateObs'].forEach(id=>{const el=byId(id);if(el)el.value='';});byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=false);byId('tpfContactsCreateMsg').textContent='';back.classList.remove('hidden');setTimeout(()=>byId('tpfCreateFirst').focus(),20);}
+async function openEdit(r){
+ await loadGlobalLabels();state.editingId=r.id;
+ const values={tpfCreateFirst:r.first,tpfCreateLast:r.last,tpfCreateNickname:r.nickname,tpfCreatePhone:r.phone,tpfCreateEmail:r.email,tpfCreateDni:r.dni,tpfCreateBank:r.bank,tpfCreateNotes:r.notes,tpfCreateObs:r.observations};
+ Object.entries(values).forEach(([id,value])=>{const el=byId(id);if(el)el.value=value||'';});
+ const labels=await getContactLabels(r.id),ids=new Set(labels.map(labelId));
+ byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=ids.has(x.value));
+ byId('tpfContactsCreateMsg').textContent='';
+ const back=byId('tpfContactsCreateBack');back.dataset.editId=r.id;back.querySelector('h3').textContent='Editar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Modifica los datos reales del contacto.';byId('tpfContactsCreateSave').textContent='Guardar cambios';back.classList.remove('hidden');
+}
+function closeCreate(){const back=byId('tpfContactsCreateBack');back.classList.add('hidden');state.editingId='';delete back.dataset.editId;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';}
+async function createContact(){
+ const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;
+ const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),nickname=byId('tpfCreateNickname')?.value.trim()||'',phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
+ if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';
+ byId('tpfCreatePhone').value=phone;btn.disabled=true;msg.textContent='Guardando…';
+ try{
+  const full=[first,last].filter(Boolean).join(' ').trim(),data={...(row?.data||{}),'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
+  let id='';
+  if(editing){const res=await sb.from('records').update({data}).eq('id',editing).select('id').single();if(res.error)throw res.error;id=res.data.id;}
+  else{const dup=await sb.rpc('find_possible_duplicate_contact',{phone_text:phone||null,dni_text:dni||null,email_text:email||null});if(dup.error)throw dup.error;if((dup.data||[]).length&&!confirm('Hay un posible contacto duplicado. ¿Quieres crearlo igualmente?')){msg.textContent='Creación cancelada.';return;}const res=await sb.from('records').insert({source_sheet:'BASE DE DATOS',data}).select('id').single();if(res.error)throw res.error;id=res.data.id;}
+  const ids=[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value),lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:id,p_label_ids:ids});if(lr.error)throw lr.error;
+  const origin=byId('tpfContactsCreateBack')?.dataset?.origin||'';closeCreate();showToast(editing?'Contacto guardado correctamente.':'Contacto creado correctamente.');await loadContacts(true);
+  try{window.dispatchEvent(new CustomEvent(editing?'tpf:contact-updated':'tpf:contact-created',{detail:{id,phone,origin}}));}catch(_){}
+ }catch(e){msg.textContent=e?.message||(editing?'No se pudo guardar el contacto.':'No se pudo crear el contacto.');M.report?.('contacts-list-ui',e,editing?'updateContact':'createContact');}
+ finally{btn.disabled=false;}
+}
 
 M.register('contacts-list-ui',{install(){buildUi();if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);}});
 })();
