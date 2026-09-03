@@ -241,6 +241,14 @@ let __oppKeepPreparedOrigin=false;
 
 function captureOpportunityModalOrigin(){
   try{
+    if(!$("view-sales")?.classList.contains("hidden")){
+      opportunityModalOrigin={
+        type:"sales",
+        view:salesCurrentView||"board",
+        left:$("salesScroll")?.scrollLeft||0
+      };
+      return;
+    }
     if(!$("opportunityFullPage")?.classList.contains("hidden")){
       opportunityModalOrigin={type:"full",oppId:currentFullOpportunity?.id||null};
       return;
@@ -266,6 +274,16 @@ function captureOpportunityModalOrigin(){
 async function restoreOpportunityModalOrigin(){
   const origin=opportunityModalOrigin;
   opportunityModalOrigin=null;
+
+  if(origin?.type==="sales"){
+    document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
+    $("view-sales")?.classList.remove("hidden");
+    setSalesView(origin.view||"board");
+    requestAnimationFrame(()=>{
+      if($("salesScroll"))$("salesScroll").scrollLeft=Number(origin.left||0);
+    });
+    return;
+  }
 
   if(origin?.type==="full"){
     $("opportunityFullPage")?.classList.remove("hidden");
@@ -418,7 +436,8 @@ $("oppModalSave").onclick=async()=>{
     phone:$("oppModalPhone").value.trim()||null,
     amount:$("oppModalAmount").value!==""?Number($("oppModalAmount").value):null,
     expected_date:$("oppModalDate").value||null,
-    notes:$("oppModalNotes").value.trim()||null
+    notes:$("oppModalNotes").value.trim()||null,
+    stage_id:stage.id
   };
 
   $("oppModalSave").disabled=true;
@@ -435,11 +454,15 @@ $("oppModalSave").onclick=async()=>{
       await runOpportunityAutomations(created?.id);
     }else{
       const current=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
-      const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);
+      const {data:saved,error}=await sb.from("sales_opportunities").update(payload).eq("id",id).select("*").single();
       if(error)throw error;
 
+      if(saved && salesCache?.opportunities){
+        salesCache.opportunities=salesCache.opportunities.map(o=>String(o.id)===String(id)?saved:o);
+      }
+
       if(current && String(current.stage_id)!==String(newStage)){
-        const {error:moveError}=await sb.from("sales_opportunities").update({stage_id:newStage,position:0}).eq("id",id);
+        const {error:moveError}=await sb.from("sales_opportunities").update({position:0}).eq("id",id);
         if(moveError)throw moveError;
         await runOpportunityAutomations(id);
       }
@@ -481,6 +504,9 @@ window.editOpp=(id)=>openOpportunityCard(id);
 window.newOppInStage=async(stageId)=>{
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(stageId));
   if(!stage)return;
+
+  captureOpportunityModalOrigin();
+  pendingOpportunityRecordId=null;
 
   $("oppModalId").value="";
   $("oppModalHeading").textContent="Nueva oportunidad";
