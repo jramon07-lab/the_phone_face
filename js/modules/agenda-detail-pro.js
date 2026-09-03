@@ -55,11 +55,36 @@
   }
   function clean(o){return Object.fromEntries(Object.entries(o).filter(([,v])=>v!==undefined&&v!==""))}
 
+  function showTaskShell(standalone){
+    const modal=$id("contactModal");
+    modal?.classList.remove("hidden");
+    $id("cpTaskPage")?.classList.remove("hidden");
+    $id("cpTaskDetailPage")?.classList.remove("hidden");
+    if(standalone){
+      modal?.classList.add("tpfTaskStandalone");
+      document.body.classList.add("agendaDetailOpen");
+      const columns=document.querySelector("#contactModal .cpColumns");if(columns)columns.style.display="none";
+      const top=document.querySelector("#contactModal .cpTop");if(top)top.style.display="none";
+    }
+  }
+  function cleanupTaskShell(){
+    const modal=$id("contactModal");
+    modal?.classList.remove("tpfTaskStandalone");
+    document.body.classList.remove("agendaDetailOpen");
+    const columns=document.querySelector("#contactModal .cpColumns");if(columns)columns.style.display="";
+    const top=document.querySelector("#contactModal .cpTop");if(top)top.style.display="";
+  }
+
   const originalOpen=window.openContactTaskDetail;
   window.openContactTaskDetail=async id=>{
+    if(typeof originalOpen!=="function"){alert("No está disponible la ficha de tarea.");return}
+    const modal=$id("contactModal");
+    const standalone=!!modal?.classList.contains("hidden")||!$id("view-agenda")?.classList.contains("hidden");
     await originalOpen(id);
+    showTaskShell(standalone);
     ensureEditor();
-    const {data:row}=await sb.from("agenda_items").select("*").eq("id",id).single();
+    const {data:row,error}=await sb.from("agenda_items").select("*").eq("id",id).single();
+    if(error){$id("cpTaskDetailMsg").textContent=error.message;return}
     activeRow=row;
     if(!row)return;
     $id("agendaDetailCustomer").value=row.customer_name||"";
@@ -68,6 +93,11 @@
   };
   window.editAgendaItem=id=>window.openContactTaskDetail(id);
   window.openAgendaItem=id=>window.openContactTaskDetail(id);
+
+  const back=$id("cpTaskDetailBack"),originalBack=back?.onclick;
+  if(back)back.onclick=async function(e){try{if(typeof originalBack==="function")await originalBack.call(this,e);else $id("cpTaskDetailPage")?.classList.add("hidden")}finally{cleanupTaskShell()}};
+  const remove=$id("cpTaskDelete"),originalDelete=remove?.onclick;
+  if(remove)remove.onclick=async function(e){if(typeof originalDelete==="function")await originalDelete.call(this,e);if($id("cpTaskDetailPage")?.classList.contains("hidden"))cleanupTaskShell()};
 
   const save=$id("cpTaskDetailSave");
   if(save)save.onclick=async()=>{
