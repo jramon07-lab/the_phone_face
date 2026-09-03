@@ -28,6 +28,22 @@ test('módulo WhatsApp: está aislado y su vista abre',async({page})=>{await log
 test('módulo Agenda: está aislado y su vista abre',async({page})=>{await login(page);await expectModuleReady(page,'agenda');const nav=page.locator('.nav[data-view="agenda"]');if(await nav.isVisible()){await nav.click();await expect(page.locator('#view-agenda')).toBeVisible();}});
 test('módulo Contactos/Ventas: está aislado y Ventas abre',async({page})=>{await login(page);await expectModuleReady(page,'contacts-sales');const nav=page.locator('.nav[data-view="sales"]');await expect(nav).toBeVisible();await nav.click();await expect(page.locator('#view-sales')).toBeVisible();});
 
+test('Ventas: operador automático, contacto por DNI y filtros de fecha están disponibles',async({page})=>{
+  await login(page);await page.locator('.nav[data-view="sales"]').click();await expect(page.locator('#view-sales')).toBeVisible();
+  await page.evaluate(()=>window.newOppInStage?.(salesCache?.stages?.[0]?.id));
+  await expect(page.locator('#oppDetailModal')).toBeVisible();
+  await expect(page.locator('#oppModalDni')).toBeVisible();
+  await page.locator('#oppModalTitle').fill('REVISIÓN VODAFONE');
+  await expect(page.locator('#oppCustomFieldsView .oppCustomItem').filter({hasText:'OPERADOR'}).locator('strong')).toHaveText('Vodafone');
+  await page.locator('#oppModalClose').click();
+  await page.locator('#salesOptionsToggle').click();
+  await expect(page.locator('#tpfDateFrom')).toBeVisible();await expect(page.locator('#tpfDateTo')).toBeVisible();
+  await page.locator('#tpfDateFilters [data-date="month"]').click();
+  await expect(page.locator('#salesOptionsToggle')).toContainText('Este mes');
+  const summary=await page.locator('#view-sales .salesSummaryStages').evaluate(el=>({wrap:getComputedStyle(el).flexWrap,overflow:getComputedStyle(el).overflow}));
+  expect(summary.wrap).toBe('wrap');expect(summary.overflow).toBe('visible');
+});
+
 test('módulo Ficha de contacto: editor separado protegido, actividad y WhatsApp interno', async ({ page }) => {
   await login(page);await expectModuleReady(page,'contact-profile');
   const seed=await page.evaluate(async()=>{const {data}=await sb.from('records').select('id,data').limit(1);const row=data?.[0]||null;return row?{id:row.id}:null});

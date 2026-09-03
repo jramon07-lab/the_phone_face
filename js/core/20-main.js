@@ -164,6 +164,106 @@ function opportunityCustomEntries(o){
   return [];
 }
 
+const SALES_OPERATORS=[
+  ["Vodafone",/\bvodafone\b/i],
+  ["Orange",/\borange\b/i],
+  ["Yoigo",/\byoigo\b/i],
+  ["O2",/(?:^|\s)o2(?:\s|$)/i],
+  ["MásMóvil",/\b(?:m[aá]s\s*m[oó]vil|masmovil)\b/i],
+  ["Movistar",/\bmovistar\b/i],
+  ["Jazztel",/\bjazztel\b/i],
+  ["Lowi",/\blowi\b/i],
+  ["Digi",/\bdigi\b/i],
+  ["Pepephone",/\bpepephone\b/i],
+  ["Simyo",/\bsimyo\b/i],
+  ["Finetwork",/\b(?:finetwork|fi network)\b/i],
+  ["Lebara",/\blebara\b/i]
+];
+function salesOperatorFromTitle(title){
+  return SALES_OPERATORS.find(([,pattern])=>pattern.test(String(title||"")))?.[0]||"";
+}
+function salesOperatorField(){
+  return (salesCache.fields||[]).find(f=>String(f.label||f.field_key||"").trim().toLowerCase()==="operador");
+}
+function syncOperatorPreview(){
+  const value=salesOperatorFromTitle($("oppModalTitle")?.value);
+  const item=[...document.querySelectorAll("#oppCustomFieldsView .oppCustomItem")]
+    .find(x=>String(x.querySelector("span")?.textContent||"").trim().toLowerCase()==="operador");
+  if(item?.querySelector("strong"))item.querySelector("strong").textContent=value||"Se completará al detectar el operador en el título";
+}
+function renderOpportunityCustomFields(values=[]){
+  const byId=new Map((values||[]).map(v=>[String(v.field_id),v.value]));
+  const fields=salesCache.fields||[];
+  $("oppCustomFieldsView").innerHTML=fields.length
+    ? fields.map(f=>`<div class="oppCustomItem"><span>${esc(f.label||f.field_key)}</span><strong>${esc(byId.get(String(f.id))??"")}</strong></div>`).join("")
+    : '<div class="small oppNoCustom">No hay campos personalizados creados.</div>';
+  syncOperatorPreview();
+}
+async function loadOpportunityCustomFields(opportunityId){
+  const {data,error}=await sb.from("sales_custom_values").select("field_id,value").eq("opportunity_id",opportunityId);
+  if(error)throw error;
+  if(String($("oppModalId")?.value)===String(opportunityId))renderOpportunityCustomFields(data||[]);
+}
+async function saveDetectedOperator(opportunityId,title){
+  const field=salesOperatorField();
+  const operator=salesOperatorFromTitle(title);
+  if(!opportunityId||!field?.id)return;
+  const {error}=await sb.from("sales_custom_values").upsert({
+    opportunity_id:opportunityId,
+    field_id:field.id,
+    value:operator||null
+  },{onConflict:"opportunity_id,field_id"});
+  if(error)throw error;
+}
+
+let oppContactSearchTimer=null;
+function salesContactValue(d,...keys){
+  for(const key of keys){
+    const value=d?.[key];
+    if(value!==undefined&&value!==null&&String(value).trim())return String(value).trim();
+  }
+  return "";
+}
+function mapSalesContact(row){
+  const d=row?.data||{};
+  return {
+    id:String(row?.id||""),
+    name:salesContactValue(d,"NOMBRE Y APELLIDOS","CLIENTE","CLIENTE FINAL")||[salesContactValue(d,"NOMBRE"),salesContactValue(d,"APELLIDOS","APELLIDO")].filter(Boolean).join(" ")||"Contacto",
+    phone:salesContactValue(d,"TELÉFONO","TELEFONO","PHONE","MOVIL"),
+    dni:salesContactValue(d,"DNI / NIF","DNI","NIF")
+  };
+}
+async function searchOpportunityContacts(term){
+  const box=$("oppContactMatches");
+  if(!box)return;
+  const q=String(term||"").trim();
+  if(q.length<2){box.classList.add("hidden");box.innerHTML="";return}
+  const results=await Promise.all(["BASE DE DATOS","DATA"].map(sheet=>
+    sb.rpc("search_records",{search_text:q,sheet_filter:sheet,result_limit:8})
+  ));
+  const rows=[];
+  results.forEach(({data})=>(data||[]).forEach(row=>{if(!rows.some(x=>String(x.id)===String(row.id)))rows.push(row)}));
+  const contacts=rows.slice(0,10).map(mapSalesContact);
+  box.innerHTML=contacts.length?contacts.map(c=>`<button type="button" class="oppContactMatch" data-contact-id="${esc(c.id)}"><b>${esc(c.name)}</b><span>${esc(c.phone||"Sin teléfono")}${c.dni?" · "+esc(c.dni):""}</span></button>`).join(""):'<div class="small oppContactNoMatch">No hay contactos coincidentes.</div>';
+  box.classList.remove("hidden");
+  box.querySelectorAll(".oppContactMatch").forEach((button,index)=>button.onclick=()=>selectOpportunityContact(contacts[index]));
+}
+function selectOpportunityContact(contact){
+  pendingOpportunityRecordId=contact.id||null;
+  $("oppModalClient").value=contact.name||"";
+  $("oppModalPhone").value=contact.phone||"";
+  $("oppModalDni").value=contact.dni||"";
+  $("oppModalOpenContact").dataset.recordId=contact.id||"";
+  $("oppContactMatches").classList.add("hidden");
+}
+function scheduleOpportunityContactSearch(value){
+  clearTimeout(oppContactSearchTimer);
+  oppContactSearchTimer=setTimeout(()=>searchOpportunityContacts(value).catch(e=>console.warn("Búsqueda de contacto",e)),220);
+}
+[$("oppModalClient"),$("oppModalPhone"),$("oppModalDni")].filter(Boolean).forEach(input=>input.addEventListener("input",()=>scheduleOpportunityContactSearch(input.value)));
+$("oppModalTitle")?.addEventListener("input",syncOperatorPreview);
+document.addEventListener("click",e=>{if(!e.target.closest(".opportunityContactSearchLabel,#oppModalClient,#oppModalPhone"))$("oppContactMatches")?.classList.add("hidden")});
+
 
 async function findContactRecordForOpportunity(o){
   if(!o)return null;
@@ -362,6 +462,9 @@ window.openOpportunityCard=(id)=>{
   $("oppModalTitle").value=o.title||"";
   $("oppModalClient").value=o.client_name||"";
   $("oppModalPhone").value=o.phone||"";
+  $("oppModalDni").value="";
+  $("oppModalOpenContact").dataset.recordId=o.record_id||"";
+  pendingOpportunityRecordId=o.record_id||null;
   $("oppModalAmount").value=o.amount??"";
   $("oppModalDate").value=o.expected_date||"";
   $("oppModalNotes").value=o.notes||"";
@@ -370,10 +473,13 @@ window.openOpportunityCard=(id)=>{
     `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
   ).join("");
 
-  const entries=opportunityCustomEntries(o);
-  $("oppCustomFieldsView").innerHTML=entries.length
-    ? entries.map(([k,v])=>`<div class="oppCustomItem"><span>${esc(k)}</span><strong>${esc(v??"")}</strong></div>`).join("")
-    : '<div class="small oppNoCustom">No hay valores de campos personalizados en esta oportunidad.</div>';
+  renderOpportunityCustomFields();
+  loadOpportunityCustomFields(o.id).catch(e=>console.warn("Campos de oportunidad",e));
+  if(o.record_id){
+    sb.from("records").select("id,data").eq("id",o.record_id).maybeSingle().then(({data})=>{
+      if(data && String($("oppModalId")?.value)===String(o.id))$("oppModalDni").value=mapSalesContact(data).dni;
+    });
+  }
 
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
   const meta=[];
@@ -390,7 +496,9 @@ if($("oppModalOpenContact"))$("oppModalOpenContact").onclick=async(e)=>{
   e.preventDefault();
   e.stopPropagation();
   const id=$("oppModalId").value;
-  if(id)await openSalesOpportunityContact(id);
+  const recordId=$("oppModalOpenContact").dataset.recordId;
+  if(recordId)await openContact(recordId);
+  else if(id)await openSalesOpportunityContact(id);
 };
 
 async function refreshOpportunitySideAfterChange(){
@@ -437,7 +545,8 @@ $("oppModalSave").onclick=async()=>{
     amount:$("oppModalAmount").value!==""?Number($("oppModalAmount").value):null,
     expected_date:$("oppModalDate").value||null,
     notes:$("oppModalNotes").value.trim()||null,
-    stage_id:stage.id
+    stage_id:stage.id,
+    record_id:pendingOpportunityRecordId||null
   };
 
   $("oppModalSave").disabled=true;
@@ -451,6 +560,7 @@ $("oppModalSave").onclick=async()=>{
       }).select("id").single();
       if(error)throw error;
       pendingOpportunityRecordId=null;
+      await saveDetectedOperator(created?.id,title);
       await runOpportunityAutomations(created?.id);
     }else{
       const current=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
@@ -460,6 +570,7 @@ $("oppModalSave").onclick=async()=>{
       if(saved && salesCache?.opportunities){
         salesCache.opportunities=salesCache.opportunities.map(o=>String(o.id)===String(id)?saved:o);
       }
+      await saveDetectedOperator(id,title);
 
       if(current && String(current.stage_id)!==String(newStage)){
         const {error:moveError}=await sb.from("sales_opportunities").update({position:0}).eq("id",id);
@@ -513,6 +624,8 @@ window.newOppInStage=async(stageId)=>{
   $("oppModalTitle").value="";
   $("oppModalClient").value="";
   $("oppModalPhone").value="";
+  $("oppModalDni").value="";
+  $("oppModalOpenContact").dataset.recordId="";
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
   $("oppModalNotes").value="";
@@ -523,6 +636,7 @@ window.newOppInStage=async(stageId)=>{
   $("oppCustomFieldsView").innerHTML=(salesCache.fields||[]).length
     ? (salesCache.fields||[]).map(f=>`<div class="oppCustomItem"><span>${esc(f.label)}</span><strong>Se podrá completar al guardar</strong></div>`).join("")
     : '<div class="small oppNoCustom">No hay campos personalizados creados.</div>';
+  syncOperatorPreview();
 
   $("oppMetaInfo").textContent="Creando nueva oportunidad";
   $("oppModalSave").textContent="Crear oportunidad";
