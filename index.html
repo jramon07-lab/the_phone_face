@@ -62,7 +62,7 @@
 
 <link rel="stylesheet" href="/assets/app.css">
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
-<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-03">
+<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-04">
 <link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
 </head>
 <body>
@@ -718,7 +718,7 @@
    <section id="view-agenda" class="hidden agendaPro">
     <header class="agendaHeader">
       <div><span class="agendaEyebrow">ORGANIZACIÓN</span><h2>Agenda y recordatorios</h2><p>Todo lo que tienes que hacer, ordenado y disponible en todos tus dispositivos.</p></div>
-      <button id="agendaOpenCreate" class="primary">＋ Nuevo recordatorio</button>
+      <button id="agendaOpenCreate" class="primary" type="button">＋ Crear tarea</button>
     </header>
     <div class="agendaStats" id="agendaStats">
       <button data-agenda-filter="today"><span>Hoy</span><b id="agendaStatToday">0</b><small>recordatorios</small></button>
@@ -727,10 +727,24 @@
       <button data-agenda-filter="completed"><span>Completados</span><b id="agendaStatCompleted">0</b><small>finalizados</small></button>
     </div>
     <div class="agendaToolbar card">
-      <div class="agendaViewSwitch"><button id="agendaListView" class="active">☷ Lista</button><button id="agendaCalendarView">▦ Calendario</button></div>
-      <label class="agendaSearch">⌕ <input id="agendaSearch" placeholder="Buscar asunto, cliente o teléfono"></label>
-      <select id="agendaFilter" aria-label="Filtrar recordatorios"><option value="pending">Pendientes</option><option value="today">Hoy</option><option value="tomorrow">Mañana</option><option value="week">Esta semana</option><option value="month">Este mes</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="all">Todos</option></select>
-      <button id="agendaRefresh" class="secondary">↻ Actualizar</button>
+      <div class="agendaToolbarMain">
+        <div class="agendaViewSwitch"><button id="agendaListView" class="active" type="button">☷ Lista</button><button id="agendaCalendarView" type="button">▦ Calendario</button></div>
+        <label class="agendaSearch">⌕ <input id="agendaSearch" placeholder="Buscar asunto, cliente o teléfono"></label>
+        <label class="agendaStatusFilter"><span>Estado</span><select id="agendaFilter" aria-label="Filtrar por estado"><option value="pending">Pendientes</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="cancelled">Cancelados</option><option value="all">Todos los estados</option></select></label>
+        <button id="agendaRefresh" class="secondary" type="button">↻ Actualizar</button>
+        <button id="agendaOpenCreateToolbar" class="primary agendaCreateCta" type="button">＋ Crear tarea</button>
+      </div>
+      <div class="agendaQuickRow">
+        <span class="agendaQuickLabel">Fecha</span>
+        <div id="agendaQuickFilters" class="agendaQuickFilters" aria-label="Filtrar por fecha">
+          <button type="button" data-agenda-period="all" class="active" aria-pressed="true">Todo</button>
+          <button type="button" data-agenda-period="today" aria-pressed="false">Hoy</button>
+          <button type="button" data-agenda-period="tomorrow" aria-pressed="false">Mañana</button>
+          <button type="button" data-agenda-period="week" aria-pressed="false">Esta semana</button>
+          <button type="button" data-agenda-period="month" aria-pressed="false">Este mes</button>
+        </div>
+        <span id="agendaFilterSummary" class="agendaFilterSummary">Pendientes · Cualquier fecha</span>
+      </div>
     </div>
     <div class="agendaWorkspace">
       <main class="agendaMain card">
@@ -1489,7 +1503,7 @@
 <script src="/js/core/00-bootstrap.js"></script>
 <script src="/js/modules/contacts-sales-core.js"></script>
 <script src="/js/modules/whatsapp-scheduling-core.js"></script>
-<script src="/js/modules/agenda-core.js?v=20260903-03"></script>
+<script src="/js/modules/agenda-core.js?v=20260903-04"></script>
 <script src="/js/core/20-main.js"></script>
 <script src="/js/modules/whatsapp-green-core.js"></script>
 <script src="/js/modules/automations-core.js"></script>
@@ -1507,6 +1521,6 @@
 <script src="/js/modules/system-monitoring.js?v=20260902-02"></script>
 <script src="/js/modules/edit-presence.js?v=20260902-01"></script>
 <script src="/js/modules/google-drive-backups.js?v=20260902-01"></script>
-<script src="/js/modules/agenda-detail-pro.js?v=20260903-01"></script>
+<script src="/js/modules/agenda-detail-pro.js?v=20260903-04"></script>
 
 </body></html>
