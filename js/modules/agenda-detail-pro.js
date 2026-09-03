@@ -3,11 +3,11 @@
   const $id=id=>document.getElementById(id);
   const escHtml=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const labels={Tarea:"Ficha de tarea",Llamada:"Ficha de llamada",Cita:"Ficha de cita",WhatsApp:"Ficha de WhatsApp"};
-  let openMenuId=null;
+  let openMenuId=null,activeRow=null;
 
   function allTypes(){
-    const list=Array.isArray(window.agendaTypes)?window.agendaTypes:null;
-    return list?.length?list:[{name:"Tarea"},{name:"Llamada"},{name:"Cita"},{name:"WhatsApp"}];
+    const buttons=[...document.querySelectorAll("#agendaTypeChoices [data-type]")].map(b=>({name:b.dataset.type,icon:(b.textContent||"").trim().split(/\\s+/)[0]}));
+    return buttons.length?buttons:[{name:"Tarea",icon:"✓"},{name:"Llamada",icon:"☎"},{name:"Cita",icon:"◷"},{name:"WhatsApp",icon:"💬"}];
   }
   function ensureEditor(){
     const title=$id("cpTaskDetailTitle");
@@ -45,8 +45,8 @@
     set("agendaDetailPriority",meta.priority||"normal"); set("agendaDetailDuration",meta.duration||"30");
     set("agendaDetailResult",meta.result||""); set("agendaDetailLocation",meta.location||"");
     set("agendaDetailWhatsappMessage",meta.whatsapp_message||""); set("agendaDetailCustom",meta.custom||"");
-    if($id("agendaDetailState"))$id("agendaDetailState").value=window.currentContactTask?.status||"pending";
-    if($id("agendaDetailDelivery"))$id("agendaDetailDelivery").textContent=window.currentContactTask?.whatsapp_delivery_status||"Pendiente";
+    if($id("agendaDetailState"))$id("agendaDetailState").value=activeRow?.status||"pending";
+    if($id("agendaDetailDelivery"))$id("agendaDetailDelivery").textContent=activeRow?.whatsapp_delivery_status||"Pendiente";
     const heading=$id("cpTaskDetailHeading");if(heading)heading.textContent=labels[safeType]||("Ficha de "+safeType.toLowerCase());
   }
   function metaFromForm(){
@@ -59,7 +59,8 @@
   window.openContactTaskDetail=async id=>{
     await originalOpen(id);
     ensureEditor();
-    const row=window.currentContactTask;
+    const {data:row}=await sb.from("agenda_items").select("*").eq("id",id).single();
+    activeRow=row;
     if(!row)return;
     $id("agendaDetailCustomer").value=row.customer_name||"";
     $id("agendaDetailPhone").value=row.customer_phone||"";
@@ -70,7 +71,7 @@
 
   const save=$id("cpTaskDetailSave");
   if(save)save.onclick=async()=>{
-    const row=window.currentContactTask;
+    const row=activeRow;
     if(!row)return;
     const title=$id("cpTaskDetailTitle").value.trim(),starts=$id("cpTaskDetailStarts").value;
     if(!title||!starts){$id("cpTaskDetailMsg").textContent="Escribe un asunto y una fecha/hora.";return}
@@ -82,7 +83,7 @@
     try{
       const {data,error}=await sb.from("agenda_items").update(payload).eq("id",row.id).select("*").single();
       if(error)throw error;
-      window.currentContactTask=data;$id("cpTaskDetailMsg").textContent="Cambios guardados correctamente";
+      activeRow=data;$id("cpTaskDetailMsg").textContent="Cambios guardados correctamente";
       $id("cpTaskDetailStatus").textContent=data.status==="completed"?"Completada":data.status==="cancelled"?"Cancelada":"Pendiente";
       $id("cpTaskMarkDone").classList.toggle("hidden",data.status==="completed");
       $id("cpTaskReopen").classList.toggle("hidden",data.status!=="completed");
