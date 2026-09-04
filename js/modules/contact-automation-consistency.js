@@ -84,9 +84,10 @@ async function executionAlreadyStarted(automationIds,ctx,labelId,since){
 }
 function wrapManageLabels(){
   const button=$('contactLabelsSave');
-  if(!button||button.dataset.tpfAutomationConsistency==='1')return;
+  if(!button)return;
   const original=button.onclick;
-  button.onclick=async function(event){
+  if(typeof original==='function'&&original.__tpfAutomationConsistency)return;
+  const wrapped=async function(event){
     const ctx=contactContext(),before=ctx?await labelsFor(ctx.contact_id):[];
     const since=new Date(Date.now()-1500).toISOString();
     const result=typeof original==='function'?await original.call(this,event):undefined;
@@ -106,6 +107,9 @@ function wrapManageLabels(){
     await refreshVisibleContact();
     return result;
   };
+  wrapped.__tpfAutomationConsistency=true;
+  wrapped.__tpfOriginal=original;
+  button.onclick=wrapped;
   button.dataset.tpfAutomationConsistency='1';
 }
 function bindOpportunityTab(){
@@ -137,7 +141,7 @@ function install(){
   const timer=setInterval(()=>{
     wrapOpenContact();
     wrapManageLabels();
-    if(++tries>=20)clearInterval(timer);
+    if(++tries>=40)clearInterval(timer);
   },250);
 }
 M.register('contact-automation-consistency',{install});
