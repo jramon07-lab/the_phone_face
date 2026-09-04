@@ -1,0 +1,16 @@
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const vm=require("node:vm");
+const source=fs.readFileSync("js/modules/import-mapping.js","utf8");
+const context={window:{},document:{readyState:"loading",addEventListener(){}},console};
+vm.createContext(context);vm.runInContext(source,context);
+const h=context.window.TPFImportMapping;
+assert.equal(h.guess("Móvil","contact"),"phone");
+assert.equal(h.guess("NIF","contact"),"dni");
+assert.equal(h.guess("Correo electrónico","contact"),"email");
+assert.equal(h.guess("Cierre esperado","opportunity"),"expected_date");
+assert.equal(h.guess("Comercial asignado","opportunity"),"custom");
+assert.equal(h.digits("+34 695 661 409"),"695661409");
+assert.equal(h.number("1.234,50 €"),1234.5);
+assert.equal(h.date("04/09/2026"),"2026-09-04");
+console.log("import-mapping: ok");
