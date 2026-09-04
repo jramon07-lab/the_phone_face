@@ -706,7 +706,7 @@
       <h2>Importación masiva desde Excel</h2>
       <p class="small">Solo para administrador. Elige archivo y destino. Antes de importar se muestra una vista previa.</p><p class="small"><b>AJUSTES y CLAWBACK:</b> se añadirá automáticamente el nombre del archivo en la columna ARCHIVO para todas las filas importadas.</p>
       <div class="row"><input id="excelFile" type="file" accept=".xlsx,.xlsm,.xls">
-      <select id="destination"><option>LIQUIDACION</option><option selected>DATA</option><option>CLAWBACK</option><option>AJUSTES</option><option value="BASE DE DATOS">CONTACTOS</option></select></div>
+      <select id="destination"><option>LIQUIDACION</option><option selected>DATA</option><option>CLAWBACK</option><option>AJUSTES</option><option value="BASE DE DATOS">CONTACTOS</option><option value="OPORTUNIDADES">OPORTUNIDADES</option></select></div>
       <button id="previewImport" class="secondary">Vista previa</button>
       <button id="runImport" class="primary" disabled>Confirmar importación</button>
       <div id="importInfo" class="small"></div><div class="progress"><div id="importBar" class="bar"></div></div>
@@ -1522,5 +1522,6 @@
 <script src="/js/modules/edit-presence.js?v=20260902-01"></script>
 <script src="/js/modules/google-drive-backups.js?v=20260902-01"></script>
 <script src="/js/modules/agenda-detail-pro.js?v=20260903-04"></script>
+<script src="/js/modules/import-mapping.js?v=20260904-01"></script>
 
 </body></html>
