@@ -10,7 +10,7 @@
  const synonyms={
   contact:{
    first_name:["nombre","first name"],last_name:["apellidos","apellido","last name"],full_name:["nombre y apellidos","nombre completo","cliente","contacto"],
-   phone:["telefono","teléfono","movil","móvil","phone","celular"],dni:["dni","nif","dni nif","documento"],email:["email","correo","correo electronico","correo electrónico"],
+   phone:["telefono","teléfono","telefono 1","teléfono 1","movil","móvil","phone","celular"],dni:["dni","nif","nif nit","dni nif","documento"],email:["email","correo","correo electronico","correo electrónico","correo electronico 1","correo electrónico 1"],
    notes:["notas","nota","observaciones","comentarios"]
   },
   opportunity:{
