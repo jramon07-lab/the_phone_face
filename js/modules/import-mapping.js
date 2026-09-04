@@ -65,7 +65,7 @@
   const target=wb.SheetNames.find(n=>norm(n)===norm(dest)||dest==="BASE DE DATOS"&&["contactos","base de datos"].includes(norm(n))||dest==="OPORTUNIDADES"&&["oportunidades","ventas"].includes(norm(n)))||wb.SheetNames[0];
   const rows=XLSX.utils.sheet_to_json(wb.Sheets[target],{header:1,defval:"",raw:false,blankrows:false});const hi=typeof findHeader==="function"?findHeader(rows):0;
   const headers=(rows[hi]||[]).map((h,i)=>clean(h)||`Columna ${i+1}`), rawRows=rows.slice(hi+1).filter(r=>r.some(v=>clean(v))).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??""])));
-  const type=dest==="BASE DE DATOS"?"contact":"opportunity",mapping=Object.fromEntries(headers.map(h=>[h,guess(h,type)]));
+  const type=dest==="BASE DE DATOS"?"contact":"opportunity",mapping=Object.fromEntries(headers.map(h=>[h,rawRows.some(r=>clean(r[h])!=="")?guess(h,type):"ignore"]));
   state={file:f.name,sheet:target,type,headers,rawRows,mapping,duplicateRows:new Set(),errors:[]};ensureUi();q("importMapping").classList.remove("hidden");
   q("importMapGrid").innerHTML=headers.map((h,i)=>`<label for="importMap_${i}">${escHtml(h)}</label><select id="importMap_${i}" data-header="${escHtml(h)}">${options(type,mapping[h])}</select>`).join("");
   q("importMapGrid").querySelectorAll("select").forEach(s=>s.onchange=()=>{state.mapping[s.dataset.header]=s.value;analyse().catch(e=>q("importErrors").textContent=e.message)});
