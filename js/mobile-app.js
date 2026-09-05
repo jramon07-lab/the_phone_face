@@ -211,13 +211,27 @@
     clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);window.TPFMobileSystem?.stop();await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
+  async function fetchAllMobileContacts(){
+    const rows=[],pageSize=1000;
+    for(let from=0;;from+=pageSize){
+      const {data,error}=await client.from('records')
+        .select('id,source_sheet,source_row,data,created_at,updated_at')
+        .eq('source_sheet',CONTACT_SOURCE)
+        .order('updated_at',{ascending:false}).order('id',{ascending:true})
+        .range(from,from+pageSize-1);
+      if(error)return {data:null,error};
+      const page=data||[];rows.push(...page);
+      if(page.length<pageSize)return {data:rows,error:null};
+    }
+  }
+
   async function refreshData({silent=false}={}){
     if(!state.user||state.loading)return;
     state.loading=true;if(!silent)renderLoading();
     try{
       const jobs=[];
       jobs.push(has('can_view_database')
-        ?client.from('records').select('id,source_sheet,source_row,data,created_at,updated_at').eq('source_sheet',CONTACT_SOURCE).order('updated_at',{ascending:false}).limit(2000)
+        ?fetchAllMobileContacts()
         :Promise.resolve({data:[],error:null}));
       jobs.push((has('can_view_sales')||has('can_edit_sales'))?client.rpc('sales_board'):Promise.resolve({data:{stages:[],opportunities:[],fields:[]},error:null}));
       jobs.push((has('can_view_agenda')||has('can_manage_agenda'))
