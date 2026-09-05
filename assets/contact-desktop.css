@@ -1,90 +1,85 @@
-/* Desktop contact presentation only. Base: 3ce4d37278b79740546d76f92af04d51916171ac.
-   Rollback: revert this UI commit. No record or integration logic is changed. */
-.cpDesktopRail,.cpDocumentsPending{display:none}
-@media (min-width:1024px){
- #contactModal.tpfContactDesktop.tpfContactCleanV2{background:#f3f5fa}
- #contactModal.tpfContactDesktop.tpfContactCleanV2>.contactProfile{padding-left:176px;background:#f3f5fa;box-sizing:border-box}
- #contactModal.tpfContactDesktop .cpDesktopRail{display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;width:176px;box-sizing:border-box;padding:30px 14px;background:#141e35;color:#fff;z-index:6;gap:8px;overflow:auto}
- #contactModal.tpfContactDesktop .cpDesktopBrand{font-size:14px;font-weight:800;line-height:1.6;padding:0 9px 30px;letter-spacing:.025em}
- #contactModal.tpfContactDesktop .cpDesktopBrand span{display:block;font-size:13px;font-weight:400;color:#bbc6df;letter-spacing:0}
- #contactModal.tpfContactDesktop .cpDesktopRail button{width:100%;text-align:left;white-space:normal;font-size:14px;line-height:1.5;padding:12px 10px;border:1px solid transparent;border-radius:9px;color:#d9e2f3;background:transparent;cursor:pointer}
- #contactModal.tpfContactDesktop .cpDesktopRail button:hover,#contactModal.tpfContactDesktop .cpDesktopRail button:focus-visible{background:#263655;color:#fff;border-color:#8297ca}
- #contactModal.tpfContactDesktop .cpDesktopRailFoot{margin-top:auto;padding:30px 9px 0;color:#b8a7f4;font-size:12px;letter-spacing:.07em}
- #contactModal.tpfContactDesktop .cpDesktopRailFoot span{display:block;color:#bbc6df;font-size:13px;letter-spacing:0;margin-top:8px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTop{height:auto;min-height:76px;padding:12px 28px;gap:18px;box-sizing:border-box;background:#fff;border-bottom:1px solid #e1e6ef;box-shadow:none}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpNav{font-size:16px;color:#293956}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns{display:grid;grid-template-columns:minmax(290px,350px) minmax(0,1fr)!important;grid-template-rows:auto 1fr;align-items:start;gap:22px;max-width:1540px;padding:26px;box-sizing:border-box}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpLeft{grid-column:1;grid-row:1 / span 2;position:static;gap:16px;scroll-margin-top:94px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpRight{grid-column:2;grid-row:1;position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;scroll-margin-top:94px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpCenter{grid-column:2;grid-row:2;min-height:360px;padding:0 22px 20px;background:#fff;scroll-margin-top:94px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpIdentity,#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData,#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpCenter,#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection{border:1px solid #e0e6f0;border-radius:16px;box-shadow:0 3px 12px rgba(24,42,78,.035)}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpIdentity{padding:26px 20px 22px;border-top:3px solid #8262d8}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpAvatar{width:64px;height:64px;border-radius:20px;background:#eae6fb;color:#6947b7;box-shadow:none;font-size:24px;margin-bottom:14px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpName{font-size:20px!important;min-height:40px;line-height:1.4!important;color:#182a47}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpBadge{background:#f0ecfc;color:#6848ad;font-size:13px;padding:5px 12px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpQuick{gap:8px;margin-top:20px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpQuick button{font-size:14px;min-height:43px;padding:9px 6px;line-height:1.4;color:#245bc1;background:#f7faff;border-color:#dce6f6}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpOwner{font-size:12px;padding:12px 16px;color:#53627a}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData{padding:20px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .tpfContactEditBar{gap:8px;flex-wrap:wrap}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .tpfContactEditBar h3{font-size:17px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .tpfContactEditBar button{font-size:14px;padding:8px 10px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .tpfContactProtectedHint{font-size:12px;line-height:1.5}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData>label{font-size:13px;text-transform:none;letter-spacing:0;color:#53627a;margin-top:16px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData>input,#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData>textarea{font-size:16px;line-height:1.5;min-height:43px;padding:9px 11px;border-radius:9px;border-color:#dde4ef;color:#20334f;background:#fff;box-sizing:border-box}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData>textarea{min-height:88px;resize:vertical}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData>input[readonly],#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpData>textarea[readonly]{background:#f8fafd}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .contactLabelsBox{padding:14px;margin-top:20px;background:#faf9ff;border-color:#e7e0f5}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .contactLabelsHead label,#contactModal.tpfContactDesktop.tpfContactCleanV2 .contactLabelsHead button{font-size:14px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection{margin:0;padding:18px;min-width:0;box-sizing:border-box}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection:has(#cpOpportunities){order:1}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection:has(#cpTasks){order:2}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection:has(#cpWhatsappPrograms){order:3;grid-column:1 / -1}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection:has(#cpInfo){order:5}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideTitle{gap:10px;align-items:center;padding-bottom:12px;margin-bottom:14px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideTitle b{font-size:16px;color:#24344f}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideTitle button{background:#edf3ff;color:#245ed0;border-radius:9px;width:34px;min-height:34px;font-size:22px;padding:0}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpOppStat{background:#f7f9fc;border-color:#e8ecf3;padding:10px 4px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpOppStat span{font-size:12px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpOppStat b{font-size:22px;color:#244d98}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpOppExpired b{color:#b42318}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpEmpty{font-size:14px;line-height:1.6;padding:16px 8px;color:#617089}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpDocumentsPending{display:block;order:4;grid-column:1 / -1;scroll-margin-top:94px}
- #contactModal.tpfContactDesktop .cpPendingBadge{color:#7554ab;background:#f1ecfa;padding:5px 10px;border-radius:20px;font-size:12px;white-space:nowrap}
- #contactModal.tpfContactDesktop .cpDocumentsPending h3{font-size:16px;margin:0 0 8px;color:#334660}
- #contactModal.tpfContactDesktop .cpDocumentsPending p{font-size:14px;line-height:1.6;color:#617089;margin:0 0 14px}
- #contactModal.tpfContactDesktop .cpDocumentsPlan{padding:12px 14px;border:1px dashed #d4c9e9;background:#fcfaff;border-radius:10px;font-size:13px;line-height:1.6;color:#715f91}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTabs{gap:20px;font-size:14px;min-height:56px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpActivityHead{padding:22px 0 16px;gap:12px;flex-wrap:wrap}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpActivityHead h2{font-size:22px;color:#20334f}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpFullHistoryHead{gap:8px;flex-wrap:wrap}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpFullHistoryHead h3{font-size:15px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpFullHistoryHead span{font-size:12px;line-height:1.5}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpEventBody b{font-size:15px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpEventBody div{font-size:14px;line-height:1.6;overflow-wrap:anywhere}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpEventBody small,#contactModal.tpfContactDesktop.tpfContactCleanV2 .tpfTechnicalActivity summary{font-size:12px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .tpfHistoryDay{font-size:14px;color:#7050b1}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns .primary,#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTop .primary{background:#2563db;border:1px solid #2563db;color:#fff;border-radius:9px;min-height:40px;font-size:14px;padding:9px 14px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpExit{font-size:14px;border-radius:9px;padding:10px 14px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns button:focus-visible,#contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTop button:focus-visible{outline:3px solid #9d87dd;outline-offset:3px}
- #contactModal.tpfContactDesktop.tpfTaskStandalone .cpDesktopRail,#contactModal.tpfContactDesktop:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden)) .cpDesktopRail{display:none}
- #contactModal.tpfContactDesktop.tpfTaskStandalone>.contactProfile,#contactModal.tpfContactDesktop:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden))>.contactProfile{padding-left:0}
+/* Reference layout: scoped to the desktop presentation adapter. */
+.cpDocumentsPending{display:none}
+@media(min-width:1024px){
+#contactModal.tpfContactDesktop.tpfContactReference{left:252px!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;overflow:auto!important;background:#f6f8fc}
+#contactModal.tpfContactDesktop.tpfContactReference>.contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important;padding:0;background:#f6f8fc}
+#contactModal.tpfContactDesktop.tpfContactReference .cpTop{height:auto!important;min-height:68px;padding:14px 26px!important;display:flex;justify-content:flex-start;gap:18px;position:static;box-shadow:none;border-bottom:0;background:transparent}
+#contactModal.tpfContactDesktop.tpfContactReference .cpNav{font-size:24px;font-weight:800;color:#102344;order:1}
+#contactModal.tpfContactDesktop.tpfContactReference .cpExit{order:0;background:transparent;border:0;color:#3766b2;padding:7px 0;font-size:13px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefEdit{order:3;margin-left:auto;border:1px solid #2d65c8;border-radius:7px;background:white;color:#245ac1;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+#contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{display:grid;grid-template-columns:68px minmax(160px,1fr) auto;align-items:center;gap:8px 18px;text-align:left;background:transparent;border:0;border-radius:0;padding:8px 26px 24px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{grid-column:1;grid-row:1 / span 2;width:68px;height:68px;margin:0;background:#e7dcfc;color:#39245e;border-radius:50%;box-shadow:none;font-size:24px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpName{grid-column:2;grid-row:1;font-size:23px!important;text-align:left;line-height:1.4!important;margin:0;padding:0!important;min-height:32px!important;background:transparent!important;border:0!important;color:#132340!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpBadge{grid-column:2;grid-row:2;justify-self:start;padding:4px 12px;font-size:12px;background:#ede5fc;color:#6840ad}
+#contactModal.tpfContactDesktop.tpfContactReference .cpQuick{grid-column:3;grid-row:1 / span 2;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:690px;gap:8px;margin:0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpQuick button,#contactModal.tpfContactDesktop.tpfContactReference .cpRefCall{width:auto;min-width:95px;min-height:40px;padding:10px 13px;background:#fff;border:1px solid #896ac6;border-radius:7px;color:#6743b1;font-size:14px;font-weight:600;line-height:1.3;text-decoration:none;text-align:center;box-sizing:border-box;cursor:pointer}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefCall{background:#0862df;border-color:#0862df;color:white;display:inline-flex;align-items:center;justify-content:center}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefCall[aria-disabled="true"]{opacity:.5;cursor:default}
+#contactModal.tpfContactDesktop.tpfContactReference #contactWhatsapp{border-color:#2b9f73;color:#168c60}
+#contactModal.tpfContactDesktop.tpfContactReference #cpScheduleWhatsapp{font-size:12px;color:#506782;border-color:#cfdae9}
+#contactModal.tpfContactDesktop.tpfContactReference .cpColumns{display:grid!important;grid-template-columns:310px minmax(0,1fr)!important;height:auto!important;min-height:0!important;overflow:visible!important;gap:18px;padding:0 26px 28px;max-width:none;align-items:start}
+#contactModal.tpfContactDesktop.tpfContactReference .cpLeft{grid-column:1;position:static;height:auto!important;overflow:visible!important;background:transparent;border:0;gap:14px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpData{order:1;padding:20px;background:#fff;border:1px solid #e1e7f0;border-radius:9px;box-shadow:0 2px 5px #17345a04}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar h3{font-size:16px;color:#193050}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar button{font-size:12px;padding:6px 8px}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfContactProtectedHint{font-size:12px;line-height:1.5;color:#61718a}
+#contactModal.tpfContactDesktop.tpfContactReference .cpData>label{font-size:14px;font-weight:400;color:#637087;text-transform:none;letter-spacing:0;margin-top:16px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpData>input,#contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{font-size:15px;line-height:1.5;min-height:32px;padding:4px 0;border:0;border-bottom:1px solid transparent;border-radius:0;margin-top:0;box-sizing:border-box}
+#contactModal.tpfContactDesktop.tpfContactReference.tpf-contact-readonly .cpData>input[readonly],#contactModal.tpfContactDesktop.tpfContactReference.tpf-contact-readonly .cpData>textarea[readonly]{background:transparent!important;color:#15273f!important;-webkit-text-fill-color:#15273f!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{min-height:64px;resize:vertical}
+#contactModal.tpfContactDesktop.tpfContactReference.tpf-contact-editing .cpData>input,#contactModal.tpfContactDesktop.tpfContactReference.tpf-contact-editing .cpData>textarea{padding:8px;border:1px solid #a5bbdb;border-radius:6px;background:#fff}
+#contactModal.tpfContactDesktop.tpfContactReference .contactLabelsBox{padding:12px 0;background:white;border:0;border-top:1px solid #e9edf4;border-radius:0}
+#contactModal.tpfContactDesktop.tpfContactReference .contactLabelsHead label,#contactModal.tpfContactDesktop.tpfContactReference .contactLabelsHead button{font-size:13px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpOwner{order:3;padding:10px 14px;font-size:12px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpDelete{order:4;font-size:13px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefExpiry{order:2;background:white;border:1px solid #e1e7f0;border-radius:9px;padding:20px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefExpiry h3{font-size:16px;color:#203555;margin:0 0 12px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefExpiry p{font-size:13px;line-height:1.6;color:#637087;margin:14px 0 0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight{grid-column:2;position:static;display:block!important;height:auto!important;overflow:visible!important;padding:0!important;min-width:0;background:white;border:1px solid #e1e7f0;border-radius:9px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs{display:flex;align-items:stretch;border-bottom:1px solid #e0e7f1;overflow-x:auto;border-radius:9px 9px 0 0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button{flex:1;white-space:nowrap;font-size:14px;font-weight:500;min-height:53px;padding:12px 14px;background:transparent;border:0;border-bottom:3px solid transparent;color:#4d5c73;cursor:pointer}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button[aria-selected="true"]{color:#145bc8;border-bottom-color:#1664df;font-weight:700}
+#contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel{padding:14px;min-height:470px;box-sizing:border-box}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight [data-cp-ref-pane]{display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="documentos"] #cpDocumentsPending,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="oportunidades"] [data-cp-ref-pane="oportunidades"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="tareas"] [data-cp-ref-pane="tareas"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="historial"] [data-cp-ref-pane="historial"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="oportunidades"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="tareas"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="programados"]{display:block!important}
+#contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel>.cpSideSection{margin:0 0 14px;border:0;padding:0;box-shadow:none;border-radius:0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpSideTitle b{font-size:16px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpSideTitle button{font-size:22px;color:#2464ce;background:#edf4ff;border-radius:6px;width:34px;height:34px;padding:0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpOpportunities,#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks{max-height:280px;overflow-y:auto}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDrive{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px 18px;background:#f1f5fb;border:1px solid #e2e8f3;border-radius:6px;font-size:15px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpPendingBadge{display:inline-block;font-size:12px;color:#715597;background:#eee8f7;border-radius:20px;padding:5px 10px;font-weight:500}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocActions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocActions button{padding:10px 14px;font-size:14px;border:1px solid #b5c7e4;color:#697e9f;background:#f8faff;border-radius:6px;cursor:not-allowed}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocumentEmpty{min-height:310px;box-sizing:border-box;border:1px solid #e1e7f0;border-radius:7px;text-align:center;padding:50px 24px 35px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocumentIcon{color:#296ac8;background:#edf4ff;border-radius:14px;font-size:34px;padding:10px 18px;margin-bottom:14px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocumentEmpty h3{font-size:20px;color:#223c61;margin:0 0 12px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocumentEmpty p{font-size:14px;line-height:1.6;color:#63748c;max-width:450px;margin:3px 0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefDocumentEmpty>span:last-child{font-size:12px;margin-top:20px;color:#806795}
+#contactModal.tpfContactDesktop.tpfContactReference .cpCenter{height:auto!important;overflow:visible!important;min-height:0!important;padding:0 8px!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpTabs{font-size:14px;gap:20px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpEventBody b{font-size:15px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpEventBody div{font-size:14px;line-height:1.5}
+#contactModal.tpfContactDesktop.tpfContactReference .cpEventBody small{font-size:12px}
+#contactModal.tpfContactDesktop.tpfContactReference button:focus-visible,#contactModal.tpfContactDesktop.tpfContactReference a:focus-visible{outline:3px solid #aa91da;outline-offset:2px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpEmpty{font-size:14px;line-height:1.6}
 }
-@media (min-width:1024px) and (max-width:1279px){
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns{grid-template-columns:300px minmax(0,1fr)!important;padding:18px;gap:18px}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpRight{grid-template-columns:minmax(0,1fr)}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection{grid-column:1}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTop{padding:12px 18px}
+@media(min-width:1024px) and (max-width:1400px){
+#contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:280px minmax(0,1fr)!important;padding:0 18px 22px;gap:14px}
+#contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{grid-template-columns:58px minmax(0,1fr);padding:8px 18px 20px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{width:58px;height:58px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpQuick{grid-column:1 / -1;grid-row:3;max-width:none;justify-content:flex-start;margin-top:10px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button{font-size:13px;padding:12px 10px}
 }
 
-
-/* Override the legacy recovery layout only while the desktop profile is open.
-   Task pages retain their existing layout and navigation. */
-@media (min-width:1024px){
-#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))){left:0!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;overflow:auto!important}
-#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden)))>.contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important}
-#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpColumns{height:auto!important;min-height:calc(100vh - 76px);overflow:visible!important}
-#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpLeft,
-#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpCenter,
-#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpRight{height:auto!important;max-height:none!important;overflow:visible!important}
+@media(min-width:1024px){
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight #cpRefPanel>[data-cp-ref-pane][style*="display: none"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight #cpRefPanel>[data-cp-ref-pane][style*="display:none"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight #cpRefPanel>[data-cp-ref-pane].hidden{display:none!important}
 }
