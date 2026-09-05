@@ -98,7 +98,7 @@ $("cpOpportunities").innerHTML=opps.length
      date:a.created_at?new Date(a.created_at).toLocaleString("es-ES"):"",
      title:a.title||a.activity_type||"Actividad",
      text:a.description||"",
-     type:a.activity_type||"activity"
+     type:a.activity_type||"activity",author:a
    })));
  }catch(e){}
 
@@ -142,6 +142,7 @@ $("cpOpportunities").innerHTML=opps.length
        <small>${esc(x.date)}</small>
        <b>${esc(x.title)}</b>
        <div>${esc(x.text)}</div>
+       ${x.author&&window.TPFAuthorship?window.TPFAuthorship.line(x.author,false):""}
      </div>
    </div>`).join("");
 }
@@ -900,3 +901,4 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
+

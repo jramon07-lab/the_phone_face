@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const window={addEventListener(){}};const document={getElementById(){return null},body:{}};
+const context={window,document,MutationObserver:class{observe(){}},Map,Date,console};
+vm.runInNewContext(fs.readFileSync('js/modules/contact-authorship.js','utf8'),context);
+const api=window.TPFAuthorship;
+assert.equal(api.author({assigned_to:'responsible-only'}),'Autor no registrado');
+assert.equal(api.author({created_by:'real-id'}),'Usuario registrado · nombre no disponible');
+assert.equal(api.author({crm_created_by_name:'María',assigned_to:'Ramón'}),'María');
+assert.equal(api.author({crm_actor_kind:'system',created_by:'automation-owner'}),'Sistema · usuario no identificado');
+const html=api.line({crm_created_by_name:'<img src=x onerror=alert(1)>'});
+assert.ok(html.includes('&lt;img'));assert.ok(!html.includes('<img'));assert.ok(html.includes('Sin asignar'));
+assert.equal(api.capability.enabled,false);assert.equal(api.capability.installed,false);
+console.log('PASS: authors are never inferred from responsible/current user; unknown and system origins; escaped names; welcome disabled by default. No network or writes.');
