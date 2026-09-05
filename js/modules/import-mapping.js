@@ -163,8 +163,22 @@
   return `<p>Elige la persona que gestiona el contrato:</p><input type="search" data-holder-search="${i}" aria-label="Buscar persona de contacto por nombre, teléfono o DNI" placeholder="Buscar nombre, teléfono o DNI…" value="${escHtml(d.holderQuery||"")}"><p data-holder-hint="${i}">${holderChoiceHint(choices,d.holderQuery||"")}</p><select data-holder-target="${i}">${holderChoiceOptions(choices,d.target)}</select>${target?`<p><b>Titular actual:</b> ${escHtml(p.old?.same===false?p.old.holder_name:target.data?.TPF_TITULAR?.holder_name||contactName(target.data||{}))} · ${escHtml(p.old?.holder_dni)}</p>`:""}${p.error?`<p>${escHtml(p.error)}</p>`:`<p><b>Titular propuesto:</b> ${escHtml(p.party.holder_name)}<br>DNI: ${escHtml(p.party.holder_dni)||"Sin DNI"}<br>Teléfono: ${escHtml(p.party.holder_phone)||"Sin teléfono"}</p><p>La ficha seguirá a nombre de ${escHtml(contactName(target.data||{}))}, con su teléfono actual. El nombre, DNI y teléfono del Excel se guardan en Titular del contrato. Se juntan observaciones con observaciones y notas con notas, conservando los textos existentes. Las etiquetas y el destinatario de WhatsApp se conservan.</p>${p.textChanges.map(c=>`<div style="margin:10px 0;white-space:pre-wrap"><b>${escHtml(c.key)} · Resultado al juntar:</b><br>${escHtml(c.after)}</div>`).join("")}${!p.textChanges.length?"<p>No hay notas ni observaciones nuevas que añadir.</p>":""}<label><input type="checkbox" data-holder-confirm="${i}" ${d.holderConfirmed?"checked":""}> Confirmo la relación y la sustitución del titular mostrado, si ya había uno.</label>`}`;
  }
 
- function allowedDecision(r,d,contacts=[]){
+
+ function excelParty(contactRow,holderRow){
+  if(!contactRow||!holderRow||contactRow===holderRow||contactRow.blocked||holderRow.blocked)return {error:"Elige otra fila válida del Excel como titular."};
+  if(!canCreateContact(contactRow))return {error:"La persona de contacto coincide con una ficha existente. Revisa esa ficha en lugar de crear otra."};
+  const p=holderProposal(holderRow.data,{data:contactRow.data});if(!p.party)return p;
+  const data={...contactRow.data,TPF_TITULAR:p.party};p.textChanges.forEach(c=>data[c.key]=c.after);
+  return {...p,data};
+ }
+ function excelPartyHtml(r,d,i){
+  const p=excelParty(r,state.review[Number(d.holderRow)]);
+  return `<p><b>Persona de contacto:</b> ${escHtml(contactName(r.data))} · ${escHtml(contactKeys(r.data).phone)}</p><label>Titular del contrato, desde el Excel<select data-excel-holder="${i}"><option value="">Elige la fila del titular</option>${state.review.map((other,j)=>j!==i&&!other.blocked?`<option value="${j}" ${String(j)===d.holderRow?"selected":""}>Fila ${j+2} · ${escHtml(contactName(other.data))} · ${escHtml(contactKeys(other.data).dni)} · ${escHtml(contactKeys(other.data).phone)}</option>`:"").join("")}</select></label>${!d.holderRow||p.error?`<p>${escHtml(p.error||"Selecciona el titular para revisar el resultado.")}</p>`:`<p><b>Titular:</b> ${escHtml(p.party.holder_name)} · DNI: ${escHtml(p.party.holder_dni)||"Sin DNI"} · Teléfono: ${escHtml(p.party.holder_phone)||"Sin teléfono"}</p><p>Se creará una ficha para ${escHtml(contactName(r.data))}. WhatsApp irá a su teléfono de contacto. La fila del titular se usará dentro de esta ficha, sin importarla por separado en este lote. Las fichas que ya existan en el CRM se conservan.</p>${["OBSERVACIONES","NOTAS"].map(key=>`<div style="white-space:pre-wrap;margin:10px 0"><b>${key} · Resultado:</b><br>${escHtml(p.data[key])||"Vacío"}</div>`).join("")}<label><input type="checkbox" data-pair-confirm="${i}" ${d.pairConfirmed?"checked":""}> Confirmo quién es la persona de contacto y quién es el titular.</label>`}`;
+ }
+
+ function allowedDecision(r,d,contacts=[],reviews=[]){
   if(!r||r.classification?.group==="unchanged"||r.blocked||!d||d.action==="skip")return false;
+  if(d.action==="pair")return d.holderRow!==undefined&&d.holderRow!==""&&d.pairConfirmed===true&&d.reviewed===true&&!!excelParty(r,reviews[Number(d.holderRow)]).data;
   if(d.action==="holder")return d.reviewed===true&&d.holderConfirmed===true&&!!holderProposal(r.data,contacts.find(c=>String(c.id)===d.target)).party;
   if(d.action==="create")return d.reviewed===true&&canCreateContact(r);
   if(d.action==="update")return r.matches.some(m=>!identity(r.data,m.data||{}).separate&&String(m.id)===d.target&&contactDiff(r.data,m.data||{}).some(c=>d.fields?.includes(c.key)))&&d.reviewed===true;
@@ -180,13 +194,15 @@
    const target=eligible.find(m=>String(m.id)===d.target),changes=target?contactDiff(r.data,target.data||{}):[];
    return `<tr><td style="vertical-align:top;min-width:180px">${i+2} · <b>${escHtml(r.data["NOMBRE Y APELLIDOS"])||"Sin nombre"}</b><br>${escHtml(contactKeys(r.data).phones.join(" · "))}<br>${escHtml(r.data["DNI / NIF"])}<details><summary>Ver todos los datos</summary>${state.headers.map(h=>`<div><b>${escHtml(h)}:</b> ${escHtml(state.rawRows[i][h])}</div>`).join("")}</details></td>
    <td style="white-space:normal;min-width:250px"><b style="color:#175cd3">${reviewGroups[classification.group]}</b><p>${escHtml(classification.explanation)}</p>${classification.changes?.length?`<p><b>Información que aporta el Excel:</b></p>${classification.changes.map(c=>`<div style="margin:6px 0"><b>${escHtml(c.key)}</b> · ${c.mode==="complete"?"Falta en el CRM":c.mode==="append"?"Añadir conservando el texto actual":"Dato diferente"}<br>${escHtml(c.incoming)}</div>`).join("")}`:""}${state.completed.has(i)?"Ya guardada en este intento":r.issues.length?`<b style="color:#a15c00">Revisar</b><ul>${r.issues.map(x=>`<li>${escHtml(x)}</li>`).join("")}</ul>`:r.matches.length?"Coincidencia en CRM":"Nuevo contacto, sin coincidencias detectadas"}${r.matches.map(m=>`<p><b>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||[m.data?.NOMBRE,m.data?.APELLIDOS].filter(Boolean).join(" ")||m.id)}</b><br>Coincide por ${m.reasons.join(" y ")} · DNI: ${escHtml(m.keys.dni)||"sin DNI"}<br>${escHtml(m.keys.phones.join(" · "))}</p>`).join("")}</td>
-   <td style="white-space:normal;min-width:260px"><select data-decision="${i}" ${state.completed.has(i)?"disabled":""}><option value="skip">Omitir por ahora</option>${canCreateContact(r)?`<option value="create" ${d.action==="create"?"selected":""}>Crear contacto nuevo</option>`:""}${!r.blocked&&eligible.length?`<option value="update" ${d.action==="update"?"selected":""}>Actualizar contacto existente</option>`:""}${!r.blocked?`<option value="holder" ${d.action==="holder"?"selected":""}>Asignar titular y juntar notas</option>`:""}</select>
-   ${d.action==="holder"?holderImportHtml(r,d,i):""}
+   <td style="white-space:normal;min-width:260px"><select data-decision="${i}" ${state.completed.has(i)?"disabled":""}><option value="skip">Omitir por ahora</option>${canCreateContact(r)?`<option value="create" ${d.action==="create"?"selected":""}>Crear contacto nuevo</option><option value="pair" ${d.action==="pair"?"selected":""}>Crear ficha con titular del Excel</option>`:""}${!r.blocked&&eligible.length?`<option value="update" ${d.action==="update"?"selected":""}>Actualizar contacto existente</option>`:""}${!r.blocked?`<option value="holder" ${d.action==="holder"?"selected":""}>Asignar titular y juntar notas</option>`:""}</select>
+   ${d.action==="holder"?holderImportHtml(r,d,i):""}${d.action==="pair"?excelPartyHtml(r,d,i):""}
    ${d.action==="update"?`<p><b>Esta opción cambia datos de la persona de contacto.</b> Si el Excel corresponde al titular del contrato, elige «Asignar titular y juntar notas» para conservar la ficha actual.</p><select data-target="${i}"><option value="">Elige el contacto que has comprobado</option>${eligible.map(m=>`<option value="${escHtml(m.id)}" ${String(m.id)===d.target?"selected":""}>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||m.data?.NOMBRE||m.id)} · ${escHtml(m.keys.dni)}</option>`).join("")}</select><p>Marca solo los campos que quieres cambiar. Los vacíos no borran datos. Las notas y observaciones distintas se añaden; no sustituyen el texto actual. Se conservan las etiquetas, titular y campos adicionales del CRM.</p>${changes.map(c=>`<label style="display:block;margin:8px 0"><input type="checkbox" data-field-row="${i}" data-field="${escHtml(c.key)}" ${d.fields?.includes(c.key)?"checked":""}> <b>${escHtml(c.key)}</b> · ${c.mode==="complete"?"Completar":c.mode==="append"?"Conservar ambos textos":"Cambiar valor"}<br>Actual: ${escHtml(c.before)||"Vacío"}<br>Resultado: ${escHtml(c.after)}</label>`).join("")}`:""}
    ${r.blocked?"<p>Corrige estos datos en el Excel y vuelve a generar la vista previa.</p>":""}${d.action!=="skip"?`<label style="display:block;margin-top:10px"><input type="checkbox" data-reviewed="${i}" ${d.reviewed?"checked":""}> ${d.action==="create"&&r.matches.length?"Confirmo que es otra persona y quiero crear una ficha nueva.":"He comprobado los datos y esta decisión."}</label>`:""}</td></tr>`;
   }).join("")||'<tr><td colspan="3">No quedan filas para revisar. Los duplicados sin novedades se han omitido.</td></tr>';
   const root=q("previewRows"),refresh=()=>{renderContactReview();q("runImport").disabled=!validRows().length;q("importInfo").textContent=`${state.rawRows.length} filas · ${validRows().length} seleccionadas para guardar. El resto se omitirá.`};
   root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{const r=state.review[el.dataset.decision];state.decisions[el.dataset.decision]={action:el.value,target:el.value==="update"?String(r.classification.target?.id||""):"",fields:[],reviewed:false};refresh()});
+  root.querySelectorAll("[data-excel-holder]").forEach(el=>el.onchange=()=>{const d=state.decisions[el.dataset.excelHolder];Object.assign(d,{holderRow:el.value,pairConfirmed:false,reviewed:false});refresh()});
+  root.querySelectorAll("[data-pair-confirm]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.pairConfirm],{pairConfirmed:el.checked,reviewed:false});refresh()});
   root.querySelectorAll("[data-holder-search]").forEach(el=>el.oninput=()=>{
    const i=Number(el.dataset.holderSearch),d=state.decisions[i];d.holderQuery=el.value;
    const choices=holderChoices(state.contacts||[],state.review[i].matches,el.value,d.target);
@@ -219,7 +235,7 @@
   q("importMapGrid").querySelectorAll("select").forEach(s=>s.onchange=()=>{state.mapping[s.dataset.header]=s.value;state.decisions={};analyse().catch(e=>q("importErrors").textContent=e.message)});
   q("importInfo").textContent=`${rawRows.length} filas en “${target}”. Revisa la asignación antes de confirmar.`;await analyse();
  }
- function validRows(){if(state.type==="contact")return state.rawRows.map((raw,i)=>({raw,i,decision:state.decisions[i]})).filter(x=>!state.completed.has(x.i)&&allowedDecision(state.review[x.i],x.decision,state.contacts));return state.rawRows.map((raw,i)=>({raw,i})).filter(x=>!state.duplicateRows.has(x.i)&&!state.errors.some(e=>e.startsWith(`Fila ${x.i+2}:`)))}
+ function validRows(){if(state.type==="contact")return state.rawRows.map((raw,i)=>({raw,i,decision:state.decisions[i]})).filter(x=>!state.completed.has(x.i)&&allowedDecision(state.review[x.i],x.decision,state.contacts,state.review));return state.rawRows.map((raw,i)=>({raw,i})).filter(x=>!state.duplicateRows.has(x.i)&&!state.errors.some(e=>e.startsWith(`Fila ${x.i+2}:`)))}
  async function ensureContactFields(names){
   const {data,error}=await sb.rpc("crm_list_custom_fields");if(error)throw error;let fields=data||[];
   for(const name of names)if(!fields.some(f=>norm(f.name)===norm(name))){const {error:e}=await sb.rpc("crm_create_custom_field",{p_name:name,p_field_type:"text",p_options:[]});if(e)throw e}
@@ -232,9 +248,15 @@
   return new Map(rows.map(label=>[norm(label.name),label]));
  }
  async function importContacts(rows){
+  const reserved=new Set();for(const x of rows.filter(x=>x.decision.action==="pair")){
+   const j=Number(x.decision.holderRow);
+   if(reserved.has(j)||rows.some(other=>other.i===j))throw new Error("La fila del titular también está seleccionada para otra importación. Déjala en Omitir por ahora y úsala en una sola ficha por lote.");
+   if(state.completed.has(j))throw new Error("El titular ya se ha procesado. Genera una nueva vista previa.");
+   reserved.add(j);
+  }
   const existingLabels=new Set((state.crmLabels||[]).map(l=>norm(l.name)));
-  state.newLabels=uniqueLabels(rows.filter(r=>r.decision.action==="create").flatMap(r=>splitLabels(readMapped(r.raw,"labels")))).filter(n=>!existingLabels.has(norm(n)));
-  const creating=rows.some(r=>r.decision.action==="create"),customNames=Object.entries(state.mapping).filter(([,v])=>v==="custom").map(([h])=>h),fields=creating?await ensureContactFields(customNames):new Map(),labelMap=creating?await ensureLabels():new Map();let done=0;
+  state.newLabels=uniqueLabels(rows.filter(r=>["create","pair"].includes(r.decision.action)).flatMap(r=>splitLabels(readMapped(r.raw,"labels")))).filter(n=>!existingLabels.has(norm(n)));
+  const creating=rows.some(r=>["create","pair"].includes(r.decision.action)),customNames=Object.entries(state.mapping).filter(([,v])=>v==="custom").map(([h])=>h),fields=creating?await ensureContactFields(customNames):new Map(),labelMap=creating?await ensureLabels():new Map();let done=0;
   for(const {raw,i,decision} of rows){
    if(decision?.action==="holder"){
     const target=state.contacts.find(c=>String(c.id)===decision.target),proposal=holderProposal(contactData(raw),target);
@@ -252,7 +274,7 @@
     if(saved.error)throw saved.error;if(saved.data?.length!==1)throw new Error(`Fila ${i+2}: el contacto ha cambiado. Genera otra vista previa.`);
     state.completed.add(i);done++;progress(done,rows.length);continue;
    }
-   const payload={source_sheet:"BASE DE DATOS",source_row:i+2,data:contactData(raw)};const {data,error}=await sb.from("records").insert(payload).select("id").single();if(error)throw error;state.completed.add(i);
+   const payload={source_sheet:"BASE DE DATOS",source_row:i+2,data:decision.action==="pair"?excelParty(state.review[i],state.review[Number(decision.holderRow)]).data:contactData(raw)};if(!payload.data)throw new Error("Revisa la relación de contacto y titular.");const {data,error}=await sb.from("records").insert(payload).select("id").single();if(error)throw error;state.completed.add(i);if(decision.action==="pair")state.completed.add(Number(decision.holderRow));
    const values=Object.entries(extraValues(raw)).map(([name,value])=>({field_id:fields.get(norm(name))?.id,value:clean(value)})).filter(x=>x.field_id&&x.value!=="");if(values.length){const saved=await sb.rpc("crm_set_contact_custom_values",{p_contact_id:String(data.id),p_values:values});if(saved.error)throw saved.error}
    const labelIds=splitLabels(readMapped(raw,"labels")).map(name=>labelMap.get(norm(name))?.id).filter(Boolean);if(labelIds.length){const saved=await sb.rpc("crm_set_contact_labels",{p_contact_id:String(data.id),p_label_ids:[...new Set(labelIds)]});if(saved.error)throw saved.error}done++;progress(done,rows.length)}
   if(typeof crmLoadCustomFields==="function")await crmLoadCustomFields();
@@ -286,6 +308,6 @@
  }
  function bind(){ensureUi();legacyPreview=q("previewImport").onclick;legacyRun=q("runImport").onclick;q("previewImport").onclick=e=>isGuided()?preview().catch(err=>{q("importInfo").textContent="No se pudo leer el Excel: "+err.message}):legacyPreview?.call(q("previewImport"),e);q("runImport").onclick=e=>isGuided()?run():legacyRun?.call(q("runImport"),e);q("destination").addEventListener("change",()=>{state=null;q("importMapping").classList.add("hidden");q("runImport").disabled=true;q("previewHead").innerHTML="";q("previewRows").innerHTML=""})}
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
- window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact,holderProposal,holderChoices};
+ window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact,holderProposal,holderChoices,excelParty};
 })();
 
