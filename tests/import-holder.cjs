@@ -1,0 +1,14 @@
+const fs=require('node:fs'),vm=require('node:vm'),a=require('node:assert/strict');
+const ctx={window:{},document:{readyState:'loading',addEventListener(){},getElementById(){return null},createElement(){return {}},head:{appendChild(){}}}};vm.createContext(ctx);
+vm.runInContext(fs.readFileSync('js/modules/contact-party.js','utf8'),ctx);vm.runInContext(fs.readFileSync('js/modules/import-mapping.js','utf8'),ctx);
+const h=ctx.window.TPFImportMapping;
+const incoming={NOMBRE:'Ana',APELLIDOS:'Ejemplo','NOMBRE Y APELLIDOS':'Ana Ejemplo','DNI / NIF':'12345678Z','TELÉFONO':'600111222',NOTAS:'No copiar'};
+const target={id:'a',data:{NOMBRE:'Pedro','TELÉFONO':'600222333',NOTAS:'Conservar',TPF_TITULAR:{same:true,recipient:'contact'}}};
+const before=JSON.stringify(target);const p=h.holderProposal(incoming,target);a.equal(p.party.holder_name,'Ana Ejemplo');a.equal(p.party.recipient,'contact');a.equal(p.party.holder_dni,'12345678Z');a.equal(p.party.same,false);a.equal(JSON.stringify(target),before);a.equal(p.party.NOTAS,undefined);
+a(h.holderProposal(incoming,{...target,data:{...target.data,TPF_TITULAR:{same:false,recipient:'holder'}}}).error);
+a(h.holderProposal(incoming,undefined).error);
+const row=h.reviewContacts([incoming],[target])[0];
+a.equal(h.allowedDecision(row,{action:'holder',target:'a',reviewed:true,holderConfirmed:true},[target]),true);
+a.equal(h.allowedDecision(row,{action:'holder',target:'a',reviewed:true},[target]),false);
+a.equal(h.allowedDecision(row,{action:'holder',target:'wrong',reviewed:true,holderConfirmed:true},[target]),false);
+console.log('Holder preview tests passed: existing party validation, explicit target/confirmation, preservation and recipient guard.');

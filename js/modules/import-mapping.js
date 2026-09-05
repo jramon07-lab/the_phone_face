@@ -56,6 +56,7 @@
   if(!state)return;const errors=[];let duplicates=0;state.duplicateRows=new Set();
   if(state.type==="contact"){
    const existing=await allContacts();
+   if(state.contacts&&JSON.stringify(state.contacts)!==JSON.stringify(existing))state.decisions={};state.contacts=existing;
    const nextReview=reviewContacts(state.rawRows.map(contactData),existing,state.rawRows.map(rowDnis));
    if(state.review&&JSON.stringify(state.review)!==JSON.stringify(nextReview)){state.decisions={};q("importInfo").textContent="Han cambiado los datos o coincidencias. Revisa de nuevo las decisiones."}
    state.review=nextReview;
@@ -128,8 +129,23 @@
   });
  }
  function canCreateContact(r){return !!r&&!r.blocked&&!r.matches.some(m=>m.reasons.includes("DNI")||identity(r.data,m.data||{}).confirmed)}
- function allowedDecision(r,d){
+
+ function holderProposal(incoming,target){
+  if(!target||!window.TPFContactParty)return {error:"Elige una ficha de contacto."};
+  if(target.data?.TPF_TITULAR?.recipient==="holder")return {error:"Esta ficha envía WhatsApp al titular. Revisa el destinatario en la ficha antes de asignar otro titular desde el Excel."};
+  if(identity(incoming,target.data||{}).confirmed)return {error:"Esta fila corresponde a la propia persona de contacto."};
+  const old=target.data?.TPF_TITULAR||{},sameOld=norm(old.holder_name)===norm(contactName(incoming))&&(!old.holder_dni||!contactKeys(incoming).dni||dni(old.holder_dni)===contactKeys(incoming).dni);
+  const candidate={same:false,holder_first_name:clean(incoming.NOMBRE)||contactName(incoming),holder_last_name:clean(incoming.APELLIDOS),holder_dni:contactKeys(incoming).dni||(sameOld?old.holder_dni:"")||"",holder_phone:clean(incoming["TELÉFONO"])||(sameOld?old.holder_phone:"")||"",recipient:"contact"};
+  try{return {party:window.TPFContactParty.validate(candidate),old}}catch(e){return {error:e.message}}
+ }
+ function holderImportHtml(r,d,i){
+  const contacts=state.contacts||[],target=contacts.find(c=>String(c.id)===d.target),p=holderProposal(r.data,target);
+  return `<p>Elige la persona que gestiona el contrato:</p><select data-holder-target="${i}"><option value="">Seleccionar contacto existente</option>${contacts.map(c=>`<option value="${escHtml(c.id)}" ${String(c.id)===d.target?"selected":""}>${escHtml(contactName(c.data||{}))} · ${escHtml(contactKeys(c.data||{}).phone)} · ${escHtml(contactKeys(c.data||{}).dni)}</option>`).join("")}</select>${target?`<p><b>Titular actual:</b> ${escHtml(p.old?.same===false?p.old.holder_name:target.data?.TPF_TITULAR?.holder_name||contactName(target.data||{}))} · ${escHtml(p.old?.holder_dni)}</p>`:""}${p.error?`<p>${escHtml(p.error)}</p>`:`<p><b>Titular propuesto:</b> ${escHtml(p.party.holder_name)}<br>DNI: ${escHtml(p.party.holder_dni)||"Sin DNI"}<br>Teléfono: ${escHtml(p.party.holder_phone)||"Sin teléfono"}</p><p>Se guardan nombre, apellidos, DNI y teléfono del titular. Notas, observaciones y etiquetas de esta fila no se copian a la persona de contacto. Se conserva su destinatario de WhatsApp.</p><label><input type="checkbox" data-holder-confirm="${i}" ${d.holderConfirmed?"checked":""}> Confirmo la relación y la sustitución del titular mostrado, si ya había uno.</label>`}`;
+ }
+
+ function allowedDecision(r,d,contacts=[]){
   if(!r||r.classification?.group==="unchanged"||r.blocked||!d||d.action==="skip")return false;
+  if(d.action==="holder")return d.reviewed===true&&d.holderConfirmed===true&&!!holderProposal(r.data,contacts.find(c=>String(c.id)===d.target)).party;
   if(d.action==="create")return d.reviewed===true&&canCreateContact(r);
   if(d.action==="update")return r.matches.some(m=>!identity(r.data,m.data||{}).separate&&String(m.id)===d.target&&contactDiff(r.data,m.data||{}).some(c=>d.fields?.includes(c.key)))&&d.reviewed===true;
   return false;
@@ -144,12 +160,15 @@
    const target=eligible.find(m=>String(m.id)===d.target),changes=target?contactDiff(r.data,target.data||{}):[];
    return `<tr><td style="vertical-align:top;min-width:180px">${i+2} · <b>${escHtml(r.data["NOMBRE Y APELLIDOS"])||"Sin nombre"}</b><br>${escHtml(contactKeys(r.data).phones.join(" · "))}<br>${escHtml(r.data["DNI / NIF"])}<details><summary>Ver todos los datos</summary>${state.headers.map(h=>`<div><b>${escHtml(h)}:</b> ${escHtml(state.rawRows[i][h])}</div>`).join("")}</details></td>
    <td style="white-space:normal;min-width:250px"><b style="color:#175cd3">${reviewGroups[classification.group]}</b><p>${escHtml(classification.explanation)}</p>${classification.changes?.length?`<p><b>Información que aporta el Excel:</b></p>${classification.changes.map(c=>`<div style="margin:6px 0"><b>${escHtml(c.key)}</b> · ${c.mode==="complete"?"Falta en el CRM":c.mode==="append"?"Añadir conservando el texto actual":"Dato diferente"}<br>${escHtml(c.incoming)}</div>`).join("")}`:""}${state.completed.has(i)?"Ya guardada en este intento":r.issues.length?`<b style="color:#a15c00">Revisar</b><ul>${r.issues.map(x=>`<li>${escHtml(x)}</li>`).join("")}</ul>`:r.matches.length?"Coincidencia en CRM":"Nuevo contacto, sin coincidencias detectadas"}${r.matches.map(m=>`<p><b>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||[m.data?.NOMBRE,m.data?.APELLIDOS].filter(Boolean).join(" ")||m.id)}</b><br>Coincide por ${m.reasons.join(" y ")} · DNI: ${escHtml(m.keys.dni)||"sin DNI"}<br>${escHtml(m.keys.phones.join(" · "))}</p>`).join("")}</td>
-   <td style="white-space:normal;min-width:260px"><select data-decision="${i}" ${state.completed.has(i)?"disabled":""}><option value="skip">Omitir por ahora</option>${canCreateContact(r)?`<option value="create" ${d.action==="create"?"selected":""}>Crear contacto nuevo</option>`:""}${!r.blocked&&eligible.length?`<option value="update" ${d.action==="update"?"selected":""}>Actualizar contacto existente</option>`:""}</select>
+   <td style="white-space:normal;min-width:260px"><select data-decision="${i}" ${state.completed.has(i)?"disabled":""}><option value="skip">Omitir por ahora</option>${canCreateContact(r)?`<option value="create" ${d.action==="create"?"selected":""}>Crear contacto nuevo</option>`:""}${!r.blocked&&eligible.length?`<option value="update" ${d.action==="update"?"selected":""}>Actualizar contacto existente</option>`:""}${!r.blocked?`<option value="holder" ${d.action==="holder"?"selected":""}>Asignar como titular de un contacto</option>`:""}</select>
+   ${d.action==="holder"?holderImportHtml(r,d,i):""}
    ${d.action==="update"?`<select data-target="${i}"><option value="">Elige el contacto que has comprobado</option>${eligible.map(m=>`<option value="${escHtml(m.id)}" ${String(m.id)===d.target?"selected":""}>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||m.data?.NOMBRE||m.id)} · ${escHtml(m.keys.dni)}</option>`).join("")}</select><p>Marca solo los campos que quieres cambiar. Los vacíos no borran datos. Las notas y observaciones distintas se añaden; no sustituyen el texto actual. Se conservan las etiquetas, titular y campos adicionales del CRM.</p>${changes.map(c=>`<label style="display:block;margin:8px 0"><input type="checkbox" data-field-row="${i}" data-field="${escHtml(c.key)}" ${d.fields?.includes(c.key)?"checked":""}> <b>${escHtml(c.key)}</b> · ${c.mode==="complete"?"Completar":c.mode==="append"?"Conservar ambos textos":"Cambiar valor"}<br>Actual: ${escHtml(c.before)||"Vacío"}<br>Resultado: ${escHtml(c.after)}</label>`).join("")}`:""}
    ${r.blocked?"<p>Corrige estos datos en el Excel y vuelve a generar la vista previa.</p>":""}${d.action!=="skip"?`<label style="display:block;margin-top:10px"><input type="checkbox" data-reviewed="${i}" ${d.reviewed?"checked":""}> ${d.action==="create"&&r.matches.length?"Confirmo que es otra persona y quiero crear una ficha nueva.":"He comprobado los datos y esta decisión."}</label>`:""}</td></tr>`;
   }).join("")||'<tr><td colspan="3">No quedan filas para revisar. Los duplicados sin novedades se han omitido.</td></tr>';
   const root=q("previewRows"),refresh=()=>{renderContactReview();q("runImport").disabled=!validRows().length;q("importInfo").textContent=`${state.rawRows.length} filas · ${validRows().length} seleccionadas para guardar. El resto se omitirá.`};
   root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{const r=state.review[el.dataset.decision];state.decisions[el.dataset.decision]={action:el.value,target:el.value==="update"?String(r.classification.target?.id||""):"",fields:[],reviewed:false};refresh()});
+  root.querySelectorAll("[data-holder-target]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.holderTarget],{target:el.value,holderConfirmed:false,reviewed:false});refresh()});
+  root.querySelectorAll("[data-holder-confirm]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.holderConfirm],{holderConfirmed:el.checked,reviewed:false});refresh()});
   root.querySelectorAll("[data-target]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.target],{target:el.value,fields:[],reviewed:false});refresh()});
   root.querySelectorAll("[data-field-row]").forEach(el=>el.onchange=()=>{const d=state.decisions[el.dataset.fieldRow];d.fields=d.fields.filter(k=>k!==el.dataset.field);if(el.checked)d.fields.push(el.dataset.field);d.reviewed=false;refresh()});
   root.querySelectorAll("[data-reviewed]").forEach(el=>el.onchange=()=>{state.decisions[el.dataset.reviewed].reviewed=el.checked;refresh()});
@@ -174,7 +193,7 @@
   q("importMapGrid").querySelectorAll("select").forEach(s=>s.onchange=()=>{state.mapping[s.dataset.header]=s.value;state.decisions={};analyse().catch(e=>q("importErrors").textContent=e.message)});
   q("importInfo").textContent=`${rawRows.length} filas en “${target}”. Revisa la asignación antes de confirmar.`;await analyse();
  }
- function validRows(){if(state.type==="contact")return state.rawRows.map((raw,i)=>({raw,i,decision:state.decisions[i]})).filter(x=>!state.completed.has(x.i)&&allowedDecision(state.review[x.i],x.decision));return state.rawRows.map((raw,i)=>({raw,i})).filter(x=>!state.duplicateRows.has(x.i)&&!state.errors.some(e=>e.startsWith(`Fila ${x.i+2}:`)))}
+ function validRows(){if(state.type==="contact")return state.rawRows.map((raw,i)=>({raw,i,decision:state.decisions[i]})).filter(x=>!state.completed.has(x.i)&&allowedDecision(state.review[x.i],x.decision,state.contacts));return state.rawRows.map((raw,i)=>({raw,i})).filter(x=>!state.duplicateRows.has(x.i)&&!state.errors.some(e=>e.startsWith(`Fila ${x.i+2}:`)))}
  async function ensureContactFields(names){
   const {data,error}=await sb.rpc("crm_list_custom_fields");if(error)throw error;let fields=data||[];
   for(const name of names)if(!fields.some(f=>norm(f.name)===norm(name))){const {error:e}=await sb.rpc("crm_create_custom_field",{p_name:name,p_field_type:"text",p_options:[]});if(e)throw e}
@@ -191,6 +210,14 @@
   state.newLabels=uniqueLabels(rows.filter(r=>r.decision.action==="create").flatMap(r=>splitLabels(readMapped(r.raw,"labels")))).filter(n=>!existingLabels.has(norm(n)));
   const creating=rows.some(r=>r.decision.action==="create"),customNames=Object.entries(state.mapping).filter(([,v])=>v==="custom").map(([h])=>h),fields=creating?await ensureContactFields(customNames):new Map(),labelMap=creating?await ensureLabels():new Map();let done=0;
   for(const {raw,i,decision} of rows){
+   if(decision?.action==="holder"){
+    const target=state.contacts.find(c=>String(c.id)===decision.target),proposal=holderProposal(contactData(raw),target);
+    if(!proposal.party||!decision.holderConfirmed)throw new Error(proposal.error||"Confirma el titular.");
+    const next={...target.data,TPF_TITULAR:proposal.party};
+    const saved=await sb.from("records").update({data:next}).eq("id",target.id).eq("data",JSON.stringify(target.data)).select("id");
+    if(saved.error)throw saved.error;if(saved.data?.length!==1)throw new Error("La ficha ha cambiado. Genera una nueva vista previa antes de continuar.");
+    state.completed.add(i);done++;progress(done,rows.length);continue;
+   }
    if(decision?.action==="update"){
     const target=state.review[i].matches.find(r=>String(r.id)===decision.target);
     const changes=contactDiff(contactData(raw),target.data||{}).filter(c=>decision.fields?.includes(c.key));
@@ -233,6 +260,6 @@
  }
  function bind(){ensureUi();legacyPreview=q("previewImport").onclick;legacyRun=q("runImport").onclick;q("previewImport").onclick=e=>isGuided()?preview().catch(err=>{q("importInfo").textContent="No se pudo leer el Excel: "+err.message}):legacyPreview?.call(q("previewImport"),e);q("runImport").onclick=e=>isGuided()?run():legacyRun?.call(q("runImport"),e);q("destination").addEventListener("change",()=>{state=null;q("importMapping").classList.add("hidden");q("runImport").disabled=true;q("previewHead").innerHTML="";q("previewRows").innerHTML=""})}
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
- window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact};
+ window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact,holderProposal};
 })();
 
