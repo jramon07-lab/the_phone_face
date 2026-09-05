@@ -45,6 +45,20 @@
     const parts=clean(value).replace(/\s+/g,' ').split(' ').filter(Boolean);
     return {first:parts.shift()||'',last:parts.join(' ')};
   }
+  function contactPhoneNumber(value){
+    let number=String(value||'').trim().replace(/[^+0-9]/g,'');
+    if(number.startsWith('00'))number='+'+number.slice(2);
+    let raw=number.replace(/\D/g,'');
+    if(!number.startsWith('+')&&raw.length===9)raw='34'+raw;
+    return raw.length>=7&&raw.length<=15?raw:'';
+  }
+  function contactPhones(contact){
+    const values=[contact?.phone],data=contact?.data||{};
+    Object.entries(data).forEach(([key,value])=>{const name=key.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();if(/^(TELEFONOS?|PHONE|MOVIL)(?:[ _]?[0-9]+)?$/.test(name))values.push(value);});
+    const seen=new Set(),result=[];
+    values.flatMap(value=>Array.isArray(value)?value:String(value||'').split(/[;,\n|/]+/)).forEach(value=>{const number=contactPhoneNumber(value);if(number&&!seen.has(number)){seen.add(number);result.push({label:clean(value),number});}});
+    return result;
+  }
   function mapContact(row){
     const data=row?.data||{};
     let first=clean(field(data,'NOMBRE'));
@@ -143,7 +157,7 @@
     const term=foldText(query);if(!term)return true;
     const contact=opportunityContact(opp,context.contacts||opportunityContactIndex());
     const stage=context.stages?.get(String(opp?.stage_id));
-    const hay=foldText([opp?.title,opp?.client_name,opp?.phone,opp?.notes,stage?.name,contact?.fullName,contact?.dni,contact?.phone,contact?.email].filter(Boolean).join(' '));
+    const hay=foldText([opp?.title,opp?.client_name,opp?.phone,opp?.notes,stage?.name,contact?.fullName,contact?.dni,...contactPhones(contact).map(p=>p.label),contact?.email].filter(Boolean).join(' '));
     const termDigits=digits(query),hayDigits=digits(hay);
     return hay.includes(term)||(termDigits.length>=3&&hayDigits.includes(termDigits));
   }
@@ -215,6 +229,7 @@
     finally{button.disabled=false;button.textContent='Entrar';}
   }
   async function signOut(){
+    contactHistory={id:'',rows:[],loading:false,error:'',limit:50};
     taskDetail={id:'',row:null,loading:false,error:''};
     profileLabels={contactId:'',loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
     stopMobileWaRefresh();stopGuidedCamera();mobileTemplateRequestId+=1;mobileLabelRequestId+=1;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=null;state.scanUrl='';state.draft=null;
@@ -311,7 +326,8 @@
       switch(current.parts[0]){
         case 'home':view.innerHTML=renderHome();break;
         case 'contacts':view.innerHTML=renderContacts();bindContactFilters();break;
-        case 'contact':view.innerHTML=renderContact(current.parts[1]);break;
+        case 'contact':view.innerHTML=renderContact(current.parts[1]);if(state.profileTab==='history')ensureContactHistory(current.parts[1]);break;
+        case 'contact-text':view.innerHTML=renderContactText(current.parts[1],current.parts[2]);break;
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
         case 'contact-labels':view.innerHTML=renderProfileLabels(current.parts[1]);ensureProfileLabels(current.parts[1]);break;
         case 'opportunities':view.innerHTML=renderOpportunities();bindOpportunityFilters();break;
@@ -413,7 +429,7 @@
   function contactMatchesSearch(contact,query=''){
     const term=foldText(query);if(!term)return true;
     const termDigits=digits(query),text=foldText([contact?.fullName,contact?.dni,contact?.phone,contact?.email].filter(Boolean).join(' '));
-    const numericMatch=termDigits.length>=3&&[contact?.dni,contact?.phone].some(value=>digits(value).includes(termDigits));
+    const numericMatch=termDigits.length>=3&&[contact?.dni,...contactPhones(contact).map(p=>p.number)].some(value=>digits(value).includes(termDigits));
     return text.includes(term)||numericMatch;
   }
   function contactMatchesFilter(contact,filter='all',activity=new Map()){
@@ -590,16 +606,74 @@
     const opps=relatedOpportunities(id),tasks=relatedTasks(id);const tab=state.profileTab;
     let body='';
     if(tab==='summary')body=`<div class="m-info-card">
-      ${infoRow('DNI / NIF',contact.dni)}${infoRow('Teléfono',contact.phone)}${infoRow('Correo electrónico',contact.email)}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Observaciones',contact.observations)}${infoRow('Notas',contact.notes)}
+      ${infoRow('Teléfonos',contactPhones(contact).map(p=>p.label).join('\n'))}${infoRow('DNI / NIF',contact.dni)}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
     </div>`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
+    if(tab==='history')body=renderContactHistory(id);
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
     return `<div class="m-page">${pageHead('Ficha del contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar">✎</button>`:'')}
       <div class="m-profile-hero"><div class="m-avatar">${esc(initials(contact))}</div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.dni||'Sin DNI')}</p><p>${esc(contact.phone||'Sin teléfono')}</p></div>
-      <div class="m-profile-actions">${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-primary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Nueva oportunidad</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" type="button">Gestionar etiquetas</button>`:''}</div>
-      <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
+      ${contactPhoneActions(contact)}<div class="m-profile-actions">${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-primary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Nueva oportunidad</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" type="button">Gestionar etiquetas</button>`:''}</div>
+      <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
     </div>`;
+  }
+  let contactHistory={id:'',rows:[],loading:false,error:'',limit:50},contactTextSaving=false;
+  function contactPhoneActions(contact){
+    const phones=contactPhones(contact);if(!phones.length)return '';
+    return `<div class="m-contact-phone-actions">${phones.length>1?`<label class="m-field"><span>Elegir teléfono</span><select id="mobileContactPhone" class="m-select" data-contact-phone="${esc(contact.id)}">${phones.map(p=>`<option value="${p.number}">${esc(p.label)}</option>`).join('')}</select></label>`:''}<div class="m-inline-actions"><a id="mobileContactCall" class="m-secondary" href="tel:+${phones[0].number}">☎ Llamar</a>${has('can_use_whatsapp')?`<button class="m-secondary" data-action="contact-whatsapp" data-id="${esc(contact.id)}">WhatsApp</button>`:''}</div></div>`;
+  }
+  function selectedContactPhone(id){const contact=state.contacts.find(c=>String(c.id)===String(id));const phones=contactPhones(contact);return phones.find(p=>p.number===byId('mobileContactPhone')?.value)||phones[0];}
+  function openContactWhatsApp(id){if(!has('can_use_whatsapp')||!has('can_view_database'))return;const phone=selectedContactPhone(id);if(phone)go(mobileWaChatPath(phone.number+'@c.us'));}
+  function contactTextCard(contact,kind){const label=kind==='notes'?'Notas':'Observaciones';return `<div class="m-info-row"><div class="m-contact-text-head"><span>${label}</span>${has('can_edit_records')?`<button class="m-ghost" data-action="route" data-route="contact-text/${esc(contact.id)}/${kind}">Editar ${label.toLowerCase()}</button>`:''}</div><b>${esc(contact[kind]||'—')}</b></div>`;}
+  function renderContactText(id,kind){
+    const contact=state.contacts.find(c=>String(c.id)===String(id));if(!contact||!has('can_edit_records')||!['notes','observations'].includes(kind))return empty('No disponible','No tienes permiso para editar este contacto.');
+    const label=kind==='notes'?'Notas':'Observaciones';
+    return `<div class="m-page">${pageHead('Editar '+label.toLowerCase(),'contact/'+id)}<p class="m-subtitle">${esc(contact.fullName)}</p><label class="m-field"><span>${label}</span><textarea id="mobileContactText" class="m-textarea m-contact-text-editor">${esc(contact[kind]||'')}</textarea></label><button class="m-primary m-library-full" data-action="contact-text-save" data-id="${esc(id)}" data-kind="${kind}">Guardar ${label.toLowerCase()}</button><p id="mobileContactTextMsg" class="m-form-msg"></p></div>`;
+  }
+  async function saveContactText(id,kind,button){
+    const contact=state.contacts.find(c=>String(c.id)===String(id)),msg=byId('mobileContactTextMsg');
+    if(!contact||!has('can_edit_records')||!['notes','observations'].includes(kind)||contactTextSaving)return;
+    const value=byId('mobileContactText')?.value??'',previous=contact[kind]||'';
+    if(previous&& !value.trim()&&!confirm('¿Vaciar '+(kind==='notes'?'las notas':'las observaciones')+' de este contacto?'))return;
+    contactTextSaving=true;if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
+    try{
+      const latest=await client.from('records').select('id,data,source_sheet,created_at,updated_at').eq('id',id).eq('source_sheet',CONTACT_SOURCE).single();if(latest.error)throw latest.error;
+      if(mapContact(latest.data)[kind]!==previous)throw new Error('Este texto ha cambiado en el CRM. Vuelve a la ficha, actualiza y revisa antes de guardar.');
+      const data={...latest.data.data};const aliases=kind==='notes'?['NOTAS','NOTES']:['OBSERVACIONES','OBSERVACION','Observaciones'];
+      aliases.forEach((key,index)=>{if(index===0||Object.hasOwn(data,key))data[key]=value;});
+      let query=client.from('records').update({data}).eq('id',id).eq('source_sheet',CONTACT_SOURCE);
+      query=latest.data.updated_at?query.eq('updated_at',latest.data.updated_at):query.is('updated_at',null);
+      const saved=await query.select('id,data,source_sheet,created_at,updated_at').single();if(saved.error)throw saved.error;
+      const index=state.contacts.findIndex(c=>String(c.id)===String(id));if(index>=0)state.contacts[index]=mapContact(saved.data);
+      let warning=false;try{const log=await client.from('contact_activity').insert({contact_id:id,activity_type:kind==='notes'?'note':'update',title:kind==='notes'?'Notas actualizadas':'Observaciones actualizadas',description:value.trim()||'Texto eliminado',created_by:state.user.id});if(log.error)warning=true;}catch(_){warning=true;}
+      contactHistory={id:'',rows:[],loading:false,error:'',limit:50};
+      if(route().parts[0]==='contact-text'&&route().parts[1]===String(id)){state.profileTab='summary';go('contact/'+id,true);}
+      toast(warning?'Texto guardado. No se pudo añadir al historial.':'Texto guardado en el CRM.',warning?'error':'success');
+    }catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar.';}
+    finally{contactTextSaving=false;if(button)button.disabled=false;}
+  }
+  function ensureContactHistory(id){if(contactHistory.id!==String(id))loadContactHistory(id);}
+  async function loadContactHistory(id,limit=50){
+    if(!has('can_view_database')||!state.contacts.some(c=>String(c.id)===String(id)))return;
+    const model={id:String(id),rows:[],loading:true,error:'',limit};contactHistory=model;
+    try{
+      const results=await Promise.all([
+        client.from('contact_activity').select('id,activity_type,title,description,created_at').eq('contact_id',id).order('created_at',{ascending:false}).limit(limit),
+        (has('can_view_agenda')||has('can_manage_agenda'))?client.from('agenda_items').select('id,title,description,status,created_at,updated_at').eq('related_record_id',id).or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('updated_at',{ascending:false}).limit(limit):Promise.resolve({data:[]}),
+        has('can_view_sales')?client.from('sales_opportunities').select('id,title,status,stage_id,created_at,updated_at').eq('record_id',id).order('updated_at',{ascending:false}).limit(limit):Promise.resolve({data:[]})
+      ]);
+      const failed=results.find(r=>r.error);if(failed)throw failed.error;
+      const [activity,tasks,opps]=results;
+      model.more=results.some(r=>(r.data||[]).length===limit);
+      model.rows=[...(activity.data||[]).map(a=>({at:a.created_at,title:a.title||'Actividad',text:a.description||'',path:''})),...(tasks.data||[]).map(t=>({at:t.updated_at||t.created_at,title:(t.status==='completed'?'Tarea completada · ':'Tarea · ')+(t.title||''),text:t.description||'',path:'task/'+t.id})),...(opps.data||[]).map(o=>({at:o.updated_at||o.created_at,title:(['won','lost'].includes(o.status)?'Oportunidad cerrada · ':'Oportunidad · ')+(o.title||''),text:state.board.stages.find(s=>String(s.id)===String(o.stage_id))?.name||'',path:'opportunity/'+o.id}))].sort((a,b)=>(Date.parse(b.at)||0)-(Date.parse(a.at)||0));
+    }catch(error){model.error=error?.message||'No se pudo cargar el historial.';}
+    finally{model.loading=false;if(contactHistory===model&&route().parts[0]==='contact'&&route().parts[1]===String(id)&&state.profileTab==='history')render();}
+  }
+  function renderContactHistory(id){
+    const model=contactHistory;if(model.id!==String(id)||model.loading)return skeleton();
+    if(model.error)return `${empty('No se pudo cargar',model.error)}<button class="m-secondary" data-action="contact-history-reload" data-id="${esc(id)}">Reintentar</button>`;
+    return `<div class="m-contact-history"><button class="m-secondary" data-action="contact-history-reload" data-id="${esc(id)}">Actualizar historial</button><p class="m-subtitle">Actividad registrada y última actualización de tareas y oportunidades.</p>${model.rows.length?model.rows.map(row=>`<article class="m-info-card"><small>${esc(dateTime(row.at))}</small><h3>${esc(row.title)}</h3><p>${esc(row.text)}</p>${row.path?`<button class="m-ghost" data-action="route" data-route="${esc(row.path)}">Ver detalle ›</button>`:''}</article>`).join(''):empty('Sin actividad','Todavía no hay actividad registrada para este contacto.')}${model.more?`<button class="m-secondary" data-action="contact-history-more" data-id="${esc(id)}">Cargar más actividad</button>`:''}</div>`;
   }
   function infoRow(label,value){return `<div class="m-info-row"><span>${esc(label)}</span><b>${esc(value||'—')}</b></div>`;}
 
@@ -1599,6 +1673,7 @@
     byId('mobileWhatsAppFileInput').onchange=event=>{const chatId=state.whatsapp.pendingFileChatId;state.whatsapp.pendingFileChatId='';sendMobileWaFile(event.target.files?.[0],chatId);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
     byId('mobileView').addEventListener('change',event=>{
+      if(event.target?.dataset?.contactPhone){const phone=selectedContactPhone(event.target.dataset.contactPhone),link=byId('mobileContactCall');if(phone&&link)link.href='tel:+'+phone.number;return;}
       const prefix=event.target?.dataset?.taskTypePrefix;
       if(['newTask','editTask'].includes(prefix)){const fields=byId(prefix+'TypeFields');if(fields)fields.innerHTML=taskTypeFields(prefix,event.target.value);return;}
       if(event.target?.id==='mobileProfileLabelCategory'){filterProfileLabels();return;}
@@ -1651,7 +1726,11 @@
     if(action==='create-all')performCreation();
     if(action==='retry-creation')performCreation();
     if(action==='finish-flow'){resetDraft();go('home');}
-    if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
+    if(action==='profile-tab'){state.profileTab=target.dataset.tab;if(state.profileTab==='history')contactHistory={id:'',rows:[],loading:false,error:'',limit:50};render();}
+    if(action==='contact-whatsapp')openContactWhatsApp(target.dataset.id);
+    if(action==='contact-text-save')saveContactText(target.dataset.id,target.dataset.kind,target);
+    if(action==='contact-history-reload')loadContactHistory(target.dataset.id);
+    if(action==='contact-history-more')loadContactHistory(target.dataset.id,contactHistory.limit+50);
     if(action==='save-opportunity-detail')saveOpportunityDetail(target.dataset.id,target);
     if(action==='profile-delete-opportunity')deleteProfileOpportunity(target.dataset.id,target.dataset.contactId,target);
     if(action==='profile-labels')openProfileLabels(target.dataset.contactId);
