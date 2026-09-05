@@ -333,6 +333,7 @@
         case 'review':ensureDraft();view.innerHTML=renderReview();break;
         case 'creating':view.innerHTML=renderCreating();break;
         case 'success':view.innerHTML=renderSuccess();break;
+        case 'screen-check':view.innerHTML=renderScreenCheck();break;
         case 'more':view.innerHTML=renderMore();break;
         case 'system':if(!state.perms?.is_admin){go('more',true);break}view.innerHTML=window.TPFMobileSystem?.render?.()||empty('Estado no disponible','Recarga la aplicación.');window.TPFMobileSystem?.refresh();break;
         default:view.innerHTML=renderHome();
@@ -1519,8 +1520,37 @@
     mobileWaRefreshTimer=setTimeout(async()=>{mobileWaRefreshTimer=null;const latest=route();if(latest.parts[0]==='whatsapp')await loadMobileWaChats({silent:true,light:true});else if(latest.parts[0]==='whatsapp-chat')await loadMobileWaHistory(safeDecode(latest.parts[1]),{silent:true});scheduleMobileWaRefresh();},page==='whatsapp-chat'?20000:180000);
   }
 
+  function renderScreenCheck(){
+    if(!state.perms?.is_admin)return empty('Acceso restringido','Solo disponible para el administrador.');
+    const round=value=>Number.isFinite(value)?Math.round(value*10)/10:'—';
+    const rect=selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();return r?`${round(r.top)} / ${round(r.bottom)} / ${round(r.height)}`:'—';};
+    const app=byId('mobileApp'),nav=document.querySelector('.m-bottom-nav'),vv=window.visualViewport;
+    const appStyle=getComputedStyle(app),navStyle=nav?getComputedStyle(nav):null,units=[];
+    const probe=document.createElement('div');probe.style.cssText='position:absolute;top:0;left:0;width:0;visibility:hidden;pointer-events:none;';document.body.appendChild(probe);
+    try{for(const unit of ['vh','dvh','lvh']){probe.style.height='100'+unit;units.push(`${unit}: ${round(probe.getBoundingClientRect().height)}`);}}finally{probe.remove();}
+    const lines=[
+      'PANTALLA · diagnóstico 1',
+      `Instalada: ${navigator.standalone===true} / CSS: ${matchMedia('(display-mode:standalone)').matches}`,
+      `Pantalla: ${screen.width} × ${screen.height} · escala ${devicePixelRatio}`,
+      `Disponible: ${screen.availWidth} × ${screen.availHeight}`,
+      `Ventana: ${innerWidth} × ${innerHeight}`,
+      `Visible: ${round(vv?.width)} × ${round(vv?.height)} · zoom ${round(vv?.scale)}`,
+      `Desplazamiento visible: ${round(vv?.offsetTop)} / ${round(vv?.pageTop)}`,
+      units.join(' · '),
+      'Medidas: arriba / abajo / altura',
+      `Aplicación: ${rect('#mobileApp')}`,
+      `Cabecera: ${rect('.m-header')}`,
+      `Contenido: ${rect('#mobileView')}`,
+      `Barra: ${rect('.m-bottom-nav')}`,
+      `Botón: ${rect('.m-bottom-nav button:last-child')}`,
+      `Reserva inferior: ${navStyle?.paddingBottom||'—'}`,
+      `Diseño: ${appStyle.display} / ${appStyle.position} / ${navStyle?.position||'—'}`,
+      location.hostname
+    ];
+    return `<div class="m-page">${pageHead('Diagnóstico de pantalla','more')}<p class="m-subtitle">Envía una captura de estas medidas para revisar el margen inferior.</p><pre class="m-info-card" style="font-size:11px;line-height:1.65;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere">${esc(lines.join('\n'))}</pre><button class="m-secondary" data-action="route" data-route="screen-check">Volver a medir</button></div>`;
+  }
   function renderMore(){
-    return `<div class="m-page">${pageHead('Más','home')}<div class="m-info-card">${infoRow('Usuario',state.perms?.display_name||state.user?.email)}${infoRow('Sincronización','Mismo CRM y misma base de datos')}${infoRow('Última actualización',state.lastRefresh?dateTime(state.lastRefresh):'—')}</div><div class="m-action-stack" style="margin-top:14px">${state.perms?.is_admin?'<button class="m-secondary" data-action="route" data-route="system">● Estado del sistema</button>':''}<button class="m-secondary" data-action="refresh">↻ Actualizar datos</button><button class="m-secondary" data-action="open-desktop">Abrir CRM completo</button><button class="m-danger" data-action="logout">Cerrar sesión</button></div></div>`;
+    return `<div class="m-page">${pageHead('Más','home')}<div class="m-info-card">${infoRow('Usuario',state.perms?.display_name||state.user?.email)}${infoRow('Sincronización','Mismo CRM y misma base de datos')}${infoRow('Última actualización',state.lastRefresh?dateTime(state.lastRefresh):'—')}</div><div class="m-action-stack" style="margin-top:14px">${state.perms?.is_admin?'<button class="m-secondary" data-action="route" data-route="system">● Estado del sistema</button><button class="m-secondary" data-action="route" data-route="screen-check">Diagnóstico de pantalla</button>':''}<button class="m-secondary" data-action="refresh">↻ Actualizar datos</button><button class="m-secondary" data-action="open-desktop">Abrir CRM completo</button><button class="m-danger" data-action="logout">Cerrar sesión</button></div></div>`;
   }
 
   function handleMobileWaSheetKeydown(event){
