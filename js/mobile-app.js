@@ -247,6 +247,7 @@
       jobs.push((has('can_view_agenda')||has('can_manage_agenda'))
         ?client.from('agenda_items').select('id,title,description,customer_name,customer_phone,starts_at,reminder_at,assigned_to,related_record_id,status,whatsapp_enabled,created_at').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('starts_at',{ascending:true}).limit(1000)
         :Promise.resolve({data:[],error:null}));
+      jobs.push((has('can_view_agenda')||has('can_manage_agenda'))?loadMobileTaskTypes():Promise.resolve());
       const [contacts,board,tasks]=await Promise.all(jobs);
       if(contacts.error)throw contacts.error;if(board.error)throw board.error;if(tasks.error)throw tasks.error;
       state.contacts=(contacts.data||[]).map(mapContact);
@@ -884,14 +885,43 @@
     try{const {error}=await client.from('agenda_items').update({status:'completed'}).eq('id',id).select('id').single();if(error)throw error;await refreshData({silent:true});render();toast('Tarea completada.','success');}catch(error){toast(error?.message||'No se pudo completar.','error');}
   }
   function taskLocalValue(value){if(!value)return '';const date=new Date(value);if(Number.isNaN(date.getTime()))return '';date.setMinutes(date.getMinutes()-date.getTimezoneOffset());return date.toISOString().slice(0,16);}
+  const MOBILE_TASK_DEFAULT_TYPES=['Tarea','Llamada','Cita','WhatsApp'];
+  let mobileTaskTypes=[...MOBILE_TASK_DEFAULT_TYPES];
+  async function loadMobileTaskTypes(){
+    try{
+      const {data,error}=await client.from('app_settings').select('value').eq('key','agenda_types').maybeSingle();
+      if(error)throw error;
+      const types=Array.isArray(data?.value)?data.value.filter(t=>t?.name&&t?.icon&&t?.color).slice(0,30).map(t=>String(t.name)):[];
+      mobileTaskTypes=types.length?[...new Set(types)]:[...MOBILE_TASK_DEFAULT_TYPES];
+    }catch(_){mobileTaskTypes=[...MOBILE_TASK_DEFAULT_TYPES];}
+  }
+  function taskTypeOptions(selected){return [...new Set([...mobileTaskTypes,selected])].filter(Boolean).map(name=>`<option value="${esc(name)}" ${name===selected?'selected':''}>${esc(name)}</option>`).join('');}
+  function taskTypeFields(prefix,type,meta={}){
+    const key=String(type).toLowerCase();
+    const select=(suffix,label,options,value)=>`<label class="m-field"><span>${label}</span><select id="${prefix}${suffix}" class="m-select">${options.map(([id,text])=>`<option value="${id}" ${String(value)===id?'selected':''}>${text}</option>`).join('')}</select></label>`;
+    const input=(suffix,label,value)=>`<label class="m-field"><span>${label}</span><input id="${prefix}${suffix}" class="m-input" value="${esc(value||'')}"></label>`;
+    if(key==='tarea')return select('Priority','Prioridad',[['normal','Normal'],['high','Alta'],['urgent','Urgente']],meta.priority||'normal');
+    if(key==='llamada')return select('Duration','Duración',[['15','15 minutos'],['30','30 minutos'],['45','45 minutos'],['60','1 hora']],meta.duration||'30')+select('Result','Resultado',[['','Sin indicar'],['pending','Pendiente de llamar'],['answered','Atendida'],['no_answer','No contesta'],['callback','Volver a llamar']],meta.result||'');
+    if(key==='cita')return select('Duration','Duración',[['30','30 minutos'],['60','1 hora'],['90','90 minutos'],['120','2 horas']],meta.duration||'30')+input('Location','Lugar',meta.location);
+    if(key==='whatsapp')return `<label class="m-field"><span>Mensaje de referencia</span><textarea id="${prefix}WhatsappMessage" class="m-textarea">${esc(meta.whatsapp_message||'')}</textarea></label><p class="m-subtitle">Este recordatorio no programa un envío de WhatsApp.</p>`;
+    return input('Custom','Detalle',meta.custom);
+  }
+  function readTaskTypeFields(prefix){
+    const original=prefix==='editTask'?taskDetail.row:null,type=clean(byId(prefix+'Type')?.value)||original?.agenda_type||'Tarea';
+    const meta={...(original?.agenda_meta||{})},keys={tarea:[['priority','Priority']],llamada:[['duration','Duration'],['result','Result']],cita:[['duration','Duration'],['location','Location']],whatsapp:[['whatsapp_message','WhatsappMessage']]};
+    for(const key of ['priority','duration','result','location','whatsapp_message','custom'])delete meta[key];
+    for(const [key,suffix] of keys[type.toLowerCase()]||[['custom','Custom']]){const value=clean(byId(prefix+suffix)?.value);if(value)meta[key]=value;}
+    return {agenda_type:type,agenda_meta:meta};
+  }
   function taskFields(prefix,row={}){
-    return `<div class="m-form-grid"><label class="m-field"><span>Asunto</span><input id="${prefix}Title" class="m-input" value="${esc(row.title||'')}" placeholder="Llamar al cliente"></label><label class="m-field"><span>Fecha y hora</span><input id="${prefix}Starts" class="m-input" type="datetime-local" value="${esc(taskLocalValue(row.starts_at))}"></label><label class="m-field"><span>Recordatorio (opcional)</span><input id="${prefix}Reminder" class="m-input" type="datetime-local" value="${esc(taskLocalValue(row.reminder_at))}"></label><label class="m-field"><span>Notas</span><textarea id="${prefix}Notes" class="m-textarea">${esc(row.description||'')}</textarea></label><label class="m-task-option"><input id="${prefix}NotifyApp" type="checkbox" ${row.notify_in_app!==false?'checked':''}> Aviso en The Phone Face</label><label class="m-task-option"><input id="${prefix}NotifyEmail" type="checkbox" ${row.notify_email?'checked':''}> Email</label><label class="m-task-option"><input id="${prefix}Google" type="checkbox" ${row.sync_google_calendar?'checked':''}> Añadir a Google Calendar</label></div>`;
+    const type=row.agenda_type||'Tarea';
+    return `<div class="m-form-grid"><label class="m-field"><span>Tipo de recordatorio</span><select id="${prefix}Type" data-task-type-prefix="${prefix}" class="m-select">${taskTypeOptions(type)}</select></label><div id="${prefix}TypeFields" class="m-form-grid">${taskTypeFields(prefix,type,row.agenda_meta||{})}</div><label class="m-field"><span>Asunto</span><input id="${prefix}Title" class="m-input" value="${esc(row.title||'')}" placeholder="Llamar al cliente"></label><label class="m-field"><span>Fecha y hora</span><input id="${prefix}Starts" class="m-input" type="datetime-local" value="${esc(taskLocalValue(row.starts_at))}"></label><label class="m-field"><span>Recordatorio (opcional)</span><input id="${prefix}Reminder" class="m-input" type="datetime-local" value="${esc(taskLocalValue(row.reminder_at))}"></label><label class="m-field"><span>Notas</span><textarea id="${prefix}Notes" class="m-textarea">${esc(row.description||'')}</textarea></label><label class="m-task-option"><input id="${prefix}NotifyApp" type="checkbox" ${row.notify_in_app!==false?'checked':''}> Aviso en The Phone Face</label><label class="m-task-option"><input id="${prefix}NotifyEmail" type="checkbox" ${row.notify_email?'checked':''}> Email</label><label class="m-task-option"><input id="${prefix}Google" type="checkbox" ${row.sync_google_calendar?'checked':''}> Añadir a Google Calendar</label></div>`;
   }
   function readTaskFields(prefix){
     const title=clean(byId(prefix+'Title')?.value),starts=byId(prefix+'Starts')?.value,reminder=byId(prefix+'Reminder')?.value;
     if(!title||!starts)throw new Error('Escribe un asunto y una fecha/hora.');
     if(!Number.isFinite(new Date(starts).getTime())||(reminder&&!Number.isFinite(new Date(reminder).getTime())))throw new Error('La fecha no es válida.');
-    return {title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked};
+    return {...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked};
   }
   function renderNewTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
@@ -1569,6 +1599,8 @@
     byId('mobileWhatsAppFileInput').onchange=event=>{const chatId=state.whatsapp.pendingFileChatId;state.whatsapp.pendingFileChatId='';sendMobileWaFile(event.target.files?.[0],chatId);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
     byId('mobileView').addEventListener('change',event=>{
+      const prefix=event.target?.dataset?.taskTypePrefix;
+      if(['newTask','editTask'].includes(prefix)){const fields=byId(prefix+'TypeFields');if(fields)fields.innerHTML=taskTypeFields(prefix,event.target.value);return;}
       if(event.target?.id==='mobileProfileLabelCategory'){filterProfileLabels();return;}
       const id=event.target?.dataset?.profileLabelId;
       if(id&&profileLabels.loaded&&!profileLabels.saving){event.target.checked?profileLabels.selected.add(id):profileLabels.selected.delete(id);}
