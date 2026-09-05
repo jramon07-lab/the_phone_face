@@ -64,6 +64,7 @@
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
 <link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-05">
 <link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
+<link rel="stylesheet" href="/assets/contact-desktop.css?v=20260905-01">
 </head>
 <body>
 
@@ -231,8 +232,16 @@
     </div>
    </section>
 
-   <div id="contactModal" class="contactProfileBack hidden">
+   <div id="contactModal" class="contactProfileBack tpfContactDesktop hidden">
     <div class="contactProfile">
+      <nav class="cpDesktopRail" aria-label="Secciones de la ficha">
+        <div class="cpDesktopBrand">THE PHONE FACE<span>Ficha de cliente</span></div>
+        <button type="button" onclick="document.querySelector('#contactModal .cpLeft').scrollIntoView({block:'start'})">Datos del contacto</button>
+        <button type="button" onclick="document.querySelector('#contactModal .cpRight').scrollIntoView({block:'start'})">Seguimiento</button>
+        <button type="button" onclick="document.querySelector('#contactModal .cpCenter').scrollIntoView({block:'start'})">Historial</button>
+        <button type="button" onclick="document.getElementById('cpDocumentsPending').scrollIntoView({block:'start'})">Documentos</button>
+        <div class="cpDesktopRailFoot">CONTACTOS<span>Todo sobre tu cliente</span></div>
+      </nav>
       <div class="cpTop">
         <button id="contactClose" class="cpExit">← Volver</button>
         <div class="cpNav">Ficha completa del contacto</div>
@@ -318,6 +327,12 @@
             <div class="cpSideTitle"><b>Información</b></div>
             <div id="cpInfo" class="small"></div>
           </div>
+          <section id="cpDocumentsPending" class="cpSideSection cpDocumentsPending" aria-labelledby="cpDocumentsTitle">
+            <div class="cpSideTitle"><b id="cpDocumentsTitle">Documentos</b><span class="cpPendingBadge">Pendiente</span></div>
+            <h3>Google Drive</h3>
+            <p>Pendiente de conectar. Aquí podrás reunir los documentos del cliente en una sola carpeta.</p>
+            <div class="cpDocumentsPlan">Vincular carpeta existente · PDF y fotografías · Escaneo de DNI</div>
+          </section>
         </aside>
       </div>
 
@@ -1525,3 +1540,4 @@
 <script src="/js/modules/import-mapping.js?v=20260905-01"></script>
 
 </body></html>
+
