@@ -104,6 +104,7 @@
     if(s.title)s.title.textContent=s.titleText;
     if(s.subtitle)s.subtitle.textContent=s.subtitleText;
     if(close)byId('tpfContactsCreateBack')?.classList.add('hidden');
+    const back=byId('tpfContactsCreateBack');if(back)delete back.dataset.tpfProfileEditing;
     createEditState=null;
   }
   async function returnFromCreateEdit(){restoreCreateModal(true);}
@@ -135,6 +136,7 @@
     const add=byId('tpfContactsAdd');if(!add)return;
     add.click();
     const back=await waitForCreateModal();if(!back)return;
+    back.dataset.tpfProfileEditing='1';
     const save=byId('tpfContactsCreateSave'),closeBtn=byId('tpfContactsCreateClose'),cancel=byId('tpfContactsCreateCancel');
     const title=back.querySelector('.tpfContactsModalHead h3'),subtitle=back.querySelector('.tpfContactsModalHead .small');
     createEditState={id,saveHandler:save?.onclick||null,closeHandler:closeBtn?.onclick||null,cancelHandler:cancel?.onclick||null,saveText:save?.textContent||'Crear contacto',title,titleText:title?.textContent||'Agregar contacto',subtitle,subtitleText:subtitle?.textContent||''};
@@ -406,3 +408,4 @@
     }
   });
 })();
+

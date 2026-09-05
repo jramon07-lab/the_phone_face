@@ -37,8 +37,8 @@
  function watchCreate(){const box=$('tpfContactsCreateBack'),choice=$('tpfCreateWelcome');if(!box||!choice)return false;
   const variant=$('tpfCreateWelcomeVariant'),preview=$('tpfCreateWelcomePreview');
   const showMessage=()=>{if(preview)preview.textContent=welcomeMessages[variant?.value]||welcomeMessages.general;};variant?.addEventListener('change',showMessage);showMessage();
-  const update=()=>{const editing=!!box.dataset.editId;choice.closest('.tpfWelcomeChoice').hidden=editing;if(editing)choice.checked=false;};
-  new MutationObserver(update).observe(box,{attributes:true,attributeFilter:['data-edit-id','class']});update();return true;
+  const update=()=>{const editing=!!box.dataset.editId||box.dataset.tpfProfileEditing==='1';choice.closest('.tpfWelcomeChoice').hidden=editing;if(editing)choice.checked=false;};
+  new MutationObserver(update).observe(box,{attributes:true,attributeFilter:['data-edit-id','data-tpf-profile-editing','class']});update();return true;
  }
  if(!watchCreate()){const createObserver=new MutationObserver(()=>{if(watchCreate())createObserver.disconnect();});createObserver.observe(document.body,{childList:true});}
  window.addEventListener('tpf:contact-open',refresh);window.addEventListener('tpf:contact-updated',refresh);

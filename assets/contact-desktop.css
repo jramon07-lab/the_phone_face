@@ -165,3 +165,9 @@
 
 .tpfWelcomeChoice select{display:block;width:100%;max-width:320px;margin:8px 0;padding:9px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#172554;}
 #tpfCreateWelcomePreview{margin:8px 0;padding:12px;background:#f4f6fb;border-radius:8px;line-height:1.5;}
+
+/* Welcome is only available in the new-contact form. */
+#tpfContactsCreateBack[data-edit-id] .tpfWelcomeChoice,#tpfContactsCreateBack[data-tpf-profile-editing="1"] .tpfWelcomeChoice,.tpfWelcomeChoice[hidden]{display:none!important;}
+#tpfContactsCreateBack .tpfWelcomeChoice>label{display:block;margin:0 0 8px;font-size:13px;text-transform:none;}
+#tpfContactsCreateBack .tpfWelcomeChoice>label:first-child{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-weight:600;}
+#tpfContactsCreateBack #tpfCreateWelcome{width:16px!important;height:16px;min-height:0;margin:0!important;flex:0 0 16px;}
