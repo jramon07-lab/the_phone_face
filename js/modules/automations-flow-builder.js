@@ -99,6 +99,65 @@
     const title=b.querySelector('.tpfFlowTimelineTitle');if(title)title.textContent=simpleView?'Qué hará esta automatización':'PASOS DEL FLUJO';
     const labels={action:'Añadir acción',wait:'Añadir espera',condition:'Añadir condición',repeat:'Añadir repetición'};
     b.querySelectorAll('[data-add]').forEach(x=>{x.textContent='+ '+labels[x.dataset.add]});
+    ensureCardsLayout();renderCards();
+  }
+
+  function ensureCardsLayout(){
+    const b=$('tpfFlowBuilder');if(!$('tpfGuidedCards')){const cards=document.createElement('section');cards.id='tpfGuidedCards';b.querySelector('.tpfFlowBody').insertAdjacentElement('beforebegin',cards);}
+    if($('tpfGuidedStyles'))return;
+    const s=document.createElement('style');s.id='tpfGuidedStyles';s.textContent=`
+      #tpfFlowBuilder.tpfSimple.tpfBuilderPro,#tpfFlowBuilder.tpfSimple{display:grid!important;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+      #tpfFlowBuilder.tpfSimple>.tpfFlowHead,#tpfFlowBuilder.tpfSimple>.tpfBuilderProTop,#tpfFlowBuilder.tpfSimple>#tpfSimpleTabs,#tpfFlowBuilder.tpfSimple>#tpfSimpleReview,#tpfFlowBuilder.tpfSimple>#tpfBuilderReview,#tpfFlowBuilder.tpfSimple>#tpfFlowMessage{grid-column:1/-1}
+      #tpfFlowBuilder.tpfSimple>.tpfFlowMeta{grid-column:1;grid-row:3;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(100px,.65fr)!important;gap:10px!important;padding:36px 16px 16px!important;border:1px solid #e0e7f0!important;border-radius:14px!important}
+      #tpfFlowBuilder.tpfSimple>.tpfFlowMeta>label:first-of-type{grid-column:1/-1}
+      #tpfFlowBuilder.tpfSimple>.tpfFlowMeta>.afClassify{display:none!important}
+      #tpfFlowBuilder.tpfSimple>#tpfLifecycleOptions{grid-column:2;grid-row:3/5;border-radius:14px;border:1px solid #e0e7f0!important;background:#fff!important;padding:16px!important;min-width:0}
+      #tpfFlowBuilder.tpfSimple>#tpfLifecycleOptions>div:first-child{flex-direction:column}
+      #tpfFlowBuilder.tpfSimple>#tpfLifecycleOptions label{font-size:13px;line-height:1.5}
+      #tpfFlowBuilder.tpfSimple #tpfLifecycleMode{display:block!important;margin:8px 0!important;width:100%;min-height:40px}
+      #tpfFlowBuilder.tpfSimple #tpfLifecycleConfig .tpfStepConfig{grid-template-columns:minmax(0,1fr)!important}
+      #tpfFlowBuilder.tpfSimple.tpfBuilderPro>.tpfFlowBody,#tpfFlowBuilder.tpfSimple>.tpfFlowBody{display:none!important}
+      #tpfFlowBuilder:not(.tpfSimple)>#tpfGuidedCards{display:none!important}
+      #tpfFlowBuilder.tpfSimple>#tpfGuidedCards{display:grid;grid-column:1;grid-row:4;gap:12px;min-width:0}
+      #tpfGuidedCards>h3{margin:0;color:#1b2a41;font-size:17px}.tpfGuidedCard{background:#fff;border:1px solid #dee6f1;border-radius:14px;padding:16px;min-width:0}.tpfGuidedCardHead{display:flex;gap:8px;align-items:center;margin-bottom:12px}.tpfGuidedCardHead h4{margin:0;flex:1;font-size:15px}.tpfGuidedCardHead button{min-width:28px;min-height:30px;background:#f3f6fb;border:1px solid #dce4ef;color:#4b5d78;border-radius:6px}.tpfGuidedCard .tpfStepConfig{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important}
+      .tpfGuidedCard details{grid-column:1/-1;border-top:1px solid #e6ebf3;padding-top:10px;margin-top:4px}.tpfGuidedCard summary{font-size:12px;color:#225db5;cursor:pointer}.tpfGuidedCard details>.tpfStepConfig{padding-top:12px}.tpfGuidedCard select,.tpfGuidedCard input,.tpfGuidedCard textarea{width:100%;box-sizing:border-box}.tpfGuidedCard .tpfCheckRow input{width:auto}.tpfGuidedCard .hint{display:none}.tpfGuidedCard p{margin:0;font-size:12px;line-height:1.6;color:#667085}.tpfGuidedCard .tpfCardSearch{margin:0 0 6px;min-height:36px}.tpfGuidedCard[data-kind="wait"]{background:#f6f2ff;border-color:#e4daf8}
+      #tpfFlowBuilder.tpfSimple #tpfFlowTriggerConfig{padding:10px;background:#f8faff}#tpfFlowBuilder.tpfSimple #tpfFlowTriggerConfig .tpfSearchWrap{grid-template-columns:minmax(0,1fr) minmax(110px,.65fr)!important;padding:0;background:none;border:0}#tpfFlowBuilder.tpfSimple #tpfFlowTriggerConfig .tpfSearchWrap input{min-height:34px!important}
+      #tpfFlowBuilder.tpfSimple>.tpfBuilderReview{display:none!important}
+      @media(max-width:760px){#tpfFlowBuilder.tpfSimple.tpfBuilderPro,#tpfFlowBuilder.tpfSimple{grid-template-columns:minmax(0,1fr)!important}#tpfFlowBuilder.tpfSimple>.tpfFlowMeta,#tpfFlowBuilder.tpfSimple>#tpfLifecycleOptions,#tpfFlowBuilder.tpfSimple>#tpfGuidedCards{grid-column:1!important;grid-row:auto!important}#tpfFlowBuilder.tpfSimple>#tpfLifecycleOptions{order:5}#tpfFlowBuilder.tpfSimple>#tpfFlowMessage{order:6}}
+    `;document.head.appendChild(s);
+  }
+
+  function renderCards(){
+    const root=$('tpfGuidedCards');if(!root||!simpleView)return;
+    const expanded=new Set([...root.querySelectorAll('details[open]')].map(x=>x.closest('[data-card-id]')?.dataset.cardId));
+    root.innerHTML='<h3>Acciones y mensajes</h3>';
+    const primary={create_opportunity:['title','amount','stage_id'],create_task:['title','start_value','start_unit','start_time'],send_template:['template_id'],send_whatsapp_now:['text'],assign_label:['label_id','label_name_template','label_category'],move_opportunity:['stage_id']};
+    flow.steps.forEach((step,i)=>{
+      const card=document.createElement('article');card.className='tpfGuidedCard';card.dataset.cardId=step.id;card.dataset.kind=step.kind;
+      card.innerHTML=`<header class="tpfGuidedCardHead"><span class="tpfStepNum">${i+1}</span><h4>${esc(stepTitle(step))}</h4><button type="button" data-card-move="up" aria-label="Subir paso ${i+1}">↑</button><button type="button" data-card-move="down" aria-label="Bajar paso ${i+1}">↓</button><button type="button" data-card-delete="1" aria-label="Quitar paso ${i+1}">×</button></header>`;
+      const body=document.createElement('div');
+      if(step.kind==='wait')renderWait(body,step);else if(step.kind==='repeat')renderRepeat(body,step);else if(step.kind==='condition')renderCondition(body,step);else renderAction(body,step);
+      body.querySelector('h4')?.remove();body.querySelector('.hint')?.remove();
+      const grid=body.querySelector('.tpfStepConfig');
+      if(grid&&step.kind==='action'){
+        const more=document.createElement('details');more.open=expanded.has(step.id);more.innerHTML='<summary>Más opciones de este paso</summary><div class="tpfStepConfig"></div>';
+        const moreGrid=more.querySelector('div');
+        [...grid.children].forEach(el=>{const key=el.querySelector('[data-cfg]')?.dataset.cfg;const chooseAction=el.querySelector('[data-key="action_type"]');if((chooseAction&&step.action_type)||(key&&!primary[step.action_type]?.includes(key))||(!key&&!chooseAction&&el.tagName!=='P'))moreGrid.appendChild(el);});
+        if(moreGrid.children.length)grid.appendChild(more);
+      }
+      body.querySelectorAll('select[data-cfg="template_id"],select[data-cfg="label_id"],select[data-cfg="stage_id"]').forEach(select=>{
+        if(select.dataset.cfg==='label_id'){
+          const option=document.createElement('option');option.value='__dynamic__';option.textContent='Etiqueta con mes y año';select.appendChild(option);select.value=step.config?.label_id||'';
+          if(select.value==='__dynamic__'){
+            const fields=document.createElement('div');fields.className='full';fields.innerHTML=`<label>Nombre de etiqueta<input data-cfg="label_name_template" value="${esc(step.config?.label_name_template||'')}" placeholder="VENTAS {MES} {AÑO}"></label><label>Categoría<input data-cfg="label_category" value="${esc(step.config?.label_category||'')}"></label>`;select.closest('label').insertAdjacentElement('afterend',fields);
+          }
+        }
+        if(select.options.length>8){const search=document.createElement('input');search.className='tpfCardSearch';search.type='search';search.placeholder='Buscar…';search.setAttribute('aria-label','Buscar opciones de '+select.dataset.cfg);search.addEventListener('input',()=>{const q=search.value.toLocaleLowerCase();[...select.options].forEach(o=>{o.hidden=!!o.value&&o.value!==select.value&&!o.textContent.toLocaleLowerCase().includes(q);});});select.insertAdjacentElement('beforebegin',search);}
+      });
+      card.appendChild(body);root.appendChild(card);
+    });
+    const add=document.createElement('div');add.className='tpfFlowAdd';add.innerHTML='<button type="button" data-add="action">+ Añadir acción</button><button type="button" data-add="wait">+ Añadir espera</button><button type="button" data-add="condition">+ Añadir condición</button><button type="button" data-add="repeat">+ Añadir repetición</button>';root.appendChild(add);
+    if(!flow.steps.length){const p=document.createElement('p');p.className='small';p.textContent='Añade lo que quieres que haga la automatización. Cada paso se configura aquí mismo.';root.insertBefore(p,add);}
   }
 
   function optionName(list,id,fallback){return list.find(x=>String(x.id)===String(id))?.name||fallback;}
@@ -165,11 +224,12 @@
   function dictUnit(u){return ({minutes:'minutos',hours:'horas',days:'días',weeks:'semanas'})[u]||'unidad'}
   function renderSteps(){
     const box=$('tpfFlowSteps');if(!box)return;
-    if(!flow.steps.length){box.innerHTML='<div class="tpfFlowEmpty">Todavía no hay pasos. Añade la primera acción, espera, condición o repetición.</div>';renderEditor(null);return;}
+    if(!flow.steps.length){box.innerHTML='<div class="tpfFlowEmpty">Todavía no hay pasos. Añade la primera acción, espera, condición o repetición.</div>';renderEditor(null);renderCards();return;}
     if(!flow.selected||!flow.steps.some(x=>x.id===flow.selected))flow.selected=flow.steps[0].id;
     box.innerHTML=flow.steps.map((s,i)=>`<div class="tpfFlowStep ${s.id===flow.selected?'active':''}" data-step-id="${s.id}"><div class="tpfFlowStepTop"><span class="tpfStepNum">${i+1}</span><span class="tpfStepKind tpfKind${s.kind[0].toUpperCase()+s.kind.slice(1)}">${s.kind==='action'?'HACER':s.kind==='wait'?'ESPERAR':s.kind==='repeat'?'REPETIR':'SI'}</span><span class="tpfFlowStepTitle">${esc(stepTitle(s))}</span><button type="button" data-move="up">↑</button><button type="button" data-move="down">↓</button><button type="button" data-delete="1">×</button></div></div>`).join('');
     renderEditor(flow.steps.find(x=>x.id===flow.selected));
     refreshSummaries();
+    renderCards();
   }
 
   function renderEditor(s){
@@ -215,7 +275,8 @@
   }
 
   function onBuilderClick(ev){
-    const presentation=ev.target.closest('[data-presentation]');if(presentation){simpleView=presentation.dataset.presentation==='simple';ensureSimpleView();return;}
+    const presentation=ev.target.closest('[data-presentation]');if(presentation){simpleView=presentation.dataset.presentation==='simple';ensureSimpleView();renderSteps();return;}
+    const card=ev.target.closest('[data-card-id]');if(card){const i=flow.steps.findIndex(x=>x.id===card.dataset.cardId);if(i<0)return;const del=ev.target.closest('[data-card-delete]'),move=ev.target.closest('[data-card-move]');if(del){flow.steps.splice(i,1);renderSteps();}else if(move){const j=i+(move.dataset.cardMove==='up'?-1:1);if(j>=0&&j<flow.steps.length){[flow.steps[i],flow.steps[j]]=[flow.steps[j],flow.steps[i]];renderSteps();}}return;}
     if(ev.target.closest('#tpfShowFlowReview')){const r=$('tpfSimpleReview');r.hidden=!r.hidden;$('tpfShowFlowReview').setAttribute('aria-expanded',String(!r.hidden));refreshSummaries();return;}
     const preset=ev.target.closest('[data-lifecycle-draft]');if(preset){if((flow.id||flow.steps.length)&&!window.confirm('Preparar un borrador nuevo descartará los cambios sin guardar del editor. ¿Continuar?'))return;lifecycleDraft(preset.dataset.lifecycleDraft);return;}
     const add=ev.target.closest('[data-add]');if(add){const kind=add.dataset.add;const s={id:uid(),kind};if(kind==='action'){s.action_type='';s.config={}}if(kind==='wait'){s.value='';s.unit=''}if(kind==='condition'){s.condition_type=''}if(kind==='repeat'){s.every_value='';s.every_unit='';s.times='';s.stop_if_response=false}flow.steps.push(s);flow.selected=s.id;renderSteps();return;}
@@ -235,9 +296,10 @@
     if(t.dataset.lifecycleStage!==undefined&&flow.lifecycle){flow.lifecycle.stop_stage_ids=flow.lifecycle.stop_stage_ids||[];flow.lifecycle.stop_stage_ids[Number(t.dataset.lifecycleStage)]=t.value;return;}
     if(t.id==='tpfFlowName'){flow.name=t.value;return}if(t.id==='tpfFlowEnabled'){flow.enabled=t.value==='1';return}
     if(t.dataset.triggerKey){flow.trigger_config[t.dataset.triggerKey]=t.value;return}
-    const s=flow.steps.find(x=>x.id===flow.selected);if(!s)return;
-    if(t.dataset.key){let v=t.type==='checkbox'?t.checked:t.value;if(['value','every_value','times'].includes(t.dataset.key)&&v!=='')v=Number(v);s[t.dataset.key]=v;if(t.dataset.key==='action_type'){s.config={};}renderSteps();return;}
-    if(t.dataset.cfg){s.config=s.config||{};s.config[t.dataset.cfg]=t.value;return}
+    const cardId=t.closest('[data-card-id]')?.dataset.cardId;
+    const s=flow.steps.find(x=>x.id===(cardId||flow.selected));if(!s)return;
+    if(t.dataset.key){let v=t.type==='checkbox'?t.checked:t.value;if(['value','every_value','times'].includes(t.dataset.key)&&v!=='')v=Number(v);s[t.dataset.key]=v;if(t.dataset.key==='action_type'){s.config={};}if(!cardId||ev.type==='change'||t.dataset.key==='action_type')renderSteps();return;}
+    if(t.dataset.cfg){s.config=s.config||{};s.config[t.dataset.cfg]=t.value;if(cardId&&t.dataset.cfg==='label_id'&&ev.type==='change')renderCards();return}
     if(t.dataset.cfgBool){s.config=s.config||{};s.config[t.dataset.cfgBool]=t.checked;return}
     if(t.dataset.custom){s.config=s.config||{};s.config.custom_values=s.config.custom_values||{};s.config.custom_values[t.dataset.custom]=t.value;return}
   }

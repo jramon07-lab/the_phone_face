@@ -1,0 +1,23 @@
+// Isolated input-handler checks; no browser, network, or CRM writes.
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(require('node:path').join(__dirname,'../js/modules/automations-flow-builder.js'),'utf8');
+const handler=source.slice(source.indexOf('  function onBuilderInput('),source.indexOf('  function validate('));
+const flow={selected:'one',steps:[{id:'one',config:{title:'Original'}},{id:'two',config:{title:'Segundo'},kind:'wait',value:2,unit:'days'}]};
+let renders=0;
+const context={flow,queueMicrotask:()=>{},refreshSummaries:()=>{},renderSteps:()=>renders++,renderCards:()=>renders++};
+vm.createContext(context);vm.runInContext(handler+'\nthis.handle=onBuilderInput;',context);
+const input=(dataset,value,type='text',event='input')=>context.handle({type:event,target:{dataset,value,type,checked:value,closest:()=>({dataset:{cardId:'two'}})}});
+input({cfg:'title'},'Editado en tarjeta');
+assert.equal(flow.steps[0].config.title,'Original');
+assert.equal(flow.steps[1].config.title,'Editado en tarjeta');
+input({key:'value'},'10','number');
+assert.equal(flow.steps[1].value,10);
+assert.equal(renders,0,'typing a multi-digit wait must not destroy input focus');
+input({key:'value'},'10','number','change');
+assert.equal(renders,1);
+input({cfgBool:'notify_email'},true,'checkbox');
+assert.equal(flow.steps[1].config.notify_email,true);
+input({custom:'field-example'},'Campo adicional');
+assert.equal(flow.steps[1].config.custom_values['field-example'],'Campo adicional');
+assert.equal(flow.steps[0].config.custom_values,undefined);
+console.log('PASS: card inputs target their own step, preserve other steps, support extra fields and multi-digit waits.');
