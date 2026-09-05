@@ -19,7 +19,7 @@ async function identity(req){const bearer=String(req.headers.authorization||'');
 async function record(id,who){if(!/^[0-9a-f-]{36}$/i.test(String(id)))throw fail(400,'Contacto no válido.');const r=await request(SB+'/rest/v1/records?id=eq.'+id+'&select=id,data,source_sheet',{headers:who.headers});if(!r.ok)throw fail(403,'No tienes acceso a esta ficha.');const row=(await r.json())[0];if(!row)throw fail(404,'No se encontró la ficha.');return row;}
 function folderId(value){let s=String(value||'').trim();if(s.startsWith('https://')){let u;try{u=new URL(s);}catch(_){throw fail(400,'Enlace no válido.');}if(u.hostname!=='drive.google.com')throw fail(400,'Pega un enlace de carpeta de Google Drive.');s=u.pathname.match(/\/folders\/([\w-]+)/)?.[1]||'';}if(!/^[\w-]{10,200}$/.test(s))throw fail(400,'Identificador de carpeta no válido.');return s;}
 async function drive(t,path,options={}){const r=await request('https://www.googleapis.com/drive/v3/'+path,{...options,headers:{Authorization:'Bearer '+t,...options.headers}});if(!r.ok)throw fail(r.status===404?404:502,r.status===404?'La carpeta no existe o Google no permite acceder a ella.':'Google Drive no pudo completar la operación. Inténtalo más tarde.');return r.json();}
-async function folder(t,id){const d=await drive(t,'files/'+folderId(id)+'?supportsAllDrives=true&fields=id,name,mimeType,trashed,capabilities(canAddChildren),webViewLink');if(d.trashed||d.mimeType!==FOLDER)throw fail(400,'Elige una carpeta existente, no un archivo.');return d;}
+async function folder(t,id){const d=await drive(t,'files/'+folderId(id)+'?supportsAllDrives=true&fields=id,name,mimeType,trashed,parents,capabilities(canAddChildren),webViewLink');if(d.trashed||d.mimeType!==FOLDER)throw fail(400,'Elige una carpeta existente, no un archivo.');return d;}
 const adapters={google_drive:{folder,async list(t,id,page){const q=new URLSearchParams({q:"'"+folderId(id)+"' in parents and trashed = false and mimeType != '"+FOLDER+"'",fields:'nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink)',pageSize:'100',orderBy:'name',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});if(page)q.set('pageToken',String(page));return drive(t,'files?'+q);}}};
 function adapter(link){if(!link||link.version!==1)throw fail(409,'Vincula primero una carpeta.');if(!adapters[link.provider])throw fail(409,'Este proveedor todavía no está conectado.');return adapters[link.provider];}
 function cookie(req,name){return String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)||'';}
@@ -35,7 +35,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const saved=await request(SB+'/rest/v1/crm_external_credentials?on_conflict=provider',{method:'POST',headers:{...serviceHeaders(),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({provider:PROVIDER,encrypted_value:seal({refresh_token:d.refresh_token}),updated_by:state.userId,updated_at:new Date().toISOString()})});if(!saved.ok)throw fail(503,'No se pudo guardar la autorización.');
   res.setHeader('Set-Cookie','tpf_docs_nonce=; Path=/api/crm-documents; HttpOnly; Secure; SameSite=Lax; Max-Age=0');res.setHeader('Location',ORIGIN+'/?documents=connected');return res.status(303).end();
  }
- const write=['authorize','link','upload'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
+ const write=['authorize','link','bulkLink','upload'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
  const who=await identity(req),body=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
  if(action==='status')return json(res,200,{ok:true,configured:configured(),connected:configured()?!!await credential():false,canManage:!!who.p.is_admin,canUpload:!!(who.p.is_admin||who.p.can_edit_records),callback:who.p.is_admin?CALLBACK:undefined});
  if(!configured())throw fail(503,'Falta configurar la conexión de Documentos en el servidor.');
@@ -46,6 +46,13 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   res.setHeader('Set-Cookie','tpf_docs_nonce='+nonce+'; Path=/api/crm-documents; HttpOnly; Secure; SameSite=Lax; Max-Age=600');
   const q=new URLSearchParams({client_id:CID,redirect_uri:CALLBACK,response_type:'code',scope:'https://www.googleapis.com/auth/drive',access_type:'offline',prompt:'consent',state,code_challenge:crypto.createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256'});return json(res,200,{ok:true,url:'https://accounts.google.com/o/oauth2/v2/auth?'+q});
  }
+ if(action==='bulkFolders'){
+  if(!who.p.is_admin)throw fail(403,'Solo el administrador puede vincular carpetas en bloque.');
+  const t=await token(),root=await folder(t,req.query?.rootId);
+  const q=new URLSearchParams({q:"'"+root.id+"' in parents and trashed = false and mimeType = '"+FOLDER+"'",fields:'nextPageToken,files(id,name)',pageSize:'100',orderBy:'name',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});
+  if(req.query?.page)q.set('pageToken',String(req.query.page));
+  return json(res,200,{ok:true,root:{id:root.id,name:root.name},...await drive(t,'files?'+q)});
+ }
  const row=await record(body.contactId||req.query?.contactId,who),link=row.data?.TPF_DOCUMENTS;
  const t=await token();
  if(action==='search'){
@@ -53,10 +60,17 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const term=String(req.query?.q||'').trim();if(term.length<2||term.length>150)throw fail(400,'Escribe al menos dos caracteres.');
   const q=new URLSearchParams({q:"trashed = false and mimeType = '"+FOLDER+"' and name contains '"+term.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'",fields:'nextPageToken,files(id,name,webViewLink)',pageSize:'30',orderBy:'name',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});return json(res,200,{ok:true,...await drive(t,'files?'+q)});
  }
- if(action==='link'){
+ if(action==='link'||action==='bulkLink'){
   if(!who.p.is_admin||body.confirmed!==true)throw fail(403,'Confirma la carpeta con una cuenta de administrador.');
   if(JSON.stringify(body.expectedLink||null)!==JSON.stringify(link||null))throw fail(409,'La vinculación ha cambiado. Actualiza la ficha.');
-  const f=await folder(t,body.folderId),newLink={version:1,provider:'google_drive',folder_id:f.id,folder_name:f.name,linked_at:new Date().toISOString(),linked_by:who.p.user_id};
+  const f=await folder(t,body.folderId);
+  if(action==='bulkLink'){
+   if(link)throw fail(409,'La ficha ya tiene una carpeta. Se conserva la vinculación existente.');
+   const stable=v=>JSON.stringify(v,(_,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b))):value);
+   if(stable(body.expectedData)!==stable(row.data))throw fail(409,'Los datos del contacto han cambiado. Revisa de nuevo esta coincidencia.');
+   if(!f.parents?.includes(folderId(body.rootId))||f.name!==body.folderName)throw fail(409,'La carpeta cambió de nombre o ubicación. Revisa de nuevo.');
+  }
+  const newLink={version:1,provider:'google_drive',folder_id:f.id,folder_name:f.name,linked_at:new Date().toISOString(),linked_by:who.p.user_id};
   const data={...row.data,TPF_DOCUMENTS:newLink};
   const q=new URLSearchParams({id:'eq.'+row.id,data:'eq.'+JSON.stringify(row.data)}),r=await request(SB+'/rest/v1/records?'+q,{method:'PATCH',headers:{...who.headers,Prefer:'return=representation'},body:JSON.stringify({data})});if(!r.ok)throw fail(403,'No se pudo guardar la vinculación.');const updated=await r.json();if(updated.length!==1)throw fail(409,'La ficha ha cambiado. Actualízala antes de vincular.');return json(res,200,{ok:true,link:newLink});
  }

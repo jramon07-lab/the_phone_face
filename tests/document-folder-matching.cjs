@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');const {match}=require('../js/modules/document-folder-matching.js');
+const contact=(id,name,extra={})=>({id,data:{'NOMBRE Y APELLIDOS':name,...extra}}),folder=(id,name)=>({id,name});
+let rows=match([folder('a','RAMÓN SÁNCHEZ LUPIÁÑEZ')],[contact('1','Ramon Sanchez Lupiañez')]);assert.equal(rows[0].status,'clear');
+rows=match([folder('a','Torcuato Garcia Gonzalez')],[contact('1','Carmen Carmen',{TPF_TITULAR:{same:false,holder_name:'Torcuato García González'}})]);assert.equal(rows[0].status,'clear');assert.equal(rows[0].candidates[0].role,'holder');assert.equal(rows[0].candidates[0].record.id,'1');
+rows=match([folder('a','Maria Carmen')],[contact('1','Maria Carmen'),contact('2','María Carmen')]);assert.equal(rows[0].status,'review');
+rows=match([folder('a','Maria Carmen'),folder('b','María Carmen')],[contact('1','Maria Carmen')]);assert.ok(rows.every(r=>r.status==='review'));
+rows=match([folder('a','Maria Carmen'),folder('b','Miguel Morales')],[contact('1','Maria Carmen',{TPF_TITULAR:{same:false,holder_name:'Miguel Morales'}})]);assert.ok(rows.every(r=>r.status==='review'));
+rows=match([folder('a','Maria Carmen')],[contact('1','Maria Carmen',{TPF_DOCUMENTS:{version:1,provider:'google_drive',folder_id:'a'}})]);assert.equal(rows[0].status,'linked');
+rows=match([folder('b','Maria Carmen')],[contact('1','Maria Carmen',{TPF_DOCUMENTS:{version:1,provider:'onedrive',folder_id:'other'}})]);assert.equal(rows[0].status,'review');
+rows=match([folder('a','Maria'),folder('b','Maria Carmen contratos'),folder('c','Sin coincidencia')],[contact('1','Maria'),contact('2','Maria Carmen')]);assert.deepEqual(rows.map(r=>r.status),['review','unmatched','unmatched']);
+rows=match([folder('a','Maria Carmen'),folder('a','Maria Carmen')],[contact('1','Maria Carmen')]);assert.equal(rows.length,1);assert.equal(rows[0].status,'clear');
+rows=match([folder('a','Miguel Morales')],[contact('1','Maria Carmen',{TPF_TITULAR:{same:true,holder_name:'Miguel Morales'}})]);assert.equal(rows[0].status,'unmatched');
+rows=match([folder('a','Miguel Morales')],[contact('1','Miguel Morales',{TPF_TITULAR:{same:false,holder_name:'Miguel Morales'}})]);assert.equal(rows[0].status,'clear');
+console.log('PASS: exact normalized names, holder roles, same-name people, repeated folders, two roles/two folders, existing links, partial names, pagination overlap.');

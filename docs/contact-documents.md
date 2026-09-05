@@ -35,3 +35,13 @@ Validación: pruebas locales con todas las llamadas de red simuladas para permis
 Rollback: revertir el commit de Documentos en la rama temporal. Los enlaces ya guardados permanecen en los datos y los originales en Drive. Git no es copia de la base de datos.
 
 Referencias: https://developers.google.com/workspace/drive/api/guides/manage-uploads y https://developers.google.com/workspace/drive/api/guides/api-specific-auth.
+
+## Vinculación en bloque
+
+Desde Documentos, el administrador puede abrir «Vincular carpetas en bloque», pegar el enlace/ID de una carpeta principal y cargar todas sus carpetas hijas directas. La consulta pagina a 100 carpetas y a 1.000 contactos; si supera 10.000 carpetas o 50.000 contactos se bloquea la revisión incompleta. No se recorre el contenido de las carpetas de clientes.
+
+La comparación normaliza mayúsculas, tildes, espacios y puntuación, y exige nombre completo exacto del contacto o titular (same=false). No se seleccionan nombres de una sola palabra, coincidencias múltiples, varias carpetas por contacto ni fichas ya vinculadas. Las carpetas existentes con vínculo figuran como «Ya vinculada». Las coincidencias claras están seleccionadas en la vista previa pero no se guardan hasta marcar la confirmación y pulsar Guardar.
+
+Al guardar, bulkLink exige administrador, confirmación explícita, ausencia de vínculo anterior, snapshot completo de datos sin cambios y carpeta con el nombre y padre de la revisión. El PATCH mantiene la protección de concurrencia del enlace individual. Guarda secuencialmente, muestra progreso y permite detener después de la ficha en curso. Se detiene ante la primera incidencia; conserva lo ya guardado y pide una nueva revisión antes de reintentar. No se reintentan escrituras automáticamente. No se crean, renombran, mueven ni eliminan carpetas/archivos.
+
+Se añadieron tests locales de coincidencias y de permisos/conflictos/ubicación para bulkLink; todas las llamadas externas están simuladas. Ninguna vinculación real se realizó durante el desarrollo. La búsqueda y confirmación masiva en la cuenta de Ramón quedan para su revisión. Los nuevos contactos importados no se vinculan automáticamente: se puede repetir esta revisión en bloque y se conservan los enlaces anteriores.
