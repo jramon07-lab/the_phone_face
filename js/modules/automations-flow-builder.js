@@ -6,6 +6,7 @@
   let flow={id:null,name:'',enabled:true,trigger_type:'',trigger_config:{},steps:[]};
   let opts={stages:[],pipelines:[],labels:[],templates:[],salesFields:[],users:[]};
   let observer=null;
+  let simpleView=true;
 
   function uid(){return 's_'+Math.random().toString(36).slice(2)+Date.now().toString(36)}
   function unitOptions(v=''){return '<option value="">Unidad…</option>'+units.map(([x,l])=>`<option value="${x}" ${v===x?'selected':''}>${l}</option>`).join('')}
@@ -51,14 +52,76 @@
     let b=$('tpfFlowBuilder');
     if(!b){b=document.createElement('section');b.id='tpfFlowBuilder';b.innerHTML=`
       <div class="tpfFlowHead"><div><h3>Constructor libre de automatizaciones</h3><div class="small">Elige el disparador y añade acciones, esperas, condiciones y repeticiones en el orden que quieras.</div></div><div class="tpfFlowHeadActions"><button id="tpfFlowNew" class="secondary" type="button">Nueva</button><button id="tpfFlowSave" class="primary" type="button">Guardar automatización</button></div></div>
-      <div class="tpfFlowMeta"><label>Nombre de la automatización<input id="tpfFlowName" placeholder="Ej.: Renovación → seguimiento"></label><label>CUANDO<select id="tpfFlowTrigger"><option value="">Elige qué la inicia…</option><option value="message_received">Llega un WhatsApp</option><option value="message_contains">WhatsApp contiene palabra o frase</option><option value="opportunity_stage">Oportunidad entra en una columna</option><option value="label_assigned">Se asigna una etiqueta</option><option value="unanswered">Cliente sin respuesta</option></select></label><label>Estado<select id="tpfFlowEnabled"><option value="1">Activa</option><option value="0">Pausada</option></select></label><div id="tpfFlowTriggerConfig" class="full"></div></div>
+      <div class="tpfFlowMeta"><label>Nombre de la automatización<input id="tpfFlowName" placeholder="Ej.: Renovación → seguimiento"></label><label>Cuándo empieza<select id="tpfFlowTrigger"><option value="">Elige qué la inicia…</option><option value="message_received">Llega un WhatsApp</option><option value="message_contains">WhatsApp contiene palabra o frase</option><option value="opportunity_stage">Oportunidad entra en una columna</option><option value="label_assigned">Se asigna una etiqueta</option><option value="unanswered">Cliente sin respuesta</option></select></label><label>Estado<select id="tpfFlowEnabled"><option value="1">Activa</option><option value="0">Pausada</option></select></label><div id="tpfFlowTriggerConfig" class="full"></div></div>
       <div class="tpfFlowBody"><div><div class="tpfFlowTimeline"><div class="tpfFlowTimelineTitle">PASOS DEL FLUJO</div><div id="tpfFlowSteps"></div><div class="tpfFlowAdd"><button type="button" data-add="action">+ Acción</button><button type="button" data-add="wait">+ Espera</button><button type="button" data-add="condition">+ Condición</button><button type="button" data-add="repeat">+ Repetición</button></div></div></div><div id="tpfStepEditor" class="tpfStepEditor"></div></div><div id="tpfFlowMessage" class="tpfFlowMessage"></div>`;
       const stats=$('tpfAutoStats');(stats||view.firstElementChild)?.insertAdjacentElement('afterend',b);
       b.addEventListener('click',onBuilderClick);b.addEventListener('input',onBuilderInput);b.addEventListener('change',onBuilderInput);
       $('tpfFlowSave').onclick=saveFlow;$('tpfFlowNew').onclick=resetFlow;$('tpfFlowTrigger').onchange=()=>{flow.trigger_type=$('tpfFlowTrigger').value;flow.trigger_config={};renderTriggerConfig();};
     }
     const n=$('tpfAutoNew');if(n){n.onclick=()=>{resetFlow();$('tpfFlowBuilder')?.scrollIntoView({behavior:'smooth',block:'start'});};}
-    ensureLifecycleOptions();renderAll();
+    ensureSimpleView();ensureLifecycleOptions();renderAll();
+  }
+
+  function ensureSimpleView(){
+    const b=$('tpfFlowBuilder');if(!b)return;
+    if(!$('tpfSimpleTabs')){
+      const bar=document.createElement('div');bar.id='tpfSimpleTabs';bar.innerHTML='<div role="group" aria-label="Presentación de la automatización"><button type="button" data-presentation="simple">Configuración sencilla</button><button type="button" data-presentation="advanced">Vista avanzada</button></div><button type="button" id="tpfShowFlowReview" aria-expanded="false">Ver resumen completo</button>';
+      b.querySelector('.tpfFlowMeta').insertAdjacentElement('beforebegin',bar);
+      const review=document.createElement('div');review.id='tpfSimpleReview';review.hidden=true;bar.insertAdjacentElement('afterend',review);
+      const style=document.createElement('style');style.id='tpfSimpleFlowStyles';style.textContent=`
+        #tpfSimpleTabs{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#fff;padding:14px 20px;border:1px solid #e0e7f0;border-bottom:0}
+        #tpfSimpleTabs>div{display:flex;gap:8px;flex-wrap:wrap}#tpfSimpleTabs button{min-height:40px;padding:9px 14px;border-radius:9px;border:1px solid #d8e0ed;background:#fff;color:#42526b;font-size:13px}
+        #tpfSimpleTabs button[aria-pressed="true"]{color:#135bc4;background:#edf4ff;border-color:#94baff;font-weight:700}
+        #tpfSimpleReview{padding:20px;background:#fff;border:1px solid #d8e3f3;color:#26354a}#tpfSimpleReview[hidden]{display:none!important}#tpfSimpleReview h3{margin:0 0 12px}#tpfSimpleReview ol{padding-left:22px;margin:12px 0}#tpfSimpleReview li{padding:7px 0;line-height:1.5;font-size:14px}
+        #tpfFlowBuilder.tpfSimple>.tpfBuilderStepper{display:none!important}
+        #tpfFlowBuilder.tpfSimple>.tpfFlowMeta{border-radius:0!important}
+        #tpfFlowBuilder.tpfSimple .tpfFlowMeta label,#tpfFlowBuilder.tpfSimple .tpfStepConfig label{font-size:13px!important;line-height:1.5}
+        #tpfFlowBuilder.tpfSimple .tpfFlowMeta input,#tpfFlowBuilder.tpfSimple .tpfFlowMeta select,#tpfFlowBuilder.tpfSimple .tpfStepConfig input,#tpfFlowBuilder.tpfSimple .tpfStepConfig select,#tpfFlowBuilder.tpfSimple .tpfStepConfig textarea{font-size:14px!important;max-width:100%;box-sizing:border-box}
+        #tpfFlowBuilder.tpfSimple.tpfBuilderPro>.tpfFlowBody,#tpfFlowBuilder.tpfSimple>.tpfFlowBody{grid-template-columns:minmax(300px,.95fr) minmax(0,1.3fr)!important;padding:20px!important;gap:20px!important;background:#f5f7fb!important}
+        #tpfFlowBuilder.tpfSimple .tpfFlowTimeline{min-height:0!important;padding:16px!important}#tpfFlowBuilder.tpfSimple .tpfFlowTimelineTitle{font-size:15px!important}
+        #tpfFlowBuilder.tpfSimple .tpfFlowTimelineTitle:after{display:none!important}
+        #tpfFlowBuilder.tpfSimple .tpfFlowStep{padding:14px!important;cursor:pointer}#tpfFlowBuilder.tpfSimple .tpfFlowStep.active{border-left:4px solid #2468db!important}
+        #tpfFlowBuilder.tpfSimple .tpfFlowStepTitle{font-size:14px!important;line-height:1.4}#tpfFlowBuilder.tpfSimple .tpfStepKind{display:none!important}
+        #tpfFlowBuilder.tpfSimple .tpfFlowStep button{width:30px;height:30px;flex-shrink:0}#tpfFlowBuilder.tpfSimple .tpfStepNum{flex-shrink:0;background:#efe7ff!important;color:#7149b4!important}
+        .tpfStepSummary{font-size:12px;line-height:1.6;color:#667085;margin:8px 0 0 33px;overflow-wrap:anywhere}.tpfStepSummary:empty{display:none}
+        #tpfFlowBuilder:not(.tpfSimple) .tpfStepSummary{display:none}
+        #tpfFlowBuilder.tpfSimple .tpfFlowAdd button{font-size:12px!important;min-height:42px!important}
+        #tpfFlowBuilder.tpfSimple .tpfStepEditor{min-height:0!important;align-self:start;padding:20px!important}#tpfFlowBuilder.tpfSimple .tpfStepEditor:before{content:'EDITAR EL PASO SELECCIONADO';font-size:12px!important}
+        #tpfFlowBuilder.tpfSimple .tpfStepEditor h4{font-size:19px!important}#tpfFlowBuilder.tpfSimple .tpfStepEditor .hint,#tpfFlowBuilder.tpfSimple .small,#tpfFlowBuilder.tpfSimple .tpfVarHelp,#tpfFlowBuilder.tpfSimple .tpfDynamicHint{font-size:12px!important;line-height:1.6!important}
+        #tpfFlowBuilder.tpfSimple #tpfLifecycleOptions{border:1px solid #e0e7f0;border-top:0}#tpfFlowBuilder.tpfSimple #tpfLifecycleOptions button{font-size:13px;min-height:40px}
+        #tpfFlowBuilder.tpfSimple #tpfLifecycleMode{margin-left:10px;max-width:100%;font-size:14px;padding:8px}
+        #tpfFlowBuilder.tpfSimple .tpfFlowMessage{font-size:13px!important}
+        @media(max-width:900px){#tpfFlowBuilder.tpfSimple.tpfBuilderPro>.tpfFlowBody,#tpfFlowBuilder.tpfSimple>.tpfFlowBody{grid-template-columns:minmax(0,1fr)!important}#tpfFlowBuilder.tpfSimple.tpfBuilderPro>.tpfFlowMeta{grid-template-columns:minmax(0,1fr)!important}#tpfFlowBuilder.tpfSimple #tpfLifecycleMode{display:block;margin:8px 0 0;width:100%}}
+      `;document.head.appendChild(style);
+    }
+    b.classList.toggle('tpfSimple',simpleView);
+    b.querySelectorAll('[data-presentation]').forEach(x=>x.setAttribute('aria-pressed',String((x.dataset.presentation==='simple')===simpleView)));
+    const title=b.querySelector('.tpfFlowTimelineTitle');if(title)title.textContent=simpleView?'Qué hará esta automatización':'PASOS DEL FLUJO';
+    const labels={action:'Añadir acción',wait:'Añadir espera',condition:'Añadir condición',repeat:'Añadir repetición'};
+    b.querySelectorAll('[data-add]').forEach(x=>{x.textContent='+ '+labels[x.dataset.add]});
+  }
+
+  function optionName(list,id,fallback){return list.find(x=>String(x.id)===String(id))?.name||fallback;}
+  function stepSummary(s){
+    const c=s.config||{};
+    if(s.kind==='wait')return `Esperar otros ${s.value??'…'} ${dictUnit(s.unit)} antes de continuar.`;
+    if(s.kind==='repeat')return `Repetir la acción anterior cada ${s.every_value||'…'} ${dictUnit(s.every_unit)}, hasta ${s.times||'…'} veces.${s.stop_if_response?' Se detiene si el cliente responde.':''}`;
+    if(s.kind==='condition')return s.condition_type==='no_response'?'Los siguientes pasos solo continúan si el cliente no ha respondido.':'Elige qué debe cumplirse para continuar.';
+    if(s.action_type==='send_template')return 'Plantilla: '+optionName(opts.templates,c.template_id,'pendiente de elegir');
+    if(s.action_type==='send_whatsapp_now')return c.text||'Escribe el mensaje que se enviará.';
+    if(s.action_type==='create_opportunity')return [c.title||'Título pendiente',optionName(opts.stages,c.stage_id,'Columna pendiente'),c.amount!==undefined&&c.amount!==''?'Importe: '+c.amount:''].filter(Boolean).join(' · ');
+    if(s.action_type==='create_task')return [c.title||'Título pendiente',c.start_value?`Dentro de ${c.start_value} ${dictUnit(c.start_unit)}`:'Fecha configurada en el paso',c.start_time||''].filter(Boolean).join(' · ');
+    if(s.action_type==='assign_label')return c.label_id==='__dynamic__'?(c.label_name_template||'Etiqueta con mes y año'):optionName(opts.labels,c.label_id,'Elige la etiqueta');
+    if(s.action_type==='move_opportunity')return 'Columna de destino: '+optionName(opts.stages,c.stage_id,'pendiente de elegir');
+    if(s.action_type==='record_offer_month')return 'Añade OFERTA · MES · AÑO tras confirmar el envío.';
+    if(s.action_type==='record_sale_month')return 'Registra VENTAS · MES · AÑO y conserva las etiquetas de otras ofertas abiertas.';
+    return 'Selecciona qué quieres que ocurra en este paso.';
+  }
+  function refreshSummaries(){
+    document.querySelectorAll('#tpfFlowSteps [data-step-id]').forEach(row=>{const s=flow.steps.find(x=>x.id===row.dataset.stepId);if(s){let p=row.querySelector('.tpfStepSummary');if(!p){p=document.createElement('p');p.className='tpfStepSummary';row.appendChild(p);}p.textContent=stepSummary(s);}});
+    const review=$('tpfSimpleReview');if(!review||review.hidden)return;
+    const c=flow.trigger_config||{};const triggerDetail=flow.trigger_type==='label_assigned'?optionName(opts.labels,c.label_id,'Etiqueta pendiente'):flow.trigger_type==='opportunity_stage'?optionName(opts.stages,c.stage_id,'Columna pendiente'):flow.trigger_type==='message_contains'?(c.keyword||'Palabra pendiente'):flow.trigger_type==='unanswered'?`${c.wait_value||'…'} ${dictUnit(c.wait_unit)}`:'';
+    review.innerHTML=`<h3>${esc(flow.name||'Automatización sin nombre')}</h3><p><strong>${flow.enabled?'Activa al guardar':'Pausada al guardar'}</strong> · ${esc(triggerLabel(flow.trigger_type))}${triggerDetail?' · '+esc(triggerDetail):''}</p><ol>${flow.steps.map(s=>`<li><strong>${esc(stepTitle(s))}</strong><br>${esc(stepSummary(s))}</li>`).join('')}</ol><p class="small">Revisa cada paso para consultar todos sus campos. Este resumen no guarda ni activa la automatización.</p>`;
   }
 
   function ensureLifecycleOptions(){
@@ -106,6 +169,7 @@
     if(!flow.selected||!flow.steps.some(x=>x.id===flow.selected))flow.selected=flow.steps[0].id;
     box.innerHTML=flow.steps.map((s,i)=>`<div class="tpfFlowStep ${s.id===flow.selected?'active':''}" data-step-id="${s.id}"><div class="tpfFlowStepTop"><span class="tpfStepNum">${i+1}</span><span class="tpfStepKind tpfKind${s.kind[0].toUpperCase()+s.kind.slice(1)}">${s.kind==='action'?'HACER':s.kind==='wait'?'ESPERAR':s.kind==='repeat'?'REPETIR':'SI'}</span><span class="tpfFlowStepTitle">${esc(stepTitle(s))}</span><button type="button" data-move="up">↑</button><button type="button" data-move="down">↓</button><button type="button" data-delete="1">×</button></div></div>`).join('');
     renderEditor(flow.steps.find(x=>x.id===flow.selected));
+    refreshSummaries();
   }
 
   function renderEditor(s){
@@ -117,9 +181,9 @@
     renderAction(e,s);
   }
 
-  function renderWait(e,s){e.innerHTML=`<h4>ESPERAR</h4><div class="hint">Elige exactamente cuánto tiempo debe pasar antes del siguiente paso.</div><div class="tpfStepConfig"><label>Tiempo<input data-key="value" type="number" min="0" value="${esc(s.value??'')}"></label><label>Unidad<select data-key="unit">${unitOptions(s.unit||'')}</select></label></div>`}
-  function renderRepeat(e,s){e.innerHTML=`<h4>REPETIR</h4><div class="hint">Repite la acción inmediatamente anterior con el intervalo y límite que tú decidas.</div><div class="tpfStepConfig"><label>Cada<input data-key="every_value" type="number" min="1" value="${esc(s.every_value??'')}"></label><label>Unidad<select data-key="every_unit">${unitOptions(s.every_unit||'')}</select></label><label>Máximo de repeticiones<input data-key="times" type="number" min="1" max="100" value="${esc(s.times??'')}"></label><div class="full tpfCheckRow"><label><input data-key="stop_if_response" type="checkbox" ${s.stop_if_response?'checked':''}> Detener las repeticiones si el cliente responde</label></div></div>`}
-  function renderCondition(e,s){e.innerHTML=`<h4>CONDICIÓN</h4><div class="hint">Los pasos siguientes solo continuarán si se cumple esta condición.</div><div class="tpfStepConfig"><label class="full">Condición<select data-key="condition_type"><option value="">Elige condición…</option><option value="no_response" ${s.condition_type==='no_response'?'selected':''}>El cliente no ha respondido desde que empezó el flujo</option></select></label></div>`}
+  function renderWait(e,s){e.innerHTML=`<h4>Cuánto esperar</h4><div class="hint">Elige exactamente cuánto tiempo debe pasar antes del siguiente paso.</div><div class="tpfStepConfig"><label>Tiempo<input data-key="value" type="number" min="0" value="${esc(s.value??'')}"></label><label>Unidad<select data-key="unit">${unitOptions(s.unit||'')}</select></label></div>`}
+  function renderRepeat(e,s){e.innerHTML=`<h4>Cuántas veces repetir</h4><div class="hint">Repite la acción inmediatamente anterior con el intervalo y límite que tú decidas.</div><div class="tpfStepConfig"><label>Cada<input data-key="every_value" type="number" min="1" value="${esc(s.every_value??'')}"></label><label>Unidad<select data-key="every_unit">${unitOptions(s.every_unit||'')}</select></label><label>Máximo de repeticiones<input data-key="times" type="number" min="1" max="100" value="${esc(s.times??'')}"></label><div class="full tpfCheckRow"><label><input data-key="stop_if_response" type="checkbox" ${s.stop_if_response?'checked':''}> Detener las repeticiones si el cliente responde</label></div></div>`}
+  function renderCondition(e,s){e.innerHTML=`<h4>Cuándo continuar</h4><div class="hint">Los pasos siguientes solo continuarán si se cumple esta condición.</div><div class="tpfStepConfig"><label class="full">Condición<select data-key="condition_type"><option value="">Elige condición…</option><option value="no_response" ${s.condition_type==='no_response'?'selected':''}>El cliente no ha respondido desde que empezó el flujo</option></select></label></div>`}
 
   function commonVars(){return '<div class="tpfVarHelp">Puedes usar variables en los textos: <b>{nombre}</b>, <b>{dni}</b>, <b>{telefono}</b>, <b>{mensaje}</b>. Si un campo queda vacío, no se fuerza ningún valor.</div>'}
   function stageOptions(v=''){return '<option value="">Elige columna…</option>'+opts.stages.map(x=>`<option value="${x.id}" ${String(v)===String(x.id)?'selected':''}>${esc(x.name)}</option>`).join('')}
@@ -129,7 +193,7 @@
   function actionSelect(s){return `<label class="full">Acción<select data-key="action_type"><option value="">Elige una acción…</option><option value="create_opportunity" ${s.action_type==='create_opportunity'?'selected':''}>Crear oportunidad</option><option value="create_task" ${s.action_type==='create_task'?'selected':''}>Crear tarea</option><option value="send_whatsapp_now" ${s.action_type==='send_whatsapp_now'?'selected':''}>Enviar WhatsApp ahora</option><option value="send_template" ${s.action_type==='send_template'?'selected':''}>Enviar plantilla WhatsApp</option><option value="assign_label" ${s.action_type==='assign_label'?'selected':''}>Asignar etiqueta</option><option value="move_opportunity" ${s.action_type==='move_opportunity'?'selected':''}>Mover oportunidad de columna</option></select></label>`}
 
   function renderAction(e,s){
-    const c=s.config||(s.config={});let h=`<h4>HACER</h4><div class="hint">Elige la acción. Después aparecen todos sus campos configurables.</div><div class="tpfStepConfig">${actionSelect(s)}`;
+    const c=s.config||(s.config={});let h=`<h4>${esc(actionLabel(s.action_type))}</h4><div class="hint">Elige la acción. Después aparecen todos sus campos configurables.</div><div class="tpfStepConfig">${actionSelect(s)}`;
     if(s.action_type==='create_opportunity'){
       h+=`${commonVars()}<label>Título<input data-cfg="title" value="${esc(c.title||'')}"></label><label>Cliente<input data-cfg="client_name" value="${esc(c.client_name||'')}"></label><label>Teléfono<input data-cfg="phone" value="${esc(c.phone||'')}"></label><label>Importe<input data-cfg="amount" value="${esc(c.amount||'')}" placeholder="Ej.: 120 o {importe}"></label><label>Columna / estado<select data-cfg="stage_id">${stageOptions(c.stage_id||'')}</select></label><label>Estado comercial<select data-cfg="status"><option value="">No establecer</option><option value="open" ${c.status==='open'?'selected':''}>Abierta</option><option value="won" ${c.status==='won'?'selected':''}>Ganada</option><option value="lost" ${c.status==='lost'?'selected':''}>Perdida</option></select></label><label>Fecha prevista · dentro de<input data-cfg="expected_value" type="number" min="0" value="${esc(c.expected_value??'')}"></label><label>Unidad de fecha<select data-cfg="expected_unit">${unitOptions(c.expected_unit||'')}</select></label><label>Responsable<select data-cfg="owner_user_id">${userOptions(c.owner_user_id||'self')}</select></label><label>Posición<input data-cfg="position" type="number" min="0" value="${esc(c.position??'')}"></label><label class="full">Notas<textarea data-cfg="notes" rows="3">${esc(c.notes||'')}</textarea></label>`;
       if(opts.salesFields.length){h+='<div class="tpfFieldGroup"><h5>Campos personalizados de ventas</h5><div class="tpfStepConfig">'+opts.salesFields.map(f=>`<label>${esc(f.label)}${f.required?' *':''}<input data-custom="${f.id}" value="${esc((c.custom_values||{})[f.id]??'')}"></label>`).join('')+'</div></div>';}
@@ -151,6 +215,8 @@
   }
 
   function onBuilderClick(ev){
+    const presentation=ev.target.closest('[data-presentation]');if(presentation){simpleView=presentation.dataset.presentation==='simple';ensureSimpleView();return;}
+    if(ev.target.closest('#tpfShowFlowReview')){const r=$('tpfSimpleReview');r.hidden=!r.hidden;$('tpfShowFlowReview').setAttribute('aria-expanded',String(!r.hidden));refreshSummaries();return;}
     const preset=ev.target.closest('[data-lifecycle-draft]');if(preset){if((flow.id||flow.steps.length)&&!window.confirm('Preparar un borrador nuevo descartará los cambios sin guardar del editor. ¿Continuar?'))return;lifecycleDraft(preset.dataset.lifecycleDraft);return;}
     const add=ev.target.closest('[data-add]');if(add){const kind=add.dataset.add;const s={id:uid(),kind};if(kind==='action'){s.action_type='';s.config={}}if(kind==='wait'){s.value='';s.unit=''}if(kind==='condition'){s.condition_type=''}if(kind==='repeat'){s.every_value='';s.every_unit='';s.times='';s.stop_if_response=false}flow.steps.push(s);flow.selected=s.id;renderSteps();return;}
     const row=ev.target.closest('[data-step-id]');if(!row)return;const id=row.dataset.stepId,i=flow.steps.findIndex(x=>x.id===id);if(i<0)return;
@@ -161,6 +227,7 @@
 
   function onBuilderInput(ev){
     const t=ev.target;
+    queueMicrotask(refreshSummaries);
     if(t.id==='tpfLifecycleMode'){
       flow.lifecycle=t.value?{version:1,mode:t.value,stop_stage_ids:[]}:null;if(flow.extra)delete flow.extra.lifecycle;
       flow.enabled=false;renderAll();$('tpfFlowMessage').textContent='Se conservan tus pasos. Revisa el registro mensual y las columnas antes de activar. El borrador queda pausado.';return;
@@ -228,7 +295,7 @@
     renderAll();$('tpfFlowBuilder')?.scrollIntoView({behavior:'smooth',block:'start'});return true;
   }
 
-  function renderAll(){if(!$('tpfFlowBuilder'))return;$('tpfFlowName').value=flow.name||'';$('tpfFlowEnabled').value=flow.enabled?'1':'0';$('tpfFlowTrigger').value=flow.trigger_type||'';renderTriggerConfig();renderLifecycle();renderSteps();}
+  function renderAll(){if(!$('tpfFlowBuilder'))return;$('tpfFlowName').value=flow.name||'';$('tpfFlowEnabled').value=flow.enabled?'1':'0';$('tpfFlowTrigger').value=flow.trigger_type||'';renderTriggerConfig();renderLifecycle();renderSteps();refreshSummaries();}
   function decorateRules(){
     const rules=Array.isArray(window.crmAutomations)?window.crmAutomations:[];
     document.querySelectorAll('#auto2List .auto2Rule').forEach(el=>{
