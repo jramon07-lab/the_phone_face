@@ -28,3 +28,7 @@ La interfaz muestra la bienvenida pendiente y deshabilitada hasta que la capacid
 ## Reversibilidad
 
 Conservar el commit anterior `6e16ad40549fed060bd266b617efe3a7ff99493c` y su Preview m4r4qwufc. El rollback SQL conserva columnas y solicitudes para no perder auditoría. Antes de retroceder el servidor, revisar las bienvenidas pendientes: un rollback de Git no cancela trabajos ni restaura la base de datos.
+
+## Dos variantes aprobadas
+
+Migración `welcome_two_variants_disabled`: texto General y Con oferta guardados en configuración desactivada. Selector exclusivo en Crear contacto de PC, General por defecto y vista previa del texto. Cambiarlo no envía nada; la casilla Enviar bienvenida permanece desactivada. La solicitud guarda una sola variante y conserva la misma clave única por cliente. El RPC anterior sigue siendo compatible y selecciona General. El script de activación conserva ambos textos. No se ha ejecutado la activación.

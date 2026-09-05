@@ -4,7 +4,8 @@
  let generation=0,names=new Map(),lastData=null,capability={installed:false,enabled:false};
  const author=r=>r?.crm_created_by_name||(r?.crm_actor_kind==='system'?'Sistema · usuario no identificado':names.get(r?.crm_created_by||r?.created_by))||((r?.crm_created_by||r?.created_by)?'Usuario registrado · nombre no disponible':'Autor no registrado');
  function line(r,responsible=true){if(!r)return '';const id=r.assigned_to||r.owner_user_id||r.crm_responsible_id;return '<div class="cpAuthLine">Creado por: '+esc(author(r))+(r.created_at?' · '+esc(new Date(r.created_at).toLocaleString('es-ES')):'')+(responsible?'<br>Responsable: '+esc(id?(names.get(id)||'Usuario asignado · nombre no disponible'):'Sin asignar'):'')+'</div>';}
- window.TPFAuthorship={line,author,get capability(){return capability;}};
+ const welcomeMessages=Object.freeze({general:'Hola, [cliente] 👋 Soy [usuario], de Phone House Albolote. Puedes contactar conmigo por aquí cuando lo necesites.',offer:'Hola, [cliente] 👋 Soy [usuario], de Phone House Albolote. Te paso por aquí la oferta que hemos comentado.'});
+ window.TPFAuthorship={line,author,welcomeMessages,get capability(){return capability;}};
  async function inspectCapability(){try{const r=await sb.rpc('crm_welcome_capability');capability=!r.error&&r.data?r.data:{installed:false,enabled:false};}catch(_){capability={installed:false,enabled:false};}return capability;}
  window.TPFAuthorship.refreshCapability=inspectCapability;
  function paint(){
@@ -34,6 +35,8 @@
   }catch(_){/* Attribution never blocks the approved contact actions. */}
  }
  function watchCreate(){const box=$('tpfContactsCreateBack'),choice=$('tpfCreateWelcome');if(!box||!choice)return false;
+  const variant=$('tpfCreateWelcomeVariant'),preview=$('tpfCreateWelcomePreview');
+  const showMessage=()=>{if(preview)preview.textContent=welcomeMessages[variant?.value]||welcomeMessages.general;};variant?.addEventListener('change',showMessage);showMessage();
   const update=()=>{const editing=!!box.dataset.editId;choice.closest('.tpfWelcomeChoice').hidden=editing;if(editing)choice.checked=false;};
   new MutationObserver(update).observe(box,{attributes:true,attributeFilter:['data-edit-id','class']});update();return true;
  }
