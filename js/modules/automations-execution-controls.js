@@ -4,7 +4,7 @@ const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
 const state={autos:[],jobs:[],groups:[],execs:new Map(),exclusions:[],fields:[],templates:new Map(),labels:new Map(),stages:new Map(),loading:false,bound:false};
 const safeRetry=new Set(['assign_label','send_template','__send_whatsapp','send_whatsapp_now','move_opportunity']);
-const actionNames={flow_v1:'Disparador',create_opportunity:'Crear oportunidad',create_task:'Crear tarea',send_template:'Enviar plantilla',send_whatsapp_now:'Enviar WhatsApp',__send_whatsapp:'Enviar WhatsApp',assign_label:'Asignar etiqueta',move_opportunity:'Mover oportunidad',schedule_whatsapp:'Programar WhatsApp'};
+const actionNames={record_offer_month:'Registrar OFERTA · mes y año',record_sale_month:'Cambiar OFERTA por VENTAS · mes y año',flow_v1:'Disparador',create_opportunity:'Crear oportunidad',create_task:'Crear tarea',send_template:'Enviar plantilla',send_whatsapp_now:'Enviar WhatsApp',__send_whatsapp:'Enviar WhatsApp',assign_label:'Asignar etiqueta',move_opportunity:'Mover oportunidad',schedule_whatsapp:'Programar WhatsApp'};
 const triggerNames={message_received:'Llega un WhatsApp',message_contains:'WhatsApp contiene palabra',opportunity_stage:'Oportunidad cambia de columna',label_assigned:'Se asigna etiqueta',unanswered:'Cliente sin respuesta'};
 function visible(){const v=$('view-automations');return !!v&&!v.classList.contains('hidden')}
 function ts(v){const n=new Date(v||0).getTime();return Number.isFinite(n)?n:0}

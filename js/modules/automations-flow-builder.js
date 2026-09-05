@@ -9,7 +9,7 @@
 
   function uid(){return 's_'+Math.random().toString(36).slice(2)+Date.now().toString(36)}
   function unitOptions(v=''){return '<option value="">Unidad…</option>'+units.map(([x,l])=>`<option value="${x}" ${v===x?'selected':''}>${l}</option>`).join('')}
-  function actionLabel(t){return ({create_opportunity:'Crear oportunidad',create_task:'Crear tarea',send_whatsapp_now:'Enviar WhatsApp ahora',send_template:'Enviar plantilla WhatsApp',assign_label:'Asignar etiqueta',move_opportunity:'Mover oportunidad de columna'})[t]||'Elige una acción'}
+  function actionLabel(t){return ({create_opportunity:'Crear oportunidad',create_task:'Crear tarea',send_whatsapp_now:'Enviar WhatsApp ahora',send_template:'Enviar plantilla WhatsApp',assign_label:'Asignar etiqueta',move_opportunity:'Mover oportunidad de columna',record_offer_month:'Registrar OFERTA · mes y año',record_sale_month:'Cambiar OFERTA por VENTAS · mes y año'})[t]||'Elige una acción'}
   function triggerLabel(t){return ({message_received:'Llega un WhatsApp',message_contains:'WhatsApp contiene palabra o frase',opportunity_stage:'Oportunidad entra en una columna',label_assigned:'Se asigna una etiqueta',unanswered:'Cliente sin respuesta'})[t]||'Elige qué inicia la automatización'}
   function getRule(id){return (Array.isArray(window.crmAutomations)?window.crmAutomations:[]).find(x=>String(x.id)===String(id))}
 
@@ -58,7 +58,32 @@
       $('tpfFlowSave').onclick=saveFlow;$('tpfFlowNew').onclick=resetFlow;$('tpfFlowTrigger').onchange=()=>{flow.trigger_type=$('tpfFlowTrigger').value;flow.trigger_config={};renderTriggerConfig();};
     }
     const n=$('tpfAutoNew');if(n){n.onclick=()=>{resetFlow();$('tpfFlowBuilder')?.scrollIntoView({behavior:'smooth',block:'start'});};}
-    renderAll();
+    ensureLifecycleOptions();renderAll();
+  }
+
+  function ensureLifecycleOptions(){
+    if($('tpfLifecycleOptions'))return;
+    const box=document.createElement('div');box.id='tpfLifecycleOptions';box.style.cssText='padding:14px 17px;border-bottom:1px solid #edf1f5;background:#f8faff';
+    box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" data-lifecycle-draft="offer">Preparar oferta y seguimiento</button><button type="button" data-lifecycle-draft="after_sale">Preparar después de tramitar</button></div><label style="display:block;margin-top:12px">Protecciones de este flujo<select id="tpfLifecycleMode"><option value="">Mantener funcionamiento actual</option><option value="offer">Oferta y seguimiento</option><option value="after_sale">Después de tramitar</option></select></label><div id="tpfLifecycleConfig" style="margin-top:12px"></div>';
+    $('tpfFlowBuilder').querySelector('.tpfFlowMeta').insertAdjacentElement('afterend',box);
+  }
+
+  function lifecycleDraft(mode){
+    const action=(type,config={})=>({id:uid(),kind:'action',action_type:type,config});
+    const wait=days=>({id:uid(),kind:'wait',value:days,unit:'days'});
+    const after=mode==='after_sale';
+    flow={id:null,name:after?'Después de tramitar':'Oferta y seguimiento',enabled:false,trigger_type:after?'opportunity_stage':'label_assigned',trigger_config:{},
+      lifecycle:{version:1,mode,stop_stage_ids:[]},selected:null,
+      steps:after?[action('record_sale_month'),wait(2),action('send_template'),wait(5),action('send_template')]:[action('create_opportunity',{title:'Oferta · {nombre}',client_name:'{nombre}',phone:'{telefono}',status:'open'}),action('send_template'),action('record_offer_month'),wait(2),action('send_template'),wait(3),action('send_template')]};
+    renderAll();$('tpfFlowMessage').className='tpfFlowMessage';$('tpfFlowMessage').textContent='Borrador pausado. Elige las columnas, la etiqueta y las plantillas. Puedes cambiar los días; las esperas se suman.';
+  }
+
+  function renderLifecycle(){
+    const box=$('tpfLifecycleConfig');if(!box)return;
+    const p=flow.lifecycle||{},offer=p.mode==='offer',after=p.mode==='after_sale';
+    $('tpfLifecycleMode').value=p.mode||'';
+    if(!offer&&!after){box.innerHTML='<span class="small">Opcional: prepara uno de estos flujos como borrador nuevo. Tus automatizaciones actuales se conservan.</span>';return;}
+    box.innerHTML=`<strong>${after?'Después de tramitar':'Oferta y seguimiento'}</strong><p class="small">${after?'El día 0 es la entrada en la columna elegida arriba. No depende de la etiqueta de seguimiento de oferta. Al salir de esa columna se cancelan los pasos pendientes.':'La etiqueta elegida arriba inicia esta campaña una vez por cliente. Quitarla detiene el seguimiento; volver a ponerla no lo reinicia. Cualquier respuesta del cliente detiene este seguimiento.'}</p>${offer?`<div class="tpfStepConfig"><label>Pendiente de tramitar<select data-lifecycle-stage="0">${stageOptions(p.stop_stage_ids?.[0]||'')}</select></label><label>Tramitado<select data-lifecycle-stage="1">${stageOptions(p.stop_stage_ids?.[1]||'')}</select></label></div>`:''}<p class="small">Una petición explícita de baja bloquea los mensajes comerciales de estos flujos. Las plantillas y las esperas se eligen en los pasos. «Cancelar ejecución» sigue disponible en el historial.</p>`;
   }
 
   function renderTriggerConfig(){
@@ -119,10 +144,14 @@
     }else if(s.action_type==='move_opportunity'){
       h+=`<label class="full">Mover a columna<select data-cfg="stage_id">${stageOptions(c.stage_id||'')}</select></label>`;
     }
+    if(s.action_type==='record_offer_month')h+='<p class="full">Añade OFERTA con el mes y año del envío confirmado. Debe ir justo después de enviar la oferta, con una oportunidad vinculada.</p>';
+    if(s.action_type==='record_sale_month')h+='<p class="full">Añade VENTAS con el mes y año de entrada en Tramitado. Retira la etiqueta de esa oferta si ninguna otra oportunidad abierta la necesita.</p>';
     h+='</div>';e.innerHTML=h;
+    if(flow.lifecycle){const select=e.querySelector('[data-key="action_type"]');if(select){for(const type of ['record_offer_month','record_sale_month']){const option=document.createElement('option');option.value=type;option.textContent=actionLabel(type);select.appendChild(option);}select.value=s.action_type||'';}}
   }
 
   function onBuilderClick(ev){
+    const preset=ev.target.closest('[data-lifecycle-draft]');if(preset){if((flow.id||flow.steps.length)&&!window.confirm('Preparar un borrador nuevo descartará los cambios sin guardar del editor. ¿Continuar?'))return;lifecycleDraft(preset.dataset.lifecycleDraft);return;}
     const add=ev.target.closest('[data-add]');if(add){const kind=add.dataset.add;const s={id:uid(),kind};if(kind==='action'){s.action_type='';s.config={}}if(kind==='wait'){s.value='';s.unit=''}if(kind==='condition'){s.condition_type=''}if(kind==='repeat'){s.every_value='';s.every_unit='';s.times='';s.stop_if_response=false}flow.steps.push(s);flow.selected=s.id;renderSteps();return;}
     const row=ev.target.closest('[data-step-id]');if(!row)return;const id=row.dataset.stepId,i=flow.steps.findIndex(x=>x.id===id);if(i<0)return;
     if(ev.target.closest('[data-delete]')){flow.steps.splice(i,1);flow.selected=flow.steps[Math.max(0,i-1)]?.id||null;renderSteps();return;}
@@ -132,6 +161,11 @@
 
   function onBuilderInput(ev){
     const t=ev.target;
+    if(t.id==='tpfLifecycleMode'){
+      flow.lifecycle=t.value?{version:1,mode:t.value,stop_stage_ids:[]}:null;if(flow.extra)delete flow.extra.lifecycle;
+      flow.enabled=false;renderAll();$('tpfFlowMessage').textContent='Se conservan tus pasos. Revisa el registro mensual y las columnas antes de activar. El borrador queda pausado.';return;
+    }
+    if(t.dataset.lifecycleStage!==undefined&&flow.lifecycle){flow.lifecycle.stop_stage_ids=flow.lifecycle.stop_stage_ids||[];flow.lifecycle.stop_stage_ids[Number(t.dataset.lifecycleStage)]=t.value;return;}
     if(t.id==='tpfFlowName'){flow.name=t.value;return}if(t.id==='tpfFlowEnabled'){flow.enabled=t.value==='1';return}
     if(t.dataset.triggerKey){flow.trigger_config[t.dataset.triggerKey]=t.value;return}
     const s=flow.steps.find(x=>x.id===flow.selected);if(!s)return;
@@ -143,6 +177,12 @@
 
   function validate(){
     if(!String(flow.name||'').trim())return 'Pon un nombre a la automatización.';
+    if(flow.lifecycle&&!flow.enabled)return ''; // Incomplete drafts are safe while paused; server validates activation too.
+    if(flow.lifecycle?.mode==='offer'){
+      if(flow.trigger_type!=='label_assigned')return 'El seguimiento de oferta necesita la etiqueta de inicio.';
+      const ids=flow.lifecycle.stop_stage_ids||[];if(ids.length!==2||!ids[0]||!ids[1]||ids[0]===ids[1])return 'Elige dos columnas diferentes: Pendiente de tramitar y Tramitado.';
+    }
+    if(flow.lifecycle?.mode==='after_sale'&&flow.trigger_type!=='opportunity_stage')return 'Elige la columna Tramitado como inicio.';
     if(!flow.trigger_type)return 'Elige qué inicia la automatización.';
     if(flow.trigger_type==='message_contains'&&!String(flow.trigger_config.keyword||'').trim())return 'Escribe la palabra o frase del disparador.';
     if(flow.trigger_type==='opportunity_stage'&&!flow.trigger_config.stage_id)return 'Elige la columna que inicia la automatización.';
@@ -172,9 +212,9 @@
     const msg=$('tpfFlowMessage'),err=validate();if(err){msg.className='tpfFlowMessage err';msg.textContent=err;return;}
     const btn=$('tpfFlowSave');btn.disabled=true;msg.className='tpfFlowMessage';msg.textContent='Guardando…';
     try{
-      const payload={version:1,steps:flow.steps.map(({id,...x})=>x)};
+      const payload={...(flow.extra||{}),version:1,steps:flow.steps.map(({id,...x})=>x),...(flow.lifecycle?{lifecycle:flow.lifecycle}:{})};
       const {data,error}=await sb.rpc('crm_upsert_automation',{p_id:flow.id||null,p_name:String(flow.name).trim(),p_enabled:!!flow.enabled,p_trigger_type:flow.trigger_type,p_trigger_config:normalizeTrigger(),p_action_type:'flow_v1',p_action_config:payload});
-      if(error)throw error;flow.id=data||flow.id;msg.className='tpfFlowMessage ok';msg.textContent='Automatización guardada. El flujo se ejecutará en servidor aunque cierres el CRM.';try{await window.loadAutomations?.()}catch(_){}decorateRules();
+      if(error)throw error;flow.id=data||flow.id;msg.className='tpfFlowMessage ok';msg.textContent=flow.enabled?'Automatización guardada. El flujo se ejecutará en servidor aunque cierres el CRM.':'Borrador guardado y pausado. No se enviará ningún mensaje.';try{await window.loadAutomations?.()}catch(_){}decorateRules();
     }catch(e){msg.className='tpfFlowMessage err';msg.textContent=e?.message||'No se pudo guardar.'}finally{btn.disabled=false}
   }
 
@@ -183,11 +223,12 @@
     let r=getRule(id);if(!r){try{await window.loadAutomations?.();r=getRule(id)}catch(_){}}
     if(!r||r.action_type!=='flow_v1')return false;
     flow={id:r.id,name:r.name||'',enabled:!!r.enabled,trigger_type:r.trigger_type||'',trigger_config:{...(r.trigger_config||{})},steps:(r.action_config?.steps||[]).map(x=>({id:uid(),...JSON.parse(JSON.stringify(x))})),selected:null};
+    flow.extra={...(r.action_config||{})};flow.lifecycle=r.action_config?.lifecycle?JSON.parse(JSON.stringify(r.action_config.lifecycle)):null;
     if(flow.trigger_type==='unanswered'&&flow.trigger_config.minutes&&!flow.trigger_config.wait_value){const m=Number(flow.trigger_config.minutes);if(m%10080===0){flow.trigger_config.wait_value=m/10080;flow.trigger_config.wait_unit='weeks'}else if(m%1440===0){flow.trigger_config.wait_value=m/1440;flow.trigger_config.wait_unit='days'}else if(m%60===0){flow.trigger_config.wait_value=m/60;flow.trigger_config.wait_unit='hours'}else{flow.trigger_config.wait_value=m;flow.trigger_config.wait_unit='minutes'}}
     renderAll();$('tpfFlowBuilder')?.scrollIntoView({behavior:'smooth',block:'start'});return true;
   }
 
-  function renderAll(){if(!$('tpfFlowBuilder'))return;$('tpfFlowName').value=flow.name||'';$('tpfFlowEnabled').value=flow.enabled?'1':'0';$('tpfFlowTrigger').value=flow.trigger_type||'';renderTriggerConfig();renderSteps();}
+  function renderAll(){if(!$('tpfFlowBuilder'))return;$('tpfFlowName').value=flow.name||'';$('tpfFlowEnabled').value=flow.enabled?'1':'0';$('tpfFlowTrigger').value=flow.trigger_type||'';renderTriggerConfig();renderLifecycle();renderSteps();}
   function decorateRules(){
     const rules=Array.isArray(window.crmAutomations)?window.crmAutomations:[];
     document.querySelectorAll('#auto2List .auto2Rule').forEach(el=>{
