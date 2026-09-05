@@ -327,15 +327,26 @@
         case 'system':if(!state.perms?.is_admin){go('more',true);break}view.innerHTML=window.TPFMobileSystem?.render?.()||empty('Estado no disponible','Recarga la aplicación.');window.TPFMobileSystem?.refresh();break;
         default:view.innerHTML=renderHome();
       }
+      updateMobileWhatsAppNav();
       if(!['whatsapp','whatsapp-chat'].includes(current.parts[0]))stopMobileWaRefresh();
       view.scrollTop=current.parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0;
     }catch(error){window.TPFMobileSystem?.report?.({type:'JavaScript',module:'Interfaz móvil',message:'No se pudo abrir una pantalla',detail:error?.message||''});view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
   }
   window.TPFMobileRerender=render;
   function setActiveNav(name){
-    const quickOrigin=route().query.get('origin')==='quick',group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'':name==='system'?'more':name;
+    const quickOrigin=route().query.get('origin')==='quick',group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'whatsapp':name==='system'?'more':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
+    byId('mobileMenu').setAttribute('aria-current',group==='more'?'page':'false');
+  }
+  function updateMobileWhatsAppNav(){
+    const button=byId('mobileNavWhatsApp'),badge=byId('mobileNavWhatsAppBadge');
+    if(!button||!badge)return;
+    const unread=has('can_use_whatsapp')&&state.whatsapp.loaded
+      ?state.whatsapp.chats.filter(chat=>mobileWaUnread(chat)>0).length:0;
+    badge.textContent=unread>99?'99+':String(unread);
+    badge.classList.toggle('hidden',unread===0);
+    button.setAttribute('aria-label',unread?`WhatsApp, ${unread} conversaciones no leídas`:'WhatsApp');
   }
 
   function homePriorityRow(item){
@@ -1141,6 +1152,7 @@
     finally{if(timer)clearTimeout(timer);}
   }
   function updateMobileWaListDom(){
+    updateMobileWhatsAppNav();
     const status=byId('mobileWaStatus'),filters=byId('mobileWaFilters'),list=byId('mobileWaList'),button=document.querySelector('[data-action="wa-refresh"]');
     if(status)status.innerHTML=renderMobileWaStatus();if(filters)filters.innerHTML=renderMobileWaFilters();if(list)list.innerHTML=renderMobileWaListBody();if(button)button.disabled=state.whatsapp.loadingChats;
   }
