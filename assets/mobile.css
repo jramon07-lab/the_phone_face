@@ -13,7 +13,7 @@
   --m-red:#ff6b75;
   --m-amber:#f4bd62;
   --m-safe-top:env(safe-area-inset-top,0px);
-  --m-safe-bottom:env(safe-area-inset-bottom,0px);
+  --m-safe-bottom:min(env(safe-area-inset-bottom,0px),34px);
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -84,6 +84,11 @@ button{cursor:pointer}
 /* WhatsApp shortcut: badge counts chats already loaded by the mobile app. */
 .m-bottom-nav .m-nav-badge{position:absolute;top:2px;left:calc(50% + 7px);min-width:17px;padding:2px 4px;border-radius:10px;background:#25d366;color:#062718;font-size:.58rem;line-height:1.2;text-align:center;pointer-events:none}
 .m-bottom-nav button>span svg{display:block}
+
+/* Keep native iOS date controls inside the form's available column. */
+.m-form-grid{grid-template-columns:minmax(0,1fr)}
+.m-field input[type="date"],.m-field input[type="datetime-local"]{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
+.m-field input::-webkit-date-and-time-value{min-width:0;text-align:left}
 
 /* Contact profile actions stay outside clickable opportunity cards. */
 .m-profile-actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.m-profile-actions>button{flex:1 1 150px;min-height:44px}
