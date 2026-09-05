@@ -1,6 +1,8 @@
--- REVIEW ONLY. Not applied to the shared database; welcome starts disabled.
+-- Authorship and opt-in welcome schema. Welcome starts disabled; activation is separate.
 -- No existing contacts, labels, jobs or messages are created/updated by this file.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '60s';
 create schema if not exists crm_private;
 revoke all on schema crm_private from public;
 
@@ -37,7 +39,8 @@ end $$;
 create or replace function public.crm_set_contact_labels(p_contact_id uuid,p_label_ids uuid[]) returns void language plpgsql security invoker set search_path=public,pg_temp as $$
 begin
  if auth.uid() is null then raise exception 'Authentication required';end if;
- perform 1 from public.records where id=p_contact_id for update;
+ perform pg_advisory_xact_lock(hashtextextended(p_contact_id::text,0));
+ perform 1 from public.records where id=p_contact_id;
  if not found then raise exception 'Contacto no accesible';end if;
  delete from public.crm_contact_labels where contact_id=p_contact_id and not(label_id=any(coalesce(p_label_ids,'{}'::uuid[])));
  insert into public.crm_contact_labels(contact_id,label_id)
@@ -50,6 +53,7 @@ create table public.crm_welcome_settings (
  message text not null default 'Hola {{nombre_cliente}}, soy {{nombre_usuario}}, de The Phone Face. Estoy aquí para ayudarte.'
 );
 alter table public.crm_welcome_settings enable row level security;
+revoke all on public.crm_welcome_settings from anon,authenticated;
 grant select on public.crm_welcome_settings to authenticated;
 create policy welcome_settings_read on public.crm_welcome_settings for select to authenticated using(public.current_user_is_admin() or public.current_user_can('can_view_database'));
 -- Configuration is deliberately a separate activation step, not part of this migration.
@@ -62,6 +66,7 @@ create table public.crm_welcome_requests (
  sent_at timestamptz,error_message text
 );
 alter table public.crm_welcome_requests enable row level security;
+revoke all on public.crm_welcome_requests from anon,authenticated;
 grant select,insert on public.crm_welcome_requests to authenticated;
 create policy welcome_read on public.crm_welcome_requests for select to authenticated using(exists(select 1 from public.records r where r.id=contact_id));
 create policy welcome_request on public.crm_welcome_requests for insert to authenticated with check(requested_by=auth.uid() and status='requested' and actor_id is null and actor_name is null and job_id is null and sent_at is null and exists(select 1 from public.records r where r.id=contact_id and r.crm_created_by=auth.uid() and r.crm_creation_origin='manual' and r.created_at>now()-interval '5 minutes'));
@@ -69,7 +74,7 @@ create policy welcome_request on public.crm_welcome_requests for insert to authe
 create or replace function public.crm_welcome_capability() returns jsonb language sql stable security invoker set search_path=public,pg_temp as $$
  select jsonb_build_object('installed',true,'enabled',coalesce((select enabled and label_id is not null and automation_id is not null from public.crm_welcome_settings where id),false));
 $$;
-revoke all on function public.crm_welcome_capability() from public;
+revoke all on function public.crm_welcome_capability() from public,anon;
 grant execute on function public.crm_welcome_capability() to authenticated;
 
 -- One transaction: create, opt in, then assign labels. Imports never call this RPC.
@@ -89,7 +94,7 @@ declare cid uuid;cfg public.crm_welcome_settings%rowtype;labels uuid[]:=coalesce
  perform public.crm_set_contact_labels(cid,labels);
  return cid;
 end $$;
-revoke all on function public.crm_create_contact_with_welcome(jsonb,uuid[],boolean) from public;
+revoke all on function public.crm_create_contact_with_welcome(jsonb,uuid[],boolean) from public,anon;
 grant execute on function public.crm_create_contact_with_welcome(jsonb,uuid[],boolean) to authenticated;
 
 -- Private trigger hook: snapshots the assigning user; no access to HTTP secrets.
@@ -139,7 +144,7 @@ create or replace function public.crm_contact_authorship(p_contact_id uuid) retu
  'welcome',(select to_jsonb(w) from public.crm_welcome_requests w where w.contact_id=r.id))
  from public.records r where r.id=p_contact_id;
 $$;
-revoke all on function public.crm_contact_authorship(uuid) from public;
+revoke all on function public.crm_contact_authorship(uuid) from public,anon;
 grant execute on function public.crm_contact_authorship(uuid) to authenticated;
 
 CREATE OR REPLACE FUNCTION public.crm_server_on_label_assigned()
@@ -199,4 +204,5 @@ end $$;
 create trigger crm_audit_record after insert or update on public.records for each row execute function crm_private.audit_entity();
 create trigger crm_audit_opportunity after insert or update on public.sales_opportunities for each row execute function crm_private.audit_entity();
 create trigger crm_audit_task after update of title,description,status,assigned_to,starts_at,reminder_at on public.agenda_items for each row execute function crm_private.audit_entity();
+revoke all on function crm_private.stamp_actor(),crm_private.audit_entity(),crm_private.welcome_job_status() from public,anon,authenticated;
 commit;

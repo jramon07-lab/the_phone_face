@@ -1,8 +1,8 @@
 # Autoría y bienvenida — preparación del 5 de septiembre
 
-Estado: código de interfaz preparado en la rama temporal. SQL propuesto NO aplicado. Bienvenida NO activada. No se ha enviado ningún mensaje ni creado registros de prueba.
+Estado: SQL aplicado el 5 de septiembre tras autorización expresa del usuario sobre la base compartida. Migraciones `contact_authorship_welcome_disabled` y `contact_authorship_explicit_function_grants`. Bienvenida NO activada. No se ha enviado ningún mensaje ni creado registros de prueba. El archivo SQL recoge la definición consolidada; no volver a aplicarlo sobre tablas ya existentes.
 
-La Preview usa la base principal `overfzbjtpjqxzbujezg`; desplegar una Preview no aísla la base ni el ejecutor de automatizaciones. Aplicar los scripts cambia el servidor compartido y requiere resolver la instrucción de no tocar Production.
+La Preview usa la base principal `overfzbjtpjqxzbujezg`; desplegar una Preview no aísla la base ni el ejecutor de automatizaciones. El usuario autorizó esta actualización compartida manteniendo la bienvenida desactivada. No se ha promovido ninguna rama ni despliegue a Production.
 
 ## Resultado preparado
 
@@ -17,13 +17,13 @@ La Preview usa la base principal `overfzbjtpjqxzbujezg`; desplegar una Preview n
 
 ## Activación pendiente
 
-1. Revisar y probar `db/proposals/contact_authorship_welcome.sql` en una copia aislada del esquema actual. No se ha ejecutado: falta autorización para el servidor compartido y no se ha usado la antigua rama de base de datos.
-2. Validar permisos, triggers existentes, concurrencia y el contrato de la cola sin llamar a GREEN ni al ejecutor. La validación local de JavaScript no sustituye esta comprobación SQL.
-3. Aplicar el SQL en una transacción tras aprobación. No rellena autores antiguos.
-4. Revisar el texto y ejecutar `db/proposals/activate_welcome.sql` con sesión de administrador. Este script crea la configuración y la etiqueta sin asignarla a contactos y no encola mensajes. Falla si ya existe Bienvenida, para impedir reutilizar una etiqueta con efectos desconocidos.
-5. Verificar catálogos/RLS y capacidad de la interfaz mediante consultas de lectura. No hacer E2E ni envíos de prueba.
+1. Instalación confirmada: cinco triggers de autoría y tres de auditoría. Nuevas tablas con RLS y permisos explícitos; acceso anónimo a los RPC nuevos revocado.
+2. Lectura de capacidad comprobada con rol authenticated: installed=true, enabled=false. Petición de creación sin identidad rechazada antes de insertar. Cero solicitudes y cero trabajos welcome al terminar.
+3. No se ha probado creación real ni envíos, respetando la prohibición de E2E y registros de prueba. Queda pendiente validar el recorrido de bienvenida antes de activarlo; comprobar permisos no equivale a verificar entrega de WhatsApp.
+4. `db/proposals/activate_welcome.sql` NO ejecutado. Requiere sesión de administrador y revisión del texto. Crea configuración y etiqueta sin asignarla a contactos; falla si ya existe Bienvenida.
+5. Asesor de seguridad consultado: sus avisos devueltos sobre funciones de automatización anteriores no se han modificado en esta entrega. Catálogos actuales de las nuevas funciones y tablas comprobados directamente.
 
-La interfaz muestra la bienvenida pendiente y deshabilitada hasta que la capacidad del servidor indique activación. El móvil y los restantes formularios no cambian sus creaciones: se benefician de la autoría del servidor cuando se aplique, pero la casilla de bienvenida de esta entrega se prepara para Crear contacto de PC.
+La interfaz muestra la bienvenida pendiente y deshabilitada hasta que la capacidad del servidor indique activación. El móvil y los restantes formularios no cambian sus creaciones: se benefician de la autoría del servidor desde esta instalación, pero la casilla de bienvenida de esta entrega se prepara para Crear contacto de PC.
 
 ## Reversibilidad
 
