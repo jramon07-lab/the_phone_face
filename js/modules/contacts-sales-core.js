@@ -812,6 +812,7 @@ async function loadSales(){
  const {data,error}=await sb.rpc("sales_board");
  if(error){$("salesBoard").innerHTML=esc(error.message);return}
  salesCache={stages:data?.stages||[],opportunities:data?.opportunities||[],fields:data?.fields||[]};
+ window.dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:salesCache.opportunities}}));
  renderSales();
 }
 window.moveOpp=async(id,stage)=>{const {error}=await sb.from("sales_opportunities").update({stage_id:stage,position:0}).eq("id",id);if(error)alert(error.message);else loadSales()};
