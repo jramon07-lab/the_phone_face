@@ -13,7 +13,7 @@
  #contactModal.tpfContactDesktop .cpDesktopRailFoot span{display:block;color:#bbc6df;font-size:13px;letter-spacing:0;margin-top:8px}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTop{height:auto;min-height:76px;padding:12px 28px;gap:18px;box-sizing:border-box;background:#fff;border-bottom:1px solid #e1e6ef;box-shadow:none}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpNav{font-size:16px;color:#293956}
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns{display:grid;grid-template-columns:minmax(290px,350px) minmax(0,1fr);grid-template-rows:auto 1fr;align-items:start;gap:22px;max-width:1540px;padding:26px;box-sizing:border-box}
+ #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns{display:grid;grid-template-columns:minmax(290px,350px) minmax(0,1fr)!important;grid-template-rows:auto 1fr;align-items:start;gap:22px;max-width:1540px;padding:26px;box-sizing:border-box}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpLeft{grid-column:1;grid-row:1 / span 2;position:static;gap:16px;scroll-margin-top:94px}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpRight{grid-column:2;grid-row:1;position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;scroll-margin-top:94px}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpCenter{grid-column:2;grid-row:2;min-height:360px;padding:0 22px 20px;background:#fff;scroll-margin-top:94px}
@@ -71,9 +71,20 @@
  #contactModal.tpfContactDesktop.tpfTaskStandalone>.contactProfile,#contactModal.tpfContactDesktop:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden))>.contactProfile{padding-left:0}
 }
 @media (min-width:1024px) and (max-width:1279px){
- #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns{grid-template-columns:300px minmax(0,1fr);padding:18px;gap:18px}
+ #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpColumns{grid-template-columns:300px minmax(0,1fr)!important;padding:18px;gap:18px}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpRight{grid-template-columns:minmax(0,1fr)}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpSideSection{grid-column:1}
  #contactModal.tpfContactDesktop.tpfContactCleanV2 .cpTop{padding:12px 18px}
 }
 
+
+/* Override the legacy recovery layout only while the desktop profile is open.
+   Task pages retain their existing layout and navigation. */
+@media (min-width:1024px){
+#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))){left:0!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;overflow:auto!important}
+#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden)))>.contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important}
+#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpColumns{height:auto!important;min-height:calc(100vh - 76px);overflow:visible!important}
+#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpLeft,
+#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpCenter,
+#contactModal.tpfContactDesktop.tpfContactCleanV2:not(.tpfTaskStandalone):not(.tpfListTaskModal):not(.tpf-wa-task-mode):not(.tpf-wa-task-flow):not(:has(#cpTaskPage:not(.hidden),#cpTaskDetailPage:not(.hidden),#tpfWaTasksPage:not(.hidden))) .cpRight{height:auto!important;max-height:none!important;overflow:visible!important}
+}
