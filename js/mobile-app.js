@@ -1,6 +1,9 @@
 (function(){
   'use strict';
 
+  // iOS home-screen apps may expose navigator.standalone without matching the media query.
+  document.documentElement?.classList.toggle('m-installed',window.navigator?.standalone===true||window.matchMedia?.('(display-mode:standalone)')?.matches===true);
+
   const SB_URL='https://overfzbjtpjqxzbujezg.supabase.co';
   const SB_KEY='sb_publishable_o6_eM5v04EBInhfiSnyFLA_5yRHlB4j';
   const CONTACT_SOURCE='BASE DE DATOS';
