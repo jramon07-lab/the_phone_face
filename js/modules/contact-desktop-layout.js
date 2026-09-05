@@ -13,6 +13,9 @@
  identity.before(identityAnchor);center.before(centerAnchor);
  const heading=modal.querySelector('.cpNav'),oldHeading=heading?.textContent;
  let mounted=false,selected='resumen';
+ const createTask=$('cpTaskPage'),createTaskAnchor=document.createComment('original create task position');
+ if(createTask)createTask.before(createTaskAnchor);
+ let embeddedCreate=false,createWasVisible=false,tabBeforeCreate='resumen';
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
   ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['documentos','Documentos'],['historial','Historial']
@@ -51,10 +54,18 @@
   e.preventDefault();select(keys[i],true);
  });
  function taskMode(){
+  if(embeddedCreate)return false;
   return ['tpfTaskStandalone','tpfListTaskModal','tpf-wa-task-mode','tpf-wa-task-flow'].some(c=>modal.classList.contains(c)) ||
    ['cpTaskPage','cpTaskDetailPage','tpfWaTasksPage'].some(id=>{const e=$(id);return e&&!e.classList.contains('hidden');});
  }
  function sync(){
+  if(embeddedCreate&&createTask){
+   if(!mq.matches||modal.classList.contains('hidden')||(createWasVisible&&createTask.classList.contains('hidden'))){
+    embeddedCreate=false;createWasVisible=false;createTaskAnchor.after(createTask);modal.classList.remove('cpRefTaskInside');select(tabBeforeCreate);
+   }else if(!createTask.classList.contains('hidden')){
+    createWasVisible=true;if(createTask.parentElement!==panel)panel.appendChild(createTask);select('tareas');
+   }
+  }
   edit.textContent=modal.classList.contains('tpf-contact-editing')?'Cancelar edición':'Editar datos';
   const on=mq.matches&&!taskMode();
   if(on&&!mounted){
@@ -70,6 +81,12 @@
    sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();call.remove();
   }
  }
+ document.addEventListener('click',e=>{
+  if(!mounted||modal.classList.contains('hidden')||!createTask)return;
+  if(e.target.closest?.('#cpNewTask,#cpSideNewTask')){
+   embeddedCreate=true;createWasVisible=false;tabBeforeCreate=selected;modal.classList.add('cpRefTaskInside');
+  }
+ },true);
  const observer=new MutationObserver(sync);observer.observe(modal,{attributes:true,attributeFilter:['class']});
  ['cpTaskPage','cpTaskDetailPage'].forEach(id=>{if($(id))observer.observe($(id),{attributes:true,attributeFilter:['class']});});
  mq.addEventListener('change',sync);
