@@ -14,13 +14,15 @@
  const heading=modal.querySelector('.cpNav'),oldHeading=heading?.textContent;
  let mounted=false,selected='resumen';
  const composer=$('agendaCreateCard'),typeModal=$('agendaTypeModal');
- let embeddedCreate=false,tabBeforeCreate='resumen',composerPositions=[];
+ let embeddedCreate=false,tabBeforeCreate='resumen',composerPositions=[],composerChildren=[],taskDialog=null,taskTrigger=null,contactWasInert=false;
  function restoreComposer(){
   if(!embeddedCreate)return;
   embeddedCreate=false;
+  composer.replaceChildren(...composerChildren);composerChildren=[];composer.removeAttribute('data-contact-dialog');
+  taskDialog?.remove();taskDialog=null;modal.inert=contactWasInert;
   composerPositions.splice(0).forEach(({node,parent,next})=>parent.insertBefore(node,next?.parentNode===parent?next:null));
   typeModal?.removeAttribute('data-contact-composer');
-  modal.classList.remove('cpRefTaskInside');select(tabBeforeCreate);
+  modal.classList.remove('cpRefTaskInside');select(tabBeforeCreate);taskTrigger?.focus();taskTrigger=null;
  }
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
@@ -92,7 +94,24 @@
   const contactId=contact.id;
   tabBeforeCreate=selected;embeddedCreate=true;
   [composer,typeModal].filter(Boolean).forEach(node=>composerPositions.push({node,parent:node.parentNode,next:node.nextSibling}));
-  panel.appendChild(composer);
+  taskTrigger=e.target.closest('#cpNewTask,#cpSideNewTask');
+  contactWasInert=modal.inert;modal.inert=true;
+  composerChildren=[...composer.childNodes];
+  const head=composer.querySelector('.agendaComposerHead'),save=$('agendaSave'),message=$('agendaMsg');
+  const formBody=document.createElement('div');formBody.className='cpTaskDialogBody';
+  composerChildren.filter(node=>node!==head&&node!==save&&node!==message).forEach(node=>formBody.appendChild(node));
+  const footer=document.createElement('div');footer.className='cpTaskDialogFooter';
+  const back=document.createElement('button');back.type='button';back.textContent='← Volver';back.addEventListener('click',()=>window.TPFAgendaComposer?.close());
+  footer.append(save,back,message);composer.replaceChildren(head,formBody,footer);
+  taskDialog=document.createElement('div');taskDialog.className='cpTaskDialogBackdrop';taskDialog.setAttribute('role','dialog');taskDialog.setAttribute('aria-modal','true');taskDialog.setAttribute('aria-label','Nueva tarea');
+  composer.setAttribute('data-contact-dialog','true');taskDialog.appendChild(composer);document.body.appendChild(taskDialog);
+  taskDialog.addEventListener('keydown',event=>{
+   if(event.key!=='Tab')return;
+   const controls=[...taskDialog.querySelectorAll('button,input,select,textarea,a[href]')].filter(node=>!node.disabled&&node.getClientRects().length);
+   const first=controls[0],last=controls[controls.length-1];
+   if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+  });
   if(typeModal){document.body.appendChild(typeModal);typeModal.setAttribute('data-contact-composer','true');}
   modal.classList.add('cpRefTaskInside');select('tareas');
   window.openAgendaComposer({customerName:$('contactName')?.value||'',phone:$('contactPhone')?.value||'',contactId,type:'Tarea'}, {
