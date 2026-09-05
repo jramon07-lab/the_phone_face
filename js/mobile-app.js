@@ -1360,8 +1360,15 @@
   }
   function mobileWaFindContact(chatId){
     if(String(chatId||'').includes('@')&&!/@c\.us$/i.test(String(chatId||'')))return null;
-    const wanted=mobileWaPhoneVariants(chatId);if(!wanted.size)return null;
-    return state.contacts.find(contact=>{const variants=mobileWaPhoneVariants(contact.phone);return [...wanted].some(value=>variants.has(value));})||null;
+    const number=contactPhoneNumber(mobileWaNormalizePhone(chatId));if(!number)return null;
+    const matches=state.contacts.filter(contact=>contactPhones(contact).some(phone=>phone.number===number));
+    const current=route(),origin=current.query.get('fromContact');
+    if(current.parts[0]==='whatsapp-chat'&&safeDecode(current.parts[1])===String(chatId)&&origin){const selected=matches.find(contact=>String(contact.id)===origin);if(selected)return selected;}
+    return matches.length===1?matches[0]:null;
+  }
+  function mobileWaContactChat(chatId){
+    const chat=mobileWaSelectedChat(chatId),contact=mobileWaFindContact(chatId);
+    return contact?{...chat,name:contact.fullName}:chat;
   }
   function mobileWaStatus(){
     const value=String(state.whatsapp.providerState||'').toLowerCase();
@@ -1463,7 +1470,7 @@
   function renderMobileWaContactAction(chat){
     const id=String(chat.id||''),group=id.includes('@g.us'),lid=id.includes('@lid');if(group)return '<span>Los grupos no se vinculan a una ficha.</span>';if(lid)return '<span>Este chat no muestra un teléfono verificable.</span>';
     const contact=mobileWaFindContact(chat.id);
-    if(contact)return `<span>Contacto sincronizado</span><button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver ficha</button>`;
+    if(contact)return `<span>${esc(contact.fullName)}${contact.dni?` · DNI: ${esc(contact.dni)}`:''}</span><button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver ficha</button>`;
     if(has('can_create_database')&&has('can_view_database'))return `<span>No está en Contactos</span><button class="m-secondary" data-action="wa-create-contact" data-chat-id="${esc(chat.id)}" type="button">Crear contacto</button>`;
     return '<span>No está vinculado a Contactos.</span>';
   }
@@ -1529,7 +1536,7 @@
     finally{state.whatsapp.templatesLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='templates'&&root.dataset.chatId===chatId)setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);}
   }
   function resolveMobileWaTemplate(text,chatId){
-    const chat=mobileWaSelectedChat(chatId),contact=mobileWaFindContact(chatId),fullName=clean(contact?.fullName||chat?.name),first=clean(contact?.first||fullName.split(/\s+/)[0]),dni=clean(contact?.dni),phone=clean(contact?.phone||mobileWaNormalizePhone(chatId));
+    const chat=mobileWaSelectedChat(chatId),contact=mobileWaFindContact(chatId),fullName=clean(contact?.fullName||chat?.name),first=clean(contact?.first||fullName.split(/\s+/)[0]),dni=clean(contact?.dni),phone=clean(contactPhones(contact).find(p=>p.number===contactPhoneNumber(mobileWaNormalizePhone(chatId)))?.label||contact?.phone||mobileWaNormalizePhone(chatId));
     return String(text||'').replace(/\{\{contacto\.nombre_completo\}\}/gi,fullName).replace(/\{\{contacto\.nombre\}\}/gi,first).replace(/\{\{contacto\.telefono\}\}/gi,phone).replace(/\{\{contacto\.(?:dni|dni \/ nif|nif)\}\}/gi,dni).replace(/\{nombre_completo\}/gi,fullName).replace(/\{nombre\}/gi,first).replace(/\{dni\}/gi,dni).replace(/\{telefono\}/gi,phone);
   }
   function useMobileWaTemplate(index){
@@ -1562,7 +1569,7 @@
   function renderMobileWhatsAppChat(chatId){
     if(!has('can_use_whatsapp'))return `<div class="m-page">${pageHead('WhatsApp','home')}${empty('Acceso restringido','No tienes permiso para utilizar WhatsApp.')}</div>`;
     if(!chatId)return `<div class="m-page">${pageHead('WhatsApp','whatsapp')}${empty('Chat no encontrado','Vuelve a la lista de conversaciones.')}</div>`;
-    const chat=mobileWaSelectedChat(chatId),id=String(chat.id||''),phone=id.includes('@g.us')?'Grupo':id.includes('@lid')?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`,sameChat=String(state.whatsapp.selectedId)===String(chatId),busy=state.whatsapp.sending?' disabled':'',busyText=state.whatsapp.sending?'Hay un envío en curso…':'';
+    const chat=mobileWaContactChat(chatId),id=String(chat.id||''),phone=id.includes('@g.us')?'Grupo':id.includes('@lid')?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`,sameChat=String(state.whatsapp.selectedId)===String(chatId),busy=state.whatsapp.sending?' disabled':'',busyText=state.whatsapp.sending?'Hay un envío en curso…':'';
     return `<div class="m-page m-wa-chat-page"><div class="m-wa-chat-head"><button class="m-back" data-action="wa-back-list" type="button" aria-label="${mobileWaBackTarget()==='whatsapp'?'Volver a conversaciones':'Volver a la ficha del contacto'}">‹</button><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-title"><strong>${esc(mobileWaChatName(chat))}</strong><small>${esc(phone)}</small></span><button class="m-back m-wa-refresh" data-action="wa-refresh-chat" type="button" aria-label="Actualizar chat">↻</button></div><div class="m-wa-contact-link">${renderMobileWaContactAction(chat)}</div><div id="mobileWaMessages" class="m-wa-messages" aria-live="polite">${sameChat?renderMobileWaMessages():skeleton()}</div><div class="m-wa-composer"><button class="m-secondary m-wa-attach" data-action="wa-attach" type="button" aria-label="Abrir acciones del chat" aria-haspopup="dialog" aria-controls="mobileWaActionSheet" aria-expanded="false"${busy}>＋</button><textarea id="mobileWaComposer" class="m-textarea" rows="1" maxlength="4096" placeholder="Escribe un mensaje"${busy}></textarea><button id="mobileWaSend" class="m-primary" data-action="wa-send" type="button"${busy}>Enviar</button><small id="mobileWaComposerMsg" class="m-form-msg">${esc(busyText)}</small></div></div>`;
   }
   function updateMobileWaMessagesDom({scrollBottom=false}={}){

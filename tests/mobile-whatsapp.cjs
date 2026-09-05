@@ -226,7 +226,7 @@ async function run(){
   assert.equal(nodes.mobileWaMessages.writes,0,'Un refresco sin cambios no debe reconstruir el historial');
   assert.match(source,/loadMobileWaChats\(\{silent:true,light:true\}\)/);
   assert.match(source,/page==='whatsapp-chat'\?20000:180000/);
-  assert.match(source,/if\(action==='wa-back-list'\)go\('whatsapp',true\)/);
+  assert.match(source,/if\(action==='wa-back-list'\)go\(mobileWaBackTarget\(\),true\)/);
   assert.match(htmlSource,/id="mobileWhatsAppFileInput"[^>]*accept="image\/\*,video\/\*,audio\/\*,\.pdf,\.doc,\.docx,\.xls,\.xlsx,\.txt"/);
   assert.match(htmlSource,/id="mobileWaActionSheet"[^>]*aria-hidden="true"/);
 
