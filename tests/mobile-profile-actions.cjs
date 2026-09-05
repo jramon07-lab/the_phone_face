@@ -19,7 +19,7 @@ const client={
     if(name==='delete_sales_opportunity')return failDelete?{error:{message:'Delete failed'}}:{data:null};
     throw Error('Unexpected RPC '+name);
   },
-  from(table){assert.equal(table,'sales_opportunities');const q={
+  from(table){if(table==='app_settings'){const q={select(){return q},eq(){return q},async maybeSingle(){return {data:{value:{a:'Operadores',b:'Tiendas',c:'Operadores'}}}}};return q;}assert.equal(table,'sales_opportunities');const q={
     select(){return q},eq(){return q},
     async maybeSingle(){return {data:stillExists?{id:'o1'}:null}},
     insert(row){inserted=row;return q},async single(){return {data:{id:'new-opportunity'}}},
@@ -49,7 +49,7 @@ async function run(){
   node('contactOppTitle').value='Nueva';node('contactOppStage').value='s1';node('contactOppAmount').value='12,50';
   await api.saveContactOpportunity('c1');assert.equal(inserted.record_id,'c1');assert.equal(inserted.phone,'600000001');assert.equal(inserted.amount,12.5);assert.equal(refreshes,1);assert.equal(location.hash,'#/contact/c1');
   api.openProfileLabels('c1');await api.loadProfileLabels('c1');
-  assert.match(api.renderProfileLabels('c1'),/checked/);
+  assert.match(api.renderProfileLabels('c1'),/checked/);assert.match(api.renderProfileLabels('c1'),/Todas las categorías/);assert.match(api.renderProfileLabels('c1'),/Operadores/);assert.match(api.renderProfileLabels('c1'),/Tiendas/);
   api.editor.selected.delete('a');api.editor.selected.add('c');assigned.get('c1').push('external');
   await api.saveProfileLabels('c1');assert.deepEqual([...assigned.get('c1')].sort(),['b','c','external']);assert.deepEqual(assigned.get('c2'),['b']);
   assert(!calls.some(c=>c.name==='crm_delete_label'),'Must never delete the global label');

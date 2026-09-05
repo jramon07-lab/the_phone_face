@@ -625,10 +625,11 @@
     if(!has('can_manage_labels')||profileLabels.contactId!==String(contactId)||profileLabels.loading)return;
     const editor=profileLabels;editor.loading=true;editor.error='';
     try{
-      const [all,assigned]=await Promise.all([client.rpc('crm_list_labels'),client.rpc('crm_get_contact_labels',{p_contact_id:contactId})]);
-      if(all.error)throw all.error;if(assigned.error)throw assigned.error;
+      const [all,assigned,categories]=await Promise.all([client.rpc('crm_list_labels'),client.rpc('crm_get_contact_labels',{p_contact_id:contactId}),client.from('app_settings').select('value').eq('key','crm_label_categories_v1').maybeSingle()]);
+      if(all.error)throw all.error;if(assigned.error)throw assigned.error;if(categories.error)throw categories.error;
       if(editor!==profileLabels)return;
       editor.labels=[...new Map([...(all.data||[]),...(assigned.data||[])].map(label=>[profileLabelId(label),label])).values()].filter(label=>profileLabelId(label)).sort((a,b)=>String(a.name||a.label_name||'').localeCompare(String(b.name||b.label_name||''),'es'));
+      editor.categories=categories.data?.value||{};
       editor.initial=(assigned.data||[]).map(profileLabelId).filter(Boolean);editor.selected=new Set(editor.initial);editor.loaded=true;
     }catch(error){if(editor===profileLabels)editor.error=error?.message||'No se pudieron cargar las etiquetas.';}
     finally{editor.loading=false;if(editor===profileLabels&&profileLabelsVisible(contactId))render();}
@@ -639,8 +640,13 @@
     const editor=profileLabels;
     if(editor.contactId!==String(contactId)||editor.loading||!editor.loaded&&!editor.error)return `<div class="m-page">${head}${skeleton()}</div>`;
     if(editor.error&&!editor.loaded)return `<div class="m-page">${head}<p class="m-form-msg">${esc(editor.error)}</p><button class="m-secondary" data-action="profile-labels-retry" data-contact-id="${esc(contactId)}">Reintentar</button></div>`;
-    const labels=editor.labels.map(label=>{const id=profileLabelId(label);return `<label class="m-profile-label"><input type="checkbox" data-profile-label-id="${esc(id)}" ${editor.selected.has(id)?'checked':''} ${editor.saving?'disabled':''}><span>${esc(label.name||label.label_name||'Etiqueta')}</span></label>`;}).join('');
-    return `<div class="m-page">${head}<p class="m-subtitle">${esc(contact.fullName)}</p><p class="m-muted">Marca para añadir y desmarca para quitar de este contacto.</p><input id="mobileProfileLabelSearch" class="m-input" type="search" placeholder="Buscar etiqueta" aria-label="Buscar etiqueta"><div class="m-profile-labels">${labels||empty('Sin etiquetas','Todavía no hay etiquetas creadas en el CRM.')}</div><button class="m-primary m-library-full" data-action="profile-labels-save" data-contact-id="${esc(contactId)}" ${editor.saving||!editor.labels.length?'disabled':''}>${editor.saving?'Guardando…':'Guardar etiquetas'}</button><p class="m-form-msg">${esc(editor.error)}</p></div>`;
+    const labels=editor.labels.map(label=>{const id=profileLabelId(label);const category=clean(editor.categories?.[id])||clean(label.category)||mobileWaInferLabelCategory(label.name);return `<label class="m-profile-label" data-category="${esc(category)}"><input type="checkbox" data-profile-label-id="${esc(id)}" ${editor.selected.has(id)?'checked':''} ${editor.saving?'disabled':''}><span>${esc(label.name||label.label_name||'Etiqueta')}<small class="m-label-category">${esc(category)}</small></span></label>`;}).join('');
+    return `<div class="m-page">${head}<p class="m-subtitle">${esc(contact.fullName)}</p><p class="m-muted">Marca para añadir y desmarca para quitar de este contacto.</p><input id="mobileProfileLabelSearch" class="m-input" type="search" placeholder="Buscar etiqueta" aria-label="Buscar etiqueta"><label class="m-field" style="margin-top:12px"><span>Categoría</span><select id="mobileProfileLabelCategory" class="m-select"><option value="">Todas las categorías</option>${[...new Set(editor.labels.map(label=>clean(editor.categories?.[profileLabelId(label)])||clean(label.category)||mobileWaInferLabelCategory(label.name)))].sort((a,b)=>a.localeCompare(b,'es')).map(category=>`<option value="${esc(category)}">${esc(category)}</option>`).join('')}</select></label><p id="mobileProfileLabelEmpty" class="m-muted hidden">No hay etiquetas que coincidan con los filtros.</p><div class="m-profile-labels">${labels||empty('Sin etiquetas','Todavía no hay etiquetas creadas en el CRM.')}</div><button class="m-primary m-library-full" data-action="profile-labels-save" data-contact-id="${esc(contactId)}" ${editor.saving||!editor.labels.length?'disabled':''}>${editor.saving?'Guardando…':'Guardar etiquetas'}</button><p class="m-form-msg">${esc(editor.error)}</p></div>`;
+  }
+  function filterProfileLabels(){
+    const query=foldText(byId('mobileProfileLabelSearch')?.value),category=byId('mobileProfileLabelCategory')?.value||'';let count=0;
+    document.querySelectorAll('.m-profile-label').forEach(label=>{const visible=(!category||label.dataset.category===category)&&foldText(label.textContent).includes(query);label.classList.toggle('hidden',!visible);if(visible)count++;});
+    byId('mobileProfileLabelEmpty')?.classList.toggle('hidden',count>0);
   }
   async function saveProfileLabels(contactId){
     const editor=profileLabels;
@@ -1458,13 +1464,13 @@
     byId('mobileWhatsAppFileInput').onchange=event=>{const chatId=state.whatsapp.pendingFileChatId;state.whatsapp.pendingFileChatId='';sendMobileWaFile(event.target.files?.[0],chatId);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
     byId('mobileView').addEventListener('change',event=>{
+      if(event.target?.id==='mobileProfileLabelCategory'){filterProfileLabels();return;}
       const id=event.target?.dataset?.profileLabelId;
       if(id&&profileLabels.loaded&&!profileLabels.saving){event.target.checked?profileLabels.selected.add(id):profileLabels.selected.delete(id);}
     });
     byId('mobileView').addEventListener('input',event=>{
       if(event.target?.id!=='mobileProfileLabelSearch')return;
-      const query=foldText(event.target.value);
-      document.querySelectorAll('.m-profile-label').forEach(label=>label.classList.toggle('hidden',!foldText(label.textContent).includes(query)));
+      filterProfileLabels();
     });
     byId('mobileWaActionSheet').addEventListener('click',handleViewClick);
     byId('mobileWaActionSheet').addEventListener('input',handleMobileWaSheetFilter);
