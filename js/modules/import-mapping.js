@@ -10,8 +10,9 @@
  const synonyms={
   contact:{
    first_name:["nombre","first name"],last_name:["apellidos","apellido","last name"],full_name:["nombre y apellidos","nombre completo","cliente","contacto"],
-   phone:["telefono","teléfono","telefono 1","teléfono 1","movil","móvil","phone","celular"],dni:["dni","nif","nif nit","dni nif","documento"],email:["email","correo","correo electronico","correo electrónico","correo electronico 1","correo electrónico 1"],
-   notes:["notas","nota","observaciones","comentarios"]
+   phone:["telefono","teléfono","telefono 1","teléfono 1","movil","móvil","phone","celular"],phone_2:["telefono 2","teléfono 2"],phone_3:["telefono 3","teléfono 3"],
+   dni:["dni","nif","nif nit","dni nif","documento"],email:["email","correo","correo electronico","correo electrónico","correo electronico 1","correo electrónico 1"],
+   observations:["observaciones","observacion","observación","comentarios"],notes:["notas","nota"],labels:["etiquetas","tags"],owner:["propietario"],created_at:["creado","fecha de creación","fecha creacion"],avatar:["url de imagen del contacto","imagen del contacto","avatar"]
   },
   opportunity:{
    title:["titulo","título","oportunidad","nombre oportunidad","asunto"],client_name:["cliente","nombre cliente","contacto","nombre y apellidos"],
@@ -20,11 +21,12 @@
    stage:["estado","etapa","columna","fase","stage"],notes:["notas","nota","observaciones","comentarios"]
   }
  };
- const labels={contact:{first_name:"Nombre",last_name:"Apellidos",full_name:"Nombre completo",phone:"Teléfono",dni:"DNI / NIF",email:"Correo",notes:"Notas"},opportunity:{title:"Título",client_name:"Cliente",phone:"Teléfono",dni:"DNI del contacto",email:"Correo del contacto",amount:"Importe",expected_date:"Fecha prevista",stage:"Estado / columna",notes:"Notas"}};
+ const labels={contact:{first_name:"Nombre",last_name:"Apellidos",full_name:"Nombre completo",phone:"Teléfono principal",phone_2:"Teléfono adicional 1",phone_3:"Teléfono adicional 2",dni:"DNI / NIF",email:"Correo",observations:"Observaciones",notes:"Notas",labels:"Etiquetas",owner:"Propietario",created_at:"Fecha de creación",avatar:"Imagen del contacto"},opportunity:{title:"Título",client_name:"Cliente",phone:"Teléfono",dni:"DNI del contacto",email:"Correo del contacto",amount:"Importe",expected_date:"Fecha prevista",stage:"Estado / columna",notes:"Notas"}};
+ const contactIgnored=new Set(["importe de oportunidades ganadas","importe de oportunidades perdidas","numero de oportunidades ganadas","numero de oportunidades perdidas","etapa de oportunidad activa","moneda"]);
  let state=null, legacyPreview=null, legacyRun=null;
 
  function isGuided(){return ["BASE DE DATOS","OPORTUNIDADES"].includes(q("destination")?.value)}
- function guess(header,type){const n=norm(header), group=synonyms[type];for(const [key,list] of Object.entries(group))if(list.some(x=>norm(x)===n))return key;return "custom"}
+ function guess(header,type){const n=norm(header);if(type==="contact"&&contactIgnored.has(n))return "ignore";const group=synonyms[type];for(const [key,list] of Object.entries(group))if(list.some(x=>norm(x)===n))return key;return "custom"}
  function options(type,selected){return '<option value="ignore">No importar</option>'+Object.entries(labels[type]).map(([v,l])=>`<option value="${v}" ${selected===v?"selected":""}>${escHtml(l)}</option>`).join("")+`<option value="custom" ${selected==="custom"?"selected":""}>Campo adicional</option>`}
  function ensureUi(){
   if(q("importMapping"))return;
@@ -37,21 +39,28 @@
   q("importInfo").parentNode.appendChild(box);
  }
  function readMapped(raw,key){for(const [h,target] of Object.entries(state.mapping))if(target===key&&clean(raw[h]))return clean(raw[h]);return ""}
+ function readMappedValues(raw,key){return Object.entries(state.mapping).filter(([,target])=>target===key).map(([h])=>clean(raw[h])).filter(Boolean)}
  function extraValues(raw){const out={};for(const [h,target] of Object.entries(state.mapping))if(target==="custom"&&clean(raw[h])!=="")out[h]=raw[h];return out}
+ function rowPhones(raw){return ["phone","phone_2","phone_3"].flatMap(key=>readMappedValues(raw,key)).filter((v,i,a)=>{const d=digits(v);return d&&a.findIndex(x=>digits(x)===d)===i})}
+ function rowDnis(raw){return [...new Set(readMappedValues(raw,"dni").map(dni).filter(Boolean))]}
+ function splitLabels(v){return [...new Set(clean(v).split(/[,;\n]+/).map(x=>clean(x).replace(/\s+/g," ").toLocaleUpperCase("es-ES")).filter(Boolean))]}
+ function uniqueLabels(values){const out=[],seen=new Set();for(const value of values){const key=norm(value);if(key&&!seen.has(key)){seen.add(key);out.push(value)}}return out}
  function contactData(raw){
   const first=readMapped(raw,"first_name"),last=readMapped(raw,"last_name"),full=readMapped(raw,"full_name")||[first,last].filter(Boolean).join(" ");
-  return {...raw,"NOMBRE":first||full,"APELLIDOS":last,"NOMBRE Y APELLIDOS":full,"TELÉFONO":readMapped(raw,"phone"),"DNI / NIF":readMapped(raw,"dni"),"EMAIL":readMapped(raw,"email"),"NOTAS":readMapped(raw,"notes")};
+  const phones=rowPhones(raw),dnis=rowDnis(raw);
+  return {...raw,"NOMBRE":first||full,"APELLIDOS":last,"NOMBRE Y APELLIDOS":full,"TELÉFONO":phones[0]||"","TELÉFONO 2":phones[1]||"","TELÉFONO 3":phones[2]||"","DNI / NIF":dnis[0]||"","EMAIL":readMapped(raw,"email"),"OBSERVACIONES":readMapped(raw,"observations"),"NOTAS":readMapped(raw,"notes"),"PROPIETARIO":readMapped(raw,"owner"),"FECHA DE CREACIÓN":readMapped(raw,"created_at"),"IMAGEN DEL CONTACTO":readMapped(raw,"avatar")};
  }
  async function allContacts(){let out=[];for(let from=0;;from+=1000){const {data,error}=await sb.from("records").select("id,data").eq("source_sheet","BASE DE DATOS").range(from,from+999);if(error)throw error;out.push(...(data||[]));if((data||[]).length<1000)break}return out}
- function contactKeys(data){return {phone:digits(data["TELÉFONO"]||data.TELEFONO||data.MOVIL),dni:dni(data["DNI / NIF"]||data.DNI||data.NIF),email:email(data.EMAIL||data.Email)}}
+ function contactKeys(data){const phones=[data["TELÉFONO"],data.TELEFONO,data.MOVIL,data["TELÉFONO 2"],data["TELEFONO 2"],data["TELÉFONO 3"],data["TELEFONO 3"]].map(digits).filter(Boolean),unique=[...new Set(phones)];return {phone:unique[0]||"",phones:unique,dni:dni(data["DNI / NIF"]||data.DNI||data.NIF),email:email(data.EMAIL||data.Email)}}
  async function analyse(){
   if(!state)return;const errors=[];let duplicates=0;state.duplicateRows=new Set();
   if(state.type==="contact"){
-   const existing=await allContacts(), seen=new Set();existing.forEach(r=>{const k=contactKeys(r.data||{});Object.entries(k).forEach(([t,v])=>v&&seen.add(t+":"+v))});
-   state.rawRows.forEach((raw,i)=>{const d=contactData(raw),k=contactKeys(d);if(!clean(d["NOMBRE Y APELLIDOS"])&&!k.phone&&!k.dni&&!k.email)errors.push(`Fila ${i+2}: falta nombre, teléfono, DNI o correo.`);const hit=Object.entries(k).some(([t,v])=>v&&seen.has(t+":"+v));if(hit){duplicates++;state.duplicateRows.add(i)}else Object.entries(k).forEach(([t,v])=>v&&seen.add(t+":"+v))});
+   const existing=await allContacts(),seenDni=new Set(),seenEmail=new Set(),seenPhone=new Map();existing.forEach(r=>{const k=contactKeys(r.data||{});if(k.dni)seenDni.add(k.dni);if(k.email)seenEmail.add(k.email);k.phones.forEach(p=>seenPhone.set(p,k.dni||""))});
+   state.rawRows.forEach((raw,i)=>{const d=contactData(raw),k=contactKeys(d),dnis=rowDnis(raw);if(dnis.length>1){errors.push(`Fila ${i+2}: DNI/NIF distintos en la misma fila; necesita revisión manual.`);return}if(!clean(d["NOMBRE Y APELLIDOS"])&&!k.phones.length&&!k.dni&&!k.email){errors.push(`Fila ${i+2}: falta nombre, teléfono, DNI o correo.`);return}const sharedDifferentDni=k.phones.some(p=>seenPhone.has(p)&&seenPhone.get(p)&&k.dni&&seenPhone.get(p)!==k.dni);if(sharedDifferentDni){errors.push(`Fila ${i+2}: teléfono compartido por contactos con DNI distinto; necesita revisión manual.`);return}const hit=(k.dni&&seenDni.has(k.dni))||(k.email&&seenEmail.has(k.email))||k.phones.some(p=>seenPhone.has(p));if(hit){duplicates++;state.duplicateRows.add(i);return}if(k.dni)seenDni.add(k.dni);if(k.email)seenEmail.add(k.email);k.phones.forEach(p=>seenPhone.set(p,k.dni||""))});
+   const lr=await sb.rpc("crm_list_labels");if(lr.error)throw lr.error;state.crmLabels=lr.data||[];const existingLabels=new Set(state.crmLabels.map(x=>norm(x.name)));state.importLabels=uniqueLabels(state.rawRows.flatMap(raw=>splitLabels(readMapped(raw,"labels"))));state.newLabels=state.importLabels.filter(name=>!existingLabels.has(norm(name)));
   }else state.rawRows.forEach((raw,i)=>{if(!readMapped(raw,"title"))errors.push(`Fila ${i+2}: falta el título de la oportunidad.`)});
   const custom=Object.entries(state.mapping).filter(([,v])=>v==="custom").length;
-  state.errors=errors;q("importSummary").innerHTML=`<div><b>${state.rawRows.length}</b>filas encontradas</div><div><b>${state.rawRows.length-duplicates-errors.length}</b>listas para importar</div><div class="importWarn"><b>${duplicates}</b>duplicados (se omitirán)</div><div><b>${errors.length}</b>filas con error</div><div><b>${custom}</b>campos adicionales</div>`;
+  state.errors=errors;q("importSummary").innerHTML=`<div><b>${state.rawRows.length}</b>filas encontradas</div><div><b>${state.rawRows.length-duplicates-errors.length}</b>listas para importar</div><div class="importWarn"><b>${duplicates}</b>duplicados (se omitirán)</div><div><b>${errors.length}</b>filas con revisión</div><div><b>${custom}</b>campos adicionales</div>${state.type==="contact"?`<div><b>${state.newLabels?.length||0}</b>etiquetas nuevas</div>`:""}`;
   q("importErrors").textContent=errors.slice(0,8).join("\n")+(errors.length>8?`\n… y ${errors.length-8} más.`:"");
   renderPreview();q("runImport").disabled=!state.rawRows.length||state.rawRows.length===duplicates+errors.length;
  }
@@ -77,10 +86,17 @@
   for(const name of names)if(!fields.some(f=>norm(f.name)===norm(name))){const {error:e}=await sb.rpc("crm_create_custom_field",{p_name:name,p_field_type:"text",p_options:[]});if(e)throw e}
   const again=await sb.rpc("crm_list_custom_fields");if(again.error)throw again.error;return new Map((again.data||[]).map(f=>[norm(f.name),f]));
  }
+ async function ensureLabels(){
+  let rows=state.crmLabels||[];
+  for(const name of state.newLabels||[]){const r=await sb.rpc("crm_create_label",{p_name:name});if(r.error)throw r.error}
+  if(state.newLabels?.length){const again=await sb.rpc("crm_list_labels");if(again.error)throw again.error;rows=again.data||[]}
+  return new Map(rows.map(label=>[norm(label.name),label]));
+ }
  async function importContacts(rows){
-  const customNames=Object.entries(state.mapping).filter(([,v])=>v==="custom").map(([h])=>h), fields=await ensureContactFields(customNames);let done=0;
+  const customNames=Object.entries(state.mapping).filter(([,v])=>v==="custom").map(([h])=>h),fields=await ensureContactFields(customNames),labelMap=await ensureLabels();let done=0;
   for(const {raw,i} of rows){const payload={source_sheet:"BASE DE DATOS",source_row:i+2,data:contactData(raw)};const {data,error}=await sb.from("records").insert(payload).select("id").single();if(error)throw error;
-   const values=Object.entries(extraValues(raw)).map(([name,value])=>({field_id:fields.get(norm(name))?.id,value:clean(value)})).filter(x=>x.field_id&&x.value!=="");if(values.length){const saved=await sb.rpc("crm_set_contact_custom_values",{p_contact_id:String(data.id),p_values:values});if(saved.error)throw saved.error}done++;progress(done,rows.length)}
+   const values=Object.entries(extraValues(raw)).map(([name,value])=>({field_id:fields.get(norm(name))?.id,value:clean(value)})).filter(x=>x.field_id&&x.value!=="");if(values.length){const saved=await sb.rpc("crm_set_contact_custom_values",{p_contact_id:String(data.id),p_values:values});if(saved.error)throw saved.error}
+   const labelIds=splitLabels(readMapped(raw,"labels")).map(name=>labelMap.get(norm(name))?.id).filter(Boolean);if(labelIds.length){const saved=await sb.rpc("crm_set_contact_labels",{p_contact_id:String(data.id),p_label_ids:[...new Set(labelIds)]});if(saved.error)throw saved.error}done++;progress(done,rows.length)}
   if(typeof crmLoadCustomFields==="function")await crmLoadCustomFields();
  }
  async function ensureSalesFields(names){
@@ -92,7 +108,7 @@
  function date(v){const s=clean(v);if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);const m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:null}
  async function importOpportunities(rows){
   const st=await sb.from("sales_stages").select("id,pipeline_id,name").eq("active",true).order("position");if(st.error||!st.data?.length)throw st.error||new Error("No hay columnas de ventas activas.");
-  const contacts=await allContacts(), contactMap=new Map();contacts.forEach(r=>{const k=contactKeys(r.data||{});Object.entries(k).forEach(([t,v])=>v&&contactMap.set(t+":"+v,r.id))});
+  const contacts=await allContacts(), contactMap=new Map();contacts.forEach(r=>{const k=contactKeys(r.data||{});k.phones.forEach(v=>contactMap.set("phone:"+v,r.id));if(k.dni)contactMap.set("dni:"+k.dni,r.id);if(k.email)contactMap.set("email:"+k.email,r.id)});
   const customNames=Object.entries(state.mapping).filter(([,v])=>v==="custom").map(([h])=>h),fields=await ensureSalesFields(customNames);let done=0;
   for(const {raw} of rows){const stageName=norm(readMapped(raw,"stage")),stage=st.data.find(s=>norm(s.name)===stageName)||st.data[0],p=digits(readMapped(raw,"phone")),d=dni(readMapped(raw,"dni")),e=email(readMapped(raw,"email")),recordId=contactMap.get("dni:"+d)||contactMap.get("phone:"+p)||contactMap.get("email:"+e)||null;
    const payload={pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:recordId,title:readMapped(raw,"title"),client_name:readMapped(raw,"client_name")||null,phone:readMapped(raw,"phone")||null,amount:number(readMapped(raw,"amount")),expected_date:date(readMapped(raw,"expected_date")),notes:readMapped(raw,"notes")||null};
@@ -102,10 +118,11 @@
  function progress(done,total){q("importBar").style.width=`${done/total*100}%`;q("importInfo").textContent=`Importados ${done} / ${total}`}
  async function run(){
   if(!(perms?.is_admin||perms?.can_manage_imports)){alert("Sin permiso");return}if(!state)return;await analyse();const rows=validRows();if(!rows.length){alert("No hay filas válidas nuevas para importar.");return}
-  if(!confirm(`¿Importar ${rows.length} filas válidas en ${state.type==="contact"?"Contactos":"Oportunidades"}? Los duplicados y errores se omitirán.`))return;
+  const labelNotice=state.type==="contact"&&state.newLabels?.length?`\n\nSe crearán ${state.newLabels.length} etiquetas nuevas en MAYÚSCULAS y se asignarán sin iniciar automatizaciones.`:"";
+  if(!confirm(`¿Importar ${rows.length} filas válidas en ${state.type==="contact"?"Contactos":"Oportunidades"}? Los duplicados y filas en revisión se omitirán.${labelNotice}`))return;
   q("runImport").disabled=true;try{if(state.type==="contact")await importContacts(rows);else await importOpportunities(rows);q("importInfo").textContent=`Importación terminada: ${rows.length} registros nuevos. Las columnas adicionales se han conservado.`;state=null;q("importMapping").classList.add("hidden")}catch(e){q("importInfo").textContent="Importación detenida: "+(e.message||e);q("runImport").disabled=false}
  }
  function bind(){ensureUi();legacyPreview=q("previewImport").onclick;legacyRun=q("runImport").onclick;q("previewImport").onclick=e=>isGuided()?preview().catch(err=>{q("importInfo").textContent="No se pudo leer el Excel: "+err.message}):legacyPreview?.call(q("previewImport"),e);q("runImport").onclick=e=>isGuided()?run():legacyRun?.call(q("runImport"),e);q("destination").addEventListener("change",()=>{state=null;q("importMapping").classList.add("hidden");q("runImport").disabled=true;q("previewHead").innerHTML="";q("previewRows").innerHTML=""})}
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
- window.TPFImportMapping={norm,guess,digits,contactKeys,number,date};
+ window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels};
 })();
