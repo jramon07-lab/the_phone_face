@@ -2807,6 +2807,18 @@ async function tpfRestoreWhatsappSnapshot(s){
 
 async function tpfRestoreScreen(s){
   if(!s)return false;
+  // Returning from a child editor to the already mounted desktop contact
+  // does not require exposing the main view or refetching the same customer.
+  const contactLayer=$("contactModal");
+  if(s.type==="contact" && s.id && window.matchMedia("(min-width:1024px)").matches &&
+     contactLayer?.classList.contains("tpfContactDesktop") && !contactLayer.classList.contains("hidden") &&
+     String(currentContact?.id||"")===String(s.id)){
+    ["oppDetailModal","opportunityFullPage","cpTaskDetailPage","cpTaskPage"].forEach(id=>$(id)?.classList.add("hidden"));
+    const columns=contactLayer.querySelector(".cpColumns"),top=contactLayer.querySelector(".cpTop");
+    if(columns)columns.style.display="";
+    if(top)top.style.display="";
+    return true;
+  }
   window.__TPF_RESTORING=true;
   try{
     tpfCloseAllDetails();

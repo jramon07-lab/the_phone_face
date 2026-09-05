@@ -100,6 +100,11 @@
    onSaved:async row=>{restoreComposer();if(row?.related_record_id&&typeof logContactActivity==='function')await logContactActivity(row.related_record_id,'task_created','Tarea creada',row.title||'');if(typeof currentContact!=='undefined'&&currentContact?.id===contactId&&typeof renderContactProfile==='function')await renderContactProfile();}
   });
  },true);
+ // The contact back button closes its child composer before leaving the client.
+ window.addEventListener('click',e=>{
+  if(!embeddedCreate||!e.target.closest?.('#contactClose'))return;
+  e.preventDefault();e.stopImmediatePropagation();window.TPFAgendaComposer?.close();
+ },true);
  const observer=new MutationObserver(sync);observer.observe(modal,{attributes:true,attributeFilter:['class']});
  ['cpTaskPage','cpTaskDetailPage'].forEach(id=>{if($(id))observer.observe($(id),{attributes:true,attributeFilter:['class']});});
  mq.addEventListener('change',sync);

@@ -143,3 +143,13 @@
 #contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #agendaSave{display:inline-flex!important;visibility:visible!important;min-height:42px;background:#155eef;color:white}
 }
 #agendaTypeModal[data-contact-composer="true"]{z-index:70000!important;--ap-blue:#155eef;--ap-text:#182230;--ap-muted:#667085;--ap-line:#e4e7ec;--ap-soft:#f8faff}
+
+/* Keep only the active child editor actionable in the contact workspace. */
+@media(min-width:1024px){
+#contactModal.tpfContactDesktop.cpRefTaskInside .cpQuick,
+#contactModal.tpfContactDesktop.cpRefTaskInside .cpRefEdit{visibility:hidden!important;pointer-events:none!important}
+#contactModal.tpfContactDesktop.cpRefTaskInside .cpData{pointer-events:none}
+#contactModal.tpfContactDesktop.hidden{display:none!important}
+#contactModal.tpfContactDesktop #cpTaskPage.hidden,
+#contactModal.tpfContactDesktop #cpTaskDetailPage.hidden{display:none!important}
+}
