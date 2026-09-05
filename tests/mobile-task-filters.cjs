@@ -15,6 +15,7 @@ const view={innerHTML:'',scrollTop:-1};
 const nodes={
   mobileApp:{classList:{contains(){return false;}}},
   mobileView:view,
+  mobileMenu:{setAttribute(){}},
   mobileAdd:{classList:{toggle(){}}}
 };
 const context={

@@ -14,6 +14,7 @@ class FixedDate extends Date{static now(){return fixedNow;}}
 const nodes={
   mobileApp:{classList:{contains(){return false;}}},
   mobileView:{innerHTML:'',scrollTop:0},
+  mobileMenu:{setAttribute(){}},
   mobileAdd:{classList:{toggle(){}}}
 };
 const context={

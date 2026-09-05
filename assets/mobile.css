@@ -89,10 +89,13 @@ button{cursor:pointer}
 .m-form-grid{grid-template-columns:minmax(0,1fr)}
 .m-field input[type="date"],.m-field input[type="datetime-local"]{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
 .m-field input::-webkit-date-and-time-value{min-width:0;text-align:left}
+.m-task-open{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left}
+.m-task-description{display:block;margin-top:10px;color:var(--m-muted);font-size:.75rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.m-task-option{display:flex;align-items:center;gap:10px;min-height:44px;font-size:.83rem}.m-task-option input{width:20px;height:20px;accent-color:var(--m-purple)}
+.m-edit-fields{border:0;padding:0;margin:0;min-width:0}.m-detail-actions{display:grid;gap:10px;margin-top:18px}
+.m-label-category{display:block;color:var(--m-muted);font-size:.7rem;margin-top:4px}
 
 /* Contact profile actions stay outside clickable opportunity cards. */
 .m-profile-actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.m-profile-actions>button{flex:1 1 150px;min-height:44px}
 .m-profile-opportunity{display:grid;gap:8px}.m-profile-opportunity>.m-list-card{width:100%}.m-profile-opportunity>.m-danger{justify-self:end;min-height:44px}
 .m-profile-labels{display:grid;gap:8px;margin:14px 0}.m-profile-label{display:flex;align-items:center;gap:12px;min-height:48px;padding:12px;border:1px solid #294354;border-radius:12px;background:#0d2030}.m-profile-label input{width:20px;height:20px;flex-shrink:0;accent-color:#a855f7}.m-profile-label span{overflow-wrap:anywhere}
-
-.m-label-category{display:block;color:var(--m-muted);font-size:.7rem;margin-top:4px}
