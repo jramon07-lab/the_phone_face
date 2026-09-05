@@ -12,7 +12,7 @@
  const centerAnchor=document.createComment('desktop history original position');
  identity.before(identityAnchor);center.before(centerAnchor);
  const heading=modal.querySelector('.cpNav'),oldHeading=heading?.textContent;
- let mounted=false,selected='documentos';
+ let mounted=false,selected='resumen';
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
   ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['documentos','Documentos'],['historial','Historial']
@@ -55,6 +55,7 @@
    ['cpTaskPage','cpTaskDetailPage','tpfWaTasksPage'].some(id=>{const e=$(id);return e&&!e.classList.contains('hidden');});
  }
  function sync(){
+  edit.textContent=modal.classList.contains('tpf-contact-editing')?'Cancelar edición':'Editar datos';
   const on=mq.matches&&!taskMode();
   if(on&&!mounted){
    mounted=true;if(heading)heading.textContent='Ficha del cliente';
@@ -64,7 +65,7 @@
    modal.querySelector('.cpTop')?.appendChild(edit);
    modal.classList.add('tpfContactReference');select(selected);updateCall();
   }else if(!on&&mounted){
-   mounted=false;if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
+   mounted=false;photoEpoch++;avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
    sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();call.remove();
   }
@@ -72,8 +73,47 @@
  const observer=new MutationObserver(sync);observer.observe(modal,{attributes:true,attributeFilter:['class']});
  ['cpTaskPage','cpTaskDetailPage'].forEach(id=>{if($(id))observer.observe($(id),{attributes:true,attributeFilter:['class']});});
  mq.addEventListener('change',sync);
- window.addEventListener('tpf:contact-open',()=>{selected='documentos';sync();select(selected);updateCall();});
+ window.addEventListener('tpf:contact-open',()=>{selected='resumen';delete right.dataset.cpRefProgramsAll;sync();select(selected);updateCall();refreshPhoto();});
  modal.addEventListener('input',e=>{if(e.target.id==='contactPhone')updateCall();});
  call.addEventListener('click',updateCall);
- sync();
+
+ // Summary limits only the number of cards, never the fields inside each card.
+ const summaryLists=[['cpOpportunities','oportunidades','.oppUnifiedCard'],['cpTasks','tareas','.cpTaskWrap'],['cpWhatsappPrograms','programados','.cpWaWrap']];
+ summaryLists.forEach(([id,key,selector])=>{
+  const list=$(id);if(!list)return;
+  const more=document.createElement('button');more.type='button';more.className='cpRefMore';more.dataset.cpRefMore=key;
+  list.after(more);
+  const update=()=>{const count=list.querySelectorAll(':scope > '+selector).length;more.hidden=count<=2;more.textContent=key==='programados'&&right.dataset.cpRefProgramsAll==='true'?'Mostrar solo 2':'Ver todos ('+count+')';};
+  more.addEventListener('click',()=>{if(key==='programados'){right.dataset.cpRefProgramsAll=right.dataset.cpRefProgramsAll==='true'?'false':'true';update();}else select(key,true);});
+  new MutationObserver(update).observe(list,{childList:true});update();
+ });
+ const schedule=$('cpScheduleWhatsapp'),oldScheduleText=schedule?.textContent;
+ const refreshHeader=()=>{if(schedule)schedule.textContent=mounted?'Programar WhatsApp':oldScheduleText;};
+ new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});
+ // Reuse the existing read-only avatar loader and its shared in-memory cache.
+ let photoKey='',photoEpoch=0;
+ const avatar=$('cpAvatar');
+ function refreshPhoto(){
+  if(!avatar)return;
+  let contact=null;try{contact=typeof currentContact!=='undefined'?currentContact:null;}catch(_){}
+  let phone=String($('contactPhone')?.value||'').replace(/[^0-9]/g,'');
+  if(phone.startsWith('00'))phone=phone.slice(2);if(phone.length===9)phone='34'+phone;
+  const key=String(contact?.id||'')+':'+phone;
+  if(key!==photoKey){photoKey=key;photoEpoch++;avatar.querySelector('.cpRefPhoto')?.remove();}
+  if(!mounted||modal.classList.contains('hidden')||!contact?.id||!/^[0-9]{10,15}$/.test(phone))return;
+  if(typeof waLoadAvatar!=='function'||typeof contactCanUseWhatsapp!=='function'||!contactCanUseWhatsapp())return;
+  if(avatar.querySelector('.cpRefPhoto'))return;
+  const epoch=++photoEpoch;
+  Promise.resolve(waLoadAvatar(phone+'@c.us')).then(url=>{
+   if(epoch!==photoEpoch||key!==photoKey||!mounted||modal.classList.contains('hidden')||!url)return;
+   if(!/^https:\/\//i.test(url)&&!/^data:image\/(jpeg|png|webp);base64,/i.test(url))return;
+   const img=new Image();img.className='cpRefPhoto';img.alt='';img.decoding='async';img.referrerPolicy='no-referrer';
+   let expired=false;const timer=setTimeout(()=>{expired=true;img.onload=null;img.onerror=null;},4000);
+   img.onload=()=>{clearTimeout(timer);if(!expired&&epoch===photoEpoch&&key===photoKey&&mounted&&!modal.classList.contains('hidden')){avatar.querySelector('.cpRefPhoto')?.remove();avatar.appendChild(img);}};
+   img.onerror=()=>{clearTimeout(timer);};img.src=url;
+  }).catch(()=>{});
+ }
+ new MutationObserver(()=>{if(!modal.classList.contains('hidden'))refreshPhoto();}).observe(modal,{attributes:true,attributeFilter:['class']});
+ if(avatar)new MutationObserver(()=>{if(!avatar.querySelector('.cpRefPhoto'))refreshPhoto();}).observe(avatar,{childList:true});
+ sync();refreshHeader();refreshPhoto();
 })();

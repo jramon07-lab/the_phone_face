@@ -1,5 +1,5 @@
 /* Reference layout: scoped to the desktop presentation adapter. */
-.cpDocumentsPending{display:none}
+.cpDocumentsPending,.cpRefMore{display:none}
 @media(min-width:1024px){
 #contactModal.tpfContactDesktop.tpfContactReference{left:252px!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;overflow:auto!important;background:#f6f8fc}
 #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important;padding:0;background:#f6f8fc}
@@ -82,4 +82,50 @@
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight #cpRefPanel>[data-cp-ref-pane][style*="display: none"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight #cpRefPanel>[data-cp-ref-pane][style*="display:none"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight #cpRefPanel>[data-cp-ref-pane].hidden{display:none!important}
+}
+
+/* Compact summary: card contents and action button dimensions are preserved. */
+@media(min-width:1024px){
+#contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{column-gap:14px;padding-top:2px;padding-bottom:18px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpName{text-align:left!important;justify-self:start;width:100%;color:#132340!important;-webkit-text-fill-color:#132340!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{position:relative;overflow:hidden;flex-shrink:0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefPhoto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#e7dcfc}
+#contactModal.tpfContactDesktop.tpfContactReference #tpfContactEditToggle{display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpQuick{align-items:center}
+#contactModal.tpfContactDesktop.tpfContactReference #cpScheduleWhatsapp{font-size:14px;white-space:nowrap}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:14px;min-height:0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="oportunidades"]{grid-column:1;grid-row:1}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="tareas"]{grid-column:2;grid-row:1}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="programados"]{grid-column:1 / -1;grid-row:2;border-top:1px solid #e6ebf2!important;padding-top:12px!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpOpportunities,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks{max-height:none;overflow:visible}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpOpportunities>.oppUnifiedCard:nth-child(n+3),
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks>.cpTaskWrap:nth-child(n+3),
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]:not([data-cp-ref-programs-all="true"]) #cpWhatsappPrograms>.cpWaWrap:nth-child(n+3){display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpViewOpportunities{display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpWhatsappPrograms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpSideTitle{margin-bottom:8px;padding-bottom:7px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpOppSummary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpOppStat{display:flex;gap:5px;align-items:center;padding:0;border:0;background:none}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpOppStat b{font-size:14px;margin:0}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedCard{padding:8px!important;margin:6px 0!important}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedClient,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedMeta,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedNotes,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedStageControl{margin-top:3px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedTop{flex-wrap:wrap;gap:4px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedTitle,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .oppUnifiedNotes{overflow-wrap:anywhere;white-space:pre-wrap}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpTaskWrap,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpWaWrap{margin-top:6px}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpWaItem small{white-space:pre-wrap;overflow:visible;max-height:none;text-overflow:clip;overflow-wrap:anywhere}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRefMore{display:none}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpRefMore:not([hidden]){display:block;border:0;background:#f1f5fc;color:#2e5fab;padding:8px 12px;margin-top:8px;border-radius:6px;font-size:13px;cursor:pointer}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel>.cpSideSection{margin-bottom:0}
+}
+@media(min-width:1024px) and (max-width:1150px){
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{grid-template-columns:minmax(0,1fr)}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="tareas"]{grid-column:1;grid-row:2}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="programados"]{grid-row:3}
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpWhatsappPrograms{grid-template-columns:minmax(0,1fr)}
 }
