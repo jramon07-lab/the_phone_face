@@ -84,3 +84,8 @@ button{cursor:pointer}
 /* WhatsApp shortcut: badge counts chats already loaded by the mobile app. */
 .m-bottom-nav .m-nav-badge{position:absolute;top:2px;left:calc(50% + 7px);min-width:17px;padding:2px 4px;border-radius:10px;background:#25d366;color:#062718;font-size:.58rem;line-height:1.2;text-align:center;pointer-events:none}
 .m-bottom-nav button>span svg{display:block}
+
+/* Contact profile actions stay outside clickable opportunity cards. */
+.m-profile-actions{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}.m-profile-actions>button{flex:1 1 150px;min-height:44px}
+.m-profile-opportunity{display:grid;gap:8px}.m-profile-opportunity>.m-list-card{width:100%}.m-profile-opportunity>.m-danger{justify-self:end;min-height:44px}
+.m-profile-labels{display:grid;gap:8px;margin:14px 0}.m-profile-label{display:flex;align-items:center;gap:12px;min-height:48px;padding:12px;border:1px solid #294354;border-radius:12px;background:#0d2030}.m-profile-label input{width:20px;height:20px;flex-shrink:0;accent-color:#a855f7}.m-profile-label span{overflow-wrap:anywhere}

@@ -18,6 +18,8 @@
     library:{templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:60},
     whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
+  let profileLabels={contactId:'',loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
+  const deletingProfileOpportunities=new Set();
   let mobileWaRefreshTimer=null;
   let contactSearchTimer=null;
   let opportunitySearchTimer=null;
@@ -207,6 +209,7 @@
     finally{button.disabled=false;button.textContent='Entrar';}
   }
   async function signOut(){
+    profileLabels={contactId:'',loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
     stopMobileWaRefresh();stopGuidedCamera();mobileTemplateRequestId+=1;mobileLabelRequestId+=1;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=null;state.scanUrl='';state.draft=null;
     clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);window.TPFMobileSystem?.stop();await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
@@ -302,6 +305,7 @@
         case 'contacts':view.innerHTML=renderContacts();bindContactFilters();break;
         case 'contact':view.innerHTML=renderContact(current.parts[1]);break;
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
+        case 'contact-labels':view.innerHTML=renderProfileLabels(current.parts[1]);ensureProfileLabels(current.parts[1]);break;
         case 'opportunities':view.innerHTML=renderOpportunities();bindOpportunityFilters();break;
         case 'opportunity':view.innerHTML=renderOpportunity(current.parts[1]);break;
         case 'tasks':view.innerHTML=renderTasks();break;
@@ -334,7 +338,7 @@
   }
   window.TPFMobileRerender=render;
   function setActiveNav(name){
-    const quickOrigin=route().query.get('origin')==='quick',group=name==='contact'||name==='edit-contact'?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'whatsapp':name==='system'?'more':name;
+    const quickOrigin=route().query.get('origin')==='quick',group=['contact','edit-contact','contact-labels'].includes(name)?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'whatsapp':name==='system'?'more':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
     byId('mobileMenu').setAttribute('aria-current',group==='more'?'page':'false');
@@ -577,15 +581,82 @@
     if(tab==='summary')body=`<div class="m-info-card">
       ${infoRow('DNI / NIF',contact.dni)}${infoRow('Teléfono',contact.phone)}${infoRow('Correo electrónico',contact.email)}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Observaciones',contact.observations)}${infoRow('Notas',contact.notes)}
     </div>`;
-    if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
+    if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opp=>`<article class="m-profile-opportunity">${opportunityCard(opp)}${has('can_edit_sales')?`<button class="m-danger" data-action="profile-delete-opportunity" data-id="${esc(opp.id)}" data-contact-id="${esc(id)}" type="button">Eliminar oportunidad</button>`:''}</article>`).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
     return `<div class="m-page">${pageHead('Ficha del contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar">✎</button>`:'')}
       <div class="m-profile-hero"><div class="m-avatar">${esc(initials(contact))}</div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.dni||'Sin DNI')}</p><p>${esc(contact.phone||'Sin teléfono')}</p></div>
+      <div class="m-profile-actions">${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-primary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Nueva oportunidad</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" type="button">Gestionar etiquetas</button>`:''}</div>
       <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
     </div>`;
   }
   function infoRow(label,value){return `<div class="m-info-row"><span>${esc(label)}</span><b>${esc(value||'—')}</b></div>`;}
+
+  async function deleteProfileOpportunity(id,contactId,button){
+    const opp=relatedOpportunities(contactId).find(row=>String(row.id)===String(id));
+    if(!opp||!has('can_edit_sales')||deletingProfileOpportunities.has(String(id)))return;
+    if(!confirm(`¿Eliminar la oportunidad "${opp.title||'Sin título'}"?`))return;
+    deletingProfileOpportunities.add(String(id));if(button)button.disabled=true;
+    try{
+      const removed=await client.rpc('delete_sales_opportunity',{opportunity_id:opp.id});
+      if(removed.error)throw removed.error;
+      const check=await client.from('sales_opportunities').select('id').eq('id',opp.id).maybeSingle();
+      if(check.error)throw check.error;
+      if(check.data)throw new Error('La oportunidad sigue existiendo. Actualiza los datos antes de intentarlo de nuevo.');
+      state.board.opportunities=state.board.opportunities.filter(row=>String(row.id)!==String(id));
+      updateAlertDot();render();toast('Oportunidad eliminada.','success');
+    }catch(error){toast(error?.message||'No se pudo eliminar la oportunidad.','error');}
+    finally{deletingProfileOpportunities.delete(String(id));if(button)button.disabled=false;}
+  }
+
+  function profileLabelId(label){return String(label.id??label.label_id??label.value??'');}
+  function profileLabelsVisible(contactId){const current=route();return current.parts[0]==='contact-labels'&&String(current.parts[1])===String(contactId);}
+  function openProfileLabels(contactId){
+    if(!has('can_manage_labels')||!state.contacts.some(row=>String(row.id)===String(contactId)))return;
+    profileLabels={contactId:String(contactId),loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
+    go(`contact-labels/${contactId}`);
+  }
+  function ensureProfileLabels(contactId){
+    if(!has('can_manage_labels')||!state.contacts.some(row=>String(row.id)===String(contactId)))return;
+    if(profileLabels.contactId!==String(contactId))profileLabels={contactId:String(contactId),loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
+    if(!profileLabels.loaded&&!profileLabels.loading&&!profileLabels.error)loadProfileLabels(contactId);
+  }
+  async function loadProfileLabels(contactId){
+    if(!has('can_manage_labels')||profileLabels.contactId!==String(contactId)||profileLabels.loading)return;
+    const editor=profileLabels;editor.loading=true;editor.error='';
+    try{
+      const [all,assigned]=await Promise.all([client.rpc('crm_list_labels'),client.rpc('crm_get_contact_labels',{p_contact_id:contactId})]);
+      if(all.error)throw all.error;if(assigned.error)throw assigned.error;
+      if(editor!==profileLabels)return;
+      editor.labels=[...new Map([...(all.data||[]),...(assigned.data||[])].map(label=>[profileLabelId(label),label])).values()].filter(label=>profileLabelId(label)).sort((a,b)=>String(a.name||a.label_name||'').localeCompare(String(b.name||b.label_name||''),'es'));
+      editor.initial=(assigned.data||[]).map(profileLabelId).filter(Boolean);editor.selected=new Set(editor.initial);editor.loaded=true;
+    }catch(error){if(editor===profileLabels)editor.error=error?.message||'No se pudieron cargar las etiquetas.';}
+    finally{editor.loading=false;if(editor===profileLabels&&profileLabelsVisible(contactId))render();}
+  }
+  function renderProfileLabels(contactId){
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),head=pageHead('Etiquetas del contacto',`contact/${contactId}`);
+    if(!contact||!has('can_manage_labels'))return `<div class="m-page">${head}${empty('No disponible','No tienes permiso o el contacto ya no existe.')}</div>`;
+    const editor=profileLabels;
+    if(editor.contactId!==String(contactId)||editor.loading||!editor.loaded&&!editor.error)return `<div class="m-page">${head}${skeleton()}</div>`;
+    if(editor.error&&!editor.loaded)return `<div class="m-page">${head}<p class="m-form-msg">${esc(editor.error)}</p><button class="m-secondary" data-action="profile-labels-retry" data-contact-id="${esc(contactId)}">Reintentar</button></div>`;
+    const labels=editor.labels.map(label=>{const id=profileLabelId(label);return `<label class="m-profile-label"><input type="checkbox" data-profile-label-id="${esc(id)}" ${editor.selected.has(id)?'checked':''} ${editor.saving?'disabled':''}><span>${esc(label.name||label.label_name||'Etiqueta')}</span></label>`;}).join('');
+    return `<div class="m-page">${head}<p class="m-subtitle">${esc(contact.fullName)}</p><p class="m-muted">Marca para añadir y desmarca para quitar de este contacto.</p><input id="mobileProfileLabelSearch" class="m-input" type="search" placeholder="Buscar etiqueta" aria-label="Buscar etiqueta"><div class="m-profile-labels">${labels||empty('Sin etiquetas','Todavía no hay etiquetas creadas en el CRM.')}</div><button class="m-primary m-library-full" data-action="profile-labels-save" data-contact-id="${esc(contactId)}" ${editor.saving||!editor.labels.length?'disabled':''}>${editor.saving?'Guardando…':'Guardar etiquetas'}</button><p class="m-form-msg">${esc(editor.error)}</p></div>`;
+  }
+  async function saveProfileLabels(contactId){
+    const editor=profileLabels;
+    if(!has('can_manage_labels')||!editor.loaded||editor.saving||editor.contactId!==String(contactId)||!state.contacts.some(row=>String(row.id)===String(contactId)))return;
+    const added=[...editor.selected].filter(id=>!editor.initial.includes(id)),removed=new Set(editor.initial.filter(id=>!editor.selected.has(id)));
+    if(!added.length&&!removed.size){go(`contact/${contactId}`,true);return;}
+    editor.saving=true;editor.error='';render();
+    try{
+      const current=await client.rpc('crm_get_contact_labels',{p_contact_id:contactId});if(current.error)throw current.error;
+      const ids=[...new Set((current.data||[]).map(profileLabelId).filter(id=>id&&!removed.has(id)).concat(added))];
+      const saved=await client.rpc('crm_set_contact_labels',{p_contact_id:contactId,p_label_ids:ids});if(saved.error)throw saved.error;
+      editor.initial=ids;editor.selected=new Set(ids);state.library.labelsLoaded=false;
+      if(editor===profileLabels&&profileLabelsVisible(contactId)){state.profileTab='summary';go(`contact/${contactId}`,true);toast('Etiquetas guardadas en el contacto.','success');}
+    }catch(error){editor.error=error?.message||'No se pudieron guardar las etiquetas.';}
+    finally{editor.saving=false;if(editor===profileLabels&&profileLabelsVisible(contactId))render();}
+  }
 
   function contactFields(contact={},prefix='edit'){
     return `<div class="m-form-grid two">
@@ -1386,6 +1457,15 @@
     byId('mobileGalleryInput').onchange=event=>{handleImage(event.target.files?.[0]);event.target.value='';};
     byId('mobileWhatsAppFileInput').onchange=event=>{const chatId=state.whatsapp.pendingFileChatId;state.whatsapp.pendingFileChatId='';sendMobileWaFile(event.target.files?.[0],chatId);event.target.value='';};
     byId('mobileView').addEventListener('click',handleViewClick);
+    byId('mobileView').addEventListener('change',event=>{
+      const id=event.target?.dataset?.profileLabelId;
+      if(id&&profileLabels.loaded&&!profileLabels.saving){event.target.checked?profileLabels.selected.add(id):profileLabels.selected.delete(id);}
+    });
+    byId('mobileView').addEventListener('input',event=>{
+      if(event.target?.id!=='mobileProfileLabelSearch')return;
+      const query=foldText(event.target.value);
+      document.querySelectorAll('.m-profile-label').forEach(label=>label.classList.toggle('hidden',!foldText(label.textContent).includes(query)));
+    });
     byId('mobileWaActionSheet').addEventListener('click',handleViewClick);
     byId('mobileWaActionSheet').addEventListener('input',handleMobileWaSheetFilter);
     byId('mobileWaActionSheet').addEventListener('change',handleMobileWaSheetFilter);
@@ -1428,6 +1508,10 @@
     if(action==='retry-creation')performCreation();
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
+    if(action==='profile-delete-opportunity')deleteProfileOpportunity(target.dataset.id,target.dataset.contactId,target);
+    if(action==='profile-labels')openProfileLabels(target.dataset.contactId);
+    if(action==='profile-labels-retry')loadProfileLabels(target.dataset.contactId);
+    if(action==='profile-labels-save')saveProfileLabels(target.dataset.contactId);
     if(action==='task-filter'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'all';render();}
     if(action==='agenda-day'&&validAgendaDateKey(target.dataset.date))go(`agenda?date=${target.dataset.date}`,true);
     if(action==='open-tasks'){state.taskFilter=TASK_FILTERS.includes(target.dataset.filter)?target.dataset.filter:'pending';go('tasks');}
