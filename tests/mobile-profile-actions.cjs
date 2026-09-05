@@ -44,7 +44,7 @@ api.state.contacts=[{id:'c1',first:'Uno',fullName:'Cliente Uno',phone:'600000001
 api.state.board={stages:[{id:'s1',pipeline_id:'p1',name:'Nueva'}],opportunities:[{id:'o1',record_id:'c1',title:'Primera'},{id:'o2',record_id:'c2',title:'Otra'}]};
 async function run(){
   let html=api.renderContact('c1');assert.match(html,/new-contact-opportunity\/c1/);assert.match(html,/Gestionar etiquetas/);
-  api.state.profileTab='opportunities';html=api.renderContact('c1');assert.match(html,/profile-delete-opportunity/);assert(!html.includes('data-id="o2"'));
+  api.state.profileTab='opportunities';html=api.renderContact('c1');assert(!html.includes('profile-delete-opportunity'));assert.match(html,/opportunity\/o1/);assert(!html.includes('data-id="o2"'));
   assert.match(api.renderContactOpportunity('c1'),/Cliente Uno/);
   node('contactOppTitle').value='Nueva';node('contactOppStage').value='s1';node('contactOppAmount').value='12,50';
   await api.saveContactOpportunity('c1');assert.equal(inserted.record_id,'c1');assert.equal(inserted.phone,'600000001');assert.equal(inserted.amount,12.5);assert.equal(refreshes,1);assert.equal(location.hash,'#/contact/c1');

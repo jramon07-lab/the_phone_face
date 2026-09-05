@@ -20,6 +20,7 @@
   };
   let profileLabels={contactId:'',loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
   const deletingProfileOpportunities=new Set();
+  const savingMobileOpportunities=new Set();
   let taskDetail={id:'',row:null,loading:false,error:''};
   const taskWrites=new Set();
   let mobileWaRefreshTimer=null;
@@ -310,6 +311,7 @@
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
         case 'contact-labels':view.innerHTML=renderProfileLabels(current.parts[1]);ensureProfileLabels(current.parts[1]);break;
         case 'opportunities':view.innerHTML=renderOpportunities();bindOpportunityFilters();break;
+        case 'edit-opportunity':view.innerHTML=renderEditOpportunity(current.parts[1]);break;
         case 'opportunity':view.innerHTML=renderOpportunity(current.parts[1]);break;
         case 'task':view.innerHTML=renderTaskDetail(current.parts[1]);ensureTaskDetail(current.parts[1]);break;
         case 'tasks':view.innerHTML=renderTasks();break;
@@ -342,7 +344,7 @@
   }
   window.TPFMobileRerender=render;
   function setActiveNav(name){
-    const quickOrigin=route().query.get('origin')==='quick',group=['contact','edit-contact','contact-labels'].includes(name)?'contacts':name==='opportunity'||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'whatsapp':name==='system'?'more':name;
+    const quickOrigin=route().query.get('origin')==='quick',group=['contact','edit-contact','contact-labels'].includes(name)?'contacts':['opportunity','edit-opportunity'].includes(name)||(name==='new-contact-opportunity'&&!quickOrigin)?'opportunities':name==='new-task'?(quickOrigin?'add':''):['scan','detected','new-opportunity','new-contact-opportunity','choose-contact','assign-label','templates','template-edit','labels','label-edit','review','creating','success'].includes(name)?'add':['whatsapp','whatsapp-chat'].includes(name)?'whatsapp':name==='system'?'more':name;
     document.querySelectorAll('[data-mobile-route]').forEach(button=>button.classList.toggle('active',button.dataset.mobileRoute===group));
     byId('mobileAdd').classList.toggle('active',group==='add');
     byId('mobileMenu').setAttribute('aria-current',group==='more'?'page':'false');
@@ -585,7 +587,7 @@
     if(tab==='summary')body=`<div class="m-info-card">
       ${infoRow('DNI / NIF',contact.dni)}${infoRow('Teléfono',contact.phone)}${infoRow('Correo electrónico',contact.email)}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Observaciones',contact.observations)}${infoRow('Notas',contact.notes)}
     </div>`;
-    if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opp=>`<article class="m-profile-opportunity">${opportunityCard(opp)}${has('can_edit_sales')?`<button class="m-danger" data-action="profile-delete-opportunity" data-id="${esc(opp.id)}" data-contact-id="${esc(id)}" type="button">Eliminar oportunidad</button>`:''}</article>`).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
+    if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
     return `<div class="m-page">${pageHead('Ficha del contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar">✎</button>`:'')}
@@ -597,8 +599,8 @@
   function infoRow(label,value){return `<div class="m-info-row"><span>${esc(label)}</span><b>${esc(value||'—')}</b></div>`;}
 
   async function deleteProfileOpportunity(id,contactId,button){
-    const opp=relatedOpportunities(contactId).find(row=>String(row.id)===String(id));
-    if(!opp||!has('can_edit_sales')||deletingProfileOpportunities.has(String(id)))return;
+    const opp=(contactId?relatedOpportunities(contactId):state.board.opportunities).find(row=>String(row.id)===String(id));
+    if(!opp||!has('can_edit_sales')||deletingProfileOpportunities.has(String(id))||savingMobileOpportunities.has(String(id)))return;
     if(!confirm(`¿Eliminar la oportunidad "${opp.title||'Sin título'}"?`))return;
     deletingProfileOpportunities.add(String(id));if(button)button.disabled=true;
     try{
@@ -608,7 +610,7 @@
       if(check.error)throw check.error;
       if(check.data)throw new Error('La oportunidad sigue existiendo. Actualiza los datos antes de intentarlo de nuevo.');
       state.board.opportunities=state.board.opportunities.filter(row=>String(row.id)!==String(id));
-      updateAlertDot();render();toast('Oportunidad eliminada.','success');
+      updateAlertDot();if(['opportunity','edit-opportunity'].includes(route().parts[0])&&route().parts[1]===String(id)){state.profileTab='opportunities';go(opp.record_id?`contact/${opp.record_id}`:'opportunities',true);}else render();toast('Oportunidad eliminada.','success');
     }catch(error){toast(error?.message||'No se pudo eliminar la oportunidad.','error');}
     finally{deletingProfileOpportunities.delete(String(id));if(button)button.disabled=false;}
   }
@@ -760,8 +762,29 @@
   }
   function renderOpportunity(id){
     const opp=state.board.opportunities.find(row=>String(row.id)===String(id));if(!opp)return `<div class="m-page">${pageHead('Oportunidad','opportunities')}${empty('No encontrada','Actualiza e inténtalo de nuevo.')}</div>`;
+    if(!has('can_view_sales')&&!has('can_edit_sales'))return empty('Acceso restringido','No tienes permiso para ver oportunidades.');
     const stage=state.board.stages.find(row=>String(row.id)===String(opp.stage_id));
-    return `<div class="m-page">${pageHead('Oportunidad','opportunities')}<div class="m-profile-hero"><div class="m-avatar">◇</div><h1>${esc(opp.title||'Oportunidad')}</h1><p>${esc(opp.client_name||'Sin contacto')}</p></div><div class="m-info-card">${infoRow('Columna / Estado',stage?.name||'—')}${infoRow('Importe',opp.amount!=null?money(opp.amount):'—')}${infoRow('Cierre previsto',date(opp.expected_date))}${infoRow('Teléfono',opp.phone)}${infoRow('Notas',opp.notes)}</div>${opp.record_id?`<button class="m-secondary" style="width:100%;margin-top:12px" data-action="route" data-route="contact/${esc(opp.record_id)}">Ver contacto</button>`:''}</div>`;
+    return `<div class="m-page">${pageHead('Oportunidad','opportunities')}<div class="m-profile-hero"><div class="m-avatar">◇</div><h1>${esc(opp.title||'Oportunidad')}</h1><p>${esc(opp.client_name||'Sin contacto')}</p></div><div class="m-info-card">${infoRow('Columna / Estado',stage?.name||'—')}${infoRow('Importe',opp.amount!=null?money(opp.amount):'—')}${infoRow('Cierre previsto',date(opp.expected_date))}${infoRow('Teléfono',opp.phone)}${infoRow('Notas',opp.notes)}</div>${has('can_edit_sales')?`<div class="m-detail-actions"><button class="m-primary" data-action="route" data-route="edit-opportunity/${esc(id)}">Editar oportunidad</button><button class="m-danger" data-action="profile-delete-opportunity" data-id="${esc(id)}">Eliminar oportunidad</button></div>`:''}${opp.record_id?`<button class="m-secondary" style="width:100%;margin-top:12px" data-action="route" data-route="contact/${esc(opp.record_id)}">Ver contacto</button>`:''}</div>`;
+  }
+
+  function renderEditOpportunity(id){
+    const opp=state.board.opportunities.find(row=>String(row.id)===String(id)),head=pageHead('Editar oportunidad',`opportunity/${id}`);
+    if(!opp||!has('can_edit_sales'))return `<div class="m-page">${head}${empty('No disponible','No tienes permiso o la oportunidad ya no existe.')}</div>`;
+    const stages=state.board.stages.filter(stage=>!opp.pipeline_id||String(stage.pipeline_id)===String(opp.pipeline_id));
+    const options=stages.map(stage=>`<option value="${esc(stage.id)}" ${String(stage.id)===String(opp.stage_id)?'selected':''}>${esc(stage.name)}</option>`).join('');
+    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(opp.client_name||'Sin contacto')}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="editOppTitle" class="m-input" value="${esc(opp.title||'')}"></label><label class="m-field"><span>Columna / Estado</span><select id="editOppStage" class="m-select">${stages.some(stage=>String(stage.id)===String(opp.stage_id))?'':`<option value="${esc(opp.stage_id||'')}">Columna actual</option>`}${options}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="editOppDate" class="m-input" type="date" value="${esc(String(opp.expected_date||'').slice(0,10))}"></label><label class="m-field"><span>Importe (opcional)</span><input id="editOppAmount" class="m-input" inputmode="decimal" value="${esc(opp.amount??'')}"></label><label class="m-field"><span>Notas</span><textarea id="editOppNotes" class="m-textarea">${esc(opp.notes||'')}</textarea></label></div><div class="m-detail-actions"><button class="m-primary" data-action="save-opportunity-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="route" data-route="opportunity/${esc(id)}">Cancelar</button></div><p id="mobileOppDetailMsg" class="m-form-msg"></p></div>`;
+  }
+  async function saveOpportunityDetail(id,button){
+    const opp=state.board.opportunities.find(row=>String(row.id)===String(id)),msg=byId('mobileOppDetailMsg');
+    if(!opp||!has('can_edit_sales')||savingMobileOpportunities.has(String(id))||deletingProfileOpportunities.has(String(id)))return;
+    const title=clean(byId('editOppTitle')?.value),stageId=byId('editOppStage')?.value,stage=state.board.stages.find(row=>String(row.id)===String(stageId)),raw=clean(byId('editOppAmount')?.value).replace(',','.'),amount=raw===''?null:Number(raw),expected=byId('editOppDate')?.value||null;
+    if(!title||!stageId||(!stage&&String(stageId)!==String(opp.stage_id))||(stage&&opp.pipeline_id&&String(stage.pipeline_id)!==String(opp.pipeline_id))||(amount!==null&&!Number.isFinite(amount))||(expected&&!validAgendaDateKey(expected))){if(msg)msg.textContent='Revisa el nombre, la columna, la fecha y el importe.';return;}
+    const patch={title,stage_id:stageId,amount,expected_date:expected,notes:clean(byId('editOppNotes')?.value)||null};
+    if(String(stageId)!==String(opp.stage_id))patch.position=0;
+    savingMobileOpportunities.add(String(id));if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
+    try{const result=await client.from('sales_opportunities').update(patch).eq('id',id).select('*').single();if(result.error)throw result.error;const index=state.board.opportunities.findIndex(row=>String(row.id)===String(id));if(index>=0)state.board.opportunities[index]={...opp,...result.data};updateAlertDot();if(route().parts[0]==='edit-opportunity'&&route().parts[1]===String(id)){go(`opportunity/${id}`,true);toast('Oportunidad guardada.','success');}}
+    catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar la oportunidad.';}
+    finally{savingMobileOpportunities.delete(String(id));if(button)button.disabled=false;}
   }
 
   function taskCard(task){
@@ -1564,6 +1587,7 @@
     if(action==='retry-creation')performCreation();
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;render();}
+    if(action==='save-opportunity-detail')saveOpportunityDetail(target.dataset.id,target);
     if(action==='profile-delete-opportunity')deleteProfileOpportunity(target.dataset.id,target.dataset.contactId,target);
     if(action==='profile-labels')openProfileLabels(target.dataset.contactId);
     if(action==='profile-labels-retry')loadProfileLabels(target.dataset.contactId);
