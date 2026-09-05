@@ -1,0 +1,24 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('api/green.js','utf8');
+const fn=source.slice(source.indexOf('async function cachedGreenRead'),source.indexOf('function sendCachedGreenRead'));
+let now=100000,calls=0;
+const context={Date:{now:()=>now},greenReadCache:new Map(),greenReadInFlight:new Map(),greenReadBackoffUntil:new Map(),pruneGreenReadCache:()=>{}};
+vm.createContext(context);vm.runInContext(fn+';this.read=cachedGreenRead',context);
+const policy={freshMs:1000,staleMs:10000};
+(async()=>{
+ const limited=async()=>{calls++;throw Object.assign(new Error('limit'),{status:429});};
+ await assert.rejects(context.read('empty',policy,limited),e=>e.status===429);
+ await assert.rejects(context.read('empty',policy,limited),e=>e.status===429&&e.retryAfterMs===45000);
+ assert.equal(calls,1,'no provider request during backoff without cache');
+ now+=45001;await context.read('empty',policy,async()=>({ok:true}));
+ assert.equal((await context.read('empty',policy,limited)).degraded,false);
+ context.greenReadCache.set('stale',{at:now-2000,value:{chats:[1]}});
+ const stale=await context.read('stale',policy,limited);
+ assert.equal(stale.degraded,true);assert.equal(stale.value.chats.length,1);
+ const count=calls;await context.read('stale',policy,limited);assert.equal(calls,count);
+ now+=10001;await assert.rejects(context.read('stale',policy,limited),e=>e.status===429);assert.equal(calls,count);
+ let finish;const loader=()=>new Promise(r=>finish=r);
+ const a=context.read('parallel',policy,loader),b=context.read('parallel',policy,()=>{throw Error('duplicate')});
+ finish({ok:true});await Promise.all([a,b]);
+ console.log('PASS: rate limit with empty/expired cache, stale fallback, recovery and concurrent reads');
+})().catch(e=>{console.error(e);process.exitCode=1});

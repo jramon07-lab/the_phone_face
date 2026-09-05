@@ -73,6 +73,12 @@ async function cachedGreenRead(key, policy, loader) {
   if (cached && age < staleMs && now < backoffUntil) {
     return { value: cached.value, cached: true, degraded: true, providerStatus: 429 };
   }
+  if (now < backoffUntil) {
+    const error = new Error('WhatsApp limita temporalmente las consultas. Espera antes de actualizar.');
+    error.status = 429;
+    error.retryAfterMs = backoffUntil - now;
+    throw error;
+  }
 
   if (greenReadInFlight.has(key)) return greenReadInFlight.get(key);
 
@@ -604,6 +610,7 @@ export default async function handler(req, res) {
       message: e?.message || String(e)
     });
     const responseStatus = providerStatus >= 400 && providerStatus < 500 ? providerStatus : 502;
+    if (responseStatus === 429) res.setHeader('Retry-After', String(Math.max(1, Math.ceil(Number(e?.retryAfterMs || 45000) / 1000))));
     return res.status(responseStatus).json({
       ok: false,
       error: e?.message || String(e),

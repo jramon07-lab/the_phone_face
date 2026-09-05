@@ -1410,7 +1410,7 @@
     const {data,error}=await client.auth.getSession();if(error)throw error;
     const token=data?.session?.access_token;if(!token)throw new Error('La sesión ha caducado. Vuelve a entrar.');
     const method=getActions.has(action)?'GET':'POST',controller=typeof AbortController==='function'?new AbortController():null;
-    const timer=controller?setTimeout(()=>controller.abort(),action==='summary'?30000:20000):null;
+    const timer=controller?setTimeout(()=>controller.abort(),action==='summary'?65000:['state','chats','history'].includes(action)?35000:20000):null;
     try{
       const response=await fetch(`/api/mobile-green?action=${encodeURIComponent(action)}`,{method,headers:{Authorization:`Bearer ${token}`,...(method==='POST'?{'Content-Type':'application/json'}:{})},body:method==='POST'?JSON.stringify(payload||{}):undefined,cache:'no-store',signal:controller?.signal});
       const result=await response.json().catch(()=>({}));
