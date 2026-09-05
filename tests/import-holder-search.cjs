@@ -1,0 +1,11 @@
+const fs=require('node:fs'),vm=require('node:vm'),a=require('node:assert/strict');const ctx={window:{},document:{readyState:'loading',addEventListener(){}}};vm.createContext(ctx);vm.runInContext(fs.readFileSync(process.argv[2]||'js/modules/import-mapping.js','utf8'),ctx);const h=ctx.window.TPFImportMapping;
+const contacts=[{id:'1',data:{NOMBRE:'Carmen','TELÉFONO':'600111222','DNI / NIF':'12345678Z'}},{id:'2',data:{NOMBRE:'Ana','TELÉFONO':'699888777'}},{id:'3',data:{NOMBRE:'Carmen Otra'}}];
+a.equal(h.holderChoices(contacts,[contacts[0]],'','').list.length,1);
+a.equal(h.holderChoices(contacts,[contacts[0]],'carmen','').list[0].id,'1');
+a.equal(h.holderChoices(contacts,[],'+34 600 111 222','').list[0].id,'1');
+a.equal(h.holderChoices(contacts,[],'12345678z','').list[0].id,'1');
+a.equal(h.holderChoices(contacts,[],'inexistente','').list.length,0);
+a.equal(h.holderChoices(contacts,[],'Ana','1').list.length,2);
+a.equal(h.holderChoices(contacts,[],'a','').list.length,0);
+const many=Array.from({length:50},(_,i)=>({id:String(i),data:{NOMBRE:'Prueba '+i}}));a.equal(h.holderChoices(many,[],'Prueba','').list.length,30);a.equal(h.holderChoices(many,[],'Prueba','').total,50);
+console.log('Holder search: matches first, name/phone/DNI lookup, no results, selection preservation and result limit passed.');

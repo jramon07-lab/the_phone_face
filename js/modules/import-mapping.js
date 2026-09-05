@@ -138,9 +138,29 @@
   const candidate={same:false,holder_first_name:clean(incoming.NOMBRE)||contactName(incoming),holder_last_name:clean(incoming.APELLIDOS),holder_dni:contactKeys(incoming).dni||(sameOld?old.holder_dni:"")||"",holder_phone:clean(incoming["TELÉFONO"])||(sameOld?old.holder_phone:"")||"",recipient:"contact"};
   try{return {party:window.TPFContactParty.validate(candidate),old,textChanges:contactDiff(incoming,target.data||{}).filter(c=>c.key==="OBSERVACIONES"||c.key==="NOTAS")}}catch(e){return {error:e.message}}
  }
+
+ function holderChoices(contacts,matches,query,targetId){
+  const matchIds=new Set(matches.map(c=>String(c.id))),term=norm(query),phoneTerm=digits(query);
+  const filtered=contacts.filter(c=>{
+   if(!term)return matchIds.has(String(c.id));
+   if(term.length<2)return false;
+   const data=c.data||{},keys=contactKeys(data);
+   return norm([contactName(data),keys.dni].join(" ")).includes(term)||(phoneTerm.length>=3&&keys.phones.some(p=>p.includes(phoneTerm)));
+  }).sort((a,b)=>Number(matchIds.has(String(b.id)))-Number(matchIds.has(String(a.id)))||contactName(a.data||{}).localeCompare(contactName(b.data||{}),"es"));
+  const list=filtered.slice(0,30),selected=contacts.find(c=>String(c.id)===targetId);
+  if(selected&&!list.some(c=>String(c.id)===targetId))list.unshift(selected);
+  return {list,total:filtered.length,matchIds};
+ }
+ function holderChoiceOptions(choices,targetId){
+  return '<option value="">Seleccionar contacto existente</option>'+choices.list.map(c=>`<option value="${escHtml(c.id)}" ${String(c.id)===targetId?"selected":""}>${choices.matchIds.has(String(c.id))?"Coincidencia · ":""}${escHtml(contactName(c.data||{}))} · ${escHtml(contactKeys(c.data||{}).phone)} · ${escHtml(contactKeys(c.data||{}).dni)}</option>`).join("");
+ }
+ function holderChoiceHint(choices,query){
+  return norm(query).length===1?"Escribe al menos 2 caracteres.":choices.total>30?"Se muestran 30 resultados. Afina la búsqueda.":choices.total?`${choices.total} ${clean(query)?"resultados":"contactos coincidentes"}. Elige la ficha para comprobarla.`:"No hay coincidencias. Busca por nombre, teléfono o DNI.";
+ }
+
  function holderImportHtml(r,d,i){
-  const contacts=state.contacts||[],target=contacts.find(c=>String(c.id)===d.target),p=holderProposal(r.data,target);
-  return `<p>Elige la persona que gestiona el contrato:</p><select data-holder-target="${i}"><option value="">Seleccionar contacto existente</option>${contacts.map(c=>`<option value="${escHtml(c.id)}" ${String(c.id)===d.target?"selected":""}>${escHtml(contactName(c.data||{}))} · ${escHtml(contactKeys(c.data||{}).phone)} · ${escHtml(contactKeys(c.data||{}).dni)}</option>`).join("")}</select>${target?`<p><b>Titular actual:</b> ${escHtml(p.old?.same===false?p.old.holder_name:target.data?.TPF_TITULAR?.holder_name||contactName(target.data||{}))} · ${escHtml(p.old?.holder_dni)}</p>`:""}${p.error?`<p>${escHtml(p.error)}</p>`:`<p><b>Titular propuesto:</b> ${escHtml(p.party.holder_name)}<br>DNI: ${escHtml(p.party.holder_dni)||"Sin DNI"}<br>Teléfono: ${escHtml(p.party.holder_phone)||"Sin teléfono"}</p><p>La ficha seguirá a nombre de ${escHtml(contactName(target.data||{}))}, con su teléfono actual. El nombre, DNI y teléfono del Excel se guardan en Titular del contrato. Se juntan observaciones con observaciones y notas con notas, conservando los textos existentes. Las etiquetas y el destinatario de WhatsApp se conservan.</p>${p.textChanges.map(c=>`<div style="margin:10px 0;white-space:pre-wrap"><b>${escHtml(c.key)} · Resultado al juntar:</b><br>${escHtml(c.after)}</div>`).join("")}${!p.textChanges.length?"<p>No hay notas ni observaciones nuevas que añadir.</p>":""}<label><input type="checkbox" data-holder-confirm="${i}" ${d.holderConfirmed?"checked":""}> Confirmo la relación y la sustitución del titular mostrado, si ya había uno.</label>`}`;
+  const contacts=state.contacts||[],target=contacts.find(c=>String(c.id)===d.target),p=holderProposal(r.data,target),choices=holderChoices(contacts,r.matches,d.holderQuery||"",d.target);
+  return `<p>Elige la persona que gestiona el contrato:</p><input type="search" data-holder-search="${i}" aria-label="Buscar persona de contacto por nombre, teléfono o DNI" placeholder="Buscar nombre, teléfono o DNI…" value="${escHtml(d.holderQuery||"")}"><p data-holder-hint="${i}">${holderChoiceHint(choices,d.holderQuery||"")}</p><select data-holder-target="${i}">${holderChoiceOptions(choices,d.target)}</select>${target?`<p><b>Titular actual:</b> ${escHtml(p.old?.same===false?p.old.holder_name:target.data?.TPF_TITULAR?.holder_name||contactName(target.data||{}))} · ${escHtml(p.old?.holder_dni)}</p>`:""}${p.error?`<p>${escHtml(p.error)}</p>`:`<p><b>Titular propuesto:</b> ${escHtml(p.party.holder_name)}<br>DNI: ${escHtml(p.party.holder_dni)||"Sin DNI"}<br>Teléfono: ${escHtml(p.party.holder_phone)||"Sin teléfono"}</p><p>La ficha seguirá a nombre de ${escHtml(contactName(target.data||{}))}, con su teléfono actual. El nombre, DNI y teléfono del Excel se guardan en Titular del contrato. Se juntan observaciones con observaciones y notas con notas, conservando los textos existentes. Las etiquetas y el destinatario de WhatsApp se conservan.</p>${p.textChanges.map(c=>`<div style="margin:10px 0;white-space:pre-wrap"><b>${escHtml(c.key)} · Resultado al juntar:</b><br>${escHtml(c.after)}</div>`).join("")}${!p.textChanges.length?"<p>No hay notas ni observaciones nuevas que añadir.</p>":""}<label><input type="checkbox" data-holder-confirm="${i}" ${d.holderConfirmed?"checked":""}> Confirmo la relación y la sustitución del titular mostrado, si ya había uno.</label>`}`;
  }
 
  function allowedDecision(r,d,contacts=[]){
@@ -167,6 +187,12 @@
   }).join("")||'<tr><td colspan="3">No quedan filas para revisar. Los duplicados sin novedades se han omitido.</td></tr>';
   const root=q("previewRows"),refresh=()=>{renderContactReview();q("runImport").disabled=!validRows().length;q("importInfo").textContent=`${state.rawRows.length} filas · ${validRows().length} seleccionadas para guardar. El resto se omitirá.`};
   root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{const r=state.review[el.dataset.decision];state.decisions[el.dataset.decision]={action:el.value,target:el.value==="update"?String(r.classification.target?.id||""):"",fields:[],reviewed:false};refresh()});
+  root.querySelectorAll("[data-holder-search]").forEach(el=>el.oninput=()=>{
+   const i=Number(el.dataset.holderSearch),d=state.decisions[i];d.holderQuery=el.value;
+   const choices=holderChoices(state.contacts||[],state.review[i].matches,el.value,d.target);
+   root.querySelector('[data-holder-target="'+i+'"]').innerHTML=holderChoiceOptions(choices,d.target);
+   root.querySelector('[data-holder-hint="'+i+'"]').textContent=holderChoiceHint(choices,el.value);
+  });
   root.querySelectorAll("[data-holder-target]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.holderTarget],{target:el.value,holderConfirmed:false,reviewed:false});refresh()});
   root.querySelectorAll("[data-holder-confirm]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.holderConfirm],{holderConfirmed:el.checked,reviewed:false});refresh()});
   root.querySelectorAll("[data-target]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.target],{target:el.value,fields:[],reviewed:false});refresh()});
@@ -260,6 +286,6 @@
  }
  function bind(){ensureUi();legacyPreview=q("previewImport").onclick;legacyRun=q("runImport").onclick;q("previewImport").onclick=e=>isGuided()?preview().catch(err=>{q("importInfo").textContent="No se pudo leer el Excel: "+err.message}):legacyPreview?.call(q("previewImport"),e);q("runImport").onclick=e=>isGuided()?run():legacyRun?.call(q("runImport"),e);q("destination").addEventListener("change",()=>{state=null;q("importMapping").classList.add("hidden");q("runImport").disabled=true;q("previewHead").innerHTML="";q("previewRows").innerHTML=""})}
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
- window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact,holderProposal};
+ window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact,holderProposal,holderChoices};
 })();
 
