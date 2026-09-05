@@ -12,3 +12,8 @@ a.equal(h.allowedDecision(row,{action:'holder',target:'a',reviewed:true,holderCo
 a.equal(h.allowedDecision(row,{action:'holder',target:'a',reviewed:true},[target]),false);
 a.equal(h.allowedDecision(row,{action:'holder',target:'wrong',reviewed:true,holderConfirmed:true},[target]),false);
 console.log('Holder preview tests passed: existing party validation, explicit target/confirmation, preservation and recipient guard.');
+a.equal(p.textChanges.length,1);a.equal(p.textChanges[0].key,'NOTAS');a(p.textChanges[0].after.includes('Conservar'));a(p.textChanges[0].after.includes('No copiar'));
+const combined={...target.data,TPF_TITULAR:p.party};p.textChanges.forEach(c=>combined[c.key]=c.after);
+a.equal(combined.NOMBRE,target.data.NOMBRE);a.equal(combined['TELÉFONO'],target.data['TELÉFONO']);
+a.equal(h.holderProposal(incoming,{id:'a',data:combined}).textChanges.length,0);
+console.log('Combined holder texts preserve the contact identity and do not repeat on reimport.');
