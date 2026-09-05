@@ -155,6 +155,7 @@
       const ids=new Set((r.data||[]).map(x=>String(x.id??x.label_id??x.value??'')));
       byId('tpfCreateLabels')?.querySelectorAll('input').forEach(x=>x.checked=ids.has(String(x.value)));
     }catch(_){}
+    window.TPFContactLabelPicker?.reset();
     if(title)title.textContent='Editar contacto';
     if(subtitle)subtitle.textContent='Modifica los datos del contacto.';
     if(save){save.textContent='Guardar cambios';save.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();saveCreateModalEdit();};}
