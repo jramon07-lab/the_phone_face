@@ -1,0 +1,28 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const context={window:{},document:{readyState:'loading',addEventListener(){}}};vm.createContext(context);
+vm.runInContext(fs.readFileSync(process.argv[2]||'js/modules/import-mapping.js','utf8'),context);
+const h=context.window.TPFImportMapping;
+const row=(name,phone,dni='')=>({'NOMBRE Y APELLIDOS':name,'TELÉFONO':phone,'DNI / NIF':dni});
+assert.equal(h.digits('+34 600 123 456'),'600123456');
+assert.equal(h.digits('+41 79 600 12 34'),'41796001234');
+assert.notEqual(h.digits('+1 234 567 8901'),h.digits('+44 234 567 8901'));
+const existing=[{id:'a',data:row('Ana','600123456','12345678Z')},{id:'b',data:row('Bea','600123456','87654321X')}];
+let r=h.reviewContacts([row('Carmen','600123456','11111111H')],existing)[0];
+assert.equal(r.matches.length,2);assert(r.issues.some(x=>x.includes('compartido')));
+assert.equal(h.allowedDecision(r,{action:'create'}),false);
+assert.equal(h.allowedDecision(r,{action:'create',reviewed:true}),true);
+r=h.reviewContacts([row('Ana','600999999','12345678Z')],existing)[0];
+assert.equal(h.allowedDecision(r,{action:'create',reviewed:true}),false);
+assert.equal(h.allowedDecision(r,{action:'update',target:'a',fields:['TELÉFONO'],reviewed:true}),true);
+assert.equal(h.allowedDecision(r,{action:'update',target:'unknown',fields:['TELÉFONO'],reviewed:true}),false);
+assert.equal(h.allowedDecision(r,{action:'update',target:'a',fields:[],reviewed:true}),false);
+assert.equal(h.contactDiff({'EMAIL':'','NOTAS':'Nueva nota'},{EMAIL:'old@example.com',NOTAS:'Anterior'}).length,1);
+const pair=h.reviewContacts([row('Ana','600111222'),row('Bea','600111222')],[]);assert.equal(pair[0].peers[0],3);assert.equal(pair[1].peers[0],2);
+r=h.reviewContacts([row('Ana','+34444','75564628Z | 75564628')],[])[0];assert(r.issues.some(x=>x.includes('Teléfono')));assert(r.issues.some(x=>x.includes('Varios DNI')));
+console.log('Import review: passed phone preservation, shared contacts, duplicate rows, explicit decisions, update diff and malformed data checks.');
+if(process.argv[3]){
+ const input=JSON.parse(fs.readFileSync(process.argv[3],'utf8')).rows;
+ const rows=input.map(v=>({'NOMBRE Y APELLIDOS':[v[0],v[1]].filter(Boolean).join(' '),'TELÉFONO':v[2],'TELÉFONO 2':v[3],'TELÉFONO 3':v[4],'DNI / NIF':v[5],EMAIL:v[6]}));
+ const review=h.reviewContacts(rows,[]);assert.equal(review.length,123);assert(review.some(r=>r.peers.length));assert(review.some(r=>r.issues.some(x=>x.includes('Varios DNI'))));
+ console.log(JSON.stringify({excelRows:review.length,withWarnings:review.filter(r=>r.issues.length).length,selectedByDefault:review.filter(r=>h.allowedDecision(r,undefined)).length}));
+}
