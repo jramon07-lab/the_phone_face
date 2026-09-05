@@ -936,12 +936,11 @@ window.deleteAutomation=async(id)=>{
   if(error)alert(error.message);else loadAutomations();
 };
 async function runOpportunityAutomations(opportunityId){
-  if(!opportunityId)return;
-  try{
-    const {data,error}=await sb.rpc("run_sales_automations_for_opportunity",{target_opportunity:opportunityId});
-    if(error)console.warn("Automatización:",error.message);
-    return data;
-  }catch(e){console.warn("Automatización:",e);}
+  // The current server trigger crm_server_opportunity_stage_trigger handles
+  // inserts and stage changes. The retired automation_rules table is empty
+  // and its runner is deliberately not executable by authenticated clients.
+  // Preserve callers without replaying or enqueueing any work from the browser.
+  return opportunityId ? { delegated_to_server: true } : undefined;
 }
 
 loadSession();
