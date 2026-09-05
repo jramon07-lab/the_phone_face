@@ -227,6 +227,7 @@ function salesContactValue(d,...keys){
 function mapSalesContact(row){
   const d=row?.data||{};
   return {
+    data:d,
     id:String(row?.id||""),
     name:salesContactValue(d,"NOMBRE Y APELLIDOS","CLIENTE","CLIENTE FINAL")||[salesContactValue(d,"NOMBRE"),salesContactValue(d,"APELLIDOS","APELLIDO")].filter(Boolean).join(" ")||"Contacto",
     phone:salesContactValue(d,"TELÉFONO","TELEFONO","PHONE","MOVIL"),
@@ -250,6 +251,7 @@ async function searchOpportunityContacts(term){
 }
 function selectOpportunityContact(contact){
   pendingOpportunityRecordId=contact.id||null;
+  window.TPFContactParty?.mountOpportunity(contact.data?.TPF_TITULAR);
   $("oppModalClient").value=contact.name||"";
   $("oppModalPhone").value=contact.phone||"";
   $("oppModalDni").value=contact.dni||"";
@@ -470,6 +472,7 @@ window.openOpportunityCard=(id)=>{
   $("oppModalSave").textContent="Guardar cambios";
   $("oppModalDelete").classList.remove("hidden");
   $("oppModalId").value=o.id||"";
+  window.TPFContactParty?.mountOpportunity(o.contract_party);
   $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
   $("oppModalTitle").value=o.title||"";
   $("oppModalClient").value=o.client_name||"";
@@ -565,6 +568,7 @@ $("oppModalSave").onclick=async()=>{
 
   $("oppModalSave").disabled=true;
   try{
+    payload.contract_party=window.TPFContactParty.readOpportunity();
     if(!id){
       const {data:created,error}=await sb.from("sales_opportunities").insert({
         pipeline_id:stage.pipeline_id,
@@ -634,6 +638,7 @@ window.newOppInStage=async(stageId)=>{
   pendingOpportunityRecordId=null;
 
   $("oppModalId").value="";
+  window.TPFContactParty?.mountOpportunity();
   $("oppModalHeading").textContent="Nueva oportunidad";
   $("oppModalTitle").value="";
   $("oppModalClient").value="";
@@ -1845,10 +1850,14 @@ function openNewOpportunityInStage(stageId){
   $("oppModalSave").textContent="Crear oportunidad";
   $("oppModalDelete").classList.add("hidden");
   $("oppModalId").value="";
+  window.TPFContactParty?.mountOpportunity();
   $("oppModalHeading").textContent="Nueva oportunidad";
   $("oppModalTitle").value="";
   $("oppModalClient").value="";
   $("oppModalPhone").value="";
+  $("oppModalDni").value="";
+  $("oppModalOpenContact").dataset.recordId="";
+  pendingOpportunityRecordId=null;
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
   $("oppModalNotes").value="";
@@ -2973,3 +2982,4 @@ if($("oppFullEdit"))$("oppFullEdit").onclick=()=>{
   $("opportunityFullPage")?.classList.add("hidden");
   openOpportunityCard(currentFullOpportunity.id);
 };
+

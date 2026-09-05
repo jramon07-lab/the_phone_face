@@ -1,0 +1,26 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.join(__dirname,'..');
+vm.runInThisContext(fs.readFileSync(path.join(root,'js/modules/contact-party.js'),'utf8'));
+const p=globalThis.TPFContactParty;
+const contact={fullName:'Contacto Ejemplo',phone:'600000001',dni:'CONTACTO'};
+const holder={same:false,holder_name:'TITULAR EJEMPLO',holder_dni:'titular',holder_phone:'',recipient:'contact'};
+assert.equal(p.normalize(null).same,true);
+assert.equal(p.snapshot(holder,contact).recipient_name,'Contacto Ejemplo');
+assert.equal(p.snapshot(holder,contact).holder_phone,'');
+assert.throws(()=>p.snapshot({...holder,recipient:'holder'},contact),/teléfono válido/);
+const chosen=p.snapshot({...holder,recipient:'holder',holder_phone:'600000002'},contact);
+assert.equal(chosen.recipient_name,'Titular Ejemplo');
+assert.equal(chosen.recipient_phone,'600000002');
+assert.equal(chosen.contact_name,'Contacto Ejemplo');
+assert.equal(p.snapshot({same:true,recipient:'holder'},contact).recipient,'contact');
+const frozen=JSON.stringify(chosen);contact.fullName='Otro nombre';assert.equal(JSON.stringify(chosen),frozen);
+assert.match(p.search({data:{TPF_TITULAR:holder}}),/TITULAR EJEMPLO/);
+assert(!p.html('example',{...holder,holder_name:'<script>alert(1)</script>'}).includes('<script>'));
+assert.match(p.html('legacy',null,true),/checked/);
+const businessSource=require('node:module').stripTypeScriptTypes(fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/contact-party.ts'),'utf8')).replace('export function','function');
+vm.runInThisContext(businessSource);
+const legacy={name:'Legado',phone:'600000003'};assert.equal(businessContext(legacy),legacy);
+assert.equal(businessContext({name:chosen.recipient_name,phone:chosen.recipient_phone,contract_party:chosen}).name,'Contacto Ejemplo');
+const before=fs.readFileSync(path.join(root,'db/proposals/contact-party-runner-before.ts'),'utf8'),after=fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/index.ts'),'utf8');
+for(const name of ['cronAuthorized','phoneToChat','sendGreen','preflight','hasResponseSince']){const pattern=new RegExp('(?:async )?function '+name+'[^\\n]*');assert.equal(after.match(pattern)?.[0],before.match(pattern)?.[0],name);}
+console.log('PASS: recipient selection, optional phone, validation, snapshot, null legacy metadata, escaping, business identity and unchanged transport. No network or data writes.');

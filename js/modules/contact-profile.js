@@ -119,6 +119,7 @@
       const q=await sb.from('records').select('data').eq('id',s.id).maybeSingle();if(q.error)throw q.error;
       const d={...(q.data?.data||{})};
       d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d.APODO=nickname;d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;d.NOTAS=notes;d.OBSERVACIONES=obs;
+      d.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
       const u=await sb.from('records').update({data:d}).eq('id',s.id);if(u.error)throw u.error;
       const ids=[...byId('tpfCreateLabels')?.querySelectorAll('input:checked')||[]].map(x=>x.value);
       const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:String(s.id),p_label_ids:ids});if(lr.error)throw lr.error;
@@ -150,6 +151,7 @@
     setCreateValue('tpfCreateBank',recordField(d,'BANCO','Banco'));
     setCreateValue('tpfCreateNotes',byId('contactNotes')?.value||recordField(d,'NOTAS','NOTES'));
     setCreateValue('tpfCreateObs',byId('contactObservations')?.value||recordField(d,'OBSERVACIONES','OBSERVACION'));
+    window.TPFContactParty?.fillContact(d);
     try{
       const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:String(id)});if(r.error)throw r.error;
       const ids=new Set((r.data||[]).map(x=>String(x.id??x.label_id??x.value??'')));
@@ -359,6 +361,7 @@
   function queueSync(){if(syncQueued)return;syncQueued=true;requestAnimationFrame(()=>{syncQueued=false;syncUi();});}
   function syncUi(){
     const root=modal();if(!root||root.classList.contains('hidden'))return;
+    try{window.TPFContactParty?.renderProfile(typeof currentContact!=='undefined'?currentContact:null);}catch(_){}
     ensureStyles();ensureEditButton();ensureObservations();bindSave();normalizeCustomFields();ensureLabelSearch();ensureWhatsappMainButton();ensureQuickTemplateButton();wrapTemplateUse();setEditMode(editMode);
   }
 
@@ -409,4 +412,5 @@
     }
   });
 })();
+
 

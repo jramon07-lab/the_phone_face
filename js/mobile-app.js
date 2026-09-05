@@ -428,8 +428,8 @@
   }
   function contactMatchesSearch(contact,query=''){
     const term=foldText(query);if(!term)return true;
-    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.dni,contact?.phone,contact?.email].filter(Boolean).join(' '));
-    const numericMatch=termDigits.length>=3&&[contact?.dni,...contactPhones(contact).map(p=>p.number)].some(value=>digits(value).includes(termDigits));
+    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.dni,contact?.phone,contact?.email,window.TPFContactParty.search(contact)].filter(Boolean).join(' '));
+    const numericMatch=termDigits.length>=3&&[contact?.dni,contact?.data?.TPF_TITULAR?.holder_dni,contact?.data?.TPF_TITULAR?.holder_phone,...contactPhones(contact).map(p=>p.number)].some(value=>digits(value).includes(termDigits));
     return text.includes(term)||numericMatch;
   }
   function contactMatchesFilter(contact,filter='all',activity=new Map()){
@@ -607,7 +607,7 @@
     let body='';
     if(tab==='summary')body=`<div class="m-info-card">
       ${infoRow('Teléfonos',contactPhones(contact).map(p=>p.label).join('\n'))}${infoRow('DNI / NIF',contact.dni)}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
-    </div>`;
+    </div>${window.TPFContactParty.summary(contact.data?.TPF_TITULAR,contact)}`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
     if(tab==='history')body=renderContactHistory(id);
@@ -763,11 +763,11 @@
       <label class="m-field"><span>Banco / IBAN</span><input id="${prefix}Bank" class="m-input" value="${esc(contact.bank||'')}"></label>
       <label class="m-field"><span>Observaciones</span><textarea id="${prefix}Observations" class="m-textarea">${esc(contact.observations||'')}</textarea></label>
       <label class="m-field"><span>Notas</span><textarea id="${prefix}Notes" class="m-textarea">${esc(contact.notes||'')}</textarea></label>
-    </div>`;
+    </div>${window.TPFContactParty.html(prefix+'Party',contact.data?.TPF_TITULAR||contact.party)}`;
   }
   function readContactFields(prefix){
     const value=id=>clean(byId(`${prefix}${id}`)?.value);
-    return {first:value('First'),last:value('Last'),dni:value('Dni').toUpperCase(),phone:value('Phone'),email:value('Email'),bank:value('Bank'),observations:value('Observations'),notes:value('Notes')};
+    return {party:window.TPFContactParty.read(prefix+'Party'),first:value('First'),last:value('Last'),dni:value('Dni').toUpperCase(),phone:value('Phone'),email:value('Email'),bank:value('Bank'),observations:value('Observations'),notes:value('Notes')};
   }
   function renderEditContact(id){
     const contact=state.contacts.find(row=>String(row.id)===String(id));
@@ -776,8 +776,8 @@
   }
   async function saveContact(id){
     const contact=state.contacts.find(row=>String(row.id)===String(id));if(!contact||!has('can_edit_records'))return;
-    const values=readContactFields('edit');if(!values.first&&!values.last){byId('mobileEditMsg').textContent='Escribe el nombre o los apellidos.';return;}
-    const fullName=[values.first,values.last].filter(Boolean).join(' ');const data={...contact.data,'NOMBRE':values.first,'APELLIDOS':values.last,'NOMBRE Y APELLIDOS':fullName,'TELÉFONO':values.phone,'DNI / NIF':values.dni,'DNI':values.dni,'EMAIL':values.email,'BANCO':values.bank,'OBSERVACIONES':values.observations,'NOTAS':values.notes};
+    let values;try{values=readContactFields('edit');}catch(error){byId('mobileEditMsg').textContent=error.message;return;}if(!values.first&&!values.last){byId('mobileEditMsg').textContent='Escribe el nombre o los apellidos.';return;}
+    const fullName=[values.first,values.last].filter(Boolean).join(' ');const data={...contact.data,'TPF_TITULAR':values.party,'NOMBRE':values.first,'APELLIDOS':values.last,'NOMBRE Y APELLIDOS':fullName,'TELÉFONO':values.phone,'DNI / NIF':values.dni,'DNI':values.dni,'EMAIL':values.email,'BANCO':values.bank,'OBSERVACIONES':values.observations,'NOTAS':values.notes};
     const button=document.querySelector('[data-action="save-contact"]');button.disabled=true;byId('mobileEditMsg').textContent='Guardando…';
     try{
       const {error}=await client.from('records').update({data}).eq('id',id).eq('source_sheet',CONTACT_SOURCE).select('id').single();if(error)throw error;
@@ -788,7 +788,7 @@
 
   function opportunityCard(opp){
     const stage=state.board.stages.find(row=>String(row.id)===String(opp.stage_id));
-    return `<button class="m-list-card" data-action="route" data-route="opportunity/${esc(opp.id)}"><span class="m-list-row"><span class="m-avatar">◇</span><span class="m-list-main"><strong>${esc(opp.title||'Oportunidad')}</strong><small>${esc(opp.client_name||'Sin contacto')} · ${esc(stage?.name||'Sin columna')}</small></span><span class="m-chevron">›</span></span></button>`;
+    return `<button class="m-list-card" data-action="route" data-route="opportunity/${esc(opp.id)}"><span class="m-list-row"><span class="m-avatar">◇</span><span class="m-list-main"><strong>${esc(opp.title||'Oportunidad')}</strong>${window.TPFContactParty.hint(opp)}<small>${esc(opp.client_name||'Sin contacto')} · ${esc(stage?.name||'Sin columna')}</small></span><span class="m-chevron">›</span></span></button>`;
   }
   function opportunityDisplayState(opp,now=Date.now(),stage=null){
     const status=foldText(opp?.status||'open'),stageName=foldText(stage?.name||stage);
@@ -855,7 +855,7 @@
     if(!opp||!has('can_edit_sales'))return `<div class="m-page">${head}${empty('No disponible','No tienes permiso o la oportunidad ya no existe.')}</div>`;
     const stages=state.board.stages.filter(stage=>!opp.pipeline_id||String(stage.pipeline_id)===String(opp.pipeline_id));
     const options=stages.map(stage=>`<option value="${esc(stage.id)}" ${String(stage.id)===String(opp.stage_id)?'selected':''}>${esc(stage.name)}</option>`).join('');
-    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(opp.client_name||'Sin contacto')}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="editOppTitle" class="m-input" value="${esc(opp.title||'')}"></label><label class="m-field"><span>Columna / Estado</span><select id="editOppStage" class="m-select">${stages.some(stage=>String(stage.id)===String(opp.stage_id))?'':`<option value="${esc(opp.stage_id||'')}">Columna actual</option>`}${options}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="editOppDate" class="m-input" type="date" value="${esc(String(opp.expected_date||'').slice(0,10))}"></label><label class="m-field"><span>Importe (opcional)</span><input id="editOppAmount" class="m-input" inputmode="decimal" value="${esc(opp.amount??'')}"></label><label class="m-field"><span>Notas</span><textarea id="editOppNotes" class="m-textarea">${esc(opp.notes||'')}</textarea></label></div><div class="m-detail-actions"><button class="m-primary" data-action="save-opportunity-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="route" data-route="opportunity/${esc(id)}">Cancelar</button></div><p id="mobileOppDetailMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(opp.client_name||'Sin contacto')}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="editOppTitle" class="m-input" value="${esc(opp.title||'')}"></label><label class="m-field"><span>Columna / Estado</span><select id="editOppStage" class="m-select">${stages.some(stage=>String(stage.id)===String(opp.stage_id))?'':`<option value="${esc(opp.stage_id||'')}">Columna actual</option>`}${options}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="editOppDate" class="m-input" type="date" value="${esc(String(opp.expected_date||'').slice(0,10))}"></label><label class="m-field"><span>Importe (opcional)</span><input id="editOppAmount" class="m-input" inputmode="decimal" value="${esc(opp.amount??'')}"></label><label class="m-field"><span>Notas</span><textarea id="editOppNotes" class="m-textarea">${esc(opp.notes||'')}</textarea></label></div>${window.TPFContactParty.html('editOppParty',opp.contract_party,true)}<div class="m-detail-actions"><button class="m-primary" data-action="save-opportunity-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="route" data-route="opportunity/${esc(id)}">Cancelar</button></div><p id="mobileOppDetailMsg" class="m-form-msg"></p></div>`;
   }
   async function saveOpportunityDetail(id,button){
     const opp=state.board.opportunities.find(row=>String(row.id)===String(id)),msg=byId('mobileOppDetailMsg');
@@ -865,7 +865,7 @@
     const patch={title,stage_id:stageId,amount,expected_date:expected,notes:clean(byId('editOppNotes')?.value)||null};
     if(String(stageId)!==String(opp.stage_id))patch.position=0;
     savingMobileOpportunities.add(String(id));if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
-    try{const result=await client.from('sales_opportunities').update(patch).eq('id',id).select('*').single();if(result.error)throw result.error;const index=state.board.opportunities.findIndex(row=>String(row.id)===String(id));if(index>=0)state.board.opportunities[index]={...opp,...result.data};updateAlertDot();if(route().parts[0]==='edit-opportunity'&&route().parts[1]===String(id)){go(`opportunity/${id}`,true);toast('Oportunidad guardada.','success');}}
+    try{patch.contract_party=window.TPFContactParty.snapshot(window.TPFContactParty.read('editOppParty'),{name:opp.contract_party?.contact_name||opp.client_name,phone:opp.contract_party?.contact_phone||opp.phone,dni:opp.contract_party?.contact_dni});const result=await client.from('sales_opportunities').update(patch).eq('id',id).select('*').single();if(result.error)throw result.error;const index=state.board.opportunities.findIndex(row=>String(row.id)===String(id));if(index>=0)state.board.opportunities[index]={...opp,...result.data};updateAlertDot();if(route().parts[0]==='edit-opportunity'&&route().parts[1]===String(id)){go(`opportunity/${id}`,true);toast('Oportunidad guardada.','success');}}
     catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar la oportunidad.';}
     finally{savingMobileOpportunities.delete(String(id));if(button)button.disabled=false;}
   }
@@ -1066,7 +1066,7 @@
     const contact=state.contacts.find(row=>String(row.id)===String(contactId)),back=mobileWaReturnPath(contactId,'opportunity');
     if(!contact||!has('can_view_sales')||!has('can_edit_sales'))return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
     if(!state.board.stages.length)return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('Sin columnas','Crea primero una columna en el Panel de ventas del CRM.')}</div>`;
-    return `<div class="m-page">${pageHead('Nueva oportunidad',back)}<p class="m-subtitle" style="margin-bottom:16px">Oportunidad para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="contactOppTitle" class="m-input" value="${esc(`Oportunidad - ${contact.fullName}`)}"></label><label class="m-field"><span>Columna / Estado</span><select id="contactOppStage" class="m-select">${state.board.stages.map(stage=>`<option value="${esc(stage.id)}">${esc(stage.name)}</option>`).join('')}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="contactOppDate" class="m-input" type="date"></label><label class="m-field"><span>Importe (opcional)</span><input id="contactOppAmount" class="m-input" inputmode="decimal" placeholder="0,00"></label><label class="m-field"><span>Notas</span><textarea id="contactOppNotes" class="m-textarea"></textarea></label></div><button class="m-primary" style="width:100%;margin-top:18px" data-action="save-contact-opportunity" data-contact-id="${esc(contactId)}">Crear oportunidad</button><p id="mobileContactOppMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page">${pageHead('Nueva oportunidad',back)}<p class="m-subtitle" style="margin-bottom:16px">Oportunidad para ${esc(contact.fullName)}</p><div class="m-form-grid"><label class="m-field"><span>Nombre de oportunidad</span><input id="contactOppTitle" class="m-input" value="${esc(`Oportunidad - ${contact.fullName}`)}"></label><label class="m-field"><span>Columna / Estado</span><select id="contactOppStage" class="m-select">${state.board.stages.map(stage=>`<option value="${esc(stage.id)}">${esc(stage.name)}</option>`).join('')}</select></label><label class="m-field"><span>Fecha de cierre prevista</span><input id="contactOppDate" class="m-input" type="date"></label><label class="m-field"><span>Importe (opcional)</span><input id="contactOppAmount" class="m-input" inputmode="decimal" placeholder="0,00"></label><label class="m-field"><span>Notas</span><textarea id="contactOppNotes" class="m-textarea"></textarea></label></div>${window.TPFContactParty.html('contactOppParty',contact.data?.TPF_TITULAR,true)}<button class="m-primary" style="width:100%;margin-top:18px" data-action="save-contact-opportunity" data-contact-id="${esc(contactId)}">Crear oportunidad</button><p id="mobileContactOppMsg" class="m-form-msg"></p></div>`;
   }
   async function saveContactOpportunity(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId)),title=clean(byId('contactOppTitle')?.value),stageId=byId('contactOppStage')?.value,stage=state.board.stages.find(row=>String(row.id)===String(stageId)),msg=byId('mobileContactOppMsg');
@@ -1075,7 +1075,7 @@
     const rawAmount=clean(byId('contactOppAmount')?.value).replace(',','.'),amount=rawAmount===''?0:Number(rawAmount);if(!Number.isFinite(amount)){if(msg)msg.textContent='El importe no es válido.';return;}
     const back=mobileWaReturnPath(contact.id,'opportunity'),button=document.querySelector('[data-action="save-contact-opportunity"]');if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
     try{
-      const row={pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:contact.id,title,client_name:contact.fullName||null,phone:contact.phone||null,amount,expected_date:byId('contactOppDate')?.value||null,owner_user_id:state.user.id,notes:clean(byId('contactOppNotes')?.value)||null};
+      const row={contract_party:window.TPFContactParty.snapshot(window.TPFContactParty.read('contactOppParty'),contact),pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:contact.id,title,client_name:contact.fullName||null,phone:contact.phone||null,amount,expected_date:byId('contactOppDate')?.value||null,owner_user_id:state.user.id,notes:clean(byId('contactOppNotes')?.value)||null};
       const {error}=await client.from('sales_opportunities').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='opportunities';go(`contact/${contact.id}`,back==='choose-contact/opportunity');}toast('Oportunidad creada y sincronizada.','success');
     }catch(error){if(msg)msg.textContent=error?.message||'No se pudo crear la oportunidad.';}
     finally{if(button)button.disabled=false;}
@@ -1208,11 +1208,11 @@
   }
   async function captureDraftContact(){state.draft.contact=readContactFields('draft');return state.draft.contact;}
   async function checkDuplicates(){
-    const contact=await captureDraftContact();
+    let contact;try{contact=await captureDraftContact();}catch(error){byId('mobileDetectedMsg').textContent=error.message;return;}
     try{const {data,error}=await client.rpc('find_possible_duplicate_contact',{phone_text:contact.phone||null,dni_text:contact.dni||null,email_text:contact.email||null});if(error)throw error;state.draft.duplicates=data||[];render();return state.draft.duplicates;}catch(error){byId('mobileDetectedMsg').textContent=error?.message||'No se pudo comprobar.';return [];}
   }
   async function continueDetected(){
-    const contact=await captureDraftContact();if(!contact.first&&!contact.last){byId('mobileDetectedMsg').textContent='Escribe el nombre o los apellidos.';return;}
+    let contact;try{contact=await captureDraftContact();}catch(error){byId('mobileDetectedMsg').textContent=error.message;return;}if(!contact.first&&!contact.last){byId('mobileDetectedMsg').textContent='Escribe el nombre o los apellidos.';return;}
     if(!has('can_create_database')||!has('can_view_database')){byId('mobileDetectedMsg').textContent='No tienes permiso para crear y consultar contactos.';return;}
     await checkDuplicates();
     if(!has('can_edit_sales')||!has('can_view_sales')){state.draft.includeOpportunity=false;go('review');return;}
@@ -1248,7 +1248,7 @@
     try{
       if(!state.createdContactId){
         setCreationStep('createContactStep','active');
-        const data={'NOMBRE':contact.first,'APELLIDOS':contact.last,'NOMBRE Y APELLIDOS':fullName,'TELÉFONO':contact.phone,'DNI / NIF':contact.dni,'DNI':contact.dni,'EMAIL':contact.email,'BANCO':contact.bank,'NOTAS':contact.notes,'OBSERVACIONES':contact.observations};
+        const data={'TPF_TITULAR':contact.party,'NOMBRE':contact.first,'APELLIDOS':contact.last,'NOMBRE Y APELLIDOS':fullName,'TELÉFONO':contact.phone,'DNI / NIF':contact.dni,'DNI':contact.dni,'EMAIL':contact.email,'BANCO':contact.bank,'NOTAS':contact.notes,'OBSERVACIONES':contact.observations};
         const result=await client.from('records').insert({source_sheet:CONTACT_SOURCE,data}).select('id').single();if(result.error)throw result.error;state.createdContactId=result.data.id;setCreationStep('createContactStep','done');
       }
       if(includeOpportunity&&!state.createdOpportunityId){
@@ -1805,3 +1805,4 @@
 
   boot();
 })();
+

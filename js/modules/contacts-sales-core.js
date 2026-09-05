@@ -295,10 +295,13 @@ function openContactNewOpportunity(){
   $("oppModalSave").textContent="Crear oportunidad";
   $("oppModalDelete").classList.add("hidden");
   $("oppModalId").value="";
+  window.TPFContactParty?.mountOpportunity(currentContact.data?.TPF_TITULAR);
   $("oppModalHeading").textContent="Nueva oportunidad";
   $("oppModalTitle").value="Oportunidad - "+name;
   $("oppModalClient").value=name;
   $("oppModalPhone").value=phone;
+  $("oppModalDni").value=currentContact.data?.["DNI / NIF"]||currentContact.data?.DNI||"";
+  $("oppModalOpenContact").dataset.recordId=currentContact.id;
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
   $("oppModalNotes").value="";
@@ -901,4 +904,5 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
+
 
