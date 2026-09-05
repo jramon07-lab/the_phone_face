@@ -69,7 +69,45 @@
   renderPreview();q("runImport").disabled=state.type==="contact"?!validRows().length:!state.rawRows.length||state.rawRows.length===duplicates+errors.length;
  }
  const editableKeys=["NOMBRE","APELLIDOS","NOMBRE Y APELLIDOS","TELÉFONO","TELÉFONO 2","TELÉFONO 3","DNI / NIF","EMAIL","OBSERVACIONES","NOTAS"];
- function contactDiff(incoming,current){return editableKeys.filter(key=>clean(incoming[key])&&clean(incoming[key])!==clean(current[key])).map(key=>({key,before:clean(current[key]),after:clean(incoming[key])}))}
+ function contactName(data){return clean(data["NOMBRE Y APELLIDOS"])||[data.NOMBRE,data.APELLIDOS].map(clean).filter(Boolean).join(" ")}
+ const textKey=v=>clean(v).replace(/\s+/g," ");
+ function identity(a,b){
+  const ak=contactKeys(a),bk=contactKeys(b),an=norm(contactName(a)),bn=norm(contactName(b));
+  const sameName=!!an&&an===bn,sameDni=!!ak.dni&&ak.dni===bk.dni,samePhone=ak.phones.some(p=>bk.phones.includes(p));
+  return {confirmed:sameName&&sameDni&&samePhone,separate:!!an&&!!bn&&an!==bn&&!!ak.dni&&!!bk.dni&&ak.dni!==bk.dni};
+ }
+ function contactDiff(incoming,current){
+  const sameName=norm(contactName(incoming))===norm(contactName(current));
+  return editableKeys.flatMap(key=>{
+   const before=clean(current[key]),value=clean(incoming[key]);if(!value)return [];
+   if(["NOMBRE","APELLIDOS","NOMBRE Y APELLIDOS"].includes(key)&&sameName)return [];
+   if(key.startsWith("TELÉFONO")&&contactKeys(current).phones.includes(digits(value)))return [];
+   if(key==="DNI / NIF"&&dni(value)===contactKeys(current).dni)return [];
+   if(key==="EMAIL"&&email(value)===contactKeys(current).email)return [];
+   if(textKey(before)===textKey(value))return [];
+   const isText=key==="NOTAS"||key==="OBSERVACIONES";
+   if(isText&&before.split("\n\n[Importación Excel]\n").some(part=>textKey(part)===textKey(value)))return [];
+   return [{key,before,incoming:value,after:isText&&before?before+"\n\n[Importación Excel]\n"+value:value,mode:!before?"complete":isText?"append":"replace"}];
+  });
+ }
+ const reviewGroups={unchanged:"Duplicado · sin novedades",complete:"Duplicado · datos para completar",text:"Duplicado · textos para añadir",different:"Posible persona diferente · teléfono compartido",new:"Sin coincidencias detectadas",doubt:"Caso dudoso · revisar"};
+ function classifyContact(r){
+  const confirmed=r.matches.filter(m=>identity(r.data,m.data||{}).confirmed);
+  if(r.blocked)return {group:"doubt",explanation:"Hay datos incompletos o con formato incorrecto que corregir."};
+  if(confirmed.length===1&&!r.matches.some(m=>!identity(r.data,m.data||{}).confirmed&&m.reasons.includes("DNI"))){
+   const target=confirmed[0],changes=contactDiff(r.data,target.data||{});
+   if(changes.some(c=>c.mode==="replace"))return {group:"doubt",target,changes,explanation:"Coinciden nombre, DNI y teléfono, pero otros datos son distintos. Comprueba cuál es correcto."};
+   return {group:changes.some(c=>c.mode==="append")?"text":changes.length?"complete":"unchanged",target,changes,explanation:"Coinciden nombre, DNI y al menos un teléfono. Se ignoran mayúsculas, tildes, espacios y el prefijo +34."};
+  }
+  if(r.matches.length&&r.matches.every(m=>identity(r.data,m.data||{}).separate))return {group:"different",explanation:"El nombre y el DNI son distintos. No se permite mezclar estos contactos aunque compartan teléfono o correo."};
+  if(!r.matches.length&&!r.peers.length&&!r.issues.length)return {group:"new",explanation:"No se ha encontrado coincidencia por teléfono, DNI o correo."};
+  return {group:"doubt",explanation:"Faltan datos para confirmar la identidad, hay varias coincidencias o se repite dentro del Excel. No se considera duplicado automáticamente."};
+ }
+ function renderReviewSummary(){
+  const counts=Object.fromEntries(Object.keys(reviewGroups).map(k=>[k,0]));state.review.forEach(r=>counts[r.classification.group]++);
+  q("importSummary").innerHTML=`<div><b>${state.rawRows.length}</b>filas del Excel</div>`+Object.entries(reviewGroups).map(([k,label])=>`<div><b>${counts[k]}</b>${label}</div>`).join("");
+  q("importErrors").textContent="Cada fila aparece en un solo grupo. Nada se guarda automáticamente. Notas y observaciones diferentes se añaden conservando el texto actual. La comparación de novedades cubre los datos principales, notas y observaciones; las etiquetas existentes se conservan.";
+ }
  function reviewContacts(rows,existing,dniLists=[]){
   const keys=rows.map(contactKeys),stored=existing.map(r=>({...r,keys:contactKeys(r.data||{})}));
   const reasons=(a,b)=>[a.dni&&a.dni===b.dni?"DNI":"",a.email&&a.email===b.email?"correo":"",a.phones.some(p=>b.phones.includes(p))?"teléfono":""].filter(Boolean);
@@ -86,28 +124,30 @@
    if(peers.length)issues.push("Coincide con filas del Excel: "+peers.join(", "));
    if(matches.some(r=>r.reasons.includes("teléfono")&&r.keys.dni&&k.dni&&r.keys.dni!==k.dni))issues.push("Teléfono compartido con otro DNI: pueden ser personas diferentes");
    const blocked=issues.some(x=>/Falta nombre|Teléfono incompleto|Varios DNI|formato del DNI|Correo no válido/.test(x));
-   return {data,matches,peers,issues,blocked};
+   const result={data,matches,peers,issues,blocked};result.classification=classifyContact(result);return result;
   });
  }
  function allowedDecision(r,d){
   if(!r||r.blocked||!d||d.action==="skip")return false;
   if(d.action==="create")return d.reviewed===true&& !r.matches.some(m=>m.reasons.includes("DNI"))&&(!r.issues.length&&!r.matches.length||d.reviewed===true);
-  if(d.action==="update")return r.matches.some(m=>String(m.id)===d.target&&contactDiff(r.data,m.data||{}).some(c=>d.fields?.includes(c.key)))&&d.reviewed===true;
+  if(d.action==="update")return r.matches.some(m=>!identity(r.data,m.data||{}).separate&&String(m.id)===d.target&&contactDiff(r.data,m.data||{}).some(c=>d.fields?.includes(c.key)))&&d.reviewed===true;
   return false;
  }
  function renderContactReview(){
+  renderReviewSummary();
   q("previewHead").innerHTML="<tr><th>Fila / Contacto</th><th>Revisión y coincidencias</th><th>Decisión</th></tr>";
   q("previewRows").innerHTML=state.review.map((r,i)=>{
    const d=state.decisions[i]||{action:"skip",fields:[]};state.decisions[i]=d;
-   const target=r.matches.find(m=>String(m.id)===d.target),changes=target?contactDiff(r.data,target.data||{}):[];
+   const eligible=r.matches.filter(m=>!identity(r.data,m.data||{}).separate),classification=r.classification;
+   const target=eligible.find(m=>String(m.id)===d.target),changes=target?contactDiff(r.data,target.data||{}):[];
    return `<tr><td style="vertical-align:top;min-width:180px">${i+2} · <b>${escHtml(r.data["NOMBRE Y APELLIDOS"])||"Sin nombre"}</b><br>${escHtml(contactKeys(r.data).phones.join(" · "))}<br>${escHtml(r.data["DNI / NIF"])}<details><summary>Ver todos los datos</summary>${state.headers.map(h=>`<div><b>${escHtml(h)}:</b> ${escHtml(state.rawRows[i][h])}</div>`).join("")}</details></td>
-   <td style="white-space:normal;min-width:250px">${state.completed.has(i)?"Ya guardada en este intento":r.issues.length?`<b style="color:#a15c00">Revisar</b><ul>${r.issues.map(x=>`<li>${escHtml(x)}</li>`).join("")}</ul>`:r.matches.length?"Coincidencia en CRM":"Nuevo contacto, sin coincidencias detectadas"}${r.matches.map(m=>`<p><b>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||[m.data?.NOMBRE,m.data?.APELLIDOS].filter(Boolean).join(" ")||m.id)}</b><br>Coincide por ${m.reasons.join(" y ")} · DNI: ${escHtml(m.keys.dni)||"sin DNI"}<br>${escHtml(m.keys.phones.join(" · "))}</p>`).join("")}</td>
-   <td style="white-space:normal;min-width:260px"><select data-decision="${i}" ${state.completed.has(i)?"disabled":""}><option value="skip">Omitir por ahora</option>${!r.blocked&&!r.matches.some(m=>m.reasons.includes("DNI"))?`<option value="create" ${d.action==="create"?"selected":""}>Crear contacto separado</option>`:""}${!r.blocked&&r.matches.length?`<option value="update" ${d.action==="update"?"selected":""}>Actualizar contacto existente</option>`:""}</select>
-   ${d.action==="update"?`<select data-target="${i}"><option value="">Elige el contacto que has comprobado</option>${r.matches.map(m=>`<option value="${escHtml(m.id)}" ${String(m.id)===d.target?"selected":""}>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||m.data?.NOMBRE||m.id)} · ${escHtml(m.keys.dni)}</option>`).join("")}</select><p>Marca solo los campos que quieres cambiar. Los vacíos no borran datos. Se conservan las etiquetas, titular y campos adicionales del CRM.</p>${changes.map(c=>`<label style="display:block;margin:8px 0"><input type="checkbox" data-field-row="${i}" data-field="${escHtml(c.key)}" ${d.fields?.includes(c.key)?"checked":""}> <b>${escHtml(c.key)}</b>: ${escHtml(c.before)||"Vacío"} → ${escHtml(c.after)}</label>`).join("")}`:""}
+   <td style="white-space:normal;min-width:250px"><b style="color:#175cd3">${reviewGroups[classification.group]}</b><p>${escHtml(classification.explanation)}</p>${classification.changes?.length?`<p><b>Información que aporta el Excel:</b></p>${classification.changes.map(c=>`<div style="margin:6px 0"><b>${escHtml(c.key)}</b> · ${c.mode==="complete"?"Falta en el CRM":c.mode==="append"?"Añadir conservando el texto actual":"Dato diferente"}<br>${escHtml(c.incoming)}</div>`).join("")}`:""}${state.completed.has(i)?"Ya guardada en este intento":r.issues.length?`<b style="color:#a15c00">Revisar</b><ul>${r.issues.map(x=>`<li>${escHtml(x)}</li>`).join("")}</ul>`:r.matches.length?"Coincidencia en CRM":"Nuevo contacto, sin coincidencias detectadas"}${r.matches.map(m=>`<p><b>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||[m.data?.NOMBRE,m.data?.APELLIDOS].filter(Boolean).join(" ")||m.id)}</b><br>Coincide por ${m.reasons.join(" y ")} · DNI: ${escHtml(m.keys.dni)||"sin DNI"}<br>${escHtml(m.keys.phones.join(" · "))}</p>`).join("")}</td>
+   <td style="white-space:normal;min-width:260px"><select data-decision="${i}" ${state.completed.has(i)?"disabled":""}><option value="skip">Omitir por ahora</option>${!r.blocked&&!r.matches.some(m=>m.reasons.includes("DNI"))?`<option value="create" ${d.action==="create"?"selected":""}>Crear contacto separado</option>`:""}${!r.blocked&&eligible.length?`<option value="update" ${d.action==="update"?"selected":""}>Actualizar contacto existente</option>`:""}</select>
+   ${d.action==="update"?`<select data-target="${i}"><option value="">Elige el contacto que has comprobado</option>${eligible.map(m=>`<option value="${escHtml(m.id)}" ${String(m.id)===d.target?"selected":""}>${escHtml(m.data?.["NOMBRE Y APELLIDOS"]||m.data?.NOMBRE||m.id)} · ${escHtml(m.keys.dni)}</option>`).join("")}</select><p>Marca solo los campos que quieres cambiar. Los vacíos no borran datos. Las notas y observaciones distintas se añaden; no sustituyen el texto actual. Se conservan las etiquetas, titular y campos adicionales del CRM.</p>${changes.map(c=>`<label style="display:block;margin:8px 0"><input type="checkbox" data-field-row="${i}" data-field="${escHtml(c.key)}" ${d.fields?.includes(c.key)?"checked":""}> <b>${escHtml(c.key)}</b> · ${c.mode==="complete"?"Completar":c.mode==="append"?"Conservar ambos textos":"Cambiar valor"}<br>Actual: ${escHtml(c.before)||"Vacío"}<br>Resultado: ${escHtml(c.after)}</label>`).join("")}`:""}
    ${r.blocked?"<p>Corrige estos datos en el Excel y vuelve a generar la vista previa.</p>":""}${d.action!=="skip"?`<label style="display:block;margin-top:10px"><input type="checkbox" data-reviewed="${i}" ${d.reviewed?"checked":""}> He comprobado los datos y esta decisión.</label>`:""}</td></tr>`;
   }).join("");
   const root=q("previewRows"),refresh=()=>{renderContactReview();q("runImport").disabled=!validRows().length;q("importInfo").textContent=`${state.rawRows.length} filas · ${validRows().length} seleccionadas para guardar. El resto se omitirá.`};
-  root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{state.decisions[el.dataset.decision]={action:el.value,fields:[],reviewed:false};refresh()});
+  root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{const r=state.review[el.dataset.decision];state.decisions[el.dataset.decision]={action:el.value,target:el.value==="update"?String(r.classification.target?.id||""):"",fields:[],reviewed:false};refresh()});
   root.querySelectorAll("[data-target]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.target],{target:el.value,fields:[],reviewed:false});refresh()});
   root.querySelectorAll("[data-field-row]").forEach(el=>el.onchange=()=>{const d=state.decisions[el.dataset.fieldRow];d.fields=d.fields.filter(k=>k!==el.dataset.field);if(el.checked)d.fields.push(el.dataset.field);d.reviewed=false;refresh()});
   root.querySelectorAll("[data-reviewed]").forEach(el=>el.onchange=()=>{state.decisions[el.dataset.reviewed].reviewed=el.checked;refresh()});
@@ -191,6 +231,6 @@
  }
  function bind(){ensureUi();legacyPreview=q("previewImport").onclick;legacyRun=q("runImport").onclick;q("previewImport").onclick=e=>isGuided()?preview().catch(err=>{q("importInfo").textContent="No se pudo leer el Excel: "+err.message}):legacyPreview?.call(q("previewImport"),e);q("runImport").onclick=e=>isGuided()?run():legacyRun?.call(q("runImport"),e);q("destination").addEventListener("change",()=>{state=null;q("importMapping").classList.add("hidden");q("runImport").disabled=true;q("previewHead").innerHTML="";q("previewRows").innerHTML=""})}
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
- window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision};
+ window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact};
 })();
 

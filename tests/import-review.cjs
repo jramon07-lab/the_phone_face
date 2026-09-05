@@ -26,3 +26,19 @@ if(process.argv[3]){
  const review=h.reviewContacts(rows,[]);assert.equal(review.length,123);assert(review.some(r=>r.peers.length));assert(review.some(r=>r.issues.some(x=>x.includes('Varios DNI'))));
  console.log(JSON.stringify({excelRows:review.length,withWarnings:review.filter(r=>r.issues.length).length,selectedByDefault:review.filter(r=>h.allowedDecision(r,undefined)).length}));
 }
+const base={...row('Ramón Sánchez','+34 600123456','12345678Z'),NOMBRE:'Ramón',APELLIDOS:'Sánchez',NOTAS:'Nota anterior'};
+const source={...row('RAMON SANCHEZ','600 123 456','12345678z'),NOMBRE:'RAMON SANCHEZ',NOTAS:'Nota anterior'};
+const classify=(data,crm=[{id:'a',data:base}])=>h.reviewContacts([data],crm)[0];
+assert.equal(classify(source).classification.group,'unchanged');
+assert.equal(classify({...source,OBSERVACIONES:'Llamar por la tarde'}).classification.group,'complete');
+const textRow=classify({...source,NOTAS:'Nueva nota'});assert.equal(textRow.classification.group,'text');
+const note=h.contactDiff({...source,NOTAS:'Nueva nota'},base).find(c=>c.key==='NOTAS');
+assert.equal(note.mode,'append');assert(note.after.includes('Nota anterior'));assert(note.after.includes('Nueva nota'));
+assert.equal(h.contactDiff({...source,NOTAS:'Nueva nota'},{...base,NOTAS:note.after}).length,0);
+assert.equal(classify({...source,'DNI / NIF':''}).classification.group,'doubt');
+const stranger=classify(row('Otra Persona','600123456','87654321X'));
+assert.equal(stranger.classification.group,'different');assert.equal(h.allowedDecision(stranger,{action:'update',target:'a',fields:['NOMBRE Y APELLIDOS'],reviewed:true}),false);
+assert.equal(classify(source,[{id:'a',data:base},{id:'b',data:base}]).classification.group,'doubt');
+assert.equal(classify({...source,EMAIL:'nuevo@example.com'},[{id:'a',data:{...base,EMAIL:'anterior@example.com'}}]).classification.group,'doubt');
+assert.equal(classify(row('Cliente Nuevo','699888777','11111111H'),[]).classification.group,'new');
+console.log('Classification passed: strict identity, exclusive groups, empty-field completion, append-only notes, repeat-import idempotency and incompatible identity guard.');
