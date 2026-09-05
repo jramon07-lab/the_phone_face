@@ -130,25 +130,16 @@
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpWhatsappPrograms{grid-template-columns:minmax(0,1fr)}
 }
 
-/* The native create form stays inside the contact workspace. */
+/* Shared Agenda composer: the same fields and handlers, embedded in the client. */
+.agendaDateShortcuts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 10px}
+.agendaDateShortcuts button{padding:8px 12px;border:1px solid #ccd6e6;border-radius:7px;background:#f5f8ff;color:#174fa8;cursor:pointer}
+.agendaDateShortcuts small{color:#667085;font-size:12px}
 @media(min-width:1024px){
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpRefPanel>[data-cp-ref-pane]{display:none!important}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpRefPanel>#cpTaskPage:not(.hidden){display:block!important;position:relative!important;inset:auto!important;width:100%!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:visible!important;background:#fff!important;z-index:1!important}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage>.cpTaskPageTop{position:relative!important;top:auto!important;height:auto!important;min-height:64px!important;padding:0 0 14px!important;display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage>.cpTaskPageTop>div{text-align:left;min-width:0}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage>.cpTaskPageTop b{font-size:16px;line-height:1.4}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage>.cpTaskPageTop small{font-size:12px;line-height:1.5}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskSave{display:inline-flex!important;visibility:visible!important;position:static!important;align-items:center;justify-content:center;min-width:110px;min-height:40px;padding:9px 12px;background:#1262d4;color:#fff;border:1px solid #1262d4;border-radius:7px;font-size:14px;white-space:normal}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage>.cpTaskPageBody{display:grid!important;grid-template-columns:minmax(0,1fr)!important;max-width:none!important;margin:14px 0 0!important;padding:0!important;gap:14px!important;width:100%;box-sizing:border-box}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage .cpTaskFormCard{padding:16px!important;border-radius:8px!important;min-width:0}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage .cpTaskContactCard{position:static!important;padding:12px 16px!important;border-radius:8px!important}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage .cpTaskContactCard h3{font-size:14px;margin:0 0 6px}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage .cpTaskTip{font-size:12px;margin:8px 0 0;padding:8px}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage .cpTaskOptions{display:flex;flex-wrap:wrap;gap:12px}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage .tpfPickerGrid{grid-template-columns:minmax(0,1fr) 75px 75px!important}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage input,#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskPage textarea{max-width:100%;box-sizing:border-box}
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpTaskBack{display:inline-flex!important;visibility:visible!important;white-space:nowrap}
+#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #cpRefPanel>[data-cp-ref-pane],
+#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside .cpRefTabs{display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #agendaCreateCard.open{display:block!important;position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;min-height:0!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:18px!important;margin:0!important;z-index:1!important;box-sizing:border-box;--ap-blue:#155eef;--ap-text:#182230;--ap-muted:#667085;--ap-line:#e4e7ec;--ap-soft:#f8faff}
+#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside .agendaComposerHead{position:static!important}
+#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside .agendaComposerHead h3{font-size:20px!important}
+#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside #agendaSave{display:inline-flex!important;visibility:visible!important;min-height:42px;background:#155eef;color:white}
 }
-@media(min-width:1024px){
-#contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside .cpRefTabs{display:none}
-}
+#agendaTypeModal[data-contact-composer="true"]{z-index:70000!important;--ap-blue:#155eef;--ap-text:#182230;--ap-muted:#667085;--ap-line:#e4e7ec;--ap-soft:#f8faff}

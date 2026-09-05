@@ -13,9 +13,15 @@
  identity.before(identityAnchor);center.before(centerAnchor);
  const heading=modal.querySelector('.cpNav'),oldHeading=heading?.textContent;
  let mounted=false,selected='resumen';
- const createTask=$('cpTaskPage'),createTaskAnchor=document.createComment('original create task position');
- if(createTask)createTask.before(createTaskAnchor);
- let embeddedCreate=false,createWasVisible=false,tabBeforeCreate='resumen';
+ const composer=$('agendaCreateCard'),typeModal=$('agendaTypeModal');
+ let embeddedCreate=false,tabBeforeCreate='resumen',composerPositions=[];
+ function restoreComposer(){
+  if(!embeddedCreate)return;
+  embeddedCreate=false;
+  composerPositions.splice(0).forEach(({node,parent,next})=>parent.insertBefore(node,next?.parentNode===parent?next:null));
+  typeModal?.removeAttribute('data-contact-composer');
+  modal.classList.remove('cpRefTaskInside');select(tabBeforeCreate);
+ }
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
   ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['documentos','Documentos'],['historial','Historial']
@@ -59,12 +65,8 @@
    ['cpTaskPage','cpTaskDetailPage','tpfWaTasksPage'].some(id=>{const e=$(id);return e&&!e.classList.contains('hidden');});
  }
  function sync(){
-  if(embeddedCreate&&createTask){
-   if(!mq.matches||modal.classList.contains('hidden')||(createWasVisible&&createTask.classList.contains('hidden'))){
-    embeddedCreate=false;createWasVisible=false;createTaskAnchor.after(createTask);modal.classList.remove('cpRefTaskInside');select(tabBeforeCreate);
-   }else if(!createTask.classList.contains('hidden')){
-    createWasVisible=true;if(createTask.parentElement!==panel)panel.appendChild(createTask);select('tareas');
-   }
+  if(embeddedCreate&&(!mq.matches||modal.classList.contains('hidden'))){
+   window.TPFAgendaComposer?.close({silent:true});restoreComposer();
   }
   edit.textContent=modal.classList.contains('tpf-contact-editing')?'Cancelar edición':'Editar datos';
   const on=mq.matches&&!taskMode();
@@ -82,15 +84,26 @@
   }
  }
  document.addEventListener('click',e=>{
-  if(!mounted||modal.classList.contains('hidden')||!createTask)return;
-  if(e.target.closest?.('#cpNewTask,#cpSideNewTask')){
-   embeddedCreate=true;createWasVisible=false;tabBeforeCreate=selected;modal.classList.add('cpRefTaskInside');
-  }
+  if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
+  if(!e.target.closest?.('#cpNewTask,#cpSideNewTask'))return;
+  e.preventDefault();e.stopImmediatePropagation();if(embeddedCreate)return;
+  let contact=null;try{contact=typeof currentContact!=='undefined'?currentContact:null;}catch(_){}
+  if(!contact?.id)return;
+  const contactId=contact.id;
+  tabBeforeCreate=selected;embeddedCreate=true;
+  [composer,typeModal].filter(Boolean).forEach(node=>composerPositions.push({node,parent:node.parentNode,next:node.nextSibling}));
+  panel.appendChild(composer);
+  if(typeModal){document.body.appendChild(typeModal);typeModal.setAttribute('data-contact-composer','true');}
+  modal.classList.add('cpRefTaskInside');select('tareas');
+  window.openAgendaComposer({customerName:$('contactName')?.value||'',phone:$('contactPhone')?.value||'',contactId,type:'Tarea'}, {
+   onCancel:restoreComposer,
+   onSaved:async row=>{restoreComposer();if(row?.related_record_id&&typeof logContactActivity==='function')await logContactActivity(row.related_record_id,'task_created','Tarea creada',row.title||'');if(typeof currentContact!=='undefined'&&currentContact?.id===contactId&&typeof renderContactProfile==='function')await renderContactProfile();}
+  });
  },true);
  const observer=new MutationObserver(sync);observer.observe(modal,{attributes:true,attributeFilter:['class']});
  ['cpTaskPage','cpTaskDetailPage'].forEach(id=>{if($(id))observer.observe($(id),{attributes:true,attributeFilter:['class']});});
  mq.addEventListener('change',sync);
- window.addEventListener('tpf:contact-open',()=>{selected='resumen';delete right.dataset.cpRefProgramsAll;sync();select(selected);updateCall();refreshPhoto();});
+ window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;sync();select(selected);updateCall();refreshPhoto();});
  modal.addEventListener('input',e=>{if(e.target.id==='contactPhone')updateCall();});
  call.addEventListener('click',updateCall);
 

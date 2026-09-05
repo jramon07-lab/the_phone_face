@@ -111,6 +111,19 @@ $("agendaQuickFilters").onclick=e=>{const b=e.target.closest("[data-agenda-perio
 $("agendaListView").onclick=()=>{$("agendaList").classList.remove("hidden");$("agendaCalendar").classList.add("hidden");$("agendaListView").classList.add("active");$("agendaCalendarView").classList.remove("active")};
 $("agendaCalendarView").onclick=()=>{$("agendaList").classList.add("hidden");$("agendaCalendar").classList.remove("hidden");$("agendaCalendarView").classList.add("active");$("agendaListView").classList.remove("active")};
 function agendaLocalDateTime(value){const d=value instanceof Date?value:new Date(value);if(Number.isNaN(d.getTime()))return"";const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+// Calendar shortcuts use local dates and keep the selected time editable.
+function agendaQuickDate(kind,now=new Date()){
+  const date=new Date(now.getTime());
+  if(kind==='tomorrow')date.setDate(date.getDate()+1);
+  else if(kind==='monday')date.setDate(date.getDate()+((1-date.getDay()+7)%7||7));
+  date.setHours(10,0,0,0);return date;
+}
+document.getElementById('agendaDateShortcuts')?.addEventListener('click',event=>{
+  const button=event.target.closest('[data-agenda-quick-date]');if(!button)return;
+  const input=document.getElementById('agendaStarts');
+  input.value=agendaLocalDateTime(agendaQuickDate(button.dataset.agendaQuickDate));
+  input.__tpfSyncFromHidden?.();input.dispatchEvent(new Event('change',{bubbles:true}));
+});
 function mountAgendaComposerOverlay(enable){
   if(enable&&!agendaComposerMounts.length){
     [$("agendaCreateCard"),$("agendaTypeModal")].filter(Boolean).forEach(node=>{agendaComposerMounts.push({node,parent:node.parentNode,next:node.nextSibling});document.body.appendChild(node)});
@@ -132,7 +145,7 @@ function fillAgendaComposer(prefill={}){
   const set=(id,value)=>{const node=$(id);if(node&&value!=null)node.value=String(value)};
   set("agendaTitle",prefill.title||"");set("agendaDescription",prefill.description||prefill.notes||"");
   set("agendaCustomer",prefill.customerName||prefill.customer_name||"");set("agendaPhone",prefill.phone||prefill.customerPhone||prefill.customer_phone||"");
-  set("agendaStarts",prefill.startsAt||prefill.starts_at?agendaLocalDateTime(prefill.startsAt||prefill.starts_at):agendaLocalDateTime(new Date(Date.now()+60*60*1000)));
+  set("agendaStarts",prefill.startsAt||prefill.starts_at?agendaLocalDateTime(prefill.startsAt||prefill.starts_at):agendaLocalDateTime(agendaQuickDate("today")));
   set("agendaReminder",prefill.reminderAt||prefill.reminder_at?agendaLocalDateTime(prefill.reminderAt||prefill.reminder_at):"");
   const contactId=prefill.contactId||prefill.related_record_id;if(contactId)$("agendaCustomer").dataset.contactId=String(contactId);
   if($("agendaNotifyApp"))$("agendaNotifyApp").checked=prefill.notifyInApp??prefill.notify_in_app??true;
@@ -172,3 +185,4 @@ window.completeAgenda=async id=>{const {error}=await sb.from("agenda_items").upd
 window.cancelAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
 window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))return;const {error}=await sb.from("agenda_items").delete().eq("id",id);if(error)alert(error.message);else loadAgenda()};
 loadAgendaTypes().catch(renderTypeChoices);
+

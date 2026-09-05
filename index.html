@@ -64,7 +64,7 @@
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
 <link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-05">
 <link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
-<link rel="stylesheet" href="/assets/contact-desktop.css?v=20260905-05">
+<link rel="stylesheet" href="/assets/contact-desktop.css?v=20260905-06">
 </head>
 <body>
 
@@ -766,6 +766,7 @@
         <label for="agendaTitle">Asunto</label><input id="agendaTitle" placeholder="¿Qué tienes que hacer?">
         <label for="agendaCustomer">Cliente</label><div class="agendaCustomerLookup"><input id="agendaCustomer" placeholder="Buscar por nombre, teléfono o DNI"><div id="agendaCustomerResults"></div></div>
         <label for="agendaPhone">Teléfono</label><input id="agendaPhone" placeholder="Teléfono">
+        <div id="agendaDateShortcuts" class="agendaDateShortcuts" role="group" aria-label="Elegir fecha a las 10:00"><button type="button" data-agenda-quick-date="today">Hoy</button><button type="button" data-agenda-quick-date="tomorrow">Mañana</button><button type="button" data-agenda-quick-date="monday">Próximo lunes</button><small>A las 10:00 · Puedes cambiar la hora</small></div>
         <div class="agendaTwo"><div><label for="agendaStarts">Fecha y hora</label><input id="agendaStarts" type="datetime-local"></div><div><label for="agendaReminder">Avisarme desde</label><input id="agendaReminder" type="datetime-local"></div></div>
         <label for="agendaDescription">Notas</label><textarea id="agendaDescription" placeholder="Añade detalles útiles"></textarea>
         <details class="agendaOptions"><summary>Opciones de aviso</summary><div class="agendaPresets"><label><input type="checkbox" class="agendaReminderPreset" value="10"> 10 min</label><label><input type="checkbox" class="agendaReminderPreset" value="30"> 30 min</label><label><input type="checkbox" class="agendaReminderPreset" value="60"> 1 hora</label><label><input type="checkbox" class="agendaReminderPreset" value="1440"> 1 día</label></div><label><input id="agendaNotifyApp" type="checkbox" checked> Aviso en The Phone Face</label><label><input id="agendaNotifyEmail" type="checkbox"> Email</label><label><input id="agendaSyncGoogle" type="checkbox"> Google Calendar</label></details>
@@ -1510,7 +1511,7 @@
 <script src="/js/core/00-bootstrap.js"></script>
 <script src="/js/modules/contacts-sales-core.js"></script>
 <script src="/js/modules/whatsapp-scheduling-core.js"></script>
-<script src="/js/modules/agenda-core.js?v=20260903-04"></script>
+<script src="/js/modules/agenda-core.js?v=20260905-06"></script>
 <script src="/js/core/20-main.js"></script>
 <script src="/js/modules/whatsapp-green-core.js"></script>
 <script src="/js/modules/automations-core.js"></script>
@@ -1531,6 +1532,6 @@
 <script src="/js/modules/agenda-detail-pro.js?v=20260903-04"></script>
 <script src="/js/modules/import-mapping.js?v=20260905-01"></script>
 
-<script src="/js/modules/contact-desktop-layout.js?v=20260905-05"></script>
+<script src="/js/modules/contact-desktop-layout.js?v=20260905-06"></script>
 </body></html>
 
