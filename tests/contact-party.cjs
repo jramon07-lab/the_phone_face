@@ -24,3 +24,9 @@ assert.equal(businessContext({name:chosen.recipient_name,phone:chosen.recipient_
 const before=fs.readFileSync(path.join(root,'db/proposals/contact-party-runner-before.ts'),'utf8'),after=fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/index.ts'),'utf8');
 for(const name of ['cronAuthorized','phoneToChat','sendGreen','preflight','hasResponseSince']){const pattern=new RegExp('(?:async )?function '+name+'[^\\n]*');assert.equal(after.match(pattern)?.[0],before.match(pattern)?.[0],name);}
 console.log('PASS: recipient selection, optional phone, validation, snapshot, null legacy metadata, escaping, business identity and unchanged transport. No network or data writes.');
+
+const compound=p.snapshot({same:false,holder_first_name:'MARÍA JOSÉ',holder_last_name:'DE LA TORRE',recipient:'contact'},contact);
+assert.equal(compound.holder_first_name,'María José');assert.equal(compound.holder_last_name,'De La Torre');assert.equal(compound.holder_name,'María José De La Torre');assert.deepEqual(p.normalize(compound),p.normalize(p.normalize(compound)));
+assert.match(p.html('split',compound),/data-party="holder_first_name"/);assert.match(p.html('split',compound),/data-party="holder_last_name"/);
+assert.equal(p.normalize({same:false,holder_name:'María José De La Torre'}).holder_name,'María José De La Torre');
+console.log('PASS: separate and compound names round-trip; legacy full name preserved.');
