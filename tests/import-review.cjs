@@ -35,10 +35,20 @@ const textRow=classify({...source,NOTAS:'Nueva nota'});assert.equal(textRow.clas
 const note=h.contactDiff({...source,NOTAS:'Nueva nota'},base).find(c=>c.key==='NOTAS');
 assert.equal(note.mode,'append');assert(note.after.includes('Nota anterior'));assert(note.after.includes('Nueva nota'));
 assert.equal(h.contactDiff({...source,NOTAS:'Nueva nota'},{...base,NOTAS:note.after}).length,0);
-assert.equal(classify({...source,'DNI / NIF':''}).classification.group,'doubt');
+assert.equal(classify({...source,'DNI / NIF':''}).classification.group,'unchanged');
 const stranger=classify(row('Otra Persona','600123456','87654321X'));
 assert.equal(stranger.classification.group,'different');assert.equal(h.allowedDecision(stranger,{action:'update',target:'a',fields:['NOMBRE Y APELLIDOS'],reviewed:true}),false);
 assert.equal(classify(source,[{id:'a',data:base},{id:'b',data:base}]).classification.group,'doubt');
 assert.equal(classify({...source,EMAIL:'nuevo@example.com'},[{id:'a',data:{...base,EMAIL:'anterior@example.com'}}]).classification.group,'doubt');
 assert.equal(classify(row('Cliente Nuevo','699888777','11111111H'),[]).classification.group,'new');
 console.log('Classification passed: strict identity, exclusive groups, empty-field completion, append-only notes, repeat-import idempotency and incompatible identity guard.');
+
+const withoutDni={...base,'DNI / NIF':''};
+assert.equal(classify(source,[{id:'a',data:withoutDni}]).classification.group,'complete');
+assert.equal(classify({...source,'DNI / NIF':''},[{id:'a',data:withoutDni}]).classification.group,'unchanged');
+assert.equal(classify({...source,'DNI / NIF':'87654321X'}).classification.group,'doubt');
+const nameOnly=classify({...source,'TELÉFONO':'','DNI / NIF':''});
+assert.equal(nameOnly.matches.length,1);assert.equal(nameOnly.classification.group,'doubt');
+assert(nameOnly.matches[0].reasons.includes('nombre y apellidos'));
+assert.equal(classify({...source,NOTAS:'Texto adicional','DNI / NIF':''}).classification.group,'text');
+console.log('Name + phone identity passed: missing DNI accepted, missing DNI enrichment, conflicting DNI reviewed, name-only candidates reviewed.');

@@ -74,7 +74,7 @@
  function identity(a,b){
   const ak=contactKeys(a),bk=contactKeys(b),an=norm(contactName(a)),bn=norm(contactName(b));
   const sameName=!!an&&an===bn,sameDni=!!ak.dni&&ak.dni===bk.dni,samePhone=ak.phones.some(p=>bk.phones.includes(p));
-  return {confirmed:sameName&&sameDni&&samePhone,separate:!!an&&!!bn&&an!==bn&&!!ak.dni&&!!bk.dni&&ak.dni!==bk.dni};
+  return {confirmed:sameName&&samePhone&&!(ak.dni&&bk.dni&&ak.dni!==bk.dni),separate:!!an&&!!bn&&an!==bn&&!!ak.dni&&!!bk.dni&&ak.dni!==bk.dni};
  }
  function contactDiff(incoming,current){
   const sameName=norm(contactName(incoming))===norm(contactName(current));
@@ -96,8 +96,8 @@
   if(r.blocked)return {group:"doubt",explanation:"Hay datos incompletos o con formato incorrecto que corregir."};
   if(confirmed.length===1&&!r.matches.some(m=>!identity(r.data,m.data||{}).confirmed&&m.reasons.includes("DNI"))){
    const target=confirmed[0],changes=contactDiff(r.data,target.data||{});
-   if(changes.some(c=>c.mode==="replace"))return {group:"doubt",target,changes,explanation:"Coinciden nombre, DNI y teléfono, pero otros datos son distintos. Comprueba cuál es correcto."};
-   return {group:changes.some(c=>c.mode==="append")?"text":changes.length?"complete":"unchanged",target,changes,explanation:"Coinciden nombre, DNI y al menos un teléfono. Se ignoran mayúsculas, tildes, espacios y el prefijo +34."};
+   if(changes.some(c=>c.mode==="replace"))return {group:"doubt",target,changes,explanation:"Coinciden nombre y teléfono sin DNI contradictorios, pero otros datos son distintos. Comprueba cuál es correcto."};
+   return {group:changes.some(c=>c.mode==="append")?"text":changes.length?"complete":"unchanged",target,changes,explanation:"Coinciden nombre y al menos un teléfono, sin DNI contradictorios. No hace falta que ambos tengan DNI. Se ignoran mayúsculas, tildes, espacios y el prefijo +34."};
   }
   if(r.matches.length&&r.matches.every(m=>identity(r.data,m.data||{}).separate))return {group:"different",explanation:"El nombre y el DNI son distintos. No se permite mezclar estos contactos aunque compartan teléfono o correo."};
   if(!r.matches.length&&!r.peers.length&&!r.issues.length)return {group:"new",explanation:"No se ha encontrado coincidencia por teléfono, DNI o correo."};
@@ -109,8 +109,8 @@
   q("importErrors").textContent="Cada fila aparece en un solo grupo. Nada se guarda automáticamente. Notas y observaciones diferentes se añaden conservando el texto actual. La comparación de novedades cubre los datos principales, notas y observaciones; las etiquetas existentes se conservan.";
  }
  function reviewContacts(rows,existing,dniLists=[]){
-  const keys=rows.map(contactKeys),stored=existing.map(r=>({...r,keys:contactKeys(r.data||{})}));
-  const reasons=(a,b)=>[a.dni&&a.dni===b.dni?"DNI":"",a.email&&a.email===b.email?"correo":"",a.phones.some(p=>b.phones.includes(p))?"teléfono":""].filter(Boolean);
+  const keys=rows.map(data=>({...contactKeys(data),name:norm(contactName(data))})),stored=existing.map(r=>({...r,keys:{...contactKeys(r.data||{}),name:norm(contactName(r.data||{}))}}));
+  const reasons=(a,b)=>[a.name&&a.name===b.name?"nombre y apellidos":"",a.dni&&a.dni===b.dni?"DNI":"",a.email&&a.email===b.email?"correo":"",a.phones.some(p=>b.phones.includes(p))?"teléfono":""].filter(Boolean);
   return rows.map((data,i)=>{
    const k=keys[i],issues=[];
    const matches=stored.map(r=>({...r,reasons:reasons(k,r.keys)})).filter(r=>r.reasons.length);
@@ -129,7 +129,7 @@
  }
  function allowedDecision(r,d){
   if(!r||r.blocked||!d||d.action==="skip")return false;
-  if(d.action==="create")return d.reviewed===true&& !r.matches.some(m=>m.reasons.includes("DNI"))&&(!r.issues.length&&!r.matches.length||d.reviewed===true);
+  if(d.action==="create")return d.reviewed===true&& !r.matches.some(m=>m.reasons.includes("DNI")||identity(r.data,m.data||{}).confirmed)&&(!r.issues.length&&!r.matches.length||d.reviewed===true);
   if(d.action==="update")return r.matches.some(m=>!identity(r.data,m.data||{}).separate&&String(m.id)===d.target&&contactDiff(r.data,m.data||{}).some(c=>d.fields?.includes(c.key)))&&d.reviewed===true;
   return false;
  }
