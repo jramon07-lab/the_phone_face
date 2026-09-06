@@ -3,6 +3,19 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 async function run(){
+  // Execute the actual global wheel listener: profile must keep native scrolling.
+  const main=fs.readFileSync('js/core/20-main.js','utf8');
+  const start=main.indexOf('document.addEventListener("wheel",');
+  const end=main.indexOf('},{passive:false});',start)+'},{passive:false});'.length;
+  let wheel,prevented=0,scrolled=0;
+  vm.runInNewContext(main.slice(start,end),{document:{addEventListener(type,fn){wheel=fn}},$:()=>({classList:{contains:()=>false}}),window:{scrollBy(){scrolled++}}});
+  for(const selector of ['#contactModal','.contactProfileBack','.modalBack','textarea','#salesScroll']){
+    wheel({target:{closest:s=>s.split(',').map(x=>x.trim()).includes(selector)},deltaY:120,preventDefault(){prevented++}});
+  }
+  assert.equal(prevented,0,'Sales wheel handler blocked native profile scrolling');
+  assert.equal(scrolled,0,'Sales moved background behind profile');
+  wheel({target:{closest:()=>null},deltaY:120,preventDefault(){prevented++}});
+  assert.equal(prevented,1);assert.equal(scrolled,1,'Normal sales behavior changed');
   const contacts=[{id:'c1',data:{NOMBRE:'Uno'}},{id:'c2',data:{NOMBRE:'Dos'}}];
   const initial=[
     {id:'o1',record_id:'c1',expected_date:'2026-09-10'},
