@@ -47,6 +47,15 @@ test('Contactos: alta, edición PC/móvil, buscador, borrado inmediato y papeler
  try{
   const id=await createContact(page,marker,'Contacto');
   await page.locator('#tpfContactsSearch').fill(marker);await expect(page.locator('#tpfContactsRows tr')).toHaveCount(1);
+  // Creating from the Contacts menu must return to the list without leaving a blank modal layer.
+  await page.locator('#tpfContactsRows [data-action="more-final"]').click();
+  await page.locator('.tpfMoreMenu [data-more="task"]').click();
+  await expect(page.locator('.agendaCompactBackdrop')).toBeVisible();
+  await expect(page.locator('#agendaCustomer')).toHaveValue(marker+' Contacto');
+  await page.locator('.agendaCompactFooter').getByRole('button',{name:'Cancelar',exact:true}).click();
+  await expect(page.locator('.agendaCompactBackdrop')).toHaveCount(0);
+  await expect(page.locator('#contactModal')).toBeHidden();
+  await expect(page.locator('#view-database')).toBeVisible();
   if(await page.evaluate(()=>crmCan('can_export_excel'))){
    await page.locator('#tpfContactsExport').click();const downloadPromise=page.waitForEvent('download');await page.locator('[data-export="filtered"]').click();const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
    const stream=await download.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const bytes=[...Buffer.concat(chunks)];
