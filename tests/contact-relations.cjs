@@ -1,0 +1,33 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const base=path.join(__dirname,'..'),context={console,setTimeout,clearTimeout};context.window=context;vm.createContext(context);
+vm.runInContext(fs.readFileSync(path.join(base,'js/modules/contact-party.js'),'utf8'),context);
+const fields={oppModalOpenContact:{dataset:{recordId:'manager'}},oppModalId:{value:''},oppModalClient:{value:'Carmen'},oppModalPhone:{value:'600000001'},oppModalDni:{value:''},tpfContactParty:{isConnected:true}};
+context.document={getElementById:id=>fields[id],createElement:()=>({}),head:{appendChild(){}},addEventListener(){}};
+const manager={id:'manager',data:{'NOMBRE Y APELLIDOS':'Carmen','TELÉFONO':'600000001',TPF_RELACIONES:{managed_contacts:[{record_id:'father',name:'Torcuato'},{record_id:'husband',name:'Marido'}]}}};
+const father={id:'father',data:{NOMBRE:'Torcuato',APELLIDOS:'García González','TELÉFONO':'600000002','DNI / NIF':'TEST'}};
+let rows=[manager,father],duringRead=null;
+context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){id=v;return this;},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
+// Test-only access to private state; the published module has no test hooks.
+const source=fs.readFileSync(path.join(base,'js/modules/contact-relations.js'),'utf8');
+vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+const R=context.TPFContactRelations,fixture=context.__fixture;
+function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',opportunityId:'',items:manager.data.TPF_RELACIONES.managed_contacts,managers:[],selected:'',loading:false,...overrides};fixture.set(s);fields.oppModalOpenContact.dataset.recordId=s.ownerId;fields.oppModalId.value=s.opportunityId;return s;}
+(async()=>{
+ fixture.form({items:manager.data.TPF_RELACIONES.managed_contacts});const d={NOTAS:'Conservar',TPF_TITULAR:{same:false,holder_name:'Anterior'}};R.applyContactData(d,'manager');assert.equal(d.TPF_RELACIONES.managed_contacts.length,2);assert.equal(d.NOTAS,'Conservar');assert.equal(d.TPF_TITULAR.holder_name,'Anterior');
+ assert.throws(()=>R.applyContactData({},'father'),/consigo mismo/);
+ state();let payload={record_id:'manager'},p=await R.prepareOpportunity(payload);assert.equal(p.same,true);assert.equal(p.recipient_name,'Carmen');assert.equal(payload.record_id,'manager');
+ state({selected:'father',chooseOther:true});payload={record_id:'manager'};p=await R.prepareOpportunity(payload);assert.equal(payload.record_id,'father');assert.equal(payload.client_name,'Torcuato García González');assert.equal(p.recipient_name,'Carmen');assert.equal(p.recipient_phone,'600000001');assert.equal(p.holder_phone,'600000002');
+ state({ownerId:'father',managers:[manager]});payload={record_id:'father'};const fromFather=await R.prepareOpportunity(payload);assert.equal(fromFather.recipient_phone,'600000001');assert.equal(payload.record_id,'father');
+ state({historical:true,previous:p,ownerId:'father'});fields.oppModalClient.value='Torcuato';assert.equal(await R.prepareOpportunity({}),p);fields.oppModalClient.value='Carmen';
+ state({selected:'legacy',previous:{same:false,holder_name:'Anterior',recipient:'contact'}});p=await R.prepareOpportunity({});assert.equal(p.holder_name,'Anterior');assert.equal(p.recipient_name,'Carmen');
+ state({chooseOther:true});await assert.rejects(()=>R.prepareOpportunity({}),/Selecciona el titular/);
+ state({loading:true});await assert.rejects(()=>R.prepareOpportunity({}),/Espera/);
+ state({error:'Fallo de lectura'});await assert.rejects(()=>R.prepareOpportunity({}),/Fallo/);
+ state({selected:'missing'});await assert.rejects(()=>R.prepareOpportunity({}),/vinculación/);
+ state({selected:'father'});rows=[manager];await assert.rejects(()=>R.prepareOpportunity({}),/ya no existe/);rows=[manager,father];
+ state({selected:'father'});duringRead=()=>{fields.oppModalId.value='changed';};await assert.rejects(()=>R.prepareOpportunity({}),/cambiado/);duringRead=null;
+ state({ownerId:'father',managers:[manager,{id:'second'}]});await assert.rejects(()=>R.prepareOpportunity({}),/Selecciona quién/);
+ assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'jose'));
+ assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'600000001'));
+ console.log('PASS: multiple links, self-link guard, holder ownership, manager recipient, direct-holder creation, frozen edits, legacy, ambiguous managers, missing records and stale context. All network mocked; no writes.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
