@@ -27,6 +27,9 @@ assert.match(message,/75,00 €\/mes/);
 assert.match(message,/Precio válido este mes/);
 assert.doesNotMatch(message,/NOMBRE INTERNO|Netflix interno|Vodafone/,'internal catalog names are never sent to the customer');
 assert.doesNotMatch(message,/Fibra 600 Mb|Amazon incluido/,'replaced commercial features are removed');
+const hiddenMessage=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','',75,{netflix:false,extra:false});
+assert.doesNotMatch(hiddenMessage,/Netflix incluido|Línea adicional de 160 GB/,'hidden options keep their price but are omitted from the customer message');
+assert.match(hiddenMessage,/75,00 €\/mes/);
 
 const sql=fs.readFileSync(path.join(root,'db/proposals/offer-configurator.sql'),'utf8');
 for(const table of ['crm_offer_catalog','crm_offer_line_options','crm_offer_instances'])assert.match(sql,new RegExp(`alter table public\\.${table} enable row level security`));
@@ -48,6 +51,15 @@ for(const price of ["'Fibra 1 Gb',10","'Líneas principales ilimitadas',4","'Lí
 assert.match(source,/crm_create_offer_execution_v2/);
 assert.match(source,/Precio final para el cliente/);
 assert.match(source,/Nombre interno \(no se envía\)/);
+assert.match(source,/show_in_message/);
+assert.match(source,/Ocultar del mensaje/);
+
+const sqlV3=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-v3.sql'),'utf8');
+assert.match(sqlV3,/show_in_message/);
+assert.match(sqlV3,/if show_message then features:=features/);
+assert.match(sqlV3,/'TV con más de 80 canales',null,0,30,'checkbox'/);
+assert.match(sqlV3,/'Amazon',null,0,40,'radio','contenido'/);
+assert.match(sqlV3,/'Netflix',null,4,50,'radio','contenido'/);
 
 const runner=fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/index.ts'),'utf8');
 assert.match(runner,/replaceAll\("\{oferta_mensaje\}"/);
