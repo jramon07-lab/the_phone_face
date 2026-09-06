@@ -111,6 +111,14 @@ P.fillContact=function(data){
 };
 function applyContactData(data,id){const state=forms.get($('tpfContactParty'));if(!state)throw Error('Vuelve a abrir el contacto para cargar sus titulares.');if(state.creating)throw Error('Espera a que termine la creación del titular.');if(state.items.some(x=>x.record_id===clean(id||contactId())))throw Error('Un contacto no puede vincularse consigo mismo.');data.TPF_RELACIONES={version:1,managed_contacts:state.items.map(x=>({...x}))};}
 P.search=function(c){return [original.search(c),...links(c?.data?.TPF_RELACIONES||c?.TPF_RELACIONES).map(x=>[x.name,x.dni,x.phone].join(' '))].join(' ');};
+P.hint=function(c={},records){
+ const linked=links(c.data?.TPF_RELACIONES||c.TPF_RELACIONES);
+ const current=records?new Map(records.map(r=>[clean(r.id),r])):null;
+ const names=linked.map(x=>current?(current.has(x.record_id)?identity(current.get(x.record_id)).name:''):x.name).filter(Boolean).map(displayName);
+ const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;
+ if(p?.same===false&&p.holder_name&&!names.some(n=>norm(n)===norm(p.holder_name)))names.unshift(displayName(p.holder_name));
+ return names.length?`<small class="tpf-party-hint">${names.length===1?'Titular':'Titulares'}: ${names.map(esc).join(' · ')}</small>`:'';
+};
 P.renderProfile=function(c){
  let box=$('tpfContactPartySummary');const anchor=document.querySelector('#contactModal .cpData');if(!anchor||!c?.id)return;
  if(!box){box=document.createElement('div');box.id='tpfContactPartySummary';anchor.insertAdjacentElement('afterend',box);}
