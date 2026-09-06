@@ -95,10 +95,16 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
    if(mode==='focus')await page.locator('#tpfBoardMode').click();
    const row=page.locator(mode==='list'?'#salesListRows .salesListRow':'#salesBoard .opp').filter({hasText:marker+' Venta'});
    await expect(row).toContainText(dni);await page.waitForFunction(()=>!window.__TPF_RESTORING);
-   // The board keeps each stage title sticky. Center the card first so the
-   // browser test clicks the client link itself, not the header overlay.
-   await row.evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
-   await row.locator('.salesClientLink').click({force:true});
+   const link=row.locator('.salesClientLink');
+   try{await link.click();}catch(error){
+    // Only geometry and selectors for this synthetic card, never customer data.
+    console.log('SALES_HIT_TEST',JSON.stringify(await link.evaluate(el=>{
+     const rect=el.getBoundingClientRect(),parents=[];
+     for(let p=el;p&&parents.length<6;p=p.parentElement){const s=getComputedStyle(p);parents.push({tag:p.tagName,id:p.id,cls:p.className,rect:p.getBoundingClientRect().toJSON(),overflow:s.overflow,display:s.display,pointerEvents:s.pointerEvents});}
+     return {parents,stack:document.elementsFromPoint(rect.x+rect.width/2,rect.y+rect.height/2).slice(0,8).map(p=>({tag:p.tagName,id:p.id,cls:p.className}))};
+    })));
+    throw error;
+   }
    await expect(page.locator('#contactModal')).toBeVisible();
    await expect(page.locator('#contactModal')).toContainText(marker+' Titular');
    const rect=await page.locator('#contactModal').boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(1441);
