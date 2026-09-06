@@ -74,3 +74,11 @@ Borrar en escritorio/móvil pide confirmación explícita y usa POST trash. Veri
 Una selección compuesta solo por fotos desde Subir PDF/fotos abre el escáner con esas fotos. Selecciones con PDF conservan la subida original. Tipo DNI por defecto: propone contorno de una región clara rectangular sobre fondo contrastado; si no hay candidato suficiente se conserva el encuadre completo y se pide ajuste manual. Es una sugerencia revisable, no detección garantizada. Los puntos siguen siendo editables antes de preparar. El PDF DNI usa página A4 blanca con imagen centrada, sin títulos. Otro documento conserva página ajustada a imagen. Leer caducidad se inicia al preparar un DNI; confirmación de persona/fecha sigue siendo obligatoria. Se conserva la opción de guardar originales.
 
 Verificaciones locales adicionales: papelera con permisos, carpeta incorrecta, nombres cambiados, confirmación y vínculo concurrente (red simulada); detector con fondo uniforme y tarjeta contrastada; PDF A4 comprobado con pdfinfo. Pendiente de prueba real del recorte en las fotos del usuario.
+
+
+## Automatic DNI outline (2026-09-06)
+- The shared desktop/mobile scanner now combines oriented edges, quadrilateral geometry and local texture checks with the previous bright-region fallback. It runs locally on an image reduced to 360 pixels; it does not transmit photos for detection.
+- Successful DNI detection immediately prepares the cropped preview and starts the existing expiry reader. Saving still requires the user action and expiry confirmation.
+- DNI output preserves the standard 1.586 card ratio and masks the rounded exterior corners white. The PDF retains the white A4 page.
+- If a page has no detected outline, preparation blocks until a replacement photo or explicit manual adjustment. Detection can still fail on reflections, missing edges, unusual perspectives or clutter; do not describe it as guaranteed.
+- Verified with synthetic perspective/plain/patterned scenes, negative backgrounds and ephemeral image regions from the reported screenshot. User photos are not committed. Real iPhone camera/upload verification remains pending.
