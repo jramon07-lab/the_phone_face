@@ -568,7 +568,9 @@ $("oppModalSave").onclick=async()=>{
 
   $("oppModalSave").disabled=true;
   try{
-    payload.contract_party=window.TPFContactParty.readOpportunity();
+    payload.contract_party=window.TPFContactRelations
+      ?await window.TPFContactRelations.prepareOpportunity(payload)
+      :window.TPFContactParty.readOpportunity();
     if(!id){
       const {data:created,error}=await sb.from("sales_opportunities").insert({
         pipeline_id:stage.pipeline_id,
@@ -2981,4 +2983,3 @@ if($("oppFullEdit"))$("oppFullEdit").onclick=()=>{
   $("opportunityFullPage")?.classList.add("hidden");
   openOpportunityCard(currentFullOpportunity.id);
 };
-
