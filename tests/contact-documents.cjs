@@ -29,6 +29,10 @@ async function invoke(action,body={},method){let result;const res={setHeader(){r
  d=await invoke('link',{confirmed:true,expectedLink:null,folderId:fid});assert.equal(d.status,409);
  emptyPatch=true;d=await invoke('link',{confirmed:true,expectedLink:savedLink,folderId:fid});assert.equal(d.status,409);emptyPatch=false;
  d=await invoke('upload',{expectedLink:savedLink,name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,200);assert.ok(d.body.uploadUrl);assert.ok(!JSON.stringify(d).includes('test-google-access'));
+ const reordered=Object.fromEntries(Object.entries(savedLink).reverse());
+ d=await invoke('upload',{expectedLink:reordered,name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,200,'Equivalent link with reordered database keys must upload');
+ d=await invoke('upload',{expectedLink:{...reordered,folder_id:'different_folder'},name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,409);
+ d=await invoke('upload',{expectedLink:{...reordered,linked_at:'changed'},name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,409);
  d=await invoke('upload',{expectedLink:null,name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,409);
  d=await invoke('upload',{expectedLink:savedLink,name:'a.html',size:1000,mimeType:'text/html'});assert.equal(d.status,400);
  d=await invoke('link',{},'GET');assert.equal(d.status,405);
