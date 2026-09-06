@@ -58,8 +58,9 @@
   function showTaskShell(standalone){
     const modal=$id("contactModal");
     modal?.classList.remove("hidden");
-    $id("cpTaskPage")?.classList.remove("hidden");
+    $id("cpTaskPage")?.classList.add("hidden");
     $id("cpTaskDetailPage")?.classList.remove("hidden");
+    window.TPFAgendaCompact?.detail(true);
     if(standalone){
       modal?.classList.add("tpfTaskStandalone");
       document.body.classList.add("agendaDetailOpen");
@@ -94,7 +95,7 @@
     $id("agendaDetailCustomer").value=row.customer_name||"";
     $id("agendaDetailPhone").value=row.customer_phone||"";
     renderType(row.agenda_type||"Tarea",row.agenda_meta||{});
-    window.TPFAgendaCompact?.syncDetail(row,standalone);
+    window.TPFAgendaCompact?.syncDetail(row,true);
   };
   window.editAgendaItem=id=>window.openContactTaskDetail(id);
   window.openAgendaItem=id=>window.openContactTaskDetail(id);
@@ -154,7 +155,7 @@
  function rememberMove(state,node,parent){if(!node)return;state.moves.push({node,parent:node.parentNode,next:node.nextSibling});parent.appendChild(node)}
  function restore(state){if(!state)return;state.moves.reverse().forEach(({node,parent,next})=>parent?.insertBefore(node,next?.parentNode===parent?next:null));state.extra.forEach(node=>node.remove())}
  function reminder(state,id){
-  const input=$(id),box=id==="agendaReminder"?input?.parentElement:input?.closest("label");if(!box)return;
+  const input=$(id),box=id==="agendaReminder"?input?.parentElement:input?.closest(".tpfTaskDateBlock")||input?.closest("label");if(!box)return;
   const label=document.createElement("label");label.className="agendaExtraCheck";
   const check=document.createElement("input");check.type="checkbox";check.checked=!!input.value;label.append(check,document.createTextNode(" Añadir otro aviso"));box.before(label);state.extra.push(label);
   let previous=input.value;
@@ -169,7 +170,7 @@
  }
  function create(open){
   if(!open){if(createState){const state=createState;state.reminder?.box.classList.remove("agendaOptionalHidden");restore(state);state.parent.insertBefore(state.card,state.next?.parentNode===state.parent?state.next:null);state.back.remove();createState=null;focusOrigin?.focus?.();}return}
-  const card=$("agendaCreateCard");if(createState||card?.dataset.contactDialog==="true"||$("view-agenda")?.classList.contains("hidden"))return;
+  const card=$("agendaCreateCard");if(createState||!card)return;
   focusOrigin=document.activeElement;
   const state={card,parent:card.parentNode,next:card.nextSibling,moves:[],extra:[]};createState=state;
   rememberMove(state,$("agendaTypeModal"),document.body);
@@ -195,9 +196,11 @@
   if(node.isConnected&&$("agendaCustomer")?.dataset.contactId===id)node.textContent="DNI/NIF: "+(agendaDni(record)||"Sin DNI");
  }
  function detail(open){
-  if(!open){if(detailState){detailState.reminder?.box.classList.remove("agendaOptionalHidden");restore(detailState);detailState=null;}return}
+  if(!open){if(detailState){$("cpTaskDetailPage")?.classList.remove("tpfUnifiedTaskPage");detailState.reminder?.box.classList.remove("agendaOptionalHidden");restore(detailState);detailState=null;}return}
   if(detailState)return;
   const page=$("cpTaskDetailPage"),state={moves:[],extra:[]};detailState=state;
+  page.classList.add("tpfUnifiedTaskPage");
+  taskBackdrop(state);
   rememberMove(state,page,$("contactModal"));
   const footer=document.createElement("div");footer.className="agendaCompactFooter";page.appendChild(footer);state.extra.push(footer);
   rememberMove(state,$("cpTaskDetailBack"),footer);rememberMove(state,$("cpTaskDetailSave"),footer);
@@ -216,13 +219,35 @@
  document.addEventListener("click",e=>{if(e.target.closest("#agendaCustomerResults"))setTimeout(refreshCreateDni,0)});
  $("agendaCustomer")?.addEventListener("input",refreshCreateDni);
  document.addEventListener("keydown",e=>{
-  const dialog=createState?.back||(!document.body.classList.contains("agendaDetailOpen")?null:$("cpTaskDetailPage"));if(!dialog)return;
+  const dialog=createState?.back||(detailState?$("cpTaskDetailPage"):nativeCreate?$("cpTaskPage"):null);if(!dialog)return;
   if(e.key==="Escape"&&detailState){e.preventDefault();$("cpTaskDetailBack")?.click();}
+  if(e.key==="Escape"&&nativeCreate){e.preventDefault();$("cpTaskBack")?.click();}
   if(e.key!=="Tab")return;
   const nodes=[...dialog.querySelectorAll("button,input,select,textarea,summary,[tabindex]")].filter(n=>!n.disabled&&n.tabIndex>=0&&n.getClientRects().length);
   const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}
  });
  window.TPFAgendaCompact={create,detail,syncDetail};
+ function taskBackdrop(state){const back=document.createElement("div");back.className="tpfUnifiedTaskBackdrop";$("contactModal").appendChild(back);state.extra.push(back);}
+ let nativeCreate=null;
+ function syncNativeTasks(){
+  const page=$("cpTaskPage"),modal=$("contactModal"),detailPage=$("cpTaskDetailPage");
+  const detailOpen=detailPage&&!detailPage.classList.contains("hidden")&&!modal?.classList.contains("hidden");
+  if(!detailOpen&&detailState)detail(false);
+  const open=page&&!page.classList.contains("hidden")&&!modal?.classList.contains("hidden")&&!detailOpen;
+  if(open&&!nativeCreate){
+   const state={moves:[],extra:[]};nativeCreate=state;page.classList.add("tpfUnifiedTaskPage");
+   rememberMove(state,page,modal);taskBackdrop(state);
+   const footer=document.createElement("div");footer.className="agendaCompactFooter";page.appendChild(footer);state.extra.push(footer);
+   rememberMove(state,$("cpTaskBack"),footer);rememberMove(state,$("cpTaskSave"),footer);
+   reminder(state,"cpTaskReminder");
+   const host=$("cpTaskTitle").closest(".cpTaskFormCard"),notes=$("cpTaskNotes");
+   options(state,host,[notes.previousElementSibling,notes,host.querySelector(".cpTaskOptions")]);
+  }else if(!open&&nativeCreate){
+   page.classList.remove("tpfUnifiedTaskPage");nativeCreate.reminder?.box.classList.remove("agendaOptionalHidden");restore(nativeCreate);nativeCreate=null;
+  }
+ }
+ const nativeVisibility=new MutationObserver(syncNativeTasks);
+ [$("cpTaskPage"),$("cpTaskDetailPage"),$("contactModal")].filter(Boolean).forEach(node=>nativeVisibility.observe(node,{attributes:true,attributeFilter:["class"]}));
  const composerVisibility=new MutationObserver(()=>{if(createState&&!$("agendaCreateCard").classList.contains("open"))create(false)});
  if($("agendaCreateCard"))composerVisibility.observe($("agendaCreateCard"),{attributes:true,attributeFilter:["class"]});
 })();
