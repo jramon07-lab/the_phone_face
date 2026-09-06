@@ -94,7 +94,11 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
    await page.locator(mode==='list'?'#salesViewList':'#salesViewBoard').click();
    if(mode==='focus')await page.locator('#tpfBoardMode').click();
    const row=page.locator(mode==='list'?'#salesListRows .salesListRow':'#salesBoard .opp').filter({hasText:marker+' Venta'});
-   await expect(row).toContainText(dni);await page.waitForFunction(()=>!window.__TPF_RESTORING);await row.locator('.salesClientLink').click();
+   await expect(row).toContainText(dni);await page.waitForFunction(()=>!window.__TPF_RESTORING);
+   // The board keeps each stage title sticky. Center the card first so the
+   // browser test clicks the client link itself, not the header overlay.
+   await row.evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
+   await row.locator('.salesClientLink').click();
    await expect(page.locator('#contactModal')).toBeVisible();
    await expect(page.locator('#contactModal')).toContainText(marker+' Titular');
    const rect=await page.locator('#contactModal').boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(1441);
