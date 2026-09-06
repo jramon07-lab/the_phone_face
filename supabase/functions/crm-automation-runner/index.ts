@@ -21,6 +21,9 @@ function vars(text:string,ctx:any){return String(text||"")
   .replaceAll("{nombre}",String(ctx?.name||""))
   .replaceAll("{dni}",String(ctx?.dni||""))
   .replaceAll("{telefono}",String(ctx?.phone||""))
+  .replaceAll("{oferta_mensaje}",String(ctx?.oferta_mensaje||""))
+  .replaceAll("{operador}",String(ctx?.operator||""))
+  .replaceAll("{precio_total}",String(ctx?.precio_total||""))
   .replaceAll("{mensaje}",String(ctx?.message||""));}
 function durationMs(value:any,unit:any){const n=Math.max(0,Number(value||0));return n*({minutes:60000,hours:3600000,days:86400000,weeks:604800000}[String(unit)]||0);}
 function numberValue(value:any,ctx:any){const x=vars(String(value??""),ctx).replace(",",".").trim();if(!x)return null;const n=Number(x);return Number.isFinite(n)?n:null;}
@@ -93,4 +96,3 @@ async function processJob(job:any){try{
   }catch(err:any){const msg=String(err?.message||err||"Error desconocido");if(err?.beforeSend&&Number(job.attempts||0)<10){await requeue(job,msg,2);return "requeued";}await complete(job,"failed",msg);return "failed";}}
 
 Deno.serve(async(req:Request)=>{if(req.method!=="POST"&&req.method!=="GET")return json({ok:false},405);if(!(await cronAuthorized(req)))return json({ok:false,error:"Unauthorized"},401);const {data:enabledRow}=await sb.from("app_settings").select("value").eq("key","crm_server_automations_enabled").maybeSingle();if(enabledRow?.value!==true)return json({ok:true,enabled:false,claimed:0,done:0,failed:0});const {data:jobs,error}=await sb.rpc("crm_server_claim_jobs",{p_limit:20});if(error)return json({ok:false,error:error.message},500);let done=0,failed=0,requeued=0;for(const job of jobs||[]){const result=await processJob(job);if(result==="done")done++;else if(result==="requeued")requeued++;else failed++;}return json({ok:true,enabled:true,claimed:(jobs||[]).length,done,failed,requeued});});
-
