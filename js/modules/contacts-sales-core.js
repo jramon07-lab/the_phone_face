@@ -658,6 +658,8 @@ $("contactDelete").onclick=async()=>{
  const {error}=await sb.from("records").delete().eq("id",currentContact.id);
  if(error){$("contactMsg").textContent=error.message;return}
  $("contactModal").classList.add("hidden"); currentContact=null; $("searchBtn").click();
+ // Refresh after the confirmed delete, not a timer started before the request.
+ await window.tpfReloadContacts?.();
 };
 
 async function checkDuplicate(){
@@ -904,5 +906,4 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
-
 
