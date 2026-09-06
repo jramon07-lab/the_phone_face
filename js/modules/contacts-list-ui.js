@@ -191,6 +191,7 @@ async function createContact(){
  try{
   const full=[first,last].filter(Boolean).join(' ').trim(),data={...(row?.data||{}),'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
   data.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
+  window.TPFContactRelations?.applyContactData(data,editing);
   let id='';
   if(editing){const res=await sb.from('records').update({data}).eq('id',editing).select('id').single();if(res.error)throw res.error;id=res.data.id;}
   else{const dup=await sb.rpc('find_possible_duplicate_contact',{phone_text:phone||null,dni_text:dni||null,email_text:email||null});if(dup.error)throw dup.error;if((dup.data||[]).length&&!confirm('Hay un posible contacto duplicado. ¿Quieres crearlo igualmente?')){msg.textContent='Creación cancelada.';return;}const welcome=!!byId('tpfCreateWelcome')?.checked,cap=window.TPFAuthorship?.capability;let res;if(cap?.installed){res=await sb.rpc('crm_create_contact_with_welcome_variant',{p_variant:byId('tpfCreateWelcomeVariant')?.value||'general',p_data:data,p_labels:[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value),p_welcome:welcome});if(res.error)throw res.error;id=res.data;}else{if(welcome)throw new Error('Bienvenida pendiente de activar');res=await sb.from('records').insert({source_sheet:'BASE DE DATOS',data}).select('id').single();if(res.error)throw res.error;id=res.data.id;}}
@@ -203,5 +204,3 @@ async function createContact(){
 
 M.register('contacts-list-ui',{install(){buildUi();if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);}});
 })();
-
-
