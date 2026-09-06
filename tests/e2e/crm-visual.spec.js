@@ -68,6 +68,12 @@ test('Automatizaciones muestra constructor libre y pasos configurables', async (
   await builder.locator('[data-presentation="advanced"]').click();
   await expect(builder).toBeVisible({ timeout: 15000 });
   await expect(builder).toContainText('Constructor libre de automatizaciones');
+  // Automation metadata must remain outside the text rewritten by the flow decorator.
+  await expect.poll(()=>page.locator('#auto2List .auto2Rule .afOperator').count()).toBeGreaterThan(0);
+  expect(await page.locator('#auto2List .auto2Rule .afOperator').first().evaluate(node=>node.parentElement.classList.contains('auto2RuleText'))).toBe(false);
+  await page.waitForTimeout(900);
+  const mutations=await page.evaluate(async()=>{const root=document.getElementById('auto2List');let count=0;const observer=new MutationObserver(rows=>{count+=rows.filter(x=>x.type==='childList').length});observer.observe(root,{childList:true,subtree:true});await new Promise(resolve=>setTimeout(resolve,1700));observer.disconnect();return count});
+  expect(mutations,'La lista de automatizaciones no debe reconstruirse o parpadear estando inactiva').toBe(0);
   await expect(builder.locator('[data-add="action"]:visible')).toBeVisible();
   await expect(builder.locator('[data-add="wait"]:visible')).toBeVisible();
   await expect(builder.locator('[data-add="condition"]:visible')).toBeVisible();
