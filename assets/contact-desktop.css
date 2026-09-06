@@ -174,3 +174,38 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #tpfContactsCreateBack .tpfWelcomeChoice>label{display:block;margin:0 0 8px;font-size:13px;text-transform:none;}
 #tpfContactsCreateBack .tpfWelcomeChoice>label:first-child{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-weight:600;}
 #tpfContactsCreateBack #tpfCreateWelcome{width:16px!important;height:16px;min-height:0;margin:0!important;flex:0 0 16px;}
+/* Compact Agenda dialogs; contact-origin task forms keep their existing layout. */
+.agendaCompactBackdrop{position:fixed;inset:0;z-index:100100;background:#10182888;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+.agendaCompactBackdrop #agendaCreateCard.open{position:relative!important;inset:auto!important;display:flex!important;flex-direction:column!important;width:min(720px,100%)!important;max-width:720px!important;height:auto!important;max-height:calc(100dvh - 40px)!important;margin:0!important;padding:0!important;border:1px solid #e4e7ec!important;border-radius:16px!important;overflow:hidden!important;background:white!important;box-shadow:0 24px 80px #0003!important}
+.agendaCompactBackdrop .agendaComposerHead{position:static!important;flex:none;padding:16px 22px!important;margin:0!important;border-bottom:1px solid #e4e7ec}
+.agendaCompactBackdrop .agendaComposerHead h3{font-size:21px!important}
+.agendaCompactBody{padding:16px 22px;overflow-y:auto;min-height:0;overscroll-behavior:contain}
+.agendaCompactBody>label{display:block;margin-top:10px;font-size:12px;font-weight:650}
+.agendaCompactBody input:not([type=checkbox]),.agendaCompactBody textarea,.agendaCompactBody select{box-sizing:border-box;max-width:100%;width:100%;margin:5px 0 10px}
+.agendaCompactBody .agendaTwo{grid-template-columns:1fr!important}
+.agendaCompactFooter{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:none;padding:14px 22px;border-top:1px solid #e4e7ec;background:white;flex-wrap:wrap}
+.agendaCompactFooter .agendaSave{margin:0!important;min-width:0!important;width:auto!important}
+.agendaCompactFooter #agendaMsg{flex:1;font-size:12px}
+.agendaOptionalHidden{display:none!important}
+.agendaExtraCheck{display:flex!important;align-items:center;gap:8px;margin:10px 0!important;font-size:13px;font-weight:600}
+.agendaExtraCheck input{width:16px!important;height:16px!important;margin:0!important}
+.agendaCompactOptions{border-top:1px solid #e4e7ec;margin-top:14px;padding-top:12px}
+.agendaCompactOptions summary{cursor:pointer;font-weight:650;font-size:13px;margin-bottom:10px}
+.agendaCompactDni,#agendaDetailDni{display:block;color:#667085;font-size:12px;margin-bottom:10px}
+body.agendaDetailOpen #contactModal.tpfTaskStandalone:not(.hidden){position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:100vw!important;background:#10182888!important;z-index:100100!important;overflow:hidden!important;padding:0!important}
+body.agendaDetailOpen #contactModal.tpfTaskStandalone #cpTaskPage{display:none!important}
+body.agendaDetailOpen #contactModal.tpfTaskStandalone #cpTaskDetailPage:not(.hidden){position:fixed!important;inset:50% auto auto 50%!important;transform:translate(-50%,-50%);width:min(720px,calc(100vw - 40px))!important;height:auto!important;max-height:calc(100dvh - 40px)!important;min-height:0!important;display:flex!important;flex-direction:column!important;margin:0!important;padding:0!important;overflow:hidden!important;border-radius:16px!important;background:#fff!important;z-index:100110!important}
+body.agendaDetailOpen #cpTaskDetailPage .cpTaskPageTop{position:static!important;flex:none;padding:16px 22px!important;display:block!important;border-bottom:1px solid #e4e7ec}
+body.agendaDetailOpen #cpTaskDetailPage .cpTaskPageBody{display:block!important;overflow-y:auto!important;min-height:0!important;height:auto!important;padding:16px 22px!important;overscroll-behavior:contain}
+body.agendaDetailOpen #cpTaskDetailPage .cpTaskFormCard{padding:0!important;margin:0!important;border:0!important;box-shadow:none!important}
+body.agendaDetailOpen #cpTaskDetailPage .cpTaskContactCard,body.agendaDetailOpen #cpTaskDetailHeading{display:none!important}
+body.agendaDetailOpen #cpTaskDetailPage .modalGrid{grid-template-columns:1fr!important}
+body.agendaDetailOpen #cpTaskDetailPage textarea{min-height:70px!important;max-height:160px}
+.agendaTime small{display:block;font-size:12px;margin-top:5px}.agendaTime{font-size:12px!important}
+.agendaItem{grid-template-columns:88px 36px minmax(180px,1fr) minmax(140px,.6fr) auto!important}
+.agendaContactLink{border:0;background:transparent;color:#155eef;padding:0;text-align:left;font-weight:650;text-decoration:underline;cursor:pointer}
+.agendaMonthNav{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px}.agendaMonthNav h3{margin:0}
+.agendaDay .agendaDayEvent{display:block;width:100%;text-align:left;border:0;white-space:normal;padding:5px;border-radius:5px;cursor:pointer;margin-top:4px}.agendaDayEvent small{display:block;font-size:10px;color:#475467}
+.agendaDayNumber{border:0;background:transparent;font-weight:650;cursor:pointer;padding:4px}
+@media(max-width:700px){.agendaItem{grid-template-columns:75px 28px 1fr!important}.agendaItemPerson{display:block!important;grid-column:3}.agendaItemState{grid-column:3}.agendaCompactBackdrop{padding:10px}.agendaCompactBackdrop #agendaCreateCard.open{max-height:calc(100dvh - 20px)!important}.agendaCompactBody{padding:12px 16px}}
+body.agendaDetailOpen #contactModal.tpfTaskStandalone>.contactProfile{display:none!important}
