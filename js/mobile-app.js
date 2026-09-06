@@ -424,9 +424,8 @@
   function contactActivityIndex(){
     const rows=new Map(),stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage]));
     const activity=id=>{const key=String(id||'');if(!key)return null;if(!rows.has(key))rows.set(key,{opportunities:0,pendingTasks:0});return rows.get(key);};
-    (state.board.opportunities||[]).forEach(opp=>{const item=activity(opp?.record_id||opp?.contact_id);if(item&&!opportunityIsClosed(opp,stages.get(String(opp?.stage_id))))item.opportunities+=1;});
+    mobileOpportunityIndex().forEach((opps,id)=>{const item=activity(id);if(item)item.opportunities=opps.filter(opp=>!opportunityIsClosed(opp,stages.get(String(opp?.stage_id)))).length;});
     (state.tasks||[]).forEach(task=>{const item=activity(task?.related_record_id);if(item&&taskIsPending(task))item.pendingTasks+=1;});
-    state.contacts.forEach(c=>{const own=activity(c.id);mobileHolders(c).forEach(h=>{own.opportunities+=(state.board.opportunities||[]).filter(o=>String(o.record_id||o.contact_id)===h.id&&!opportunityIsClosed(o,stages.get(String(o.stage_id)))).length;});});
     return rows;
   }
   function contactMatchesSearch(contact,query=''){
@@ -692,7 +691,27 @@
     document.addEventListener('change',e=>{if(e.target.matches?.('[data-mobile-rel-toggle]')){const panel=e.target.closest('section')?.querySelector('[data-mobile-rel-panel]');if(panel)panel.hidden=!e.target.checked;}});
   }
 
-  function relatedOpportunities(id){const contact=state.contacts.find(c=>c.id===String(id)),ids=new Set([String(id),...mobileHolders(contact).map(c=>c.id)]);return state.board.opportunities.filter(opp=>ids.has(String(opp.record_id||opp.contact_id||'')));}
+  function mobileOpportunityIndex(){
+    const phones=new Map(),names=new Map(),managers=new Map(),rows=new Map();
+    const add=(map,key,id)=>{if(!key)return;if(!map.has(key))map.set(key,new Set());map.get(key).add(String(id));};
+    state.contacts.forEach(c=>{
+      contactPhones(c).forEach(p=>add(phones,p.number,c.id));add(names,foldText(c.fullName),c.id);
+      mobileHolders(c).forEach(h=>add(managers,h.id,c.id));
+    });
+    (state.board.opportunities||[]).forEach(opp=>{
+      let owner=String(opp.record_id||opp.contact_id||'');
+      if(!owner){
+        const phone=contactPhoneNumber(opp.phone),byPhone=phones.get(phone),byName=names.get(foldText(opp.client_name));
+        // Explicit links always win. Legacy matching must identify exactly one contact.
+        if(byPhone?.size===1)owner=[...byPhone][0];
+        else if(!phone&&byName?.size===1)owner=[...byName][0];
+      }
+      if(!owner)return;
+      new Set([owner,...(managers.get(owner)||[])]).forEach(id=>{if(!rows.has(id))rows.set(id,[]);rows.get(id).push(opp);});
+    });
+    return rows;
+  }
+  function relatedOpportunities(id){return mobileOpportunityIndex().get(String(id))||[];}
   function relatedTasks(id){return state.tasks.filter(task=>String(task.related_record_id||'')===String(id));}
   function renderContact(id){
     const contact=state.contacts.find(row=>String(row.id)===String(id));
