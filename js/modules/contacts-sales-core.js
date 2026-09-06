@@ -204,7 +204,8 @@ function applyWhatsappVisibilityForContact(){
   }
 }
 window.openContact=async(id)=>{
- tpfRememberScreen();
+ const sameVisible=String(currentContact?.id||"")===String(id) && !$("contactModal")?.classList.contains("hidden");
+ if(!sameVisible)tpfRememberScreen();
  const {data,error}=await sb.from("records").select("id,source_sheet,source_row,data").eq("id",id).single();
  if(error){alert(error.message);return}
  currentContact=data; const d=data.data||{};

@@ -75,6 +75,7 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
  test.skip(!allowed,'La cuenta demo no permite contactos y ventas.');
  const active=await page.evaluate(async()=>{const r=await sb.from('crm_automations').select('id').eq('enabled',true).eq('trigger_type','opportunity_stage');if(r.error)throw Error(r.error.message);return r.data.length;});
  test.skip(active>0,'Existen automatizaciones de fase activas: se requiere un panel de prueba aislado para crear ventas.');
+ const logDialog=async d=>{console.log('SALES_DIALOG',d.type(),d.message().slice(0,300));await d.dismiss();};page.on('dialog',logDialog);
  try{
   const manager=await createContact(page,marker+' Gestor','Demo'),holder=await createContact(page,marker+' Titular','Demo');
   await page.evaluate(id=>window.TPFContactsList.edit(id),holder);await page.locator('#tpfCreateDni').fill('DEMO'+Date.now());await page.locator('#tpfContactsCreateSave').click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
@@ -82,18 +83,18 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await page.evaluate(id=>window.TPFContactsList.edit(id),manager);await page.locator('[data-rel-enabled]').check();await page.locator('[data-rel-add]').click();await page.locator('[data-rel-search]').fill(marker+' Titular');await page.locator('[data-rel-pick="'+holder+'"]').click();await page.locator('#tpfContactsCreateSave').click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
   await openContact(page,manager);await page.locator('[data-rel-holders] > summary').click();await expect(page.locator('[data-rel-cards]')).toContainText(marker+' Titular');await expect(page.locator('[data-rel-cards]')).toContainText(dni);
   await page.locator('#cpNewOpp').click();await expect(page.locator('#oppDetailModal')).toBeVisible();await page.locator('#oppModalTitle').fill(marker+' Venta');await page.locator('#oppModalAmount').fill('12.34');await page.locator('#oppModalDate').fill('2035-01-15');
-  await page.locator('[data-rel-other]').check();await page.locator('[data-rel-choice]').selectOption(holder);await page.locator('#oppModalSave').click();await expect(page.locator('#oppDetailModal')).toBeHidden({timeout:15000});
+  await page.locator('[data-rel-other]').check();await page.locator('[data-rel-choice]').selectOption(holder);await page.locator('#oppModalSave').click();await expect(page.locator('#oppDetailModal')).toBeHidden({timeout:15000});await expect(page.locator('#oppModalSave')).toBeEnabled();await page.waitForFunction(()=>!window.__TPF_RESTORING);
   const opp=await page.evaluate(async title=>{const r=await sb.from('sales_opportunities').select('id,record_id,contract_party,amount').eq('title',title).single();if(r.error)throw Error(r.error.message);return r.data;},marker+' Venta');expect(opp.record_id).toBe(holder);expect(opp.contract_party.contact_name).toBe(marker+' Gestor Demo');expect(opp.amount).toBe(12.34);
-  await expect(page.locator('#cpOpportunities')).toContainText(marker+' Titular');await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();
+  await openContact(page,manager);await expect(page.locator('#cpOpportunities')).toContainText(marker+' Titular');await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();
   await page.locator('.nav[data-view="sales"]').click();await page.evaluate(()=>window.loadSales());
-  await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#view-sales')).toBeVisible();
+  await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#view-sales')).toBeVisible();await page.waitForFunction(()=>!window.__TPF_RESTORING);
   await page.setViewportSize({width:1440,height:700});
   for(const mode of ['list','board','focus']){
    console.log('SALES_MODE',mode);
    await page.locator(mode==='list'?'#salesViewList':'#salesViewBoard').click();
    if(mode==='focus')await page.locator('#tpfBoardMode').click();
    const row=page.locator(mode==='list'?'#salesListRows .salesListRow':'#salesBoard .opp').filter({hasText:marker+' Venta'});
-   await expect(row).toContainText(dni);await row.locator('.salesClientLink').click();
+   await expect(row).toContainText(dni);await page.waitForFunction(()=>!window.__TPF_RESTORING);await row.locator('.salesClientLink').click();
    await expect(page.locator('#contactModal')).toBeVisible();
    await expect(page.locator('#contactModal')).toContainText(marker+' Titular');
    const rect=await page.locator('#contactModal').boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(1441);
@@ -105,7 +106,7 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await mobile(page,'edit-opportunity/'+opp.id);await expect(page.locator('#editOppAmount')).toHaveValue('12.34',{timeout:30000});await page.locator('#editOppAmount').fill('23.45');await page.locator('[data-action="save-opportunity-detail"]').click();await expect(page.locator('#mobileView')).toContainText('23,45');
   await mobile(page,'contact/'+manager);await expect(page.locator('[data-action="profile-tab"][data-tab="opportunities"]')).toHaveText('Oportunidades (1)',{timeout:30000});
   await page.setViewportSize({width:1440,height:900});await login(page);expect(await page.evaluate(async id=>(await sb.from('sales_opportunities').select('amount').eq('id',id).single()).data.amount,opp.id)).toBe(23.45);
- }catch(error){console.error('FLOW_FAILURE',error.message);throw error;}finally{await cleanOwnData(page,marker);}
+ }catch(error){console.error('FLOW_FAILURE',error.message);throw error;}finally{page.off('dialog',logDialog);await cleanOwnData(page,marker);}
 });
 
 test('Móvil: todas las secciones principales abren y caben en la pantalla',async({page})=>{
