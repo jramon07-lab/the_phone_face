@@ -4,7 +4,8 @@ async function login(page){
   await page.goto('/');
   await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);
   await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
-  await page.getByRole('button', { name: /entrar|iniciar/i }).click();
+  await page.locator('#signin').click();
+  await expect(page.locator('#app')).toBeVisible({timeout:30000});
 }
 
 test('Estado del sistema: respeta permisos y carga diagnóstico cuando procede', async ({ page }) => {
@@ -42,7 +43,7 @@ test('Estado del sistema: genera diagnóstico exportable y redacta secretos', as
   const isAdmin = await page.evaluate(() => {
     try { return typeof perms !== 'undefined' && !!perms?.is_admin; } catch (_) { return false; }
   });
-  if(!isAdmin) return;
+  test.skip(!isAdmin, 'La cuenta demo no tiene acceso al diagnóstico de administrador.');
 
   await page.locator('.nav[data-view="system"]').click();
   await expect(page.locator('#systemExportDiagnostic')).toBeVisible();

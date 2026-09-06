@@ -49,13 +49,10 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
     const edit=taskRow.locator('button,a').filter({hasText:/^Editar$|Ver\s*\/\s*editar/i}).first();
     await expect(edit).toBeVisible({timeout:15000});
     await edit.click();
-    await expect(page.locator('#cpTaskDetailPage')).toBeVisible({timeout:10000});
-    await expect(page.locator('#cpTaskDetailTitle')).toBeEditable();
-    await expect(page.locator('#cpTaskDetailSave')).toBeVisible();
-    await page.evaluate(()=>{
-      document.getElementById('cpTaskDetailPage')?.classList.add('hidden');
-      document.getElementById('contactModal')?.classList.add('hidden');
-    });
+    await expect(page.locator('#agendaCreateCard')).toHaveClass(/\bopen\b/);
+    await expect(page.locator('#agendaTitle')).toBeEditable();
+    await expect(page.locator('#agendaSave')).toBeVisible();
+    await page.locator('#agendaCloseCreate').click();
   }else{
     test.info().annotations.push({type:'info',description:'No había una tarea existente; se omite únicamente la apertura de detalle.'});
   }
@@ -63,7 +60,7 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
   await page.locator('#waSideNewOpp').click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:10000});
   await expect(page.locator('#oppModalHeading')).toHaveText(/Nueva oportunidad/i);
-  await page.evaluate(()=>document.getElementById('oppDetailModal')?.classList.add('hidden'));
+  await page.locator('#oppModalClose').click();
 
   await page.locator('#waSideNewTask').click();
   await expect(page.locator('#agendaCreateCard')).toBeVisible({timeout:10000});

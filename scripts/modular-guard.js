@@ -58,7 +58,7 @@ const uiSource = sourceFiles.filter(fs.existsSync).map(file => fs.readFileSync(f
 const uiMarkers = [
   'TPF-PHYSICAL-SPLIT-v1',
   'TPF-MODULAR-RUNTIME-v1',
-  'tpfWaTemplatesNav',
+  'tpfWaTemplatesV3Nav',
   'tpfFlowBuilder',
   'automations-flow-builder.js',
   'contact-profile.js',

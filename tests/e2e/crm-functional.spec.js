@@ -17,7 +17,7 @@ test('funcional/permisos: módulos críticos visibles y salida accesible', async
   await expect(page.locator('.nav[data-view="search"][data-sheet="CLAWBACK"]')).toBeHidden();
   await expect(page.locator('.nav[data-view="search"][data-sheet="AJUSTES"]')).toBeHidden();
 
-  await expect(page.locator('#tpfWaTemplatesNav')).toBeVisible();
+  await expect(page.locator('#tpfWaTemplatesV3Nav')).toBeVisible();
   await expect(page.locator('.nav[data-view="automations"]').first()).toBeVisible();
   await expect(page.locator('.nav[data-view="agenda"]').first()).toBeVisible();
 

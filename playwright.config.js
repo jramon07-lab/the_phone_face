@@ -15,8 +15,8 @@ module.exports = defineConfig({
     baseURL,
     headless: true,
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    trace: 'off',
+    video: 'off',
     extraHTTPHeaders: {
       'x-vercel-protection-bypass': bypass,
       'x-vercel-set-bypass-cookie': 'true'

@@ -18,7 +18,7 @@ jobs:
           ref: ${{ github.event_name == 'deployment_status' && github.event.deployment.ref || github.ref_name }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - run: npm install
       - run: npx playwright install --with-deps chromium
       - name: Validate required browser-test secrets
@@ -37,7 +37,7 @@ jobs:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
-        run: npx playwright test tests/e2e/crm-browser-health.spec.js tests/e2e/crm-consolidation.spec.js
+        run: npx playwright test tests/e2e/crm-*.spec.js --workers=2
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4

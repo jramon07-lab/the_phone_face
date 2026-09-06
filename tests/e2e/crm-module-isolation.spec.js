@@ -13,7 +13,7 @@ async function expectModuleReady(page,name){const state=await moduleState(page,n
 
 test('estructura física: cada dominio carga desde su archivo y el index no usa app-core', async ({ page }) => {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  const structure=await page.evaluate(() => ({scripts:[...document.scripts].map(s=>s.getAttribute('src')||'').filter(Boolean),styles:[...document.querySelectorAll('link[rel="stylesheet"]')].map(x=>x.getAttribute('href')||'')}));
+  const structure=await page.evaluate(() => ({scripts:[...document.scripts].map(s=>s.getAttribute('src')||'').filter(Boolean).map(s=>new URL(s,location.href).pathname),styles:[...document.querySelectorAll('link[rel="stylesheet"]')].map(x=>x.getAttribute('href')||'')}));
   for(const src of ['/js/modules/contacts-sales-core.js','/js/modules/contact-profile.js','/js/modules/whatsapp-scheduling-core.js','/js/modules/whatsapp-green-core.js','/js/modules/agenda-core.js','/js/modules/automations-core.js','/js/modules/system-status-core.js'])expect(structure.scripts).toContain(src);
   expect(structure.scripts.some(x=>x.includes('/js/app-core.js'))).toBe(false);expect(structure.styles).toContain('/assets/app.css');
 });
@@ -66,6 +66,7 @@ test('módulo Ficha de contacto: editor separado protegido, actividad y WhatsApp
   await page.locator('#tpfContactEditorCancel').click();
   await expect(page.locator('#tpfContactEditorBack')).toBeHidden({timeout:5000});
 
+  await page.locator('[data-cp-ref-tab="historial"]').click();
   const tabs=page.locator('#contactModal .cpTabs > *');
   await expect(tabs.filter({hasText:'Todos'})).toBeVisible();
   await expect(tabs.filter({hasText:'Notas'})).toBeVisible();
@@ -74,6 +75,7 @@ test('módulo Ficha de contacto: editor separado protegido, actividad y WhatsApp
   await tabs.filter({hasText:'Tareas'}).click();
   await tabs.filter({hasText:'Todos'}).click();
 
+  await page.locator('[data-cp-ref-tab="resumen"]').click();
   await page.locator('#contactManageLabels').click();await expect(page.locator('#contactLabelsModal')).toBeVisible();await expect(page.locator('#contactLabelsSearch')).toBeVisible();await page.locator('#contactLabelsClose').click();
   await expect(page.locator('#tpfContactWhatsappMain')).toBeVisible();
   await page.evaluate(()=>{const p=document.getElementById('contactPhone');if(p)p.value='600000000';window.__tpfExternalOpen=0;window.open=()=>{window.__tpfExternalOpen++;};});

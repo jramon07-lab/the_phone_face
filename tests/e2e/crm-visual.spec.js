@@ -19,18 +19,18 @@ test('CRM visible real: menú, plantillas y build correctos', async ({ page }) =
   await expect(page.locator('.nav[data-view="search"][data-sheet="DATA"]')).toBeHidden();
   await expect(page.locator('.nav[data-view="search"][data-sheet="CLAWBACK"]')).toBeHidden();
   await expect(page.locator('.nav[data-view="search"][data-sheet="AJUSTES"]')).toBeHidden();
-  await expect(page.locator('#tpfWaTemplatesNav')).toBeVisible();
+  await expect(page.locator('#tpfWaTemplatesV3Nav')).toBeVisible();
   await expect(page.locator('#tpfBuildBadge')).toBeAttached();
   await page.screenshot({ path: 'test-results/home-after-login.png', fullPage: true });
 });
 
 test('Plantillas WhatsApp abre como página independiente con buscador', async ({ page }) => {
   await login(page);
-  await page.locator('#tpfWaTemplatesNav').click();
-  const library=page.locator('#view-wa-templates-library');
+  await page.locator('#tpfWaTemplatesV3Nav').click();
+  const library=page.locator('#view-wa-templates-v3');
   await expect(library).toBeVisible({ timeout: 15000 });
-  await expect(library.getByRole('heading',{name:'Plantillas de WhatsApp'})).toBeVisible();
-  await expect(library.locator('.tpfTplSearch')).toBeVisible();
+  await expect(library.getByRole('heading',{name:'Plantillas WhatsApp'})).toBeVisible();
+  await expect(library.locator('.tv3Search')).toBeVisible();
   await expect(page.locator('#waTemplateModal')).toBeHidden();
   await page.screenshot({ path: 'test-results/whatsapp-templates.png', fullPage: true });
 });

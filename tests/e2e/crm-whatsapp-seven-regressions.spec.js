@@ -244,8 +244,8 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
     await expect(row).toBeVisible();
 
     await row.locator('.tpfWaFocusedTaskEdit').click();
-    await expect(page.locator('#cpTaskDetailPage')).toBeVisible({ timeout: 10000 });
-    await page.locator('#cpTaskDetailBack').click();
+    await expect(page.locator('#agendaCreateCard')).toHaveClass(/\bopen\b/);
+    await page.locator('#agendaCloseCreate').click();
     await expect(page.locator('#tpfWaTasksPage')).toBeVisible({ timeout: 10000 });
     await page.locator('#tpfWaTasksBack').click();
     await expectSameWhatsAppOrigin(page, matchedWithTasks.chatId);
