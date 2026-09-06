@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
-const base=path.join(__dirname,'..'),context={console,setTimeout,clearTimeout};context.window=context;vm.createContext(context);
+const base=path.join(__dirname,'..'),context={console,setTimeout,clearTimeout,addEventListener(){}};context.window=context;vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(base,'js/modules/contact-party.js'),'utf8'),context);
 const fields={oppModalOpenContact:{dataset:{recordId:'manager'}},oppModalId:{value:''},oppModalClient:{value:'Carmen'},oppModalPhone:{value:'600000001'},oppModalDni:{value:''},tpfContactParty:{isConnected:true}};
 context.document={getElementById:id=>fields[id],createElement:()=>({}),head:{appendChild(){}},addEventListener(){}};
@@ -9,10 +9,19 @@ let rows=[manager,father],duringRead=null;
 context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){if(key==='id')id=v;return this;},order(){return this;},async range(){return {data:[]};},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
 // Test-only access to private state; the published module has no test hooks.
 const source=fs.readFileSync(path.join(base,'js/modules/contact-relations.js'),'utf8');
-vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={createHolder,newHolderData,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
 const R=context.TPFContactRelations,fixture=context.__fixture;
 function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',opportunityId:'',items:manager.data.TPF_RELACIONES.managed_contacts,managers:[],selected:'',loading:false,...overrides};fixture.set(s);fields.oppModalOpenContact.dataset.recordId=s.ownerId;fields.oppModalId.value=s.opportunityId;return s;}
 (async()=>{
+ assert.equal(fixture.displayName('MARTINA SÁNCHEZ'),'Martina Sánchez');
+ const card=fixture.holderCard({record_id:'holder',name:'MARTINA SÁNCHEZ',dni:'TEST',phone:'+34600111222'},{name:'GESTOR',phone:'+34600333444'});
+ assert(card.includes('data-rel-open="holder"'));assert(card.includes('Martina Sánchez'));assert(card.includes('WhatsApp automático'));assert(card.includes('600111222'));assert(!card.includes('+34'));
+ assert(!fixture.holderCard({record_id:'x',name:'<script>',dni:'<x>'},{}).includes('<script>'));
+ const previousSb=context.sb;
+ context.sb={from(){return {select(){return this;},eq(k,v){assert.equal(k,'source_sheet');assert.equal(v,'BASE DE DATOS');return this;},async in(k,ids){assert.equal(k,'id');assert.equal(ids.length,2);return {data:[father]};}};}};
+ const holders=await fixture.currentHolders([{record_id:'father',name:'STALE'},{record_id:'deleted'}]);assert.equal(holders.length,1);assert.equal(holders[0].name,'Torcuato García González');
+ context.sb=previousSb;
+ assert(source.includes('<details data-rel-holders${wasOpen?'));
  fixture.form({items:manager.data.TPF_RELACIONES.managed_contacts});const d={NOTAS:'Conservar',TPF_TITULAR:{same:false,holder_name:'Anterior'}};R.applyContactData(d,'manager');assert.equal(d.TPF_RELACIONES.managed_contacts.length,2);assert.equal(d.NOTAS,'Conservar');assert.equal(d.TPF_TITULAR.holder_name,'Anterior');
  assert.throws(()=>R.applyContactData({},'father'),/consigo mismo/);
  state();let payload={record_id:'manager'},p=await R.prepareOpportunity(payload);assert.equal(p.same,true);assert.equal(p.recipient_name,'Carmen');assert.equal(payload.record_id,'manager');
@@ -44,6 +53,17 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  duplicates=[];await assert.rejects(()=>fixture.createHolder(fresh,{},()=>false,()=>{}),/edición/);assert.equal(writes,1);
  fail=true;const uncertain={};await assert.rejects(()=>fixture.createHolder(fresh,uncertain,()=>true,()=>{}),/connection/);await assert.rejects(()=>fixture.createHolder(fresh,uncertain,()=>true,()=>{}),/No se repetirá/);assert.equal(writes,2);
  assert(source.includes("labels.insertAdjacentElement('afterend',root)"));
+ // Exercise the real refresh coordinator with a deletion during an older fetch.
+ const listSource=fs.readFileSync(path.join(base,'js/modules/contacts-list-ui.js'),'utf8');
+ const queueSource=listSource.slice(listSource.indexOf('let contactsLoad='),listSource.indexOf('function renderSources()'));
+ const pending=[],painted=[],loaded=[];
+ const queue={Promise,Set,console,state:{rows:[],selected:new Set(['removed']),labelsByContact:new Map()},byId:()=>null,setStatus(){},renderSources(){},applyAndRender(){painted.push(queue.state.rows.map(r=>r.id));},showToast(){},M:{report(){}},fetchAllContacts:()=>new Promise(resolve=>pending.push(resolve)),loadGlobalLabels:async()=>[],window:{dispatchEvent:e=>loaded.push(e.detail.records)},CustomEvent:function(type,args){Object.assign(this,args);}};
+ vm.createContext(queue);vm.runInContext(queueSource+';this.reload=loadContacts;',queue);
+ const firstLoad=queue.reload(true),secondLoad=queue.reload(true);assert.equal(firstLoad,secondLoad);
+ pending.shift()([{id:'removed'}]);await new Promise(setImmediate);assert.equal(painted.length,0);assert.equal(pending.length,1);
+ pending.shift()([{id:'kept'}]);await secondLoad;assert.equal(queue.state.rows[0].id,'kept');assert.equal(queue.state.selected.size,0);assert.equal(loaded.length,1);assert.equal(queue.state.loading,false);
+ for(const file of ['contacts-approved-fixes.js','contacts-lock-final.js'])assert(fs.readFileSync(path.join(base,'js/modules',file),'utf8').includes('return window.TPFContactsList.edit('));
+ console.log('PASS: fresh holder cards, escaped names, deleted holder filtering, central edit routing, coalesced forced refresh and stale response suppression.');
  console.log('PASS: inline creation, permission, duplicate cancellation, no welcome, uncertain retry guard, unchanged phone storage and post-label placement.');
  console.log('PASS: multiple links, self-link guard, holder ownership, manager recipient, direct-holder creation, frozen edits, legacy, ambiguous managers, missing records and stale context. All network mocked; no writes.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
