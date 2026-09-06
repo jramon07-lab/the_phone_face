@@ -18,6 +18,13 @@ function capture(){
  }};
 }
 function requireLink(ctx){ctx.check();if(!ctx.c?.id||!ctx.link?.folder_id||!ctx.link?.folder_name)throw Error('Vincula primero la carpeta de documentos de este cliente.');}
+async function prepare(ctx){
+ ctx.check();if(ctx.link)return ctx;
+ if(!ctx.c?.id)throw Error('Vincula primero este chat a una ficha de cliente.');
+ if(!window.TPFDocumentFolderAuto)throw Error('Actualiza la página para preparar la carpeta automáticamente.');
+ const result=await window.TPFDocumentFolderAuto.ensure({contactId:ctx.c.id,data:ctx.snapshot,check:ctx.check,notice:show});
+ ctx.check();if(JSON.stringify(ctx.c.data)!==JSON.stringify(ctx.snapshot))throw Error('La ficha cambió. Actualízala antes de guardar el archivo.');ctx.c.data=result.data;return capture();
+}
 function downloadUrl(id,name){const chatId=safe(live()?.selected?.id);return `/api/green?action=download&chatId=${encodeURIComponent(chatId)}&idMessage=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}`;}
 function show(text,kind=''){let el=$('tpfWaDocumentNotice');if(!el){el=document.createElement('div');el.id='tpfWaDocumentNotice';el.className='tpfWaDocumentNotice';document.body.appendChild(el);}el.textContent=text;el.className='tpfWaDocumentNotice '+kind;clearTimeout(show.timer);show.timer=setTimeout(()=>el.remove(),4200);}
 function button(label,action,id,info){const b=document.createElement('button');b.type='button';b.className='tpfWaDocAction';b.textContent=label;b.dataset.waDocAction=action;b.dataset.waDocId=id;b.dataset.waDocChat=safe(live()?.selected?.id);b.dataset.waDocName=documentName(info);b.dataset.waDocMime=safe(info?.mime||'');b.dataset.waDocKind=safe(info?.kind||'file');return b;}
@@ -48,7 +55,8 @@ async function act(target){
  if(!action||!id||target.disabled||pending.has(key))return;
  try{
   if(chatId!==safe(live()?.selected?.id))throw Error('El chat ha cambiado. Vuelve a abrir el archivo.');
-  const ctx=capture();target.disabled=true;pending.add(key);
+  let ctx=capture();target.disabled=true;pending.add(key);
+  if(action==='drive'||action==='dni')ctx=await prepare(ctx);
   if(action==='pc')savePc(id,name,mime);
   if(action==='drive')await saveDrive(id,name,mime,ctx);
   if(action==='dni')await dni(id,name,mime,ctx);
