@@ -1,6 +1,6 @@
 /* Agenda Pro — compatible with the existing agenda_items model. */
 const AGENDA_DEFAULT_TYPES=[{name:"Tarea",icon:"✓",color:"#155eef"},{name:"Llamada",icon:"☎",color:"#7f56d9"},{name:"Cita",icon:"◷",color:"#eaaa08"},{name:"WhatsApp",icon:"💬",color:"#16a34a"}];
-let agendaTypes=[...AGENDA_DEFAULT_TYPES],agendaSelectedType="Tarea",agendaSearchTimer,agendaDateFilter="all",agendaComposerContext=null,agendaComposerMounts=[];
+let agendaTypes=[...AGENDA_DEFAULT_TYPES],agendaSelectedType="Tarea",agendaSearchTimer,agendaDateFilter="all",agendaComposerContext=null,agendaComposerMounts=[],agendaCalendarMonth=new Date(),agendaRenderedRows=[],agendaContactCache=new Map(),agendaLoadVersion=0;
 function fmtAgendaDate(v){return v?new Date(v).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}):""}
 function agendaStatusLabel(s){return s==="completed"?"Completado":s==="cancelled"?"Cancelado":"Pendiente"}
 function whatsappDigits(phone){let p=String(phone||"").replace(/\D/g,"");if(p.startsWith("00"))p=p.slice(2);if(p.length===9)p="34"+p;return p}
@@ -49,7 +49,7 @@ function selectAgendaType(type,meta={}){
 window.sendAgendaWhatsapp=id=>{const r=(window.__agendaRows||[]).find(x=>String(x.id)===String(id));if(!r)return;const p=whatsappDigits(r.whatsapp_phone||r.customer_phone);if(!p)return alert("Esta tarea no tiene teléfono de WhatsApp.");window.open("https://wa.me/"+p+(r.whatsapp_message?"?text="+encodeURIComponent(r.whatsapp_message):""),"_blank","noopener,noreferrer")};
 function agendaSearchText(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
 function agendaSearchDigits(v){return String(v||"").replace(/\D/g,"").slice(-9)}
-function agendaContactValues(row){const d=row?.data||{};return {id:String(row?.id||""),name:d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"",phone:d["TELÉFONO"]||d.TELEFONO||d.PHONE||""}}
+function agendaContactValues(row){const d=row?.data||{};return {id:String(row?.id||""),name:d["NOMBRE Y APELLIDOS"]||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(" ")||d.CLIENTE||"",phone:d["TELÉFONO"]||d.TELEFONO||d.PHONE||""}}
 function visibleRows(rows,contacts=[]){
   const raw=String($("agendaSearch")?.value||"").trim(),q=agendaSearchText(raw);
   if(!q)return rows;
@@ -61,9 +61,36 @@ function visibleRows(rows,contacts=[]){
   })
 }
 function groupName(r){const d=startDay(new Date(r.starts_at)),t=startDay(),m=new Date(t);m.setDate(t.getDate()+1);return +d===+t?"Hoy":+d===+m?"Mañana":d<t?"Vencidos":"Próximos"}
-function renderItem(a){const t=typeFor(a),d=new Date(a.starts_at),state=a.status==="completed"?"completed":isOverdue(a)?"overdue":"";return `<article class="agendaItem"><time class="agendaTime">${d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</time><span class="agendaTypeIcon" style="--type-color:${esc(t.color)}">${esc(t.icon)}</span><div class="agendaItemTitle"><b>${esc(a.title)}</b><small>${esc(t.name)}${a.description?" · "+esc(a.description):""}</small></div><div class="agendaItemPerson"><b>${esc(a.customer_name||"Sin cliente")}</b><small>${esc(a.customer_phone||"")}</small></div><div class="agendaItemState"><span class="agendaBadge ${state}">${state==="overdue"?"Vencido":agendaStatusLabel(a.status)}</span><div class="agendaActions"><button data-open-agenda="${esc(a.id)}">Abrir</button>${a.status==="pending"?`<button class="agendaDone" data-complete-agenda="${esc(a.id)}">✓ Completar</button>`:""}<button class="agendaMore" data-more-agenda="${esc(a.id)}" aria-label="Más acciones">•••</button></div></div></article>`}
+function renderItem(a){const t=typeFor(a),d=new Date(a.starts_at),state=a.status==="completed"?"completed":isOverdue(a)?"overdue":"";return `<article class="agendaItem"><time class="agendaTime">${d.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}<small>${d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</small></time><span class="agendaTypeIcon" style="--type-color:${esc(t.color)}">${esc(a.status==="completed"?"✓":t.name==="Tarea"?"○":t.icon)}</span><div class="agendaItemTitle"><b>${esc(a.title)}</b><small>${esc(t.name)}${a.description?" · "+esc(a.description):""}</small></div><div class="agendaItemPerson">${a.__contact?`<button class="agendaContactLink" data-agenda-contact="${esc(a.__contact.id)}">${esc(a.customer_name||agendaContactValues(a.__contact).name)}</button>`:`<b>${esc(a.customer_name||"Sin cliente")}</b>`}<small>${esc(a.customer_phone||"")}</small><small>DNI/NIF: ${esc(agendaDni(a.__contact)||"Sin DNI")}</small></div><div class="agendaItemState"><span class="agendaBadge ${state}">${state==="overdue"?"Vencido":agendaStatusLabel(a.status)}</span><div class="agendaActions"><button data-open-agenda="${esc(a.id)}">Abrir</button>${a.status==="pending"?`<button data-postpone-agenda="${esc(a.id)}">Posponer</button><button class="agendaDone" data-complete-agenda="${esc(a.id)}">✓ Completar</button>`:""}<button class="agendaMore" data-more-agenda="${esc(a.id)}" aria-label="Más acciones">•••</button></div></div></article>`}
 function renderList(rows){const groups=rows.reduce((a,r)=>((a[groupName(r)]||=[]).push(r),a),{});$("agendaList").innerHTML=["Vencidos","Hoy","Mañana","Próximos"].filter(k=>groups[k]?.length).map(k=>`<section class="agendaGroup"><h3 class="agendaGroupTitle">${k}<span>${groups[k].length} recordatorio${groups[k].length===1?"":"s"}</span></h3>${groups[k].map(renderItem).join("")}</section>`).join("")}
-function renderCalendar(rows){const n=new Date(),f=new Date(n.getFullYear(),n.getMonth(),1),s=new Date(f);s.setDate(f.getDate()-((f.getDay()+6)%7));let days="";for(let i=0;i<42;i++){const d=new Date(s);d.setDate(s.getDate()+i);const rs=rows.filter(r=>dayKey(r.starts_at)===dayKey(d));days+=`<div class="agendaDay ${d.getMonth()!==n.getMonth()?"muted":""} ${isToday(d)?"today":""}"><b>${d.getDate()}</b>${rs.slice(0,3).map(r=>`<span class="agendaDayEvent">${new Date(r.starts_at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})} ${esc(r.title)}</span>`).join("")}${rs.length>3?`<small>+${rs.length-3} más</small>`:""}</div>`}$("agendaCalendar").innerHTML=`<h3 class="agendaMonthTitle">${n.toLocaleDateString("es-ES",{month:"long",year:"numeric"})}</h3><div class="agendaCalendarGrid">${["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map(x=>`<div class="agendaCalendarHead">${x}</div>`).join("")}${days}</div>`}
+function renderCalendar(rows){
+ agendaRenderedRows=rows;
+ const n=agendaCalendarMonth,f=new Date(n.getFullYear(),n.getMonth(),1),s=new Date(f);s.setDate(f.getDate()-((f.getDay()+6)%7));
+ let days="";
+ for(let i=0;i<42;i++){const d=new Date(s);d.setDate(s.getDate()+i);const rs=rows.filter(r=>dayKey(r.starts_at)===dayKey(d));
+ days+=`<div class="agendaDay ${d.getMonth()!==n.getMonth()?"muted":""} ${isToday(d)?"today":""}" data-agenda-day="${agendaLocalDateTime(d).slice(0,10)}"><button class="agendaDayNumber" data-agenda-day="${agendaLocalDateTime(d).slice(0,10)}" aria-label="Crear tarea el ${d.toLocaleDateString("es-ES")}">${d.getDate()}</button>${rs.map(r=>`<button class="agendaDayEvent" data-open-agenda="${esc(r.id)}">${new Date(r.starts_at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})} ${esc(r.title)}<small>${esc(r.customer_name||"Sin cliente")}</small></button>`).join("")}</div>`;
+ }
+ $("agendaCalendar").innerHTML=`<div class="agendaMonthNav"><button data-agenda-month="-1" aria-label="Mes anterior">←</button><h3 class="agendaMonthTitle">${n.toLocaleDateString("es-ES",{month:"long",year:"numeric"})}</h3><button data-agenda-month="1" aria-label="Mes siguiente">→</button><button data-agenda-month="today">Hoy</button></div><div class="agendaCalendarGrid">${["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map(x=>`<div class="agendaCalendarHead">${x}</div>`).join("")}${days}</div>`;
+}
+function agendaDni(record){const d=record?.data||{};return d["DNI / NIF"]||d["DNI/NIF"]||d.DNI||d.NIF||""}
+async function agendaResolveContact(row){
+ const id=String(row.related_record_id||""),phone=agendaSearchDigits(row.customer_phone);
+ const key=id||phone;if(!key)return null;
+ if(agendaContactCache.has(key))return agendaContactCache.get(key);
+ const request=(async()=>{try{
+  if(id){const r=await sb.from("records").select("id,data").eq("id",id).eq("source_sheet","BASE DE DATOS").maybeSingle();return r.error?null:r.data;}
+  if(phone.length!==9)return null;
+  const r=await sb.rpc("search_records",{search_text:phone,sheet_filter:"BASE DE DATOS",result_limit:20});
+  const hits=(r.data||[]).filter(c=>agendaSearchDigits(agendaContactValues(c).phone)===phone);
+  return !r.error&&r.data?.length<20&&hits.length===1?hits[0]:null;
+ }catch(e){console.warn("Agenda: no se pudo consultar el contacto",e);return null;}})();
+ agendaContactCache.set(key,request);return request;
+}
+$("agendaCalendar").onclick=e=>{
+ const task=e.target.closest("[data-open-agenda]");if(task)return window.openAgendaItem(task.dataset.openAgenda);
+ const nav=e.target.closest("[data-agenda-month]");if(nav){const v=nav.dataset.agendaMonth;agendaCalendarMonth=v==="today"?new Date():new Date(agendaCalendarMonth.getFullYear(),agendaCalendarMonth.getMonth()+Number(v),1);agendaDateFilter="all";return loadAgenda();}
+ const day=e.target.closest("[data-agenda-day]");if(day)window.openAgendaComposer({startsAt:day.dataset.agendaDay+"T10:00"});
+};
 function updateStats(a){$("agendaStatToday").textContent=a.filter(r=>isToday(r.starts_at)).length;$("agendaStatPending").textContent=a.filter(r=>r.status==="pending").length;$("agendaStatOverdue").textContent=a.filter(isOverdue).length;$("agendaStatCompleted").textContent=a.filter(r=>r.status==="completed").length}
 function agendaDateRange(period,now=new Date()){
   if(period==="all")return null;
@@ -86,7 +113,9 @@ function syncAgendaFilterUi(){
 }
 async function loadAgenda(){
   if(!(perms?.is_admin||perms?.can_view_agenda||perms?.can_manage_agenda))return;
-  const status=$("agendaFilter")?.value||"pending",now=new Date(),range=agendaDateRange(agendaDateFilter,now);
+  const revision=++agendaLoadVersion;
+  const status=$("agendaFilter")?.value||"pending",now=new Date();let range=agendaDateRange(agendaDateFilter,now);
+  if(agendaDateFilter==="all"&&!$("agendaCalendar").classList.contains("hidden")){const start=new Date(agendaCalendarMonth.getFullYear(),agendaCalendarMonth.getMonth(),1);start.setDate(start.getDate()-((start.getDay()+6)%7));const end=new Date(start);end.setDate(end.getDate()+42);range={start,end};}
   let q=sb.from("agenda_items").select("*").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").order("starts_at",{ascending:true}).limit(300);
   if(status==="pending")q=q.eq("status","pending");
   else if(status==="completed")q=q.eq("status","completed");
@@ -97,8 +126,11 @@ async function loadAgenda(){
   const searchText=String($("agendaSearch")?.value||"").trim();
   const contactSearch=searchText.length>=2?sb.rpc("search_records",{search_text:searchText,sheet_filter:"BASE DE DATOS",result_limit:100}):Promise.resolve({data:[]});
   const [one,two,contacts]=await Promise.all([q,sb.from("agenda_items").select("id,status,starts_at").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").limit(1000),contactSearch]);
+  if(revision!==agendaLoadVersion)return;
   if(one.error){$("agendaList").innerHTML=`<div class="agendaEmpty">${esc(one.error.message)}</div>`;return}
   const rows=visibleRows(one.data||[],contacts?.data||[]);
+  agendaContactCache.clear();await Promise.all(rows.map(async row=>{row.__contact=await agendaResolveContact(row)}));
+  if(revision!==agendaLoadVersion)return;
   window.__agendaRows=one.data||[];
   updateStats(two.data||[]);
   $("agendaEmpty").style.display=rows.length?"none":"block";
@@ -108,8 +140,8 @@ $("agendaFilter").onchange=loadAgenda;
 $("agendaRefresh").onclick=loadAgenda;
 $("agendaSearch").oninput=()=>{clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(loadAgenda,180)};
 $("agendaQuickFilters").onclick=e=>{const b=e.target.closest("[data-agenda-period]");if(!b)return;agendaDateFilter=b.dataset.agendaPeriod;loadAgenda()};
-$("agendaListView").onclick=()=>{$("agendaList").classList.remove("hidden");$("agendaCalendar").classList.add("hidden");$("agendaListView").classList.add("active");$("agendaCalendarView").classList.remove("active")};
-$("agendaCalendarView").onclick=()=>{$("agendaList").classList.add("hidden");$("agendaCalendar").classList.remove("hidden");$("agendaCalendarView").classList.add("active");$("agendaListView").classList.remove("active")};
+$("agendaListView").onclick=()=>{$("agendaList").classList.remove("hidden");$("agendaCalendar").classList.add("hidden");$("agendaListView").classList.add("active");$("agendaCalendarView").classList.remove("active");loadAgenda()};
+$("agendaCalendarView").onclick=()=>{$("agendaList").classList.add("hidden");$("agendaCalendar").classList.remove("hidden");$("agendaCalendarView").classList.add("active");$("agendaListView").classList.remove("active");loadAgenda()};
 function agendaLocalDateTime(value){const d=value instanceof Date?value:new Date(value);if(Number.isNaN(d.getTime()))return"";const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
 // Calendar shortcuts use local dates and keep the selected time editable.
 function agendaQuickDate(kind,now=new Date()){
@@ -133,7 +165,7 @@ function mountAgendaComposerOverlay(enable){
     $("agendaCreateCard")?.removeAttribute("data-agenda-overlay")
   }
 }
-function setAgendaComposer(open){const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}else{$("agendaTypeModal")?.classList.add("hidden");mountAgendaComposerOverlay(false)}}
+function setAgendaComposer(open){window.TPFAgendaCompact?.create(open);const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}else{$("agendaTypeModal")?.classList.add("hidden");mountAgendaComposerOverlay(false)}}
 function resetAgendaComposer(){
   ["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>{const node=$(id);if(node)node.value=""});
   delete $("agendaCustomer")?.dataset.contactId;document.querySelectorAll(".agendaReminderPreset").forEach(box=>box.checked=false);
@@ -185,4 +217,3 @@ window.completeAgenda=async id=>{const {error}=await sb.from("agenda_items").upd
 window.cancelAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
 window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))return;const {error}=await sb.from("agenda_items").delete().eq("id",id);if(error)alert(error.message);else loadAgenda()};
 loadAgendaTypes().catch(renderTypeChoices);
-
