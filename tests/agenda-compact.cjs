@@ -1,0 +1,35 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const core=fs.readFileSync('js/modules/agenda-core.js','utf8');
+const detail=fs.readFileSync('js/modules/agenda-detail-pro.js','utf8');
+const nodes={agendaCalendar:{innerHTML:''}};
+let contacts=[],queries=0;
+const ctx={console,Date,Map,Set,Promise,window:{},$:id=>nodes[id],esc:v=>String(v??'').replace(/</g,'&lt;'),sb:{rpc:async()=>{queries++;return {data:contacts}}}};
+vm.createContext(ctx);
+vm.runInContext(core.slice(0,core.indexOf('$("agendaCalendar").onclick'))+'\n'+core.slice(core.indexOf('function agendaLocalDateTime('),core.indexOf('// Calendar shortcuts')),ctx);
+(async()=>{
+ const record={id:'r1',data:{NOMBRE:'Ana',APELLIDOS:'García','TELÉFONO':'600123456',DNI:'TEST-DNI'}};
+ const row={id:'task1',title:'<unsafe>',starts_at:'2026-09-05T10:30:00',status:'pending',customer_name:'Ana',customer_phone:'600123456',__contact:record};
+ const html=ctx.renderItem(row);
+ assert.match(html,/TEST-DNI/);assert.match(html,/05\/09\/2026/);assert.match(html,/data-agenda-contact="r1"/);assert.match(html,/data-postpone-agenda="task1"/);assert(!html.includes('<unsafe>'));
+ assert.match(ctx.renderItem({...row,__contact:null}),/Sin DNI/);
+ vm.runInContext('agendaCalendarMonth=new Date(2026,8,1)',ctx);ctx.renderCalendar([row]);
+ assert.match(nodes.agendaCalendar.innerHTML,/septiembre de 2026/);assert.match(nodes.agendaCalendar.innerHTML,/data-open-agenda="task1"/);assert.match(nodes.agendaCalendar.innerHTML,/data-agenda-day="2026-09-05"/);assert.match(nodes.agendaCalendar.innerHTML,/Ana/);
+ vm.runInContext('agendaCalendarMonth=new Date(2026,12,1)',ctx);ctx.renderCalendar([]);assert.match(nodes.agendaCalendar.innerHTML,/enero de 2027/);
+ contacts=[record];assert.equal((await ctx.agendaResolveContact(row)).id,'r1');await ctx.agendaResolveContact(row);assert.equal(queries,1);
+ vm.runInContext('agendaContactCache.clear()',ctx);contacts=[record,{...record,id:'r2'}];assert.equal(await ctx.agendaResolveContact(row),null);
+ assert.equal(ctx.agendaContactValues(record).name,'Ana García');
+ // Execute the actual optional-reminder controller, not a duplicate implementation.
+ const input={value:'2026-09-07T10:00',__tpfSyncFromHidden(){}};
+ let hidden=false,check;
+ const box={classList:{toggle(c,v){hidden=v}},before(){}};input.parentElement=box;
+ const rc={$:()=>input,document:{createElement(tag){const node={append(){}};if(tag==='input')check=node;return node},createTextNode:t=>t}};
+ vm.createContext(rc);vm.runInContext(detail.slice(detail.indexOf(' function reminder('),detail.indexOf(' function options(')),rc);
+ const state={extra:[]};rc.reminder(state,'agendaReminder');assert.equal(check.checked,true);assert.equal(hidden,false);
+ check.checked=false;check.onchange();assert.equal(input.value,'');assert.equal(hidden,true);
+ check.checked=true;check.onchange();assert.equal(input.value,'2026-09-07T10:00');assert.equal(hidden,false);
+ assert(detail.includes('rememberMove(state,page,$("contactModal"))'));
+ assert(!detail.includes('split(/\\\\s+/)'));
+ console.log('PASS Agenda: date/DNI, safe contact resolution, calendar month/events, optional reminder preserves existing values; no data writes.');
+})().catch(e=>{console.error(e);process.exitCode=1});
