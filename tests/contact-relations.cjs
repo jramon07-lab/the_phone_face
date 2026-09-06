@@ -6,10 +6,10 @@ context.document={getElementById:id=>fields[id],createElement:()=>({}),head:{app
 const manager={id:'manager',data:{'NOMBRE Y APELLIDOS':'Carmen','TELÉFONO':'600000001',TPF_RELACIONES:{managed_contacts:[{record_id:'father',name:'Torcuato'},{record_id:'husband',name:'Marido'}]}}};
 const father={id:'father',data:{NOMBRE:'Torcuato',APELLIDOS:'García González','TELÉFONO':'600000002','DNI / NIF':'TEST'}};
 let rows=[manager,father],duringRead=null;
-context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){id=v;return this;},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
+context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){if(key==='id')id=v;return this;},order(){return this;},async range(){return {data:[]};},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
 // Test-only access to private state; the published module has no test hooks.
 const source=fs.readFileSync(path.join(base,'js/modules/contact-relations.js'),'utf8');
-vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={createHolder,newHolderData,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
 const R=context.TPFContactRelations,fixture=context.__fixture;
 function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',opportunityId:'',items:manager.data.TPF_RELACIONES.managed_contacts,managers:[],selected:'',loading:false,...overrides};fixture.set(s);fields.oppModalOpenContact.dataset.recordId=s.ownerId;fields.oppModalId.value=s.opportunityId;return s;}
 (async()=>{
@@ -29,5 +29,21 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  state({ownerId:'father',managers:[manager,{id:'second'}]});await assert.rejects(()=>R.prepareOpportunity({}),/Selecciona quién/);
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'jose'));
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'600000001'));
+ const P=context.TPFContactParty;
+ assert.equal(P.displayPhone('+34 618 788 514'),'618788514');assert.equal(P.displayPhone('0034618788514'),'618788514');assert.equal(P.displayPhone('+44 7911 123456'),'+44 7911 123456');assert.equal(P.displayPhone('341234567'),'341234567');
+ const raw={same:false,holder_name:'Prueba',holder_phone:'+34618788514',recipient:'holder'};
+ assert.equal(P.snapshot(raw,{name:'Gestor'}).recipient_phone,'+34618788514');assert(!P.summary(raw,{name:'Gestor'}).includes('+34618788514'));
+ const controls={same:{checked:false},holder_first_name:{value:'Prueba'},holder_last_name:{value:''},holder_dni:{value:''},holder_phone:{value:'618788514',dataset:{originalPhone:'+34618788514'}},recipient:{value:'holder'}};
+ fields.phoneTest={querySelector:s=>controls[s.match(/"(.*?)"/)[1]]};assert.equal(P.read('phoneTest').holder_phone,'+34618788514');
+ const fresh=fixture.newHolderData({first:'Nueva',last:'Persona',phone:'+34600111222',dni:'test'});assert.equal(fresh['TELÉFONO'],'600111222');assert.throws(()=>fixture.newHolderData({}),/nombre/);assert.throws(()=>fixture.newHolderData({first:'X',phone:'12'}),/teléfono/);
+ let writes=0,duplicates=[],fail=false;
+ context.sb.rpc=async(name,args)=>{if(name==='find_possible_duplicate_contact')return {data:duplicates};assert.equal(name,'crm_create_contact_with_welcome_variant');assert.equal(args.p_welcome,false);assert.equal(args.p_labels.length,0);writes++;if(fail)throw Error('connection lost');return {data:'new-id'};};
+ await assert.rejects(()=>fixture.createHolder(fresh,{},()=>true,()=>{}),/permiso/);assert.equal(writes,0);
+ context.perms={can_create_database:true};const attempt={};const made=await fixture.createHolder(fresh,attempt,()=>true,()=>{});assert.equal(made.record_id,'new-id');assert.equal(writes,1);await assert.rejects(()=>fixture.createHolder(fresh,attempt,()=>true,()=>{}),/No se repetirá/);assert.equal(writes,1);
+ duplicates=[father];context.confirm=()=>false;let shown=false;assert.equal(await fixture.createHolder(fresh,{},()=>true,()=>{shown=true;}),null);assert(shown);assert.equal(writes,1);
+ duplicates=[];await assert.rejects(()=>fixture.createHolder(fresh,{},()=>false,()=>{}),/edición/);assert.equal(writes,1);
+ fail=true;const uncertain={};await assert.rejects(()=>fixture.createHolder(fresh,uncertain,()=>true,()=>{}),/connection/);await assert.rejects(()=>fixture.createHolder(fresh,uncertain,()=>true,()=>{}),/No se repetirá/);assert.equal(writes,2);
+ assert(source.includes("labels.insertAdjacentElement('afterend',root)"));
+ console.log('PASS: inline creation, permission, duplicate cancellation, no welcome, uncertain retry guard, unchanged phone storage and post-label placement.');
  console.log('PASS: multiple links, self-link guard, holder ownership, manager recipient, direct-holder creation, frozen edits, legacy, ambiguous managers, missing records and stale context. All network mocked; no writes.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
