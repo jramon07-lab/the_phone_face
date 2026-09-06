@@ -172,6 +172,7 @@
   const card=$("agendaCreateCard");if(createState||card?.dataset.contactDialog==="true"||$("view-agenda")?.classList.contains("hidden"))return;
   focusOrigin=document.activeElement;
   const state={card,parent:card.parentNode,next:card.nextSibling,moves:[],extra:[]};createState=state;
+  rememberMove(state,$("agendaTypeModal"),document.body);
   const back=document.createElement("div");back.className="agendaCompactBackdrop";back.setAttribute("role","dialog");back.setAttribute("aria-modal","true");back.setAttribute("aria-label","Crear tarea");state.back=back;
   const head=card.querySelector(".agendaComposerHead"),save=$("agendaSave"),msg=$("agendaMsg");
   const body=document.createElement("div");body.className="agendaCompactBody";
