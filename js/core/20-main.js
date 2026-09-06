@@ -860,7 +860,7 @@ document.addEventListener("wheel",(e)=>{
   if(!salesView || salesView.classList.contains("hidden"))return;
 
   /* No interferir con campos, desplegables, modales ni con el scroll horizontal del tablero */
-  if(e.target.closest("input, textarea, select, .modalBack"))return;
+  if(e.target.closest("input, textarea, select, .modalBack, #contactModal, .contactProfileBack"))return;
   if(e.target.closest("#salesScroll"))return;
 
   e.preventDefault();
@@ -1279,6 +1279,7 @@ function initSalesNavigation(){
 
     salesView.addEventListener("wheel",e=>{
       const target=e.target;
+      if(target.closest("#contactModal, .contactProfileBack, .modalBack"))return;
 
       // Respetar solo elementos que realmente tengan scroll interno propio.
       const nativeScrollable=target.closest("textarea,[data-native-scroll]");
