@@ -269,6 +269,21 @@ document.addEventListener("click",e=>{if(!e.target.closest(".opportunityContactS
 
 async function findContactRecordForOpportunity(o){
   if(!o)return null;
+
+  // `record_id` is the explicit link chosen when the opportunity is created.
+  // Resolve it first: the fallback below is intentionally bounded to 1,000
+  // records, so a name/phone search can otherwise miss the linked contact (or
+  // open somebody else with the same details) in a large database.
+  const linkedContactId=o.record_id||o.contact_id||o.related_record_id||null;
+  if(linkedContactId){
+    const {data,error}=await sb.from("records")
+      .select("id,source_sheet,source_row,data")
+      .eq("id",linkedContactId)
+      .maybeSingle();
+    if(error)throw error;
+    if(data)return data;
+  }
+
   const phone=String(o.phone||"").replace(/\D/g,"").slice(-9);
   const name=String(o.client_name||"").trim().toLowerCase();
 
