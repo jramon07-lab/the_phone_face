@@ -39,6 +39,14 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'jose'));
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'600000001'));
  const P=context.TPFContactParty;
+ const frozen={record_id:'holder',client_name:'Fallback',contract_party:{same:false,holder_name:'MARTINA SANCHEZ',holder_dni:'H123',contact_name:'RAMON'}};
+ assert.equal(P.opportunityIdentity(frozen,{id:'holder',data:{DNI:'MANAGER'}}).dni,'H123');
+ assert.equal(P.opportunityIdentity(frozen).holder,'Martina Sanchez');
+ assert.equal(P.opportunityIdentity(frozen).manager,'Ramon');
+ assert(P.opportunityHint(frozen).includes('Gestionado por: Ramon'));
+ assert.equal(P.opportunityIdentity({client_name:'Antiguo'}).unlinked,true);
+ assert.equal(P.opportunityIdentity({record_id:'a'},{id:'b',data:{DNI:'WRONG'}}).dni,'');
+ assert.equal(P.opportunityIdentity({...frozen,contract_party:{...frozen.contract_party,holder_dni:''}},{id:'holder',data:{DNI:'WRONG'}}).dni,'');
  const linkedHint=P.hint(manager,[manager,father]);assert(linkedHint.includes('Titular: Torcuato García González'));assert(!linkedHint.includes('Marido'));
  assert(P.hint(manager).includes('Titulares: Torcuato · Marido'));
  assert.equal(P.hint({data:{}}),'');assert.equal(P.hint(manager,[]),'');
