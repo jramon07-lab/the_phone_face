@@ -1,6 +1,9 @@
 /* Reference layout: scoped to the desktop presentation adapter. */
 .cpDocumentsPending,.cpRefMore{display:none}
 @media(min-width:1024px){
+/* Sales stays behind the profile; the profile owns its vertical scrolling. */
+body:has(#view-sales:not(.hidden)) #contactModal.tpfContactDesktop.tpfContactReference:not(.hidden){position:fixed!important;height:100dvh!important;max-height:100dvh!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;z-index:60000!important;pointer-events:auto!important}
+body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!important;right:0!important;width:100vw!important;max-width:100vw!important}
 #contactModal.tpfContactDesktop.tpfContactReference{left:252px!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;overflow:auto!important;background:#f6f8fc}
 #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile{height:auto!important;min-height:100vh!important;overflow:visible!important;padding:0;background:#f6f8fc}
 #contactModal.tpfContactDesktop.tpfContactReference .cpTop{height:auto!important;min-height:68px;padding:14px 26px!important;display:flex;justify-content:flex-start;gap:18px;position:static;box-shadow:none;border-bottom:0;background:transparent}
