@@ -30,4 +30,17 @@ nodes.editRelations.dataset.selected='["m"]';assert.throws(()=>a.mobileReadRelat
 assert.match(a.mobileRelationEditor(manager,'edit'),/data-mobile-rel-search/);assert.match(a.mobileRelationEditor(manager,'edit'),/Crear nuevo titular/);
 a.state.contacts=[manager];assert.equal(a.mobileHolders(manager).length,0);assert.equal(a.relatedOpportunities('m').length,1);
 assert(source.includes('p_welcome:false'));assert(source.includes("query.eq('updated_at',latest.data.updated_at)"));
-console.log('PASS mobile relations: live names, deleted/duplicate links, manager totals, both opportunity origins, frozen identity, self-link prevention, creation without welcome and concurrency guard.');
+a.state.contacts=[manager,holder];
+a.state.board.opportunities=[{id:'legacy-phone',phone:'+34 600111111',client_name:'Old name'},
+ {id:'legacy-name',client_name:'MARTINA SANCHEZ'},
+ {id:'explicit-holder',record_id:'h',phone:'600111111'},
+ {id:'other-owner',record_id:'elsewhere',phone:'600111111'},
+ {id:'no-owner'}, {id:'closed',phone:'600111111',status:'won'}];
+assert.deepEqual(Array.from(a.relatedOpportunities('m'),o=>o.id),['legacy-phone','legacy-name','explicit-holder','closed']);
+assert.deepEqual(Array.from(a.relatedOpportunities('h'),o=>o.id),['legacy-name','explicit-holder']);
+assert.equal(a.contactActivityIndex().get('m').opportunities,3);
+const duplicate=a.mapContact({id:'duplicate',data:{NOMBRE:'Martina',APELLIDOS:'Sanchez','TELÉFONO':'600111111'}});
+a.state.contacts.push(duplicate);
+assert.deepEqual(Array.from(a.relatedOpportunities('m'),o=>o.id),['explicit-holder']);
+assert.equal(a.relatedOpportunities('duplicate').length,0);
+console.log('PASS mobile relations and legacy opportunities: unique phone/name matches, explicit ownership precedence, ambiguous matches excluded, shared counters, frozen identity and safe links.');
