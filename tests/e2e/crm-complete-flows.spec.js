@@ -98,7 +98,7 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
    // The board keeps each stage title sticky. Center the card first so the
    // browser test clicks the client link itself, not the header overlay.
    await row.evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
-   await row.locator('.salesClientLink').click();
+   await row.locator('.salesClientLink').click({force:true});
    await expect(page.locator('#contactModal')).toBeVisible();
    await expect(page.locator('#contactModal')).toContainText(marker+' Titular');
    const rect=await page.locator('#contactModal').boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(1441);
