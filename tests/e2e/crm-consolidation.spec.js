@@ -63,12 +63,13 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
  }
 });
 
-test('Demo: permisos de copias y verificación de Drive con administrador',async({page})=>{
+test('Demo: copias administrativas denegadas sin exportar datos',async({page})=>{
  test.setTimeout(180000);await login(page);
- // This creates a backup only; no restore and no deletion of existing Drive files.
- const result=await page.evaluate(async()=>{const {data}=await sb.auth.getSession();const r=await fetch('/api/crm-backup?action=run',{method:'POST',headers:{Authorization:'Bearer '+data.session.access_token}});const body=await r.json();return {isAdmin:!!perms?.is_admin,status:r.status,ok:body.ok,verification:body.verification,counts:body.counts,error:body.error};});
- if(!result.isAdmin){expect(result.status).toBe(403);test.info().annotations.push({type:'limitación',description:'Cuenta demo sin permiso de administrador: comprobado rechazo; copia real pendiente con administrador.'});return;}
- expect(result.status,result.error).toBe(200);expect(result.ok).toBe(true);expect(result.verification).toBe('download-decrypt-counts');expect(Object.keys(result.counts||{})).toHaveLength(38);
+ // Never export the shared database, even if the demo role changes later.
+ test.skip(await page.evaluate(()=>!!perms?.is_admin),'Esta prueba requiere una demo no administradora.');
+ const result=await page.evaluate(async()=>{const {data}=await sb.auth.getSession();const r=await fetch('/api/crm-backup?action=status',{headers:{Authorization:'Bearer '+data.session.access_token}});return {status:r.status,body:await r.json()};});
+ expect(result.status).toBe(403);expect(result.body.ok).toBe(false);
+ test.info().annotations.push({type:'limitación',description:'Comprobado rechazo mediante lectura. Copia y restauración completas pendientes en una base aislada.'});
 });
 
 

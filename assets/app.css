@@ -70,7 +70,7 @@ table{width:100%;border-collapse:collapse;min-width:780px;background:#fff}th,td{
 .stage:nth-child(3){background:linear-gradient(180deg,#fff9eb 0%,#fffdf8 14%,#fff 100%)}
 .stage:nth-child(4){background:linear-gradient(180deg,#f1fbf5 0%,#fbfefc 14%,#fff 100%)}
 .stage:nth-child(5){background:linear-gradient(180deg,#fff3f3 0%,#fffafa 14%,#fff 100%)}
-.stageHead{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;padding:4px 4px 9px;margin-bottom:6px;background:transparent;border-bottom:0;pointer-events:none}.stageHead .stageMenu{pointer-events:auto}.stageTitle{font-size:13px;font-weight:800}.stageMeta{font-size:10px;color:#7a8495}.stageMenu,.oppMenu{border:0;background:transparent;color:#657186;padding:0 3px;font-size:17px}
+.stageHead{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:flex-start;padding:4px 4px 9px;margin-bottom:6px;background:transparent;border-bottom:0}.stageTitle{font-size:13px;font-weight:800}.stageMeta{font-size:10px;color:#7a8495}.stageMenu,.oppMenu{border:0;background:transparent;color:#657186;padding:0 3px;font-size:17px}
 .stage:nth-child(1) .stageTitle:before{content:"● ";color:#438bea}.stage:nth-child(2) .stageTitle:before{content:"● ";color:#22aa69}.stage:nth-child(3) .stageTitle:before{content:"● ";color:#f2b51d}.stage:nth-child(4) .stageTitle:before{content:"● ";color:#25a866}.stage:nth-child(5) .stageTitle:before{content:"● ";color:#e04747}
 .opp{border:1px solid #e1e5eb;border-radius:7px;padding:11px;margin:8px 0;background:#fff;box-shadow:0 2px 5px rgba(30,45,65,.035)}.oppTop{display:flex;justify-content:space-between;gap:8px}.oppTitle{font-weight:750;font-size:12px}.oppInfo{display:grid;gap:4px;margin-top:7px;font-size:11px;color:#515d70}.oppInfo .label{color:#737e90}.oppFooter{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}.oppFooter select{margin:0;min-width:0;font-size:10px}.oppAmount{font-weight:800}.emptyStage{font-size:11px;color:#8b95a5;padding:12px 4px}
 .refHelpBox{border:1px solid #9fc1f3;border-radius:7px;margin:16px 0 16px;padding:14px 17px;color:#334154;font-size:11px;line-height:1.9;background:#fbfdff}.refHelpBox strong{display:block;color:#1763c9;font-size:12px;margin-bottom:4px}.refHelpBox div:before{color:#19b46e}
@@ -504,6 +504,12 @@ table{width:100%;border-collapse:collapse;min-width:780px;background:#fff}th,td{
   cursor:pointer;text-decoration:underline;text-underline-offset:2px
 }
 .salesClientLink:hover{color:#0b4ca8}
+/* A long inline button can be hidden by its parent's ellipsis. Give the
+   client link its own bounded line so its visible text remains clickable. */
+#view-sales #salesBoard .oppInfo .salesClientLink{
+  display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere;
+  text-align:left;line-height:1.35;min-height:28px
+}
 .oppContactOpenBtn{
   margin-top:6px;border:0;background:transparent;padding:0;color:#1767d8;
   font-size:11px;font-weight:800;cursor:pointer;text-align:left

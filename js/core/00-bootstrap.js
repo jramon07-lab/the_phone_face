@@ -57,6 +57,7 @@ async function doSignIn(){
  const password=$("password").value;
  if(!email||!password){$("loginMsg").textContent="Escribe correo y contraseña.";return}
  if(!window.supabase){$("loginMsg").textContent="No se ha podido cargar la conexión. Cierra Safari y vuelve a abrir la página.";return}
+ $("password").value="";
  btn.disabled=true;btn.textContent="Entrando…";$("loginMsg").textContent="Conectando…";
  try{
    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error("La conexión está tardando demasiado. Comprueba internet y vuelve a intentarlo.")),15000));

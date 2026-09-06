@@ -1,7 +1,20 @@
 const {test,expect}=require('@playwright/test');
-test.use({browserName:'webkit',trace:'off',video:'off'});
+test.use({browserName:'webkit',trace:'off',video:'off',extraHTTPHeaders:{}});
+test.beforeEach(async({page,baseURL})=>{
+ // Preview access headers belong only to our deployment, never to the CDN or Auth API.
+ const origin=new URL(baseURL).origin;
+ await page.route(url=>url.origin===origin,route=>route.continue({headers:{
+  ...route.request().headers(),
+  'x-vercel-protection-bypass':process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+  'x-vercel-set-bypass-cookie':'true'
+ }}));
+ page.on('requestfailed',request=>{
+  const url=new URL(request.url());
+  if(url.origin===origin||url.hostname.endsWith('.supabase.co'))console.log('WEBKIT_NETWORK_FAILURE',url.origin+url.pathname,request.failure()?.errorText);
+ });
+});
 async function login(page){
- await page.goto('/');await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();await expect(page.locator('#app')).toBeVisible({timeout:30000});
+ await page.goto('/');await page.waitForFunction(()=>typeof sb!=='undefined'&&!!sb);await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();await expect(page.locator('#app')).toBeVisible({timeout:30000});
 }
 test('WebKit: editor de contacto compacto, escritura y cancelación sin modificar datos',async({page})=>{
  await login(page);

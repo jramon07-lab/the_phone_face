@@ -4,7 +4,7 @@ Esta revisión usa la cuenta demo y el despliegue de pruebas. La base de datos c
 
 ## Cómo repetirla
 
-- `npm run verify`: estructura, sintaxis y 62 comprobaciones de regresión.
+- `npm run verify`: estructura, sintaxis y 63 comprobaciones de regresión.
 - El flujo **CRM Browser Validation** instala Chromium y WebKit, usa las credenciales demo de los secretos de GitHub y prueba el despliegue que acaba de publicarse.
 - Las capturas y los resultados se adjuntan a cada ejecución como **crm-browser-evidence**. Las grabaciones y trazas de autenticación están desactivadas.
 
@@ -36,3 +36,12 @@ Esta revisión usa la cuenta demo y el despliegue de pruebas. La base de datos c
 - La restauración desde Papelera conserva el identificador del contacto, pero el borrado de la base puede haber desvinculado oportunidades/tareas o eliminado actividad relacionada. No debe tratarse como restauración completa de relaciones e historial.
 
 Un resultado verde demuestra los casos ejecutados; no certifica funciones omitidas ni garantiza ausencia de cualquier fallo futuro.
+
+## Corrección de la ejecución 34041794297
+
+- El nombre largo del cliente en el tablero quedaba oculto por el recorte de su contenedor; el enlace ocupa ahora una línea propia con ajuste de texto y área de clic visible. La selección de la columna recupera sus eventos normales.
+- PC y móvil cargan la misma copia local de Supabase 2.57.4, la versión ya fijada en móvil. La biblioteca no depende de que responda un CDN externo. Se añaden pruebas en Chromium y WebKit con los CDN bloqueados.
+- Las pruebas de Safari envían las cabeceras de acceso a la preview únicamente al dominio de la aplicación y registran fallos de red sin consultas, cuerpos ni credenciales.
+- Un contacto vinculado explícitamente que ya no existe no se sustituye por otra persona con nombre o teléfono coincidente.
+- La comprobación de permisos de copias usa una consulta de estado, sin ejecutar una exportación de la base compartida.
+- Verificación local previa: 134 archivos JavaScript válidos y 63/63 comprobaciones. El resultado de navegador debe consultarse en la ejecución del commit publicado, sin reutilizar el verde de un commit anterior.

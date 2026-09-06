@@ -281,7 +281,8 @@ async function findContactRecordForOpportunity(o){
       .eq("id",linkedContactId)
       .maybeSingle();
     if(error)throw error;
-    if(data)return data;
+    // A missing explicit link must never open another person with similar data.
+    return data||null;
   }
 
   const phone=String(o.phone||"").replace(/\D/g,"").slice(-9);
