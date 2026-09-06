@@ -84,9 +84,9 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await page.locator('#cpNewOpp').click();await expect(page.locator('#oppDetailModal')).toBeVisible();await page.locator('#oppModalTitle').fill(marker+' Venta');await page.locator('#oppModalAmount').fill('12.34');await page.locator('#oppModalDate').fill('2035-01-15');
   await page.locator('[data-rel-other]').check();await page.locator('[data-rel-choice]').selectOption(holder);await page.locator('#oppModalSave').click();await expect(page.locator('#oppDetailModal')).toBeHidden({timeout:15000});
   const opp=await page.evaluate(async title=>{const r=await sb.from('sales_opportunities').select('id,record_id,contract_party,amount').eq('title',title).single();if(r.error)throw Error(r.error.message);return r.data;},marker+' Venta');expect(opp.record_id).toBe(holder);expect(opp.contract_party.contact_name).toBe(marker+' Gestor Demo');expect(opp.amount).toBe(12.34);
-  await openContact(page,manager);await expect(page.locator('#cpOpportunities')).toContainText(marker+' Titular');await page.locator('#contactClose').click();
+  await expect(page.locator('#cpOpportunities')).toContainText(marker+' Titular');await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();
   await page.locator('.nav[data-view="sales"]').click();await page.evaluate(()=>window.loadSales());
-  await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();
+  await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#view-sales')).toBeVisible();
   await page.setViewportSize({width:1440,height:700});
   for(const mode of ['list','board','focus']){
    console.log('SALES_MODE',mode);
@@ -99,7 +99,7 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
    const rect=await page.locator('#contactModal').boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(1441);
    await page.locator('#contactModal .cpLeft').hover();await page.mouse.wheel(0,600);
    await expect.poll(()=>page.evaluate(()=>Math.max(document.getElementById('contactModal').scrollTop,document.querySelector('#contactModal .cpLeft').scrollTop))).toBeGreaterThan(0);
-   await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();
+   await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#opportunityFullPage')).toBeHidden();await expect(page.locator('#view-sales')).toBeVisible();
    if(mode==='focus')await page.locator('#tpfBoardMode').click();
   }
   await mobile(page,'edit-opportunity/'+opp.id);await expect(page.locator('#editOppAmount')).toHaveValue('12.34',{timeout:30000});await page.locator('#editOppAmount').fill('23.45');await page.locator('[data-action="save-opportunity-detail"]').click();await expect(page.locator('#mobileView')).toContainText('23,45');

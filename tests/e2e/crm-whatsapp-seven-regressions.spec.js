@@ -49,7 +49,7 @@ async function expectSameWhatsAppOrigin(page, chatId) {
 }
 
 async function findChatContexts(page) {
-  const chatIds=await page.locator('#waLiveChats .waChatRow [data-wa-avatar-id]').evaluateAll(nodes=>nodes.slice(0,40).map(n=>n.dataset.waAvatarId));
+  const chatIds=await page.locator('#waLiveChats .waChatRow [data-wa-avatar-id]').evaluateAll(nodes=>nodes.map(n=>n.dataset.waAvatarId).filter(id=>id&&!id.includes('@g.us')).slice(0,40));
   const count=chatIds.length;
   let matched = null;
   let matchedWithTasks = null;
@@ -183,17 +183,21 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
 
   await test.step('6. Crear contacto muestra teléfono local y campo Apodo', async () => {
     await selectChat(page, unmatched.chatId);
-    await page.locator('#waSideCreateContact:visible, #waCreateContactTop:visible').first().click();
-    await expect(page.locator('#tpfWaCreateBack')).toBeVisible({ timeout: 10000 });
+    const create=page.locator('#waSideCreateContact:visible, #waCreateContactTop:visible').first();
+    await expect(create).toBeVisible();
+    // Cross one periodic 30-second refresh; the action must remain available.
+    await page.waitForTimeout(31000);
+    await expect(create).toBeVisible();await create.click();
+    await expect(page.locator('#tpfContactsCreateBack')).toBeVisible({ timeout: 10000 });
     const remoteDigits = unmatched.chatId.replace(/\D/g, '');
     const spanishLocal = remoteDigits.startsWith('0034')
       ? remoteDigits.slice(4)
       : remoteDigits.startsWith('34') ? remoteDigits.slice(2) : '';
     const expectedLocal = /^[6789]\d{8}$/.test(spanishLocal) ? spanishLocal : remoteDigits;
-    await expect(page.locator('#tpfWaPhone')).toHaveValue(expectedLocal);
-    await expect(page.locator('#tpfWaNickname')).toBeEditable();
-    await page.locator('#tpfWaCreateClose').click();
-    await expect(page.locator('#tpfWaCreateBack')).toBeHidden();
+    await expect(page.locator('#tpfCreatePhone')).toHaveValue(expectedLocal);
+    await expect(page.locator('#tpfCreateNickname')).toBeEditable();
+    await page.locator('#tpfContactsCreateClose').click();
+    await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
     await expectSameWhatsAppOrigin(page, unmatched.chatId);
   });
 

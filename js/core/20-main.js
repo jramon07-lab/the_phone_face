@@ -2940,11 +2940,10 @@ window.openSalesOpportunityContact=async function(id){
 
     if(!window.__TPF_RESTORING){
       const wasEdit=$("oppDetailModal") && !$("oppDetailModal").classList.contains("hidden");
-      const state={
-        ...tpfCurrentScreen(),
-        type:wasEdit?"oppEdit":"oppView",
-        id:o.id
-      };
+      const wasFull=$("opportunityFullPage") && !$("opportunityFullPage").classList.contains("hidden");
+      const state=wasEdit||wasFull
+        ?{...tpfCurrentScreen(),type:wasEdit?"oppEdit":"oppView",id:o.id}
+        :tpfCurrentScreen();
       const last=window.__TPF_HISTORY[window.__TPF_HISTORY.length-1];
       if(!last || tpfScreenKey(last)!==tpfScreenKey(state)){
         window.__TPF_HISTORY.push(state);
