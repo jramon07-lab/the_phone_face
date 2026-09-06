@@ -389,6 +389,10 @@
           },0);
         }
         protectContactFieldEvent(e);
+        const closeCreateEdit=e.target?.closest?.('#tpfContactsCreateClose,#tpfContactsCreateCancel');
+        if(closeCreateEdit&&byId('tpfContactsCreateBack')?.dataset.tpfProfileEditing==='1'){
+          e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();returnFromCreateEdit();return;
+        }
         const edit=e.target?.closest?.('#tpfContactEditToggle');
         if(edit){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openCreateModalEdit();return;}
         const saveLocal=e.target?.closest?.('#tpfContactSaveLocal');
