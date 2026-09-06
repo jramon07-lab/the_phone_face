@@ -91,3 +91,7 @@ Local validation executed the actual orientation helper with canvas rendering an
 
 ## Scanner latency (2026-09-06)
 Orientation now stops at the first direction with at least two recognized document keywords (score >=4), instead of always evaluating all four and comparing their scores. Unrecognized inputs still try all four and require manual review on failure. One orientation worker is reused across the chosen photos and terminated in a finally block at the end of the batch. The selected OCR text is retained only in scanner memory: expiry extraction reuses it when possible and otherwise follows the existing cropped/original fallback. Original-photo rotation cases still passed the local canvas/native OCR pipeline for both faces at 0/90/180/270 degrees. Actual mobile duration depends on the device; no fixed latency claim is made.
+
+
+## Fast DNI preparation (2026-09-06)
+The scanner no longer uses OCR to orient a photo before cropping and it does not automatically read expiry immediately after preparing the PDF. This removes the slow pre-processing path. It detects/crops quickly and then waits for the explicit `Leer caducidad del DNI` button. A rotated photo can be corrected manually with `Girar 90°` before `Preparar PDF`; this is intentional, because automatic text orientation costs too much time on mobile. No files are saved until the existing explicit Save action.
