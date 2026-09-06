@@ -61,7 +61,8 @@ const context={
   fetch(){fetchCount+=1;throw new Error('No debe haber llamadas de red WhatsApp en esta prueba');},
   setTimeout(fn){if(typeof fn==='function')fn();return 1;},clearTimeout(){},addEventListener(){}
 };
-vm.createContext(context);vm.runInContext(testSource,context);
+context.document.createElement=()=>({});context.document.head={appendChild(){}};
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/contact-party.js','utf8'),context);vm.runInContext(testSource,context);
 const api=context.window.__mobileWhatsAppActionsTest;
 
 async function run(){
