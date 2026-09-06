@@ -135,11 +135,25 @@ async function loadGlobalLabels(){
 async function getContactLabels(id){
  if(state.labelsByContact.has(id))return state.labelsByContact.get(id);let rows=[];try{if(typeof window.crmGetContactLabels==='function')rows=await window.crmGetContactLabels(id);else if(typeof crmGetContactLabels==='function')rows=await crmGetContactLabels(id);else{const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:id});if(r.error)throw r.error;rows=r.data;}rows=Array.isArray(rows)?rows:[];}catch(e){rows=[];}state.labelsByContact.set(id,rows);return rows;
 }
-async function loadContacts(force=false){
- if(state.loading)return;if(!force&&state.rows.length){applyAndRender();return;}state.loading=true;byId('tpfContactsLoading')?.classList.remove('hidden');byId('tpfContactsEmpty')?.classList.add('hidden');setStatus('Actualizando…');
- try{const [rows]=await Promise.all([fetchAllContacts(),loadGlobalLabels()]);state.rows=rows;state.labelsByContact.clear();state.labelsAllLoaded=false;state.selected=new Set([...state.selected].filter(id=>rows.some(r=>r.id===id)));renderSources();applyAndRender();setStatus(`${rows.length} contactos cargados`);}
- catch(e){setStatus(e?.message||'No se pudieron cargar los contactos',true);M.report?.('contacts-list-ui',e,'loadContacts');showToast(e?.message||'No se pudieron cargar los contactos',true);}
- finally{state.loading=false;byId('tpfContactsLoading')?.classList.add('hidden');}
+let contactsLoad=null,contactsReloadPending=false,editRequest=0;
+function loadContacts(force=false){
+ if(contactsLoad){if(force)contactsReloadPending=true;return contactsLoad;}
+ if(!force&&state.rows.length){applyAndRender();return Promise.resolve();}
+ state.loading=true;
+ contactsLoad=(async()=>{
+  byId('tpfContactsLoading')?.classList.remove('hidden');byId('tpfContactsEmpty')?.classList.add('hidden');setStatus('Actualizando…');
+  try{do{
+   contactsReloadPending=false;
+   const [rows]=await Promise.all([fetchAllContacts(),loadGlobalLabels()]);
+   // A save/delete during this request requires a NEW read, not this stale response.
+   if(contactsReloadPending)continue;
+   state.rows=rows;state.labelsByContact.clear();state.labelsAllLoaded=false;state.selected=new Set([...state.selected].filter(id=>rows.some(r=>r.id===id)));
+   renderSources();applyAndRender();setStatus(`${rows.length} contactos cargados`);
+   window.dispatchEvent(new CustomEvent('tpf:contacts-loaded',{detail:{records:rows}}));
+  }while(contactsReloadPending);}
+  catch(e){setStatus(e?.message||'No se pudieron cargar los contactos',true);M.report?.('contacts-list-ui',e,'loadContacts');showToast(e?.message||'No se pudieron cargar los contactos',true);}
+  finally{state.loading=false;contactsLoad=null;byId('tpfContactsLoading')?.classList.add('hidden');}
+ })();return contactsLoad;
 }
 function renderSources(){const el=byId('tpfFilterSource');if(!el)return;const cur=state.filters.source;const values=[...new Set(state.rows.map(x=>x.source).filter(Boolean))].sort();el.innerHTML='<option value="">Todos</option>'+values.map(x=>`<option value="${esc(x)}">${esc(x==='BASE DE DATOS'?'Contactos':x)}</option>`).join('');el.value=cur;}
 function renderLabelOptions(){const el=byId('tpfFilterLabel');if(el){const cur=state.filters.label;el.innerHTML='<option value="">Todas</option>'+state.labels.map(x=>`<option value="${esc(labelId(x))}">${esc(labelName(x))}</option>`).join('');el.value=cur;}const box=byId('tpfCreateLabels');if(box)box.innerHTML=state.labels.length?state.labels.map((x,i)=>`<label class="tpfContactsLabelChoice"><input type="checkbox" value="${esc(labelId(x))}"><span class="tpfLabelChip ${labelColor(i)}">${esc(labelName(x))}</span></label>`).join(''):'<span class="small">No hay etiquetas creadas.</span>';byId('tpfContactsLabelsCount')&&(byId('tpfContactsLabelsCount').textContent=String(state.labels.length));window.TPFContactLabelPicker?.install(state.labels);}
@@ -174,13 +188,20 @@ function exportContacts(scope){if(!allowed('can_export_excel'))return showToast(
 
 async function openCreate(){if(byId('tpfCreateWelcome')){byId('tpfCreateWelcome').checked=false;if(byId('tpfCreateWelcomeVariant')){byId('tpfCreateWelcomeVariant').value='general';byId('tpfCreateWelcomeVariant').dispatchEvent(new Event('change'));}const capability=await window.TPFAuthorship?.refreshCapability?.();byId('tpfCreateWelcome').disabled=!capability?.enabled;byId('tpfCreateWelcomeHint').textContent=capability?.enabled?'Solo para este cliente nuevo. Se enviará una vez con el nombre de quien añade la etiqueta.':'Pendiente de activar en el servidor. No se enviará ningún mensaje.';}if(!allowed('can_create_database'))return showToast('No tienes permiso para crear contactos.',true);state.editingId='';await loadGlobalLabels();const back=byId('tpfContactsCreateBack');delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';['tpfCreateFirst','tpfCreateLast','tpfCreateNickname','tpfCreatePhone','tpfCreateEmail','tpfCreateDni','tpfCreateBank','tpfCreateNotes','tpfCreateObs'].forEach(id=>{const el=byId(id);if(el)el.value='';});byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=false);byId('tpfContactsCreateMsg').textContent='';window.TPFContactLabelPicker?.reset();window.TPFContactParty?.fillContact({});back.classList.remove('hidden');setTimeout(()=>byId('tpfCreateFirst').focus(),20);}
 async function openEdit(r){
- await loadGlobalLabels();state.editingId=r.id;
+ const request=++editRequest;
+ try{
+ if(!allowed('can_edit_records'))throw Error('No tienes permiso para editar contactos.');
+ const fresh=await sb.from('records').select('id,source_sheet,data').eq('id',r.id).single();if(fresh.error)throw fresh.error;
+ if(request!==editRequest)return;r=mapRecord(fresh.data);
+ await loadGlobalLabels();if(request!==editRequest)return;state.editingId=r.id;
  const values={tpfCreateFirst:r.first,tpfCreateLast:r.last,tpfCreateNickname:r.nickname,tpfCreatePhone:r.phone,tpfCreateEmail:r.email,tpfCreateDni:r.dni,tpfCreateBank:r.bank,tpfCreateNotes:r.notes,tpfCreateObs:r.observations};
  Object.entries(values).forEach(([id,value])=>{const el=byId(id);if(el)el.value=value||'';});window.TPFContactParty?.fillContact(r.data||{});
  const labels=await getContactLabels(r.id),ids=new Set(labels.map(labelId));
  byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=ids.has(x.value));
  byId('tpfContactsCreateMsg').textContent='';
- const back=byId('tpfContactsCreateBack');back.dataset.editId=r.id;back.querySelector('h3').textContent='Editar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Modifica los datos reales del contacto.';byId('tpfContactsCreateSave').textContent='Guardar cambios';window.TPFContactLabelPicker?.reset();back.classList.remove('hidden');
+ if(request!==editRequest)return;
+ const back=byId('tpfContactsCreateBack');delete back.dataset.tpfProfileEditing;back.dataset.editId=r.id;back.querySelector('h3').textContent='Editar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Modifica los datos reales del contacto.';byId('tpfContactsCreateSave').textContent='Guardar cambios';byId('tpfContactsCreateSave').onclick=createContact;window.TPFContactLabelPicker?.reset();back.classList.remove('hidden');
+ }catch(e){showToast(e?.message||'No se pudo abrir el contacto.',true);}
 }
 function closeCreate(){const back=byId('tpfContactsCreateBack');back.classList.add('hidden');state.editingId='';delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';}
 async function createContact(){
@@ -189,7 +210,9 @@ async function createContact(){
  if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';
  byId('tpfCreatePhone').value=phone;btn.disabled=true;msg.textContent='Guardando…';
  try{
-  const full=[first,last].filter(Boolean).join(' ').trim(),data={...(row?.data||{}),'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
+  let previous=row?.data||{};
+  if(editing){const fresh=await sb.from('records').select('data').eq('id',editing).single();if(fresh.error)throw fresh.error;previous=fresh.data.data||{};}
+  const full=[first,last].filter(Boolean).join(' ').trim(),data={...previous,'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
   data.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
   window.TPFContactRelations?.applyContactData(data,editing);
   let id='';
@@ -202,5 +225,5 @@ async function createContact(){
  finally{btn.disabled=false;}
 }
 
-M.register('contacts-list-ui',{install(){buildUi();if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);}});
+M.register('contacts-list-ui',{install(){buildUi();if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);window.TPFContactsList={edit:id=>openEdit({id})};}});
 })();
