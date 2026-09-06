@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),B=require('../lib/crm-backup-core');
+const key='test-only-key',doc={format:'the-phone-face-backup-v2',data:Object.fromEntries(B.TABLES.map(t=>[t,[]])),counts:Object.fromEntries(B.TABLES.map(t=>[t,0])),coverage:B.COVERAGE};
+doc.data.records=[{id:'fixture',data:{NOMBRE:'Example'}}];doc.counts.records=1;
+const encrypted=B.encode(doc,key),hash=B.checksum(encrypted);
+assert.deepEqual(B.verify(encrypted,hash,key),doc);
+assert.throws(()=>B.verify(Buffer.from('not the uploaded file'),hash,key),/no coincide/);
+assert.throws(()=>B.decode(encrypted,'wrong-key'));
+const broken=structuredClone(doc);broken.counts.records=2;assert.throws(()=>B.validate(broken),/recuento/);
+delete broken.data.sales_custom_values;broken.counts.records=1;assert.throws(()=>B.validate(broken));
+assert.equal(B.due(new Date('2026-09-06T01:40:00Z'),[{status:'verified',completed_at:'2026-09-06T01:30:00Z'}]),false);
+assert.equal(B.due(new Date('2026-09-06T01:40:00Z'),[{status:'failed',completed_at:'2026-09-06T01:30:00Z'}]),true);
+assert.equal(B.due(new Date('2026-09-06T01:40:00Z'),[{status:'verified',completed_at:'2026-09-04T01:30:00Z'}]),true);
+assert(B.TABLES.includes('crm_contact_custom_values'));assert(B.TABLES.includes('sales_custom_values'));assert.equal(B.COVERAGE.restoreTested,false);
+console.log('PASS encrypted backup roundtrip, downloaded bytes, wrong key, corruption, completeness and daily idempotency');

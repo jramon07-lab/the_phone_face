@@ -9,7 +9,7 @@ const location={hash:'#/task/t1',replace(value){this.hash=value}};
 const context={window:{supabase:{createClient(){return client}}},document:{getElementById:node,querySelector(){return node('button')},querySelectorAll(){return []}},location,history:{length:1},URLSearchParams,Date,Intl,console,setTimeout(){return 1},clearTimeout(){},confirm(){return confirmResult},structuredClone};
 const source=fs.readFileSync('js/mobile-app.js','utf8');
 const code=source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`render=()=>{};updateAlertDot=()=>{};refreshData=async()=>{};window.api={state,taskCard,renderNewTask,saveTask,loadTaskDetail,renderTaskDetail,saveTaskDetail,deleteTask,renderOpportunity,renderEditOpportunity,saveOpportunityDetail,deleteProfileOpportunity,taskLocalValue,get detail(){return taskDetail}};})();`);
-assert.notEqual(code,source);vm.runInNewContext(code,context);const api=context.window.api;
+assert.notEqual(code,source);vm.runInNewContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInNewContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);vm.runInNewContext(code,context);const api=context.window.api;
 api.state.user={id:'u1'};api.state.perms={can_manage_agenda:true,can_view_agenda:true,can_edit_sales:true,can_view_sales:true};api.state.contacts=[{id:'c1',fullName:'Uno',phone:'600000001'}];api.state.tasks=[...tasks.values()];api.state.board={stages:[{id:'s1',pipeline_id:'p1',name:'Nueva'},{id:'s2',pipeline_id:'p1',name:'Revisión'}],opportunities:[...opps.values()]};
 async function run(){
  const card=api.taskCard(tasks.get('t1'));assert.match(card,/data-route="task\/t1"/);assert(!card.includes('Ver contacto'));assert.match(card,/Eliminar tarea/);

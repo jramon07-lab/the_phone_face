@@ -5,7 +5,7 @@ const nodes={};
 const source=fs.readFileSync('js/mobile-app.js','utf8');
 const exposed=['state','mapContact','mobileHolders','mobileManagers','mobileRelationsSummary','relatedOpportunities','mobileOpportunityParties','mobileOpportunityIdentityHtml','mobileReadRelations','contactActivityIndex','mobileRelationEditor','mobileOpportunityChoice'];
 const ctx={console,URLSearchParams,location:{hash:'#/contacts'},window:{},document:{getElementById:id=>nodes[id]||null,addEventListener(){},querySelector(){return null},querySelectorAll(){return []}},setTimeout,clearTimeout};
-ctx.document.createElement=()=>({});ctx.document.head={appendChild(){}};ctx.window=ctx;vm.createContext(ctx);
+ctx.document.createElement=()=>({});ctx.document.head={appendChild(){}};ctx.window=ctx;vm.createContext(ctx);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),ctx);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),ctx);
 vm.runInContext(fs.readFileSync('js/modules/contact-party.js','utf8'),ctx);
 vm.runInContext(source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`\nwindow.testApi={${exposed.join(',')}};\n})();`),ctx);
 const a=ctx.testApi;

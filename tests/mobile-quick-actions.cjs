@@ -19,7 +19,7 @@ const context={
   document:{hidden:false,activeElement:null,getElementById(id){return nodes[id]||null;},querySelectorAll(){return [];},querySelector(){return null;},addEventListener(){}},
   setTimeout(fn){if(typeof fn==='function')fn();return 1;},clearTimeout(){},addEventListener(){}
 };
-vm.createContext(context);vm.runInContext(testSource,context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);vm.runInContext(testSource,context);
 const api=context.window.__mobileQuickActions;
 
 api.state.user={id:'user-1',email:'ramon@example.com'};

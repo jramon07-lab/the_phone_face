@@ -29,7 +29,7 @@ const context={
   document:{hidden:false,getElementById(id){return nodes[id]||null;},querySelector(selector){return buttons[selector]||null;},querySelectorAll(){return [];},addEventListener(){},activeElement:null},
   setTimeout(fn){if(typeof fn==='function')fn();return 1;},clearTimeout(){},addEventListener(){}
 };
-vm.createContext(context);vm.runInContext(testSource,context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);vm.runInContext(testSource,context);
 const api=context.window.__mobileLibraries;
 
 async function run(){

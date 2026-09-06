@@ -21,7 +21,7 @@ const context={
   location:{hash:'#/opportunities'},
   document:{getElementById(id){return nodes[id]||null;},querySelectorAll(){return [];}}
 };
-vm.createContext(context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);
 vm.runInContext(testSource,context);
 
 const api=context.window.__opportunityFilters;

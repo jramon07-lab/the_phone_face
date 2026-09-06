@@ -20,8 +20,8 @@ test('estructura física: cada dominio carga desde su archivo y el index no usa 
 
 test('runtime: un fallo aislado no rompe el CRM', async ({ page }) => {
   await login(page);
-  const result=await page.evaluate(()=>{const modules=window.TPFModules;if(!modules)return{runtime:false};modules.clearErrors();const guarded=modules.guard('isolation-test',()=>{throw new Error('fallo-controlado')});guarded();return{runtime:true,appVisible:!document.getElementById('app')?.classList.contains('hidden'),isolated:modules.status().find(x=>x.name==='isolation-test')?.state==='error',hasError:modules.errors().some(x=>x.module==='isolation-test')}});
-  expect(result.runtime).toBe(true);expect(result.appVisible).toBe(true);expect(result.isolated).toBe(true);expect(result.hasError).toBe(true);await page.locator('.nav[data-view="sales"]').click();await expect(page.locator('#view-sales')).toBeVisible();
+  const result=await page.evaluate(()=>{const modules=window.TPFModules;if(!modules)return{runtime:false};modules.clearErrors();const guarded=modules.guard('isolation-test',()=>{throw new Error('fallo-controlado')});let rejected=false;try{guarded()}catch(_){rejected=true}return{rejected,runtime:true,appVisible:!document.getElementById('app')?.classList.contains('hidden'),isolated:modules.status().find(x=>x.name==='isolation-test')?.state==='error',hasError:modules.errors().some(x=>x.module==='isolation-test')}});
+  expect(result.rejected).toBe(true);expect(result.runtime).toBe(true);expect(result.appVisible).toBe(true);expect(result.isolated).toBe(true);expect(result.hasError).toBe(true);await page.locator('.nav[data-view="sales"]').click();await expect(page.locator('#view-sales')).toBeVisible();
 });
 
 test('módulo WhatsApp: está aislado y su vista abre',async({page})=>{await login(page);await expectModuleReady(page,'whatsapp');const nav=page.locator('.nav[data-view="whatsapplive"]');if(await nav.count()){await nav.click();await expect(page.locator('#view-whatsapplive')).toBeVisible();}});

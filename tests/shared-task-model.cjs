@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),M=require('../js/modules/task-model'),L=require('../js/modules/record-links');
+const contacts=[{id:'manager',data:{NOMBRE:'Ramón','TELÉFONO':'+34 600111222',TPF_RELACIONES:{managed_contacts:[{record_id:'holder'}]}}},{id:'holder',data:{NOMBRE:'Martina','TELÉFONO':'600333444'}}];
+const tasks=[{id:'old',customer_phone:'0034 600111222'},{id:'explicit',related_record_id:'holder',customer_phone:'600111222'},{id:'stale',related_record_id:'deleted',customer_phone:'600111222'},{id:'message',customer_phone:'600111222',whatsapp_enabled:true}];
+assert.deepEqual(L.related(tasks,contacts,'manager').map(x=>x.id),['old']);
+assert.deepEqual(L.related(tasks,contacts,'holder').map(x=>x.id),['explicit']);
+assert.equal(L.related(tasks,[...contacts,{id:'duplicate',phone:'600111222'}],'manager').length,0);
+const opportunities=[{id:'managed',record_id:'holder',phone:'600111222'},{id:'own',phone:'600111222'}];
+assert.deepEqual(L.related(opportunities,contacts,'manager','opportunity').map(x=>x.id),['managed','own']);
+assert.equal(L.owner({customer_phone:'+44 600111222'},L.index(contacts)),'');
+let written,filters=[],result;
+const client={from(table){assert.equal(table,'agenda_items');const q={update(v){written=v;return q},insert(v){written=v;return q},eq(k,v){filters.push([k,v]);return q},select(){return q},single:async()=>result};return q}};
+(async()=>{
+ const previous={id:'t',title:'Antes',starts_at:'2026-09-10T10:00:00Z',related_record_id:'holder',assigned_to:'u',status:'pending',updated_at:'v1',agenda_meta:{custom:'Keep'},whatsapp_enabled:false};
+ result={data:{...previous,title:'Después'}};
+ await M.save(client,{title:'Después',description:'',reminder_at:null},{id:'t',previous,canManage:true});
+ assert.equal(written.related_record_id,'holder');assert.equal(written.description,null);assert.equal(written.whatsapp_enabled,false);assert.deepEqual(filters,[['id','t'],['updated_at','v1']]);
+ result={error:{code:'PGRST116'}};await assert.rejects(M.save(client,{title:'Después'},{id:'t',previous,canManage:true}),/ha cambiado/);
+ await assert.rejects(M.save(client,previous),/permiso/);
+ assert.throws(()=>M.payload({title:'X',starts_at:'invalid'}),/fecha/);
+ assert.throws(()=>M.payload({starts_at:previous.starts_at}),/asunto/);
+ result={data:{id:'new'}};await M.save(client,{...previous,whatsapp_enabled:true},{canManage:true,userId:'u'});assert.equal(written.whatsapp_enabled,false,'A normal task must never schedule a message');
+ console.log('PASS common task writes, concurrency, permissions, stable and unambiguous relationships');
+})().catch(e=>{console.error(e);process.exitCode=1});

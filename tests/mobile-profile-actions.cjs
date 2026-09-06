@@ -37,7 +37,7 @@ const testSource=source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`
 render=()=>{};updateAlertDot=()=>{};refreshData=async()=>testRefresh();
 window.testProfile={state,renderContact,renderContactOpportunity,saveContactOpportunity,deleteProfileOpportunity,openProfileLabels,loadProfileLabels,renderProfileLabels,saveProfileLabels,get editor(){return profileLabels}};
 })();`);
-assert.notEqual(testSource,source);vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/contact-party.js','utf8'),context);vm.runInContext(testSource,context);
+assert.notEqual(testSource,source);vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/contact-party.js','utf8'),context);vm.runInContext(testSource,context);
 const api=context.window.testProfile;
 api.state.user={id:'user1'};api.state.perms={can_manage_labels:true,can_edit_sales:true,can_view_sales:true};
 api.state.contacts=[{id:'c1',first:'Uno',fullName:'Cliente Uno',phone:'600000001'},{id:'c2',fullName:'Cliente Dos'}];

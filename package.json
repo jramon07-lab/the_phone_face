@@ -2,7 +2,10 @@
   "name": "the-phone-face-crm-tests",
   "private": true,
   "scripts": {
-    "test:e2e": "playwright test tests/e2e/crm-*.spec.js"
+    "test:e2e": "playwright test tests/e2e/crm-*.spec.js",
+    "test": "node scripts/test-regressions.cjs",
+    "check": "node scripts/check-syntax.cjs && node scripts/modular-guard.js",
+    "verify": "npm run check && npm test"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0"

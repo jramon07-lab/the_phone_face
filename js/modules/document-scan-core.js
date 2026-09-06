@@ -61,12 +61,17 @@ function edgeCorners(image){
  const p=best.points,cx=p.reduce((s,q)=>s+q.x,0)/4,cy=p.reduce((s,q)=>s+q.y,0)/4;p.sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));let first=0;for(let i=1;i<4;i++)if(p[i].x+p[i].y<p[first].x+p[first].y)first=i;return [...p.slice(first),...p.slice(0,first)];
 }
 
-function detectCorners(image){return edgeCorners(image)||brightCorners(image);}
+function detectCorners(image){
+ const edge=edgeCorners(image),bright=brightCorners(image);
+ // Hough bins can tilt a straight border. Use pixel boundaries only when both
+ // independent detectors agree on the same card; retain edges on busy photos.
+ if(edge&&bright){const tolerance=Math.max(4,Math.hypot(image.width,image.height)*.03);if(edge.every((p,i)=>Math.hypot(p.x-bright[i].x,p.y-bright[i].y)<=tolerance))return bright;}
+ return edge||bright;
+}
 
 function pdf(pages,{dni=false}={}){if(!pages.length||pages.length>12)throw Error('Elige entre 1 y 12 páginas.');const enc=new TextEncoder(),parts=[],offsets=[0];let size=0;const add=x=>{const b=typeof x==='string'?enc.encode(x):x;parts.push(b);size+=b.length;};const obj=(n,head,data)=>{offsets[n]=size;add(n+' 0 obj\n'+head);if(data){add('\nstream\n');add(data);add('\nendstream');}add('\nendobj\n');};add('%PDF-1.4\n');obj(1,'<< /Type /Catalog /Pages 2 0 R >>');obj(2,'<< /Type /Pages /Count '+pages.length+' /Kids ['+pages.map((_,i)=>(3+i*3)+' 0 R').join(' ')+'] >>');pages.forEach((p,i)=>{if(!(p.bytes instanceof Uint8Array)||p.bytes[0]!==255||p.bytes[1]!==216||p.width<1||p.height<1)throw Error('Imagen JPEG no válida.');const n=3+i*3,w=595.28,h=dni?841.89:+(w*p.height/p.width).toFixed(2),iw=dni?Math.min(243,(841.89-40)*p.width/p.height):w,ih=+(iw*p.height/p.width).toFixed(2),content=enc.encode('q '+iw+' 0 0 '+ih+' '+((w-iw)/2).toFixed(2)+' '+(dni?(h-ih)/2:0).toFixed(2)+' cm /Im0 Do Q');obj(n,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+w+' '+h+'] /Resources << /XObject << /Im0 '+(n+1)+' 0 R >> >> /Contents '+(n+2)+' 0 R >>');obj(n+1,'<< /Type /XObject /Subtype /Image /Width '+p.width+' /Height '+p.height+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+p.bytes.length+' >>',p.bytes);obj(n+2,'<< /Length '+content.length+' >>',content);});const start=size;add('xref\n0 '+offsets.length+'\n0000000000 65535 f \n');for(let i=1;i<offsets.length;i++)add(String(offsets[i]).padStart(10,'0')+' 00000 n \n');add('trailer\n<< /Size '+offsets.length+' /Root 1 0 R >>\nstartxref\n'+start+'\n%%EOF');return new Blob(parts,{type:'application/pdf'});}
 function orientationScore(text){const s=String(text||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();let score=0;for(const word of ['ESPANA','DOCUMENTO','IDENTIDAD','APELLIDOS','NOMBRE','NACIONALIDAD','VALIDEZ','NACIMIENTO','DOMICILIO','PROVINCIA','LUGAR','HIJO','HIJA'])if(new RegExp('\\b'+word+'\\b').test(s))score+=2;if(/IDESP[A-Z0-9<]{8,}/.test(s.replace(/ /g,'')))score+=6;if(expiryDates(s).length)score+=3;return score;}
 return {validDate,expiryDates,transform,detectCorners,pdf,orientationScore};
 });
-
 
 

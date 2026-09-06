@@ -56,7 +56,7 @@ function harness(texts,{failSecond=false,failFormEncode=false,pngFormEncodeFails
     console:{warn(){}},
     createImageBitmap:async()=>({width:1080,height:1440,close(){calls.closed+=1;}})
   };
-  vm.createContext(context);
+  vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);
   vm.runInContext(source,context);
   return {ocr:context.window.TPFMobileOCR,calls};
 }

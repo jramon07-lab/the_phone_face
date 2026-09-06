@@ -82,20 +82,9 @@
   const detailVisibility=new MutationObserver(()=>{if($id("cpTaskDetailPage")?.classList.contains("hidden")&&document.body.classList.contains("agendaDetailOpen"))cleanupTaskShell()});
   if($id("cpTaskDetailPage"))detailVisibility.observe($id("cpTaskDetailPage"),{attributes:true,attributeFilter:["class"]});
   window.openContactTaskDetail=async id=>{
-    if(typeof originalOpen!=="function"){alert("No está disponible la ficha de tarea.");return}
-    const modal=$id("contactModal");
-    const standalone=!!modal?.classList.contains("hidden")||!$id("view-agenda")?.classList.contains("hidden");
-    await originalOpen(id);
-    showTaskShell(standalone);
-    ensureEditor();
-    const {data:row,error}=await sb.from("agenda_items").select("*").eq("id",id).single();
-    if(error){$id("cpTaskDetailMsg").textContent=error.message;return}
-    activeRow=row;
-    if(!row)return;
-    $id("agendaDetailCustomer").value=row.customer_name||"";
-    $id("agendaDetailPhone").value=row.customer_phone||"";
-    renderType(row.agenda_type||"Tarea",row.agenda_meta||{});
-    window.TPFAgendaCompact?.syncDetail(row,true);
+    const {data:row,error}=await sb.from('agenda_items').select('*').eq('id',id).single();
+    if(error||!row){alert(error?.message||'La tarea ya no está disponible.');return;}
+    return window.openAgendaComposer(row,{row});
   };
   window.editAgendaItem=id=>window.openContactTaskDetail(id);
   window.openAgendaItem=id=>window.openContactTaskDetail(id);
@@ -106,29 +95,9 @@
   if(remove)remove.onclick=async function(e){if(typeof originalDelete==="function")await originalDelete.call(this,e);if($id("cpTaskDetailPage")?.classList.contains("hidden"))cleanupTaskShell()};
 
   const save=$id("cpTaskDetailSave");
-  if(save)save.onclick=async()=>{
-    const row=activeRow;
-    if(!row)return;
-    const title=$id("cpTaskDetailTitle").value.trim(),starts=$id("cpTaskDetailStarts").value;
-    if(!title||!starts){$id("cpTaskDetailMsg").textContent="Escribe un asunto y una fecha/hora.";return}
-    save.disabled=true;$id("cpTaskDetailMsg").textContent="Guardando…";
-    const type=$id("agendaDetailTypes")?.dataset.selected||row.agenda_type||"Tarea";
-    const status=$id("agendaDetailState")?.value||row.status;
-    const payload={title,agenda_type:type,agenda_meta:clean(metaFromForm()),customer_name:$id("agendaDetailCustomer")?.value.trim()||null,customer_phone:$id("agendaDetailPhone")?.value.trim()||null,description:$id("cpTaskDetailNotes").value.trim()||null,starts_at:new Date(starts).toISOString(),reminder_at:$id("cpTaskDetailReminder").value?new Date($id("cpTaskDetailReminder").value).toISOString():null,notify_in_app:$id("cpTaskDetailNotifyApp").checked,notify_email:$id("cpTaskDetailNotifyEmail").checked,sync_google_calendar:$id("cpTaskDetailGoogle").checked,status};
-    if(type==="WhatsApp"){payload.whatsapp_enabled=true;payload.whatsapp_phone=payload.customer_phone;payload.whatsapp_message=$id("agendaDetailWhatsappMessage")?.value.trim()||null;payload.whatsapp_scheduled_at=payload.starts_at}
-    try{
-      const {data,error}=await sb.from("agenda_items").update(payload).eq("id",row.id).select("*").single();
-      if(error)throw error;
-      activeRow=data;$id("cpTaskDetailMsg").textContent="Cambios guardados correctamente";
-      $id("cpTaskDetailStatus").textContent=data.status==="completed"?"Completada":data.status==="cancelled"?"Cancelada":"Pendiente";
-      $id("cpTaskMarkDone").classList.toggle("hidden",data.status==="completed");
-      $id("cpTaskReopen").classList.toggle("hidden",data.status!=="completed");
-      if(typeof loadAgenda==="function")await loadAgenda();
-      if(document.body.classList.contains("agendaDetailOpen"))$id("cpTaskDetailBack")?.click();
-    }catch(e){$id("cpTaskDetailMsg").textContent=e?.message||"No se pudieron guardar los cambios"}finally{save.disabled=false}
-  };
+  if(save)save.onclick=()=>{const id=$id('cpTaskDetailId')?.value;if(id)return window.openContactTaskDetail(id);};
 
-  async function awaitPostpone(id){await window.openContactTaskDetail(id);$id("cpTaskDetailStarts")?.focus();}
+  async function awaitPostpone(id){await window.openContactTaskDetail(id);$id("agendaStarts")?.focus();}
   function closeMenu(){document.querySelector(".agendaPopMenu")?.remove();openMenuId=null}
   const list=$id("agendaList");
   if(list)list.onclick=e=>{

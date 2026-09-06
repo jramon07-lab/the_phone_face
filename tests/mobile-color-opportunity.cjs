@@ -5,7 +5,7 @@ const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'../js/mobile-ocr.js'),'utf8');
 const context={window:{},document:{documentElement:{dataset:{}}},console:{warn(){}},Promise,URL,Blob,File};
-vm.createContext(context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);
 vm.runInContext(source,context);
 const classify=context.window.TPFMobileOCR.classifyOpportunityColor;
 

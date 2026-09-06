@@ -34,6 +34,7 @@ async function run(){
     sb:{from(table){queries++;const q={select(){return q},eq(){return q},then(resolve,reject){return Promise.resolve(table==='records'?{data:contacts}:queryRows).then(v=>resolve(Array.isArray(v)?{data:v}:v),reject)}};return q},rpc:async()=>board},
     salesCache:{},renderSales(){},$:()=>({innerHTML:''}),esc:v=>v,
   });
+  vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);
   vm.runInContext(fs.readFileSync('js/modules/contacts-final-fix.js','utf8'),context);
   const core=fs.readFileSync('js/modules/contacts-sales-core.js','utf8');
   vm.runInContext(core.slice(core.indexOf('async function loadSales(){'),core.indexOf('\nwindow.moveOpp=')),context);

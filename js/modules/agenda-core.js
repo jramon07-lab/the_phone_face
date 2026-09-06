@@ -172,8 +172,10 @@ function resetAgendaComposer(){
   if($("agendaNotifyApp"))$("agendaNotifyApp").checked=true;if($("agendaNotifyEmail"))$("agendaNotifyEmail").checked=false;if($("agendaSyncGoogle"))$("agendaSyncGoogle").checked=false;
   selectAgendaType("Tarea",{});$("agendaStarts")?.__tpfSyncFromHidden?.();$("agendaReminder")?.__tpfSyncFromHidden?.()
 }
+let agendaEditingRow=null;
 function fillAgendaComposer(prefill={}){
   resetAgendaComposer();
+  if(!agendaEditingRow)prefill={...(window.TPFAgendaDefaults?.get()||{}),...prefill};
   const set=(id,value)=>{const node=$(id);if(node&&value!=null)node.value=String(value)};
   set("agendaTitle",prefill.title||"");set("agendaDescription",prefill.description||prefill.notes||"");
   set("agendaCustomer",prefill.customerName||prefill.customer_name||"");set("agendaPhone",prefill.phone||prefill.customerPhone||prefill.customer_phone||"");
@@ -189,9 +191,9 @@ function fillAgendaComposer(prefill={}){
 }
 function runAgendaComposerCallback(name,payload){const fn=agendaComposerContext?.[name];agendaComposerContext=null;if(typeof fn==="function")Promise.resolve(fn(payload)).catch(err=>console.warn("Agenda: retorno del compositor",err))}
 function closeAgendaComposer(){setAgendaComposer(false);runAgendaComposerCallback("onCancel")}
-window.openAgendaComposer=(prefill={},returnOrigin={})=>{agendaComposerContext=returnOrigin||{};if(prefill.overlay||returnOrigin?.overlay)mountAgendaComposerOverlay(true);fillAgendaComposer(prefill);setAgendaComposer(true);return true};
+window.openAgendaComposer=(prefill={},returnOrigin={})=>{agendaEditingRow=returnOrigin.row||null;agendaComposerContext=returnOrigin||{};if(prefill.overlay||returnOrigin?.overlay)mountAgendaComposerOverlay(true);fillAgendaComposer(prefill);setAgendaComposer(true);syncAgendaEditor();return true};
 window.TPFAgendaComposer={open:window.openAgendaComposer,close(options={}){if(options.silent){agendaComposerContext=null;setAgendaComposer(false)}else closeAgendaComposer()},selectType:selectAgendaType};
-$("agendaOpenCreate").onclick=()=>{agendaComposerContext=null;fillAgendaComposer({});setAgendaComposer(true)};$("agendaOpenCreateToolbar").onclick=()=>{agendaComposerContext=null;fillAgendaComposer({});setAgendaComposer(true)};$("agendaCloseCreate").onclick=closeAgendaComposer;document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("agendaCreateCard")?.classList.contains("open"))closeAgendaComposer()});
+$("agendaOpenCreate").onclick=()=>{agendaEditingRow=null;agendaComposerContext=null;fillAgendaComposer({});setAgendaComposer(true);syncAgendaEditor()};$("agendaOpenCreateToolbar").onclick=()=>{agendaEditingRow=null;agendaComposerContext=null;fillAgendaComposer({});setAgendaComposer(true);syncAgendaEditor()};$("agendaCloseCreate").onclick=closeAgendaComposer;document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("agendaCreateCard")?.classList.contains("open"))closeAgendaComposer()});
 $("agendaStats").onclick=e=>{const b=e.target.closest("[data-agenda-filter]");if(!b)return;const value=b.dataset.agendaFilter;if(value==="today"){agendaDateFilter="today";$("agendaFilter").value="all"}else{agendaDateFilter="all";$("agendaFilter").value=value}loadAgenda()};
 document.querySelectorAll('.nav[data-view="agenda"]').forEach(n=>n.addEventListener("click",()=>{if(window.__TPF_RESTORING)return;requestAnimationFrame(()=>{const sc=document.querySelector(".referenceWorkspace main");if(sc)sc.scrollTop=0})}));
 $("agendaTypeChoices").onclick=e=>{const b=e.target.closest("[data-type]");if(b)selectAgendaType(b.dataset.type,{})};
@@ -201,19 +203,40 @@ $("agendaTypeList").onclick=async e=>{const b=e.target.closest("[data-remove-typ
 $("agendaList").onclick=e=>{const a=e.target.closest("[data-open-agenda]"),c=e.target.closest("[data-complete-agenda]"),m=e.target.closest("[data-more-agenda]");if(a)return openAgendaItem(a.dataset.openAgenda);if(c)return completeAgenda(c.dataset.completeAgenda);if(m){document.querySelector(".agendaPopMenu")?.remove();const id=m.dataset.moreAgenda,menu=document.createElement("div");menu.className="agendaPopMenu";menu.innerHTML='<button data-agenda-edit>Editar</button><button data-agenda-cancel>Cancelar recordatorio</button><button class="danger" data-agenda-delete>Eliminar</button>';document.body.appendChild(menu);const box=m.getBoundingClientRect();menu.style.left=Math.min(box.left,innerWidth-210)+"px";menu.style.top=(box.bottom+5)+"px";menu.onclick=ev=>{if(ev.target.closest("[data-agenda-edit]"))editAgendaItem(id);if(ev.target.closest("[data-agenda-cancel]"))cancelAgenda(id);if(ev.target.closest("[data-agenda-delete]"))deleteAgenda(id);menu.remove()}}};
 $("agendaCustomer").oninput=()=>{delete $("agendaCustomer").dataset.contactId;clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(async()=>{const q=$("agendaCustomer").value.trim(),box=$("agendaCustomerResults");if(q.length<2){box.innerHTML="";return}const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:8});box.__rows=data||[];box.innerHTML=(data||[]).map((r,i)=>{const d=r.data||{},name=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"Cliente",phone=d["TELÉFONO"]||d.TELEFONO||"",dni=d["DNI / NIF"]||d.DNI||"";return `<button type="button" class="agendaCustomerResult" data-customer-result="${i}"><b>${esc(name)}</b><small>${esc(phone)} ${esc(dni)}</small></button>`}).join("")},220)};
 $("agendaCustomerResults").onclick=e=>{const b=e.target.closest("[data-customer-result]");if(!b)return;const r=$("agendaCustomerResults").__rows[Number(b.dataset.customerResult)]||{},d=r.data||{};$("agendaCustomer").value=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"";$("agendaCustomer").dataset.contactId=r.id||"";$("agendaPhone").value=d["TELÉFONO"]||d.TELEFONO||"";$("agendaCustomerResults").innerHTML=""};
-$("agendaSave").onclick=async()=>{
-  const btn=$("agendaSave"),msg=$("agendaMsg");tpfSetSaving(btn,msg);
-  if(!(perms?.is_admin||perms?.can_manage_agenda)){alert("No tienes permiso para crear recordatorios.");return tpfResetSaving(btn,msg)}
-  const title=$("agendaTitle").value.trim(),starts=$("agendaStarts").value;
-  if(!title||!starts){msg.textContent="Escribe un asunto y una fecha/hora.";return tpfResetSaving(btn,msg)}
-  const {data:{user}}=await sb.auth.getUser(),meta=agendaCreateMeta(),row={title,agenda_type:agendaSelectedType,agenda_meta:meta,description:$("agendaDescription").value.trim()||null,customer_name:$("agendaCustomer").value.trim()||null,customer_phone:$("agendaPhone").value.trim()||null,related_record_id:$("agendaCustomer").dataset.contactId||null,starts_at:new Date(starts).toISOString(),reminder_at:$("agendaReminder").value?new Date($("agendaReminder").value).toISOString():null,assigned_to:user?.id||null,status:"pending",reminder_minutes:selectedAgendaReminderMinutes(),notify_in_app:$("agendaNotifyApp")?.checked??true,notify_email:$("agendaNotifyEmail")?.checked??false,sync_google_calendar:$("agendaSyncGoogle")?.checked??false};
-  if(agendaTypeKey(agendaSelectedType)==="whatsapp"){row.whatsapp_enabled=true;row.whatsapp_phone=row.customer_phone;row.whatsapp_message=meta.whatsapp_message||null;row.whatsapp_scheduled_at=row.starts_at}
-  const {data:created,error}=await sb.from("agenda_items").insert(row).select("*").single();
-  if(error)return tpfShowSaveError(btn,msg,error);
-  const callback=agendaComposerContext?.onSaved;agendaComposerContext=null;resetAgendaComposer();setAgendaComposer(false);await loadAgenda();tpfResetSaving(btn,msg,"Recordatorio guardado.");
-  if(typeof callback==="function")try{await callback(created||row)}catch(err){console.warn("Agenda: retorno tras guardar",err)}
+function syncAgendaEditor(){
+  const card=$("agendaCreateCard"),heading=card.querySelector('.agendaComposerHead h2,.agendaComposerHead h3');
+  if(heading)heading.textContent=agendaEditingRow?'Editar recordatorio':'Crear recordatorio';
+  $("agendaSave").textContent=agendaEditingRow?'Guardar cambios':'Crear tarea';
+  let status=$("agendaEditStatus");if(!status){const label=document.createElement('label');label.textContent='Estado';status=document.createElement('select');status.id='agendaEditStatus';status.innerHTML='<option value="pending">Pendiente</option><option value="completed">Completada</option><option value="cancelled">Cancelada</option>';label.appendChild(status);($("agendaCreateDetails")||card).after(label);}
+  status.parentElement.hidden=!agendaEditingRow;status.value=agendaEditingRow?.status||'pending';
+  $("agendaMsg").textContent='';
+}
+window.TPFRefreshTasks=async()=>{
+  const jobs=[];
+  if(typeof loadAgenda==='function'&&!$("view-agenda")?.classList.contains('hidden'))jobs.push(loadAgenda());
+  if(typeof currentContact!=='undefined'&&currentContact&&!$("contactModal")?.classList.contains('hidden'))jobs.push(renderContactProfile());
+  if(typeof loadWaContactSideData==='function'&&!$("view-whatsapplive")?.classList.contains('hidden'))jobs.push(loadWaContactSideData());
+  const results=await Promise.allSettled(jobs);for(const r of results)if(r.status==='rejected')console.warn('No se pudo actualizar una vista de tareas',r.reason);
+  window.dispatchEvent(new CustomEvent('tpf:tasks-changed'));
 };
-window.completeAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
-window.cancelAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);if(error)alert(error.message);else loadAgenda()};
-window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))return;const {error}=await sb.from("agenda_items").delete().eq("id",id);if(error)alert(error.message);else loadAgenda()};
+$("agendaSave").onclick=async()=>{
+  const btn=$("agendaSave"),msg=$("agendaMsg");if(btn.disabled)return;
+  const editing=agendaEditingRow,context=agendaComposerContext;
+  tpfSetSaving(btn,msg);
+  try{
+    const {data:{user}}=await sb.auth.getUser(),meta=agendaCreateMeta();
+    const row={title:$("agendaTitle").value.trim(),agenda_type:agendaSelectedType,agenda_meta:meta,description:$("agendaDescription").value,customer_name:$("agendaCustomer").value,customer_phone:$("agendaPhone").value,related_record_id:$("agendaCustomer").dataset.contactId||null,starts_at:$("agendaStarts").value,reminder_at:$("agendaReminder").value||null,status:editing?$("agendaEditStatus").value:'pending',reminder_minutes:selectedAgendaReminderMinutes(),notify_in_app:$("agendaNotifyApp")?.checked??true,notify_email:$("agendaNotifyEmail")?.checked??false,sync_google_calendar:$("agendaSyncGoogle")?.checked??false};
+    if(agendaTypeKey(agendaSelectedType)==='whatsapp'){row.whatsapp_enabled=true;row.whatsapp_phone=row.customer_phone;row.whatsapp_message=meta.whatsapp_message||null;row.whatsapp_scheduled_at=row.starts_at;}
+    const saved=await window.TPFTaskModel.save(sb,row,{id:editing?.id,previous:editing||{},canManage:!!(perms?.is_admin||perms?.can_manage_agenda),userId:user?.id,allowScheduled:true});
+    agendaComposerContext=null;agendaEditingRow=null;resetAgendaComposer();setAgendaComposer(false);
+    tpfResetSaving(btn,msg,'Recordatorio guardado.');
+    const refresh=await Promise.allSettled([Promise.resolve().then(()=>context?.onSaved?.(saved)),window.TPFRefreshTasks()]);
+    if(refresh.some(r=>r.status==='rejected'))console.warn('La tarea se guardó, pero no se pudo actualizar una vista.');
+  }catch(error){tpfShowSaveError(btn,msg,error);}
+};
+window.completeAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);if(error)alert(error.message);else window.TPFRefreshTasks()};
+window.cancelAgenda=async id=>{const {error}=await sb.from("agenda_items").update({status:"cancelled"}).eq("id",id);if(error)alert(error.message);else window.TPFRefreshTasks()};
+window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))return;const {error}=await sb.from("agenda_items").delete().eq("id",id);if(error)alert(error.message);else window.TPFRefreshTasks()};
 loadAgendaTypes().catch(renderTypeChoices);
+
+for(const name of ['tpf:contact-updated','tpf:contact-created','tpf:contacts-loaded'])window.addEventListener(name,()=>{window.TPFRecordLinks.invalidate(sb);agendaContactCache.clear();});

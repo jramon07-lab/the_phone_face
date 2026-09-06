@@ -16,7 +16,8 @@ function contactFullNameFromData(d){
 function contactField(d,...names){for(const n of names){if(d[n]!==undefined&&d[n]!==null)return d[n]}return ""}
 async function renderContactProfile(){
  if(!currentContact)return;
- const d=currentContact.data||{};
+ const profileContact=currentContact;
+ const d=profileContact.data||{};
  const name=contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||"Contacto";
  const phone=contactField(d,"TELÉFONO","TELEFONO","PHONE","MOVIL");
  $("cpAvatar").textContent=name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||"").join("").toUpperCase()||"C";
@@ -25,13 +26,10 @@ async function renderContactProfile(){
  let opps=[];
  try{
    if(!(salesCache.opportunities||[]).length)await loadSales();
-   const np=String(phone||"").replace(/\D/g,"").slice(-9);
-   const nn=String(name||"").trim().toLowerCase();
-   opps=(salesCache.opportunities||[]).filter(o=>{
-     const op=String(o.phone||"").replace(/\D/g,"").slice(-9);
-     return (np&&op===np)||(nn&&String(o.client_name||"").trim().toLowerCase()===nn);
-   });
+   const people=await window.TPFRecordLinks.load(sb);
+   opps=window.TPFRecordLinks.related(salesCache.opportunities||[],people,profileContact.id,'opportunity');
  }catch(e){}
+ if(currentContact!==profileContact)return;
  const hydratedOpps=hydrateOpportunityStageNames(opps);
 if($("cpOppTotal"))$("cpOppTotal").textContent=String(opps.length);
 if($("cpOppOpen"))$("cpOppOpen").textContent=String(hydratedOpps.filter(o=>!oppIsClosed(o)).length);
@@ -43,16 +41,11 @@ $("cpOpportunities").innerHTML=opps.length
 
  let tasks=[];
  try{
-   const {data}=await sb.from("agenda_items").select("*").order("starts_at",{ascending:false}).limit(100);
-   const np=String(phone||"").replace(/\D/g,"").slice(-9);
-   const nn=String(name||"").trim().toLowerCase();
-   tasks=(data||[]).filter(x=>{
-     if(x.whatsapp_enabled || String(x.title||"").trim().toLowerCase()==="whatsapp programado") return false;
-     const xp=String(x.customer_phone||x.phone||"").replace(/\D/g,"").slice(-9);
-     const xn=String(x.customer_name||x.client_name||"").trim().toLowerCase();
-     return String(x.related_record_id||"")===String(currentContact.id)||(np&&xp===np)||(nn&&xn===nn);
-   }).slice(0,10);
+   const people=await window.TPFRecordLinks.load(sb),data=[];
+   for(let from=0;;from+=500){const r=await sb.from('agenda_items').select('*').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('starts_at',{ascending:false}).order('id').range(from,from+499);if(r.error)throw r.error;data.push(...(r.data||[]));if((r.data||[]).length<500)break;}
+   tasks=window.TPFRecordLinks.related(data,people,profileContact.id,'task');
  }catch(e){}
+ if(currentContact!==profileContact)return;
  $("cpTasks").innerHTML=tasks.length?tasks.map(t=>`<div class="cpTaskWrap">
   <button class="cpTask cpTaskButton" onclick="openContactTaskDetail('${t.id}')">
     <b>${esc(t.title||t.subject||"Recordatorio")}</b>
@@ -326,73 +319,15 @@ function localDateTimeValue(date){
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function openContactTaskPage(){
-  tpfRememberScreen();
   if(!currentContact)return;
-  const name=$("contactName").value.trim()||"Contacto";
-  const phone=$("contactPhone").value.trim();
-  $("cpTaskTitle").value="Llamar a "+name;
-  $("cpTaskStarts").value=localDateTimeValue(new Date(Date.now()+60*60*1000));
-  $("cpTaskReminder").value="";
-  $("cpTaskNotes").value="";
-  $("cpTaskNotifyApp").checked=true;
-  $("cpTaskNotifyEmail").checked=false;
-  $("cpTaskGoogle").checked=false;
-  $("cpTaskMsg").textContent="";
-  $("cpTaskContactLabel").textContent=`Tarea para ${name}`;
-  $("cpTaskContactName").textContent=name;
-  $("cpTaskContactPhone").textContent=phone||"Sin teléfono";
-  $("cpTaskPage").classList.remove("hidden");
+  const id=currentContact.id;
+  return window.openAgendaComposer({contactId:id,customerName:$("contactName").value.trim(),phone:$("contactPhone").value.trim(),type:'Tarea'});
 }
 if($("cpNewTask"))$("cpNewTask").onclick=openContactTaskPage;if($("cpSideNewTask"))$("cpSideNewTask").onclick=openContactTaskPage;
 $("cpTaskBack").onclick=async()=>{if(!await tpfBackExactly())$("cpTaskPage").classList.add("hidden")};
 
 
-$("cpTaskSave").onclick=async()=>{
-  if(!currentContact)return;
-  if(!(perms?.is_admin||perms?.can_manage_agenda)){
-    $("cpTaskMsg").textContent="No tienes permiso para crear recordatorios.";
-    return;
-  }
-  const title=$("cpTaskTitle").value.trim();
-  const starts=$("cpTaskStarts").value;
-  if(!title||!starts){
-    $("cpTaskMsg").textContent="Escribe un asunto y una fecha/hora.";
-    return;
-  }
-  const {data:{user}}=await sb.auth.getUser();
-  const row={
-    title,
-    description:$("cpTaskNotes").value.trim()||null,
-    customer_name:$("contactName").value.trim()||null,
-    customer_phone:$("contactPhone").value.trim()||null,
-    starts_at:new Date(starts).toISOString(),
-    reminder_at:$("cpTaskReminder").value?new Date($("cpTaskReminder").value).toISOString():null,
-    assigned_to:user?.id||null,
-    related_record_id:currentContact.id,
-    status:"pending",
-    reminder_minutes:[],
-    notify_in_app:$("cpTaskNotifyApp").checked,
-    notify_email:$("cpTaskNotifyEmail").checked,
-    sync_google_calendar:$("cpTaskGoogle").checked
-  };
-
-  $("cpTaskSave").disabled=true;
-  $("cpTaskMsg").textContent="Guardando...";
-  try{
-    const {data:createdTask,error}=await sb.from("agenda_items").insert(row).select("id,title").single();
-    if(error)throw error;
-    await logContactActivity(currentContact.id,"task_created","Tarea creada",createdTask?.title||title);
-    $("cpTaskMsg").textContent="Tarea creada correctamente";
-    await renderContactProfile();
-    await loadAgenda();
-    setTimeout(()=>$("cpTaskPage").classList.add("hidden"),450);
-  }catch(e){
-    $("cpTaskMsg").textContent=e?.message||"No se pudo crear la tarea.";
-  }finally{
-    $("cpTaskSave").disabled=false;
-  }
-};
-
+$("cpTaskSave").onclick=()=>openContactTaskPage();
 
 let currentContactTask=null;
 
@@ -432,35 +367,7 @@ window.openContactTaskDetail=async(id)=>{
 
 $("cpTaskDetailBack").onclick=async()=>{if(!await tpfBackExactly())$("cpTaskDetailPage").classList.add("hidden")};
 
-$("cpTaskDetailSave").onclick=async()=>{
-  if(!currentContactTask)return;
-  const title=$("cpTaskDetailTitle").value.trim();
-  const starts=$("cpTaskDetailStarts").value;
-  if(!title||!starts){
-    $("cpTaskDetailMsg").textContent="Escribe un asunto y una fecha/hora.";
-    return;
-  }
-  $("cpTaskDetailSave").disabled=true;
-  try{
-    const {error}=await sb.from("agenda_items").update({
-      title,
-      description:$("cpTaskDetailNotes").value.trim()||null,
-      starts_at:new Date(starts).toISOString(),
-      reminder_at:$("cpTaskDetailReminder").value?new Date($("cpTaskDetailReminder").value).toISOString():null,
-      notify_in_app:$("cpTaskDetailNotifyApp").checked,
-      notify_email:$("cpTaskDetailNotifyEmail").checked,
-      sync_google_calendar:$("cpTaskDetailGoogle").checked
-    }).eq("id",currentContactTask.id);
-    if(error)throw error;
-    $("cpTaskDetailMsg").textContent="Cambios guardados";
-    await renderContactProfile();
-    await loadAgenda();
-  }catch(e){
-    $("cpTaskDetailMsg").textContent=e?.message||"No se pudo guardar la tarea.";
-  }finally{
-    $("cpTaskDetailSave").disabled=false;
-  }
-};
+$("cpTaskDetailSave").onclick=()=>{if(currentContactTask)return window.openContactTaskDetail(currentContactTask.id);};
 
 $("cpTaskMarkDone").onclick=async()=>{
   if(!currentContactTask)return;

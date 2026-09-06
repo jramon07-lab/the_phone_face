@@ -1,0 +1,5 @@
+const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+const source=fs.readFileSync('js/modules/runtime.js','utf8').split('(function(){const Native=')[0]+'})();';
+const window={dispatchEvent(){},example(){return Promise.reject(Error('async failure'))}};
+vm.runInNewContext(source,{window,console:{error(){}},CustomEvent:function(){}});
+(async()=>{const M=window.TPFModules;assert.deepEqual(Array.from(M.wrapGlobals('tasks',['example'])),['example']);assert.equal(M.wrapGlobals('tasks',['example']).length,0);await assert.rejects(window.example(),/async failure/);assert.equal(M.errors().length,1);await M.register('async-install',{install:async()=>{throw Error('install rejected')}});assert.equal(M.status().find(x=>x.name==='async-install').state,'error');const o={value:3,fn:M.guard('method',function(n){return this.value+n})};assert.equal(o.fn(4),7);console.log('PASS module guards preserve return/this, catch rejected promises and do not stack');})().catch(e=>{console.error(e);process.exitCode=1});

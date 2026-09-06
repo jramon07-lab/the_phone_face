@@ -1587,10 +1587,9 @@ renderSales=function(){
   }
   async function fetchWaTasks(){
     if(typeof waLiveState==="undefined"||!waLiveState?.contact)return [];
-    const phone=typeof waNormalizePhone==="function"?waNormalizePhone(waLiveState.selected?.id||""):"", suffix=phone.slice(-9);
-    let q=sb.from("agenda_items").select("*").eq("status","pending").order("starts_at",{ascending:true}).limit(40);
-    if(suffix)q=q.ilike("customer_phone",`%${suffix}%`);
-    const {data,error}=await q;if(error)throw error;return data||[];
+    const contactId=waLiveState.contact.id,people=await window.TPFRecordLinks.load(sb),rows=[];
+    for(let from=0;;from+=500){const result=await sb.from("agenda_items").select("*").eq("status","pending").or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order("starts_at").order("id").range(from,from+499);if(result.error)throw result.error;rows.push(...(result.data||[]));if((result.data||[]).length<500)break;}
+    return window.TPFRecordLinks.related(rows,people,contactId,'task');
   }
   async function renderWaTasks(){
     const box=byId("waSideTasks");if(!box)return;
@@ -1612,7 +1611,7 @@ renderSales=function(){
     window.loadWaContactSideData=async function(){const r=await oldWaSide.apply(this,arguments);await renderWaTasks();return r}
   }
 
-  window.waTaskEdit=async id=>{waTaskOrigin=captureWaOrigin();if(typeof waPrepareCurrentContactForCrm==="function")waPrepareCurrentContactForCrm();await openContactTaskDetail(id)};
+  window.waTaskEdit=async id=>{waTaskOrigin=captureWaOrigin();if(typeof waPrepareCurrentContactForCrm==="function")waPrepareCurrentContactForCrm();await openContactTaskDetail(id);if(byId("agendaCreateCard")?.classList.contains("open"))waTaskOrigin=null};
   window.waTaskComplete=async id=>{try{const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);if(error)throw error;await refreshTasks()}catch(err){alert(err?.message||"No se pudo completar la tarea.")}};
   window.waTaskDelete=async id=>{
     if(!confirm("¿Eliminar esta tarea? Se enviará a la Papelera."))return;
@@ -1639,7 +1638,8 @@ renderSales=function(){
       if(typeof waPrepareCurrentContactForCrm==="function"&&!waPrepareCurrentContactForCrm()){alert("Primero vincula este chat con un contacto.");return}
       waTaskOrigin=captureWaOrigin();
       openContactTaskPage();
-      setTimeout(openTaskStandalone,0);
+      if(byId("agendaCreateCard")?.classList.contains("open"))waTaskOrigin=null;
+      if(!document.getElementById("agendaCreateCard")?.classList.contains("open"))setTimeout(openTaskStandalone,0);
     };
   }
 

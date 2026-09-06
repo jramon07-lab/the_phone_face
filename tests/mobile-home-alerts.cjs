@@ -24,7 +24,7 @@ const context={
   history:{length:1,back(){}},
   document:{getElementById(id){return nodes[id]||null;},querySelectorAll(){return [];},querySelector(){return null;}}
 };
-vm.createContext(context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);
 vm.runInContext(testSource,context);
 
 const api=context.window.__homeAlerts;

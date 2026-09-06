@@ -252,6 +252,9 @@
     }
   }
 
+  async function fetchAllMobileTasks(){
+    const data=[];for(let from=0;;from+=500){const result=await client.from('agenda_items').select('*').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('starts_at',{ascending:true}).order('id').range(from,from+499);if(result.error)return result;data.push(...(result.data||[]));if((result.data||[]).length<500)return {data,error:null};}
+  }
   async function refreshData({silent=false}={}){
     if(!state.user||state.loading)return;
     state.loading=true;if(!silent)renderLoading();
@@ -262,7 +265,7 @@
         :Promise.resolve({data:[],error:null}));
       jobs.push((has('can_view_sales')||has('can_edit_sales'))?client.rpc('sales_board'):Promise.resolve({data:{stages:[],opportunities:[],fields:[]},error:null}));
       jobs.push((has('can_view_agenda')||has('can_manage_agenda'))
-        ?client.from('agenda_items').select('id,title,description,customer_name,customer_phone,starts_at,reminder_at,assigned_to,related_record_id,status,whatsapp_enabled,created_at').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('starts_at',{ascending:true}).limit(1000)
+        ?fetchAllMobileTasks()
         :Promise.resolve({data:[],error:null}));
       jobs.push((has('can_view_agenda')||has('can_manage_agenda'))?loadMobileTaskTypes():Promise.resolve());
       const [contacts,board,tasks]=await Promise.all(jobs);
@@ -425,7 +428,8 @@
     const rows=new Map(),stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage]));
     const activity=id=>{const key=String(id||'');if(!key)return null;if(!rows.has(key))rows.set(key,{opportunities:0,pendingTasks:0});return rows.get(key);};
     mobileOpportunityIndex().forEach((opps,id)=>{const item=activity(id);if(item)item.opportunities=opps.filter(opp=>!opportunityIsClosed(opp,stages.get(String(opp?.stage_id)))).length;});
-    (state.tasks||[]).forEach(task=>{const item=activity(task?.related_record_id);if(item&&taskIsPending(task))item.pendingTasks+=1;});
+    const taskContacts=window.TPFRecordLinks.index(state.contacts);
+    (state.tasks||[]).forEach(task=>{const item=activity(window.TPFRecordLinks.owner(task,taskContacts,'task'));if(item&&taskIsPending(task))item.pendingTasks+=1;});
     return rows;
   }
   function contactMatchesSearch(contact,query=''){
@@ -692,27 +696,13 @@
   }
 
   function mobileOpportunityIndex(){
-    const phones=new Map(),names=new Map(),managers=new Map(),rows=new Map();
-    const add=(map,key,id)=>{if(!key)return;if(!map.has(key))map.set(key,new Set());map.get(key).add(String(id));};
-    state.contacts.forEach(c=>{
-      contactPhones(c).forEach(p=>add(phones,p.number,c.id));add(names,foldText(c.fullName),c.id);
-      mobileHolders(c).forEach(h=>add(managers,h.id,c.id));
-    });
-    (state.board.opportunities||[]).forEach(opp=>{
-      let owner=String(opp.record_id||opp.contact_id||'');
-      if(!owner){
-        const phone=contactPhoneNumber(opp.phone),byPhone=phones.get(phone),byName=names.get(foldText(opp.client_name));
-        // Explicit links always win. Legacy matching must identify exactly one contact.
-        if(byPhone?.size===1)owner=[...byPhone][0];
-        else if(!phone&&byName?.size===1)owner=[...byName][0];
-      }
-      if(!owner)return;
-      new Set([owner,...(managers.get(owner)||[])]).forEach(id=>{if(!rows.has(id))rows.set(id,[]);rows.get(id).push(opp);});
-    });
-    return rows;
+    const L=window.TPFRecordLinks,lookup=L.index(state.contacts),rows=new Map();
+    for(const opp of state.board.opportunities||[]){const owner=L.owner(opp,lookup,'opportunity');if(!owner)continue;
+      for(const id of new Set([owner,...(lookup.managers.get(owner)||[])])){if(!rows.has(id))rows.set(id,[]);rows.get(id).push(opp);}
+    }return rows;
   }
   function relatedOpportunities(id){return mobileOpportunityIndex().get(String(id))||[];}
-  function relatedTasks(id){return state.tasks.filter(task=>String(task.related_record_id||'')===String(id));}
+  function relatedTasks(id){return window.TPFRecordLinks.related(state.tasks,state.contacts,id,'task');}
   function renderContact(id){
     const contact=state.contacts.find(row=>String(row.id)===String(id));
     if(!contact)return `<div class="m-page">${pageHead('Ficha del contacto','contacts')}${empty('Contacto no encontrado','Actualiza los datos e inténtalo de nuevo.')}</div>`;
@@ -1125,7 +1115,7 @@
     const title=clean(byId(prefix+'Title')?.value),starts=byId(prefix+'Starts')?.value,reminder=byId(prefix+'Reminder')?.value;
     if(!title||!starts)throw new Error('Escribe un asunto y una fecha/hora.');
     if(!Number.isFinite(new Date(starts).getTime())||(reminder&&!Number.isFinite(new Date(reminder).getTime())))throw new Error('La fecha no es válida.');
-    return {...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked};
+    return window.TPFTaskModel.payload({...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked});
   }
   function renderNewTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
@@ -1159,7 +1149,7 @@
     const msg=byId('mobileTaskDetailMsg');let patch;
     try{patch=statusOnly?{status:editor.row.status==='completed'?'pending':'completed'}:readTaskFields('editTask');}catch(error){if(msg)msg.textContent=error.message;return;}
     taskWrites.add(String(id));if(msg)msg.textContent='Guardando…';
-    try{const result=await client.from('agenda_items').update(patch).eq('id',id).or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').select('*').single();if(result.error)throw result.error;editor.row=result.data;mergeTaskChange(id,result.data);if(taskDetail===editor&&route().parts[0]==='task'&&route().parts[1]===String(id)){render();toast('Tarea guardada.','success');}}
+    try{const saved=await window.TPFTaskModel.save(client,patch,{id,previous:editor.row,canManage:has('can_manage_agenda')});editor.row=saved;mergeTaskChange(id,saved);if(taskDetail===editor&&route().parts[0]==='task'&&route().parts[1]===String(id)){render();toast('Tarea guardada.','success');}}
     catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar.';}
     finally{taskWrites.delete(String(id));}
   }
@@ -1178,7 +1168,7 @@
     const button=document.querySelector('[data-action="save-task"]');button.disabled=true;byId('mobileTaskMsg').textContent='Guardando…';
     try{
       const row={title,description:clean(byId('newTaskNotes').value)||null,customer_name:contact.fullName||null,customer_phone:contact.phone||null,starts_at:new Date(starts).toISOString(),reminder_at:null,assigned_to:state.user.id,related_record_id:contact.id,status:'pending',reminder_minutes:[],notify_in_app:true,notify_email:false,sync_google_calendar:false,whatsapp_enabled:false,...readTaskFields('newTask')};
-      const {error}=await client.from('agenda_items').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='tasks';go(`contact/${contact.id}`,back==='choose-contact/task');}toast('Tarea creada y sincronizada.','success');
+      await window.TPFTaskModel.save(client,row,{canManage:has('can_manage_agenda'),userId:state.user.id});await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='tasks';go(`contact/${contact.id}`,back==='choose-contact/task');}toast('Tarea creada y sincronizada.','success');
     }catch(error){byId('mobileTaskMsg').textContent=error?.message||'No se pudo crear la tarea.';}
     finally{button.disabled=false;}
   }

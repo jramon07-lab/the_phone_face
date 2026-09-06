@@ -30,9 +30,5 @@ jobs:
       - name: Critical modular structure guard
         run: node scripts/modular-guard.js
 
-      - name: Validate JavaScript syntax
-        run: |
-          node -c api/index.js
-          node -c api/index-clean.js
-          node -c api/index-fix.js
-          node -c js/modules/system-status.js
+      - name: All JavaScript syntax and offline regressions
+        run: npm run verify
