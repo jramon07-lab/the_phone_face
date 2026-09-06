@@ -165,7 +165,7 @@ function mountAgendaComposerOverlay(enable){
     $("agendaCreateCard")?.removeAttribute("data-agenda-overlay")
   }
 }
-function setAgendaComposer(open){window.TPFAgendaCompact?.create(open);const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}else{$("agendaTypeModal")?.classList.add("hidden");mountAgendaComposerOverlay(false)}}
+function setAgendaComposer(open){window.TPFAgendaCompact?.create(open);const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));window.dispatchEvent(new CustomEvent("tpf:editor-baseline",{detail:{root:card}}));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}else{$("agendaTypeModal")?.classList.add("hidden");mountAgendaComposerOverlay(false)}}
 function resetAgendaComposer(){
   ["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>{const node=$(id);if(node)node.value=""});
   delete $("agendaCustomer")?.dataset.contactId;document.querySelectorAll(".agendaReminderPreset").forEach(box=>box.checked=false);

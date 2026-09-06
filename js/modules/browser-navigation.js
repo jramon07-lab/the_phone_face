@@ -88,5 +88,6 @@ document.addEventListener('scroll',()=>{if(!busy)update();},true);
 const watched=new Set(['contactModal','opportunityFullPage',...layers.map(x=>x[0])]);
 new MutationObserver(records=>{if(records.some(r=>watched.has(r.target.id)||r.target.id==='waMessages'||r.target.id?.startsWith('view-')||r.target.matches?.('dialog,[data-cp-ref-tab]')||r.type==='childList'&&[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1&&(watched.has(n.id)||n.matches?.('dialog')))))schedule();}).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden','open','aria-selected','aria-hidden']});
 window.addEventListener('tpf:contact-open',schedule);window.addEventListener('tpf:contact-updated',schedule);
-window.TPFBrowserNavigation={version:1};sync();
+window.addEventListener('tpf:editor-baseline',e=>{const root=e.detail?.root;if(root)for(const el of edited.keys())if(root===el||root.contains?.(el))edited.delete(el);});
+window.TPFBrowserNavigation={version:2};sync();
 })();

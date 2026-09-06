@@ -55,9 +55,20 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
  }
 });
 
-test('Demo: copia subida, descargada y descifrada desde Drive',async({page})=>{
+test('Demo: permisos de copias y verificación de Drive con administrador',async({page})=>{
  test.setTimeout(180000);await login(page);
  // This creates a backup only; no restore and no deletion of existing Drive files.
- const result=await page.evaluate(async()=>{const {data}=await sb.auth.getSession();const r=await fetch('/api/crm-backup?action=run',{method:'POST',headers:{Authorization:'Bearer '+data.session.access_token}});const body=await r.json();return {status:r.status,ok:body.ok,verification:body.verification,counts:body.counts,error:body.error};});
+ const result=await page.evaluate(async()=>{const {data}=await sb.auth.getSession();const r=await fetch('/api/crm-backup?action=run',{method:'POST',headers:{Authorization:'Bearer '+data.session.access_token}});const body=await r.json();return {isAdmin:!!perms?.is_admin,status:r.status,ok:body.ok,verification:body.verification,counts:body.counts,error:body.error};});
+ if(!result.isAdmin){expect(result.status).toBe(403);test.info().annotations.push({type:'limitación',description:'Cuenta demo sin permiso de administrador: comprobado rechazo; copia real pendiente con administrador.'});return;}
  expect(result.status,result.error).toBe(200);expect(result.ok).toBe(true);expect(result.verification).toBe('download-decrypt-counts');expect(Object.keys(result.counts||{})).toHaveLength(38);
+});
+
+
+test('Demo: el contacto muestra las mismas oportunidades en PC y móvil',async({page})=>{
+ await login(page);
+ const sample=await page.evaluate(async()=>{await loadSales();const people=await TPFRecordLinks.load(sb);return people.map(c=>({id:c.id,total:TPFRecordLinks.related(salesCache.opportunities,people,c.id,'opportunity').length})).sort((a,b)=>b.total-a.total)[0];});
+ expect(sample.total).toBeGreaterThan(0);await page.evaluate(id=>window.openContact(id),sample.id);await expect(page.locator('#cpOppTotal')).toHaveText(String(sample.total));
+ await page.setViewportSize({width:390,height:844});await page.goto('/movil/#/contact/'+sample.id);
+ if(await page.locator('#mobileLogin').isVisible()){await page.locator('#mobileEmail').fill(process.env.CRM_TEST_EMAIL);await page.locator('#mobilePassword').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#mobileLoginForm button[type="submit"]').click();}
+ await expect(page.locator('#mobileApp')).toBeVisible({timeout:30000});await expect(page.locator('[data-action="profile-tab"][data-tab="opportunities"]')).toHaveText('Oportunidades ('+sample.total+')',{timeout:30000});
 });

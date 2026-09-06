@@ -29,6 +29,7 @@ function fixture(){
  const input=g.node('editorInput');await g.emit('focusin',{target:input});input.value='draft';g.confirm=false;
  g.history.go(-1);await tick();assert.equal(g.cursor,1);assert.equal(g.screen.id,'a');assert.equal(input.value,'draft');
  let prevented=false;await g.emit('beforeunload',{preventDefault(){prevented=true;}});assert.equal(prevented,true);
+ await g.emit('tpf:editor-baseline',{detail:{root:input}});let stale=false;await g.emit('beforeunload',{preventDefault(){stale=true}});assert.equal(stale,false,'New editor must not inherit a saved draft baseline');
  g.confirm=true;g.history.go(-1);await tick();assert.equal(g.screen.mainView,'dashboard');
  const h=fixture();await h.navigate({type:'main',mainView:'contacts'});await h.navigate({type:'contact',id:'a',mainView:'contacts'});
  const back=h.node('contactClose');back.textContent='Volver';await h.emit('click',{target:back});await h.navigate({type:'main',mainView:'contacts'});await tick();
