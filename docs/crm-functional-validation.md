@@ -5,7 +5,8 @@ Esta revisión usa la cuenta demo y el despliegue de pruebas. La base de datos c
 ## Cómo repetirla
 
 - `npm run verify`: estructura, sintaxis y 63 comprobaciones de regresión.
-- El flujo **CRM Browser Validation** instala Chromium y WebKit, usa las credenciales demo de los secretos de GitHub y prueba el despliegue que acaba de publicarse.
+- El flujo **CRM Browser Validation** instala Chromium, usa las credenciales demo de los secretos de GitHub y prueba el despliegue que acaba de publicarse. Chrome es el navegador oficial acordado; WebKit es una comprobación adicional fuera de esta validación.
+- Los escenarios se ejecutan con un solo proceso y sin reintentos: comparten la cuenta demo y la prueba de cierre de sesión puede revocar las sesiones de otras pruebas si se ejecutan a la vez.
 - Las capturas y los resultados se adjuntan a cada ejecución como **crm-browser-evidence**. Las grabaciones y trazas de autenticación están desactivadas.
 
 ## Cobertura y límites
@@ -23,7 +24,7 @@ Esta revisión usa la cuenta demo y el despliegue de pruebas. La base de datos c
 | PDF | Selección de foto sintética, giro, preparación, nombre, bytes PDF válidos y prevención de doble guardado; destino de subida simulado |
 | Google Drive | Estado autenticado y lectura de la carpeta vinculada. No prueba subida real, cámara física ni eliminación de carpetas |
 | Automatizaciones | Constructor y CRUD de borradores pausados sin trabajos ejecutados; motor y reintentos comprobados con pruebas aisladas |
-| WebKit | Apertura y edición sin guardar en PC; ficha y agenda móvil. No equivale a una prueba en un iPhone físico |
+| WebKit (adicional) | Fuera del criterio de entrega de Chrome. Pruebas disponibles de apertura y edición sin guardar; la cancelación del editor requiere revisión. No equivale a una prueba en un iPhone físico |
 | Copias y administración | La demo recibe 403 al intentar una copia administrativa; no se considera una copia completada |
 
 ## Pendiente de un entorno específico

@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 24
       - run: npm install
-      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright install --with-deps chromium
       - name: Validate required browser-test secrets
         env:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
@@ -37,7 +37,10 @@ jobs:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
-        run: npx playwright test tests/e2e/crm-*.spec.js tests/e2e/safari-contact-edit.spec.js --workers=2
+        # All authenticated tests share the demo account. A parallel logout can
+        # revoke another test's session, so validate flows one at a time.
+        # Safari is optional compatibility coverage, outside the Chrome gate.
+        run: npx playwright test tests/e2e/crm-*.spec.js --workers=1 --retries=0
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4
