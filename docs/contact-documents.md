@@ -82,3 +82,8 @@ Verificaciones locales adicionales: papelera con permisos, carpeta incorrecta, n
 - DNI output preserves the standard 1.586 card ratio and masks the rounded exterior corners white. The PDF retains the white A4 page.
 - If a page has no detected outline, preparation blocks until a replacement photo or explicit manual adjustment. Detection can still fail on reflections, missing edges, unusual perspectives or clutter; do not describe it as guaranteed.
 - Verified with synthetic perspective/plain/patterned scenes, negative backgrounds and ephemeral image regions from the reported screenshot. User photos are not committed. Real iPhone camera/upload verification remains pending.
+
+
+## DNI orientation before cropping (2026-09-06)
+The shared scanner now evaluates document text at 0/90/180/270 degrees before detecting the outline. A single Spanish OCR worker per photo uses page segmentation 6 for this orientation check; it is terminated after use. Photos remain local until explicit Save. Distinct document keywords and a score margin are required; ambiguous or failed reads keep the photo unchanged and stop automatic preview, allowing manual rotation. Existing expiry recognition and confirmation are separate and unchanged.
+Local validation executed the actual orientation helper with canvas rendering and native English Tesseract for both supplied original photos at all four rotations (eight cases); all returned upright landscape photos and preserved the front header in outline detection. This does not substitute for Spanish Tesseract WASM on a physical iPhone. Small background fringes remain a known limitation; no destructive fixed inward trim was added.
