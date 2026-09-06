@@ -74,7 +74,7 @@ test('contactos: nueva pantalla, filtros, etiquetas, ficha y alta visibles', asy
     await expect(first.locator('.tpfContactPencil')).toBeVisible();
     await first.locator('[data-action="open"]').first().click();
     await expect(page.locator('#contactModal')).toBeVisible({ timeout: 30000 });
-    await expect(page.locator('#tpfContactEditToggle')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#contactModal .cpRefEdit')).toBeVisible({ timeout: 10000 });
     await page.locator('#contactClose').click();
   }
 

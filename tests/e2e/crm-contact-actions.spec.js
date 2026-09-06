@@ -43,7 +43,7 @@ async function openRecordThroughUi(page,recordId){
     if(await clickable.count())await clickable.click();else await row.click();
   }
   await expect(page.locator('#contactModal')).toBeVisible({timeout:10000});
-  await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:5000});
+  await expect(page.locator('#contactModal .cpRefEdit')).toBeVisible({timeout:5000});
 }
 
 async function shot(page,name){
@@ -57,15 +57,15 @@ test('cuenta demo por interfaz real: editor separado y oportunidades responden',
   const linked={recordId:'fe4b2188-8a08-445f-bbaa-6d4d5f89377d'};
   await openRecordThroughUi(page,linked.recordId);
 
-  await page.locator('#tpfContactEditToggle').click();
-  await expect(page.locator('#tpfContactEditorBack')).toBeVisible({timeout:5000});
-  await expect(page.locator('#tpfEditFirstName')).toBeEditable();
-  await expect(page.locator('#tpfEditLastName')).toBeEditable();
-  await expect(page.locator('#tpfEditPhone')).toBeEditable();
-  await expect(page.locator('#tpfContactEditorSave')).toBeVisible();
+  await page.locator('#contactModal .cpRefEdit').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeVisible({timeout:5000});
+  await expect(page.locator('#tpfCreateFirst')).toBeEditable();
+  await expect(page.locator('#tpfCreateLast')).toBeEditable();
+  await expect(page.locator('#tpfCreatePhone')).toBeEditable();
+  await expect(page.locator('#tpfContactsCreateSave')).toBeVisible();
   await shot(page,'demo-ui-01-editor-separado');
-  await page.locator('#tpfContactEditorCancel').click();
-  await expect(page.locator('#tpfContactEditorBack')).toBeHidden({timeout:5000});
+  await page.locator('#tpfContactsCreateCancel').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeHidden({timeout:5000});
 
   await page.locator('#cpNewOpp').click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});

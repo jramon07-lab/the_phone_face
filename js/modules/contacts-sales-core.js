@@ -561,7 +561,7 @@ $("contactSave").onclick=async()=>{
 $("contactDelete").onclick=async()=>{
  if(!currentContact)return; const name=$("contactName").value||"este contacto";
  if(!confirm(`¿Seguro que quieres eliminar a ${name}? Esta acción no se puede deshacer.`))return;
- await archiveToTrash("contact",currentContact.id,name,{record:currentContact});
+ if(!await archiveToTrash("contact",currentContact.id,name,{record:currentContact})){ $("contactMsg").textContent="No se pudo guardar en Papelera. El contacto se ha conservado."; return; }
  const {error}=await sb.from("records").delete().eq("id",currentContact.id);
  if(error){$("contactMsg").textContent=error.message;return}
  $("contactModal").classList.add("hidden"); currentContact=null; $("searchBtn").click();

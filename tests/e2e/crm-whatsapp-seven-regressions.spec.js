@@ -123,7 +123,8 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
       const box = document.getElementById('waLiveChats');
       if (!box || typeof window.hydrateWaAvatars !== 'function') return 0;
       const holder = document.createElement('div');
-      holder.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+      const bounds=box.getBoundingClientRect();
+      holder.style.cssText = `position:fixed;top:${bounds.top+4}px;left:${bounds.left+4}px;width:4px;height:4px;pointer-events:none`; 
       const ids = Array.from({ length: 16 }, (_, index) => `tpf-regression-avatar-${index}`);
       ids.forEach(id => {
         const avatar = document.createElement('span');

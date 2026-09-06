@@ -5,6 +5,9 @@ const pickerScript=path.join(process.cwd(),'js/modules/whatsapp-template-picker-
 const scheduleScript=path.join(process.cwd(),'js/modules/whatsapp-schedule-direct-v3.js');
 
 async function mountFixture(page){
+  // Same-origin isolated fixture: localStorage is unavailable on about:blank.
+  await page.route('**/validation-fixture',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><html></html>'}));
+  await page.goto('/validation-fixture');
   await page.setContent(`<!doctype html><html><head></head><body>
     <div class="referenceNav"><button id="tpfWaTemplatesV3Nav">Plantillas WhatsApp</button></div>
     <button id="waTemplateBtn">Plantillas</button>

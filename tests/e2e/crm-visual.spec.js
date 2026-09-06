@@ -39,7 +39,9 @@ test('Automatizaciones muestra constructor libre y pasos configurables', async (
   await login(page);
   await page.locator('.nav[data-view="automations"]').click();
   await expect(page.locator('#view-automations')).toBeVisible({ timeout: 15000 });
+  await page.locator('#tpfAutoNew').click();
   const builder=page.locator('#tpfFlowBuilder');
+  await builder.locator('[data-presentation="advanced"]').click();
   await expect(builder).toBeVisible({ timeout: 15000 });
   await expect(builder).toContainText('Constructor libre de automatizaciones');
   await expect(builder.locator('[data-add="action"]')).toBeVisible();

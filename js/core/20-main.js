@@ -2176,13 +2176,13 @@ window.restoreTrash=async(id)=>{
 
   try{
     if(x.entity_type==="contact"&&x.payload?.record){
-      const r={...x.payload.record}; delete r.id;
+      const r={...x.payload.record,id:x.entity_id||x.payload.record.id};
       const {error}=await sb.from("records").insert(r); if(error)throw error;
     }else if(x.entity_type==="opportunity"&&x.payload?.opportunity){
-      const r={...x.payload.opportunity}; delete r.id;
+      const r={...x.payload.opportunity,id:x.entity_id||x.payload.opportunity.id};
       const {error}=await sb.from("sales_opportunities").insert(r); if(error)throw error;
     }else if(x.entity_type==="agenda"&&x.payload?.agenda){
-      const r={...x.payload.agenda}; delete r.id;
+      const r={...x.payload.agenda,id:x.entity_id||x.payload.agenda.id};
       const {error}=await sb.from("agenda_items").insert(r); if(error)throw error;
     }else throw new Error("Este elemento no tiene datos restaurables.");
 
@@ -2192,6 +2192,12 @@ window.restoreTrash=async(id)=>{
       const {error}=await sb.from("crm_trash").delete().eq("id",id); if(error)throw error;
     }
     await auditAction(x.entity_type,x.entity_id,"restore","Restaurado desde papelera",{label:x.label});
+    window.TPFRecordLinks?.invalidate(sb);
+    if(x.entity_type==="contact"){
+      await window.tpfReloadContacts?.();
+      window.dispatchEvent(new CustomEvent('tpf:contact-created',{detail:{id:x.entity_id}}));
+    }else if(x.entity_type==="opportunity")await loadSales();
+    else if(x.entity_type==="agenda")await window.TPFRefreshTasks?.();
     await loadTrash();
   }catch(e){alert(e?.message||"No se pudo restaurar")}
 };

@@ -81,10 +81,10 @@
   const originalOpen=window.openContactTaskDetail;
   const detailVisibility=new MutationObserver(()=>{if($id("cpTaskDetailPage")?.classList.contains("hidden")&&document.body.classList.contains("agendaDetailOpen"))cleanupTaskShell()});
   if($id("cpTaskDetailPage"))detailVisibility.observe($id("cpTaskDetailPage"),{attributes:true,attributeFilter:["class"]});
-  window.openContactTaskDetail=async id=>{
+  window.openContactTaskDetail=async (id,options={})=>{
     const {data:row,error}=await sb.from('agenda_items').select('*').eq('id',id).single();
     if(error||!row){alert(error?.message||'La tarea ya no está disponible.');return;}
-    return window.openAgendaComposer(row,{row});
+    return window.openAgendaComposer(row,{...options,row});
   };
   window.editAgendaItem=id=>window.openContactTaskDetail(id);
   window.openAgendaItem=id=>window.openContactTaskDetail(id);

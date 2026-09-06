@@ -369,17 +369,11 @@ async function openTask(id,e,returnTo){
   hideContactModal();
   $('cpTaskPage')?.classList.add('hidden');
   $('cpTaskDetailPage')?.classList.add('hidden');
-  enterTaskMode(target);
+  rememberTaskOrigin(target);
   if(typeof window.openContactTaskDetail==='function'){
-    const historyLength=Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null;
-    await window.openContactTaskDetail(String(id));
-    if(historyLength!=null&&window.__TPF_HISTORY.length>historyLength){
-      window.__TPF_HISTORY.splice(historyLength);
-    }
-    revealTaskDetail();
-    requestAnimationFrame(revealTaskDetail);
-    setTimeout(revealTaskDetail,40);
-    setTimeout(revealTaskDetail,140);
+    await window.openContactTaskDetail(String(id),{
+      overlay:true,onSaved:restoreTaskOrigin,onCancel:restoreTaskOrigin
+    });
   }
 }
 

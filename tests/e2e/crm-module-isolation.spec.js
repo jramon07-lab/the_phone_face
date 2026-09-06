@@ -35,7 +35,9 @@ test('Ventas: operador automático, contacto por DNI y filtros de fecha están d
   await expect(page.locator('#oppModalDni')).toBeVisible();
   await page.locator('#oppModalTitle').fill('REVISIÓN VODAFONE');
   await expect(page.locator('#oppCustomFieldsView .oppCustomItem').filter({hasText:'OPERADOR'}).locator('strong')).toHaveText('Vodafone');
+  page.once('dialog',d=>d.accept());
   await page.locator('#oppModalClose').click();
+  await expect(page.locator('#oppDetailModal')).toBeHidden();
   await page.locator('#salesOptionsToggle').click();
   await expect(page.locator('#tpfDateFrom')).toBeVisible();await expect(page.locator('#tpfDateTo')).toBeVisible();
   await page.locator('#tpfDateFilters [data-date="month"]').click();
@@ -52,19 +54,19 @@ test('módulo Ficha de contacto: editor separado protegido, actividad y WhatsApp
   await expect(page.locator('#contactModal')).toBeVisible({timeout:5000});
   const visibleMs=await page.evaluate(()=>performance.now()-window.__tpfOpenStart);expect(visibleMs,'La ficha tarda demasiado en hacerse visible').toBeLessThan(3500);
 
-  await expect(page.locator('#tpfContactEditToggle')).toBeVisible({timeout:3000});
-  await expect(page.locator('#tpfContactEditToggle')).toHaveText('Editar datos');
-  await page.locator('#tpfContactEditToggle').click();
-  await expect(page.locator('#tpfContactEditorBack')).toBeVisible({timeout:5000});
-  await expect(page.locator('#tpfEditFirstName')).toBeEditable();
-  await expect(page.locator('#tpfEditLastName')).toBeEditable();
-  await expect(page.locator('#tpfEditPhone')).toBeEditable();
-  await expect(page.locator('#tpfEditEmail')).toBeEditable();
-  await expect(page.locator('#tpfEditDni')).toBeEditable();
-  await expect(page.locator('#tpfContactEditorSave')).toBeVisible();
-  await expect(page.locator('#tpfContactEditorCancel')).toBeVisible();
-  await page.locator('#tpfContactEditorCancel').click();
-  await expect(page.locator('#tpfContactEditorBack')).toBeHidden({timeout:5000});
+  await expect(page.locator('#contactModal .cpRefEdit')).toBeVisible({timeout:3000});
+  await expect(page.locator('#contactModal .cpRefEdit')).toHaveText('Editar datos');
+  await page.locator('#contactModal .cpRefEdit').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeVisible({timeout:5000});
+  await expect(page.locator('#tpfCreateFirst')).toBeEditable();
+  await expect(page.locator('#tpfCreateLast')).toBeEditable();
+  await expect(page.locator('#tpfCreatePhone')).toBeEditable();
+  await expect(page.locator('#tpfCreateEmail')).toBeEditable();
+  await expect(page.locator('#tpfCreateDni')).toBeEditable();
+  await expect(page.locator('#tpfContactsCreateSave')).toBeVisible();
+  await expect(page.locator('#tpfContactsCreateCancel')).toBeVisible();
+  await page.locator('#tpfContactsCreateCancel').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeHidden({timeout:5000});
 
   await page.locator('[data-cp-ref-tab="historial"]').click();
   const tabs=page.locator('#contactModal .cpTabs > *');
@@ -89,7 +91,7 @@ test('navegación principal responde sin bloqueos largos', async ({ page }) => {
   for(const [view,target] of routes){const nav=page.locator(`.nav[data-view="${view}"]`).first();if(!(await nav.count())||!(await nav.isVisible()))continue;const start=Date.now();await nav.click();await expect(page.locator(target)).toBeVisible({timeout:2500});expect(Date.now()-start,`${view} tarda demasiado en responder`).toBeLessThan(2500);}
 });
 
-test('módulo Automatizaciones/Ajustes: está aislado y constructor libre abre',async({page})=>{await login(page);await expectModuleReady(page,'automations-settings');const nav=page.locator('.nav[data-view="automations"]');if(await nav.isVisible()){await nav.click();await expect(page.locator('#view-automations')).toBeVisible();await expect(page.locator('#tpfFlowBuilder')).toBeVisible();await expect(page.locator('#tpfFlowBuilder')).toContainText('Constructor libre de automatizaciones');}});
+test('módulo Automatizaciones/Ajustes: está aislado y constructor libre abre',async({page})=>{await login(page);await expectModuleReady(page,'automations-settings');const nav=page.locator('.nav[data-view="automations"]');if(await nav.isVisible()){await nav.click();await expect(page.locator('#view-automations')).toBeVisible();await page.locator('#tpfAutoNew').click();await expect(page.locator('#tpfFlowBuilder')).toBeVisible();await expect(page.locator('#tpfFlowBuilder')).toContainText('Constructor libre de automatizaciones');}});
 
 test('módulo Estado del sistema: respeta permisos y muestra módulos al admin', async ({ page }) => {
   await login(page);await expectModuleReady(page,'system-status');const isAdmin=await page.evaluate(()=>{try{return typeof perms!=='undefined'&&!!perms?.is_admin}catch(_){return false}});const nav=page.locator('.nav[data-view="system"]');if(isAdmin){await expect(nav).toBeVisible();await nav.click();await expect(page.locator('#view-system')).toBeVisible();await expect(page.locator('#tpfModuleStatusCard')).toBeVisible({timeout:10000});await expect(page.locator('#tpf25Checks')).toBeVisible({timeout:5000});await expect(page.locator('#tpf25Summary')).toBeVisible();await expect(page.locator('#tpf25Problems')).toBeVisible();}else{await expect(nav).toBeHidden();}
