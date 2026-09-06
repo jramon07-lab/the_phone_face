@@ -11,7 +11,7 @@ create or replace function public.crm_create_offer_execution_v3(
 ) returns jsonb language plpgsql security definer set search_path='' as $$
 declare
   uid uuid:=auth.uid();rec public.records%rowtype;offer public.crm_offer_catalog%rowtype;opt public.crm_offer_line_options%rowtype;inst public.crm_offer_instances%rowtype;
-  item jsonb;feature jsonb;qty integer;copy_no integer;show_message boolean;replace_index integer;computed numeric:=0;total numeric;chosen jsonb:='[]'::jsonb;features jsonb;message text;
+  item jsonb;feature jsonb;qty integer;show_message boolean;replace_index integer;computed numeric:=0;total numeric;chosen jsonb:='[]'::jsonb;features jsonb;line_features jsonb:='[]'::jsonb;service_features jsonb:='[]'::jsonb;message text;
   nm text;first_name text;phone text;today_madrid date:=(now() at time zone 'Europe/Madrid')::date;process_date date;
   opp_stage public.sales_stages%rowtype;pending_stage public.sales_stages%rowtype;processed_stage public.sales_stages%rowtype;opp_id uuid;instance_id uuid;
   rule public.crm_automations%rowtype;flow jsonb;ctx jsonb;event_key text;result_status text;
@@ -38,7 +38,11 @@ begin
     if replace_index is not null then
       if show_message then features:=jsonb_set(features,array[replace_index::text],to_jsonb(coalesce(opt.message_text,opt.name)),false);else features:=features-replace_index;end if;
     elsif show_message then
-      for copy_no in 1..case when opt.option_type='quantity' then qty else 1 end loop features:=features||jsonb_build_array(coalesce(opt.message_text,opt.name));end loop;
+      if opt.option_type='quantity' then
+        line_features:=line_features||jsonb_build_array(qty||case when qty=1 then ' línea de ' else ' líneas de ' end||coalesce(opt.message_text,opt.name));
+      else
+        service_features:=service_features||jsonb_build_array(coalesce(opt.message_text,opt.name));
+      end if;
     end if;
     chosen:=chosen||jsonb_build_array(jsonb_build_object('option_id',opt.id,'name',opt.name,'option_type',opt.option_type,'group_name',opt.group_name,'unit_price',opt.price_delta,'quantity',qty,'subtotal',opt.price_delta*qty,'show_in_message',show_message));
   end loop;
@@ -48,6 +52,8 @@ begin
   if (p_mode='followup' or p_send_message) and (phone is null or length(phone)<8) then raise exception 'El contacto no tiene un teléfono válido';end if;
   message:='Hola '||first_name||', te envío la oferta que hemos comentado:';
   for feature in select value from jsonb_array_elements(features) loop message:=message||E'\n• '||trim(both '"' from feature::text);end loop;
+  for feature in select value from jsonb_array_elements(line_features) loop message:=message||E'\n• '||trim(both '"' from feature::text);end loop;
+  for feature in select value from jsonb_array_elements(service_features) loop message:=message||E'\n• '||trim(both '"' from feature::text);end loop;
   message:=message||E'\nPrecio final: '||to_char(total,'FM999999990D00')||' €/mes';if btrim(coalesce(p_extra_text,''))<>'' then message:=message||E'\n\n'||btrim(p_extra_text);end if;
   select * into pending_stage from public.sales_stages where active and lower(btrim(name))='pendiente de tramitar' order by position limit 1;
   select * into processed_stage from public.sales_stages where active and lower(btrim(name))='tramitado' order by position limit 1;
@@ -89,9 +95,43 @@ do $$declare standard_id uuid;counter_id uuid;begin
   select id into standard_id from public.crm_offer_catalog where operator='Vodafone' and not is_counteroffer order by created_at limit 1;
   select id into counter_id from public.crm_offer_catalog where operator='Vodafone' and is_counteroffer order by created_at limit 1;
   if standard_id is null or counter_id is null then raise exception 'Faltan las dos tarifas Vodafone';end if;
-  update public.crm_offer_catalog set name='VDF · ESTÁNDAR 600',base_features='["Fibra 600 Mb","160 GB"]' where id=standard_id;
-  update public.crm_offer_catalog set base_features='["Fibra 1 Gb","Datos ilimitados"]' where id=counter_id;
-  update public.crm_offer_line_options set name='Datos ilimitados',message_text='Datos ilimitados',replaces_text='160 GB' where offer_id=standard_id and group_name='lineas_principales';
+  update public.crm_offer_catalog set name='VDF · ESTÁNDAR 600',base_features='["Fibra 600 Mb","2 líneas de 160 GB"]' where id=standard_id;
+  update public.crm_offer_catalog set base_features='["Fibra 1 Gb","2 líneas con datos ilimitados"]' where id=counter_id;
+  update public.crm_offer_line_options set name='Datos ilimitados',message_text='2 líneas con datos ilimitados',replaces_text='2 líneas de 160 GB' where offer_id=standard_id and group_name='lineas_principales';
   update public.crm_offer_line_options set message_text=case when data_gb is null then 'Datos ilimitados' else data_gb||' GB' end where offer_id in (standard_id,counter_id) and option_type='quantity';
+end $$;
+
+-- Borrador seguro: queda visible y editable, pero no enviará nada hasta activarlo.
+do $$
+declare vodafone_rule public.crm_automations%rowtype;template_id bigint;
+begin
+  for vodafone_rule in
+    select * from public.crm_automations
+    where trigger_type='opportunity_stage'
+      and lower(coalesce(trigger_config->>'automation_operator',''))='vodafone'
+  loop
+    select id into template_id from public.wa_templates
+    where user_id=vodafone_rule.user_id and lower(btrim(name))='netflix y devolución de router'
+    order by created_at limit 1;
+    if template_id is null then
+      insert into public.wa_templates(user_id,name,body,category,shortcut)
+      values(vodafone_rule.user_id,'Netflix y devolución de router','Hola {nombre}, recuerda activar Netflix y realizar la devolución del router anterior. Si ya lo has hecho, ignora este mensaje. Si necesitas ayuda, escríbenos.','Vodafone',null)
+      returning id into template_id;
+    end if;
+    update public.crm_automations
+    set enabled=false,
+        name='TRAMITACIÓN · Vodafone',
+        action_config=jsonb_build_object(
+          'version',1,
+          'lifecycle',jsonb_build_object('mode','after_sale','version',1),
+          'steps',jsonb_build_array(
+            jsonb_build_object('kind','action','action_type','record_sale_month','config',jsonb_build_object()),
+            jsonb_build_object('kind','wait','unit','days','value',2),
+            jsonb_build_object('kind','action','action_type','send_template','config',jsonb_build_object('template_id',template_id::text))
+          )
+        ),
+        updated_at=now()
+    where id=vodafone_rule.id;
+  end loop;
 end $$;
 notify pgrst,'reload schema';

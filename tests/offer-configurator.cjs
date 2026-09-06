@@ -11,26 +11,32 @@ vm.runInContext(source,context);
 const api=context.window.TPFOffersPro;
 assert(api,'the offer configurator exposes its deterministic helpers');
 assert.deepEqual([...api.OPERATORS],['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange']);
-const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','160 GB','Amazon incluido'],line_options:[
+const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','2 líneas de 160 GB'],line_options:[
   {id:'gb',name:'Fibra 1 Gb',price_delta:10,option_type:'radio',message_text:'Fibra 1 Gb',replaces_text:'Fibra 600 Mb'},
+  {id:'unlimited',name:'Datos ilimitados',price_delta:4,option_type:'radio',message_text:'2 líneas con datos ilimitados',replaces_text:'2 líneas de 160 GB'},
   {id:'netflix',name:'Netflix interno',price_delta:4,option_type:'radio',message_text:'Netflix incluido',replaces_text:'Amazon incluido'},
-  {id:'extra',name:'Línea adicional interna',price_delta:6,option_type:'quantity',message_text:'160 GB extra'}
+  {id:'extra',name:'Línea adicional interna',price_delta:6,option_type:'quantity',message_text:'30 GB'}
 ]};
 assert.equal(api.calculateTotal(offer,{gb:1,netflix:1,extra:2}),78,'options update the calculated total');
 const message=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','Precio válido este mes.',75);
 assert.match(message,/Hola Ana/);
 assert.match(message,/Fibra 1 Gb/);
-assert.ok(message.indexOf('Fibra 1 Gb')<message.indexOf('160 GB'),'replacement keeps Fiber before mobile data');
+assert.ok(message.indexOf('Fibra 1 Gb')<message.indexOf('2 líneas de 160 GB'),'replacement keeps Fiber before mobile data');
 assert.match(message,/Netflix incluido/);
-assert.equal((message.match(/160 GB extra/g)||[]).length,2,'two extra lines are listed without multiplication text');
+assert.equal((message.match(/2 líneas de 30 GB/g)||[]).length,1,'extra lines are grouped into one natural customer sentence');
+assert.ok(message.indexOf('2 líneas de 30 GB')<message.indexOf('Netflix incluido'),'mobile lines appear before content services');
 assert.match(message,/75,00 €\/mes/);
 assert.match(message,/Precio válido este mes/);
 assert.doesNotMatch(message,/NOMBRE INTERNO|Netflix interno|Vodafone/,'internal catalog names are never sent to the customer');
-assert.doesNotMatch(message,/principales|Línea adicional|× 2/i,'customer copy omits internal line wording and multiplication text');
+assert.doesNotMatch(message,/principales|adicional|× 2/i,'customer copy omits internal line wording and multiplication text');
 assert.doesNotMatch(message,/Fibra 600 Mb|Amazon incluido/,'replaced commercial features are removed');
 const hiddenMessage=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','',75,{netflix:false,extra:false});
-assert.doesNotMatch(hiddenMessage,/Netflix incluido|160 GB extra/,'hidden options keep their price but are omitted from the customer message');
+assert.doesNotMatch(hiddenMessage,/Netflix incluido|2 líneas de 30 GB/,'hidden options keep their price but are omitted from the customer message');
 assert.match(hiddenMessage,/75,00 €\/mes/);
+const unlimitedMessage=api.buildMessage(offer,{gb:1,unlimited:1,extra:1},'Ana García','',72);
+assert.match(unlimitedMessage,/2 líneas con datos ilimitados/);
+assert.match(unlimitedMessage,/1 línea de 30 GB/);
+assert.doesNotMatch(unlimitedMessage,/2 líneas de 160 GB/);
 
 const sql=fs.readFileSync(path.join(root,'db/proposals/offer-configurator.sql'),'utf8');
 for(const table of ['crm_offer_catalog','crm_offer_line_options','crm_offer_instances'])assert.match(sql,new RegExp(`alter table public\\.${table} enable row level security`));
@@ -70,7 +76,12 @@ assert.match(sqlV4,/else opp_stage:=pending_stage/);
 assert.match(sqlV4,/p_send_message/);
 assert.match(sqlV4,/manual-offer-accepted:/);
 assert.match(sqlV4,/name='VDF · ESTÁNDAR 600'/);
-assert.match(sqlV4,/base_features='\["Fibra 600 Mb","160 GB"\]'/);
+assert.match(sqlV4,/base_features='\["Fibra 600 Mb","2 líneas de 160 GB"\]'/);
+assert.match(sqlV4,/qty\|\|case when qty=1 then ' línea de ' else ' líneas de ' end/);
+assert.match(sqlV4,/jsonb_array_elements\(line_features\)/);
+assert.match(sqlV4,/jsonb_array_elements\(service_features\)/);
+assert.match(sqlV4,/Netflix y devolución de router/);
+assert.match(sqlV4,/set enabled=false/);
 assert.match(source,/step="1"/);
 assert.match(source,/Enviar también este mensaje al cliente/);
 assert.match(source,/Fecha de tramitación/);

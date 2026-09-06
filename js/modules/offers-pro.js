@@ -8,9 +8,10 @@ const madridDateKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid
 const buildMessage=(offer,quantities={},customer='Cliente',extra='',finalPrice=null,visibility={})=>{
   if(!offer)return'';
   let features=Array.isArray(offer.base_features)?[...offer.base_features]:[];
+  const lineFeatures=[],serviceFeatures=[];
   if(!features.length){if(offer.fiber_mbps)features.push(`Fibra ${offer.fiber_mbps} Mb`);if(Number(offer.included_unlimited_lines||0))features.push('Datos ilimitados')}
-  for(const line of offer.line_options||[]){const qty=Math.max(0,Number(quantities[line.id]||0));if(!qty)continue;const replaceIndex=line.replaces_text?features.indexOf(line.replaces_text):-1;const visible=visibility[line.id]!==false;const label=line.message_text||line.name;if(replaceIndex>=0){if(visible)features.splice(replaceIndex,1,label);else features.splice(replaceIndex,1);continue}if(!visible)continue;const repeats=line.option_type==='quantity'?qty:1;for(let index=0;index<repeats;index++)features.push(label)}
-  const rows=[`Hola ${firstName(customer)}, te envío la oferta que hemos comentado:`,...features.map(x=>`• ${x}`)];
+  for(const line of offer.line_options||[]){const qty=Math.max(0,Number(quantities[line.id]||0));if(!qty)continue;const replaceIndex=line.replaces_text?features.indexOf(line.replaces_text):-1;const visible=visibility[line.id]!==false;const label=line.message_text||line.name;if(replaceIndex>=0){if(visible)features.splice(replaceIndex,1,label);else features.splice(replaceIndex,1);continue}if(!visible)continue;if(line.option_type==='quantity'){lineFeatures.push(`${qty} ${qty===1?'línea':'líneas'} de ${label}`)}else serviceFeatures.push(label)}
+  const rows=[`Hola ${firstName(customer)}, te envío la oferta que hemos comentado:`,...features.concat(lineFeatures,serviceFeatures).map(x=>`• ${x}`)];
   rows.push(`Precio final: ${money(finalPrice==null?calculateTotal(offer,quantities):finalPrice)}/mes`);
   if(String(extra||'').trim())rows.push('',String(extra).trim());
   return rows.join('\n');
