@@ -200,7 +200,7 @@
    ${r.blocked?"<p>Corrige estos datos en el Excel y vuelve a generar la vista previa.</p>":""}${d.action!=="skip"?`<label style="display:block;margin-top:10px"><input type="checkbox" data-reviewed="${i}" ${d.reviewed?"checked":""}> ${d.action==="create"&&r.matches.length?"Confirmo que es otra persona y quiero crear una ficha nueva.":"He comprobado los datos y esta decisión."}</label>`:""}</td></tr>`;
   }).join("")||'<tr><td colspan="3">No quedan filas para revisar. Los duplicados sin novedades se han omitido.</td></tr>';
   const root=q("previewRows"),refresh=()=>{renderContactReview();q("runImport").disabled=!validRows().length;q("importInfo").textContent=`${state.rawRows.length} filas · ${validRows().length} seleccionadas para guardar. El resto se omitirá.`};
-  root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{const r=state.review[el.dataset.decision];state.decisions[el.dataset.decision]={action:el.value,target:el.value==="update"?String(r.classification.target?.id||""):"",fields:[],reviewed:false};refresh()});
+  root.querySelectorAll("[data-decision]").forEach(el=>el.onchange=()=>{const i=Number(el.dataset.decision),r=state?.review?.[i];if(!r)return;state.decisions[i]={action:el.value,target:el.value==="update"?String(r.classification.target?.id||""):"",fields:[],reviewed:false};refresh()});
   root.querySelectorAll("[data-excel-holder]").forEach(el=>el.onchange=()=>{const d=state.decisions[el.dataset.excelHolder];Object.assign(d,{holderRow:el.value,pairConfirmed:false,reviewed:false});refresh()});
   root.querySelectorAll("[data-pair-confirm]").forEach(el=>el.onchange=()=>{Object.assign(state.decisions[el.dataset.pairConfirm],{pairConfirmed:el.checked,reviewed:false});refresh()});
   root.querySelectorAll("[data-holder-search]").forEach(el=>el.oninput=()=>{
@@ -310,4 +310,3 @@
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind);else bind();
  window.TPFImportMapping={norm,guess,digits,contactKeys,number,date,splitLabels,reviewContacts,contactDiff,allowedDecision,identity,classifyContact,holderProposal,holderChoices,excelParty};
 })();
-
