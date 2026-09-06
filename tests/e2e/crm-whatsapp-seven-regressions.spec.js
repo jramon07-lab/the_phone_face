@@ -121,52 +121,24 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
       await expect.poll(async () => rows.count(), { timeout: 10000 }).toBeGreaterThan(paging.rendered);
     }
 
-    const hydrated = await page.evaluate(async () => {
-      const box = document.getElementById('waLiveChats');
-      if (!box || typeof window.hydrateWaAvatars !== 'function') return 0;
-      const holder = document.createElement('div');
-      const bounds=box.getBoundingClientRect();
-      holder.style.cssText = `position:fixed;top:${bounds.top+4}px;left:${bounds.left+4}px;width:4px;height:4px;pointer-events:none`; 
-      const ids = Array.from({ length: 16 }, (_, index) => `tpf-regression-avatar-${index}`);
-      ids.forEach(id => {
-        const avatar = document.createElement('span');
-        avatar.dataset.waAvatarId = id;
-        avatar.dataset.waInitials = 'PR';
-        avatar.style.cssText = 'position:absolute;top:4px;left:4px;width:2px;height:2px';
-        holder.appendChild(avatar);
+    // Verify the real avatar queue in an isolated browser DOM; live chat loading
+    // must not determine whether the synthetic queue reaches its second batch.
+    const fixture=await page.context().newPage();
+    try {
+      await fixture.setContent('<div id="waLiveChats" style="height:500px;overflow:auto"></div>');
+      await fixture.evaluate(()=>{
+        window.TPFModules={register(_name,module){module.install();}};
+        window.waLiveState={avatars:{},avatarPending:{}};
+        window.hydrateWaAvatars=async()=>{};
+        window.waApi=async(_action,{chatId})=>({urlAvatar:'data:image/svg+xml;base64,PHN2Zy8+'});
+        window.waApplyAvatar=(element,url)=>{element.dataset.loaded=String(!!url);};
+        const box=document.getElementById('waLiveChats');
+        for(let i=0;i<16;i++){const el=document.createElement('span');el.dataset.waAvatarId='fixture-'+i;el.style.cssText='display:block;height:20px';box.appendChild(el);}
       });
-      box.appendChild(holder);
-
-      const calls = new Set();
-      const oldApi = window.waApi;
-      const oldLoad = window.waLoadAvatar;
-      const avatarUrl = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz4=';
-      window.waApi = async (action, payload, ...rest) => {
-        if (action === 'avatar' && ids.includes(String(payload?.chatId || ''))) {
-          calls.add(String(payload.chatId));
-          return { urlAvatar: avatarUrl };
-        }
-        return oldApi(action, payload, ...rest);
-      };
-      window.waLoadAvatar = async id => {
-        if (ids.includes(String(id))) {
-          calls.add(String(id));
-          return avatarUrl;
-        }
-        return oldLoad(id);
-      };
-      try {
-        await window.hydrateWaAvatars(ids);
-        const limit = Date.now() + 3500;
-        while (calls.size <= 10 && Date.now() < limit) await new Promise(resolve => setTimeout(resolve, 80));
-        return calls.size;
-      } finally {
-        window.waApi = oldApi;
-        window.waLoadAvatar = oldLoad;
-        holder.remove();
-      }
-    });
-    expect(hydrated, 'La hidratación no debe detenerse en ocho o diez avatares').toBeGreaterThan(10);
+      await fixture.addScriptTag({path:require('node:path').join(process.cwd(),'js/modules/whatsapp-performance-max.js')});
+      await fixture.evaluate(()=>window.hydrateWaAvatars(Array.from({length:16},(_,i)=>'fixture-'+i)));
+      await expect(fixture.locator('[data-loaded="true"]')).toHaveCount(16,{timeout:10000});
+    } finally { await fixture.close(); }
   });
 
   const { matched, matchedWithTasks, unmatched } = await findChatContexts(page);

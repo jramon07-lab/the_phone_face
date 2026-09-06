@@ -86,6 +86,21 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await openContact(page,manager);await expect(page.locator('#cpOpportunities')).toContainText(marker+' Titular');await page.locator('#contactClose').click();
   await page.locator('.nav[data-view="sales"]').click();await page.evaluate(()=>window.loadSales());
   await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();
+  await page.setViewportSize({width:1440,height:700});
+  for(const mode of ['list','board','focus']){
+   await page.locator('.nav[data-view="sales"]').click();
+   await page.locator(mode==='list'?'#salesViewList':'#salesViewBoard').click();
+   if(mode==='focus')await page.locator('#tpfBoardMode').click();
+   const row=page.locator(mode==='list'?'#salesListRows .salesListRow':'#salesBoard .opp').filter({hasText:marker+' Venta'});
+   await expect(row).toContainText(dni);await row.locator('.salesClientLink').click();
+   await expect(page.locator('#contactModal')).toBeVisible();
+   await expect(page.locator('#contactModal')).toContainText(marker+' Titular');
+   const rect=await page.locator('#contactModal').boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(1441);
+   await page.locator('#contactModal .cpLeft').hover();await page.mouse.wheel(0,600);
+   await expect.poll(()=>page.evaluate(()=>Math.max(document.getElementById('contactModal').scrollTop,document.querySelector('#contactModal .cpLeft').scrollTop))).toBeGreaterThan(0);
+   await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();
+   if(mode==='focus')await page.locator('#tpfBoardMode').click();
+  }
   await mobile(page,'edit-opportunity/'+opp.id);await expect(page.locator('#editOppAmount')).toHaveValue('12.34',{timeout:30000});await page.locator('#editOppAmount').fill('23.45');await page.locator('[data-action="save-opportunity-detail"]').click();await expect(page.locator('#mobileView')).toContainText('23,45');
   await mobile(page,'contact/'+manager);await expect(page.locator('[data-action="profile-tab"][data-tab="opportunities"]')).toHaveText('Oportunidades (1)',{timeout:30000});
   await page.setViewportSize({width:1440,height:900});await login(page);expect(await page.evaluate(async id=>(await sb.from('sales_opportunities').select('amount').eq('id',id).single()).data.amount,opp.id)).toBe(23.45);

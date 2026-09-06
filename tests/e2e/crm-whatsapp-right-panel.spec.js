@@ -1,5 +1,29 @@
 const { test, expect } = require('@playwright/test');
 
+test.beforeEach(async({page})=>{
+ page.setDefaultTimeout(15000);
+ await page.addInitScript(()=>{
+  window.__oppVisibility=[];
+  for(const method of ['add','remove','toggle']){
+   const original=DOMTokenList.prototype[method];
+   DOMTokenList.prototype[method]=function(...args){
+    if(this===document.getElementById('oppDetailModal')?.classList){
+     window.__oppVisibility.push({method,args,stack:new Error().stack?.split('\n').slice(1,7)});
+     window.__oppVisibility=window.__oppVisibility.slice(-15);
+    }
+    return original.apply(this,args);
+   };
+  }
+ });
+});
+test.afterEach(async({page},info)=>{
+ if(info.status===info.expectedStatus||page.isClosed())return;
+ console.log('UI_FAILURE_DIAGNOSTICS',JSON.stringify(await page.evaluate(()=>{
+  const ancestors=id=>{let n=document.getElementById(id),out=[];while(n&&out.length<8){out.push({tag:n.tagName,id:n.id,classes:n.className,display:getComputedStyle(n).display,hidden:n.hidden});n=n.parentElement;}return out;};
+  return {opportunity:window.__oppVisibility,automation:ancestors('tpfStepEditor'),task:ancestors('agendaEditStatus')};
+ })));
+});
+
 async function login(page){
   await page.goto('/', {waitUntil:'domcontentloaded'});
   await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);

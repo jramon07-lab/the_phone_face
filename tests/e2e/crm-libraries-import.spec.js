@@ -7,7 +7,7 @@ test('Plantillas: crear, buscar, favorita, editar, comprobar persistencia y borr
  await page.locator('#tpfWaTemplatesV3Nav').click();await expect(page.locator('#view-wa-templates-v3')).toBeVisible();
  try{
   await page.locator('#tv3New').click();await page.locator('#tv3Name').fill(name);await page.locator('#tv3Category').fill('Validación');await page.locator('#tv3Text').fill('Prueba sin envío. Hola {nombre}.');await page.locator('#tv3Save').click();
-  await expect(page.locator('#tv3Search')).toBeVisible({timeout:10000});await page.locator('#tv3Search').fill(name);await expect(page.locator('.tv3Card')).toHaveCount(1);
+  await expect(page.locator('#tv3Search')).toBeVisible({timeout:10000});await page.locator('#tv3Search').pressSequentially(name);await expect(page.locator('#tv3Search')).toHaveValue(name);await expect(page.locator('.tv3Card')).toHaveCount(1);
   await page.locator('.tv3Card [data-fav]').click();await page.locator('#tv3Fav').click();await expect(page.locator('.tv3Card')).toHaveCount(1);await page.locator('#tv3Fav').click();
   await page.locator('.tv3Card [data-edit]').click();await page.locator('#tv3Text').fill('Prueba editada sin envío.');await page.locator('#tv3Save').click();await expect(page.locator('.tv3Card')).toContainText('Prueba editada sin envío.');
   await page.reload();await expect(page.locator('#app')).toBeVisible({timeout:30000});await page.locator('#tpfWaTemplatesV3Nav').click();await page.locator('#tv3Search').fill(name);await expect(page.locator('.tv3Card')).toContainText('Prueba editada sin envío.');
@@ -33,14 +33,29 @@ test('Automatizaciones: crear y editar borrador pausado sin ejecutar acciones',a
  }
 });
 
-test('Importar Excel: asignación, revisión y validación antes de guardar',async({page})=>{
- await login(page);const allowed=await page.evaluate(()=>!!(perms?.is_admin||perms?.can_manage_imports));test.skip(!allowed,'La cuenta demo no tiene permiso de importación.');
- await page.locator('.nav[data-view="import"]').click();await page.locator('#destination').selectOption('BASE DE DATOS');
+test('Importar Excel: revisar, importar un contacto y retirar solo el registro de prueba',async({page})=>{
+ test.setTimeout(120000);page.setDefaultTimeout(15000);await login(page);
+ const allowed=await page.evaluate(()=>!!(perms?.is_admin||perms?.can_manage_imports));test.skip(!allowed,'La cuenta demo no tiene permiso de importación.');
  const name='Validacion Excel '+Date.now();
- const bytes=await page.evaluate(name=>{const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.json_to_sheet([{Nombre:name,Apellidos:'Demo',Telefono:'',DNI:'',Notas:'No importar: validación de vista previa'}]),'Contactos');return Array.from(new Uint8Array(XLSX.write(book,{bookType:'xlsx',type:'array'})));},name);
- await page.locator('#excelFile').setInputFiles({name:'validacion-crm.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(bytes)});await page.locator('#previewImport').click();
- await expect(page.locator('#importMapping')).toBeVisible();await expect(page.locator('#importInfo')).toContainText('1 filas');await expect(page.locator('#importMapGrid')).toContainText('Nombre');await expect(page.locator('#runImport')).toBeDisabled();
- const rows=await page.evaluate(async name=>{const r=await sb.from('records').select('id').eq('data->>NOMBRE',name);if(r.error)throw Error(r.error.message);return r.data.length;},name);expect(rows).toBe(0);
+ try {
+  await page.locator('.nav[data-view="import"]').click();await page.locator('#destination').selectOption('BASE DE DATOS');
+  const bytes=await page.evaluate(name=>{const book=XLSX.utils.book_new();XLSX.utils.book_append_sheet(book,XLSX.utils.json_to_sheet([{Nombre:name,Apellidos:'Demo',Telefono:'',DNI:'',Notas:'Validación aislada sin comunicaciones'}]),'Contactos');return Array.from(new Uint8Array(XLSX.write(book,{bookType:'xlsx',type:'array'})));},name);
+  await page.locator('#excelFile').setInputFiles({name:'validacion-crm.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from(bytes)});
+  await page.locator('#previewImport').click();await expect(page.locator('#importMapping')).toBeVisible();await expect(page.locator('#importInfo')).toContainText('1 filas');await expect(page.locator('#runImport')).toBeDisabled();
+  await page.locator('[data-decision="0"]').selectOption('create');await page.locator('[data-reviewed="0"]').check();await expect(page.locator('#runImport')).toBeEnabled();
+  page.once('dialog',d=>d.accept());await page.locator('#runImport').click();await expect(page.locator('#importInfo')).toContainText('Importación terminada',{timeout:30000});
+  const rows=await page.evaluate(async name=>(await sb.from('records').select('id,data').eq('data->>NOMBRE',name)).data,name);
+  expect(rows).toHaveLength(1);expect(rows[0].data.NOTAS).toBe('Validación aislada sin comunicaciones');
+  await page.locator('.nav[data-view="database"]').click();await page.locator('#tpfContactsSearch').fill(name);await expect(page.locator('#tpfContactsRows')).toContainText(name);
+ } finally {
+  await page.goto('/');await expect(page.locator('#app')).toBeVisible({timeout:30000});
+  const own=await page.evaluate(async name=>(await sb.from('records').select('id').eq('data->>NOMBRE',name)).data,name);
+  for(const row of own||[]){
+   await page.evaluate(id=>window.openContact(id),row.id);page.once('dialog',d=>d.accept());await page.locator('#contactDelete').click();await expect(page.locator('#contactModal')).toBeHidden();
+   const copies=await page.evaluate(async id=>(await sb.from('crm_trash').select('id').eq('entity_type','contact').eq('entity_id',id)).data,row.id);
+   for(const copy of copies||[]){page.once('dialog',d=>d.accept());await page.evaluate(id=>window.purgeTrash(id),copy.id);}
+  }
+ }
 });
 
 test('Documentos: estado real de Drive y navegación del cliente sin errores',async({page})=>{

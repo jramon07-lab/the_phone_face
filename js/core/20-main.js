@@ -2441,41 +2441,20 @@ function closeOpenDetailScreensForNavigation(){
 window.__taskOpenedFromAlerts=false;
 
 window.openAlertTask=async(id)=>{
-  window.__taskOpenedFromAlerts=true;
-
-  if(typeof openContactTaskDetail!=="function"){
-    alert("No está disponible la ficha de tarea.");
-    return;
+  if(typeof window.openContactTaskDetail!=="function"){
+    alert("No está disponible la ficha de tarea.");return;
   }
-
-  // La ficha de tarea vive dentro de estos contenedores.
-  // Desde Avisos están ocultos, así que hay que mostrarlos explícitamente.
-  $("contactModal")?.classList.remove("hidden");
-  $("cpTaskPage")?.classList.remove("hidden");
-
-  await openContactTaskDetail(id);
-
-  // Asegurar que la vista de detalle queda visible.
-  $("cpTaskDetailPage")?.classList.remove("hidden");
-
-  // No mostrar la ficha normal del contacto debajo.
-  const columns=document.querySelector("#contactModal .cpColumns");
-  if(columns)columns.style.display="none";
-
-  const top=document.querySelector("#contactModal .cpTop");
-  if(top)top.style.display="none";
-
-  if($("cpTaskDetailBack")){
-    $("cpTaskDetailBack").textContent="← Volver";
-  }
+  return window.openContactTaskDetail(id,{
+    overlay:true,
+    onSaved:async()=>{
+      if(typeof loadAlerts==="function")await loadAlerts();
+      if(typeof loadDashboard==="function")await loadDashboard();
+    }
+  });
 };
-
 window.editAlertTask=async(id)=>{
-  await openAlertTask(id);
-  setTimeout(()=>{
-    $("cpTaskDetailTitle")?.focus();
-    $("cpTaskDetailTitle")?.select();
-  },80);
+  await window.openAlertTask(id);
+  $("agendaTitle")?.focus();
 };
 
 window.deleteAlertTask=async(id)=>{

@@ -17,7 +17,7 @@ async function compact(page){
  await expect(page.locator('#agendaSave')).toBeVisible();
 }
 test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y móvil',async({page})=>{
- test.setTimeout(180000);await login(page);
+ test.setTimeout(180000);page.setDefaultTimeout(15000);await login(page);
  // Only the task created by this test is changed/deleted. It has no delivery or notification.
  const title='DEMO VALIDACIÓN '+Date.now();let id;
  try{
@@ -29,8 +29,8 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
   await page.locator('#agendaSave').click();const response=await savedPromise;expect(response.ok()).toBeTruthy();const created=await response.json();id=Array.isArray(created)?created[0]?.id:created.id;expect(id).toBeTruthy();
   await expect(page.locator('#agendaCreateCard')).not.toHaveClass(/open/);
   // The same item is reopened through all public adapters, including calendar.
-  for(const entry of ['openAgendaItem','editAgendaItem','openContactTaskDetail','waTaskEdit']){
-   await page.evaluate(async({entry,id})=>{await window[entry](id);},{entry,id});await compact(page);
+  for(const entry of ['openAgendaItem','editAgendaItem','openContactTaskDetail','waTaskEdit','openAlertTask','editAlertTask']){
+   await page.evaluate(async({entry,id})=>{await window[entry](id);},{entry,id});await compact(page);await expect(page.locator('#cpTaskDetailPage')).toBeHidden();
    await expect(page.locator('#agendaTitle')).toHaveValue(title);await expect(page.locator('#agendaNotifyApp')).not.toBeChecked();await close(page);
   }
   await page.evaluate(id=>window.openAgendaItem(id),id);await page.locator('#agendaTitle').fill(title+' EDITADA');
@@ -39,7 +39,7 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
   await page.locator('#agendaFilter').selectOption('all');
   await expect(page.locator('[data-complete-agenda="'+id+'"]')).toBeVisible();await page.locator('[data-complete-agenda="'+id+'"]:visible').first().click();
   await expect.poll(()=>page.evaluate(async id=>(await sb.from('agenda_items').select('status').eq('id',id).single()).data.status,id)).toBe('completed');
-  await page.evaluate(id=>window.openAgendaItem(id),id);await page.locator('#agendaEditStatus').selectOption('pending');await page.locator('#agendaSave').click();await expect(page.locator('#agendaCreateCard')).not.toHaveClass(/open/);
+  await page.evaluate(id=>window.openAgendaItem(id),id);await page.locator('.agendaCompactOptions > summary').click();await page.locator('#agendaEditStatus').selectOption('pending');await page.locator('#agendaSave').click();await expect(page.locator('#agendaCreateCard')).not.toHaveClass(/open/);
   await expect.poll(()=>page.evaluate(async id=>(await sb.from('agenda_items').select('status').eq('id',id).single()).data.status,id)).toBe('pending');
   await page.locator('[data-postpone-agenda="'+id+'"]:visible').click();await compact(page);await expect(page.locator('#agendaTitle')).toHaveValue(title+' EDITADA');await close(page);
   await page.locator('#agendaCalendarView').click();await expect(page.locator('#agendaCalendar')).toBeVisible();const month=await page.locator('.agendaMonthTitle').textContent();await page.locator('[data-agenda-month="1"]').click();await expect(page.locator('.agendaMonthTitle')).not.toHaveText(month);await page.locator('[data-agenda-month="-1"]').click();await expect(page.locator('.agendaMonthTitle')).toHaveText(month);
