@@ -73,6 +73,16 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference button:focus-visible,#contactModal.tpfContactDesktop.tpfContactReference a:focus-visible{outline:3px solid #aa91da;outline-offset:2px}
 #contactModal.tpfContactDesktop.tpfContactReference .cpEmpty{font-size:14px;line-height:1.6}
 }
+/* Shared task dialog presentation for every desktop entry point. */
+#contactModal .tpfUnifiedTaskBackdrop{position:fixed;inset:0;background:#10182888;z-index:100109}
+#contactModal#contactModal .tpfUnifiedTaskPage:not(.hidden){position:fixed!important;inset:50% auto auto 50%!important;transform:translate(-50%,-50%)!important;width:min(720px,calc(100vw - 32px))!important;max-width:720px!important;height:auto!important;max-height:calc(100dvh - 32px)!important;min-height:0!important;margin:0!important;padding:0!important;display:flex!important;flex-direction:column!important;background:white!important;border-radius:16px!important;overflow:hidden!important;z-index:100110!important}
+#contactModal#contactModal .tpfUnifiedTaskPage .cpTaskPageTop{position:static!important;flex:none;height:auto!important;padding:16px 22px!important;display:block!important;border-bottom:1px solid #e4e7ec}
+#contactModal#contactModal .tpfUnifiedTaskPage .cpTaskPageBody{display:block!important;overflow-y:auto!important;min-height:0!important;height:auto!important;width:100%!important;max-width:none!important;margin:0!important;padding:16px 22px!important;box-sizing:border-box;overscroll-behavior:contain}
+#contactModal#contactModal .tpfUnifiedTaskPage .cpTaskFormCard{padding:0!important;margin:0!important;border:0!important;box-shadow:none!important}
+#contactModal#contactModal .tpfUnifiedTaskPage .cpTaskContactCard,#contactModal#contactModal .tpfUnifiedTaskPage .cpTaskFormCard>h2{display:none!important}
+#contactModal#contactModal .tpfUnifiedTaskPage .modalGrid{grid-template-columns:1fr!important}
+#contactModal#contactModal .tpfUnifiedTaskPage textarea{min-height:70px!important;max-height:160px}
+#contactModal#contactModal .tpfUnifiedTaskPage .agendaCompactFooter{flex:none}
 @media(min-width:1024px) and (max-width:1400px){
 #contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:280px minmax(0,1fr)!important;padding:0 18px 22px;gap:14px}
 #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{grid-template-columns:58px minmax(0,1fr);padding:8px 18px 20px}
