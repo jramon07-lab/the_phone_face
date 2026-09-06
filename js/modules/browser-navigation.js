@@ -5,7 +5,7 @@ if(window.TPFBrowserNavigation||!window.tpfCaptureCurrentScreen||location.pathna
 const $=id=>document.getElementById(id),MARK='tpfNavigation',session=Date.now().toString(36)+Math.random().toString(36).slice(2);
 const layers=[['tpfContactsCreateBack','tpfContactsCreateCancel'],['waFilePreviewModal','waFilePreviewClose'],['waTemplateModal','waTemplateClose'],['waQuickModal','waQuickClose'],['agendaTypeModal','agendaCloseTypes'],['agendaCreateCard','agendaCloseCreate'],['oppDetailModal','oppModalCloseX'],['cpTaskDetailPage','cpTaskDetailBack'],['cpTaskPage','cpTaskBack']];
 const backIds=new Set(['contactClose','oppFullBack','salesFullBackBtn',...layers.map(x=>x[1]),'tpfContactsCreateClose','oppModalClose','waQuickCancel']);
-const entries=new Map(),edited=new Map();let position=0,current=null,busy=false,repair=null,timer=null,nativeReturn=false,popQueue=Promise.resolve();
+const entries=new Map(),edited=new Map();let position=0,current=null,busy=false,repair=null,timer=null,nativeReturn=false,popQueue=Promise.resolve(),pendingBack=null;
 const visible=el=>!!el&&el.isConnected&&!el.closest('.hidden,[hidden],[aria-hidden="true"]')&&getComputedStyle(el).display!=='none';
 function topLayer(){const dialog=[...document.querySelectorAll('dialog[open]')].pop();if(dialog)return {el:dialog,close:null,key:'dialog:'+dialog.className};for(const [id,close] of layers)if(visible($(id)))return {el:$(id),close,key:id};return null;}
 function capture(){
@@ -75,7 +75,16 @@ async function pop(e){
 function click(e){
  const button=e.target.closest?.('button,a,.nav,[role="button"]');if(!button)return;
  const back=backIds.has(button.id)||/^(←\s*)?(volver|cancelar|cerrar)(\s|$)/i.test(button.textContent.trim());
- if(busy&&e.isTrusted&&(back||button.matches('.nav'))){e.preventDefault();e.stopImmediatePropagation();return;}
+ if(busy&&e.isTrusted&&(back||button.matches('.nav'))){
+  e.preventDefault();e.stopImmediatePropagation();
+  if(back&&!pendingBack){
+   pendingBack=button;
+   let attempts=0;
+   const retry=()=>{if(!pendingBack)return;if(!busy){const target=pendingBack;pendingBack=null;if(target.isConnected)target.click();return}if(++attempts<50)setTimeout(retry,50);else pendingBack=null;};
+   setTimeout(retry,50);
+  }
+  return;
+ }
  if(!busy&&(back||button.matches('.nav'))&&!approve()){e.preventDefault();e.stopImmediatePropagation();return;}
  if(!busy){update();nativeReturn=back;}schedule();
 }
