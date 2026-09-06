@@ -1,5 +1,5 @@
 const {test,expect}=require('@playwright/test');
-test.describe.configure({mode:'serial'});
+test.describe.configure({mode:'default'});
 test.use({trace:'off',video:'off'}); // Keep authentication inputs out of recordings.
 async function login(page){
  await page.goto('/',{waitUntil:'domcontentloaded'});
@@ -24,9 +24,9 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
   await page.locator('.nav[data-view="agenda"]').first().click();
   await page.locator('#agendaOpenCreateToolbar').click();await compact(page);
   await page.locator('#agendaTitle').fill(title);
-  await page.evaluate(()=>{document.getElementById('agendaStarts').value='2035-01-15T10:00';for(const id of ['agendaNotifyApp','agendaNotifyEmail','agendaSyncGoogle'])document.getElementById(id).checked=false;document.querySelectorAll('.agendaReminderPreset').forEach(n=>n.checked=false);});
+  await page.evaluate(()=>{document.getElementById('agendaStarts').value='2035-01-15T10:00';document.getElementById('agendaStarts').__tpfSyncFromHidden?.();for(const id of ['agendaNotifyApp','agendaNotifyEmail','agendaSyncGoogle'])document.getElementById(id).checked=false;document.querySelectorAll('.agendaReminderPreset').forEach(n=>n.checked=false);});
   const savedPromise=page.waitForResponse(r=>r.url().includes('/rest/v1/agenda_items')&&r.request().method()==='POST');
-  await page.locator('#agendaSave').click();const response=await savedPromise;expect(response.ok()).toBeTruthy();id=(await response.json())[0]?.id;expect(id).toBeTruthy();
+  await page.locator('#agendaSave').click();const response=await savedPromise;expect(response.ok()).toBeTruthy();const created=await response.json();id=Array.isArray(created)?created[0]?.id:created.id;expect(id).toBeTruthy();
   await expect(page.locator('#agendaCreateCard')).not.toHaveClass(/open/);
   // The same item is reopened through all public adapters, including calendar.
   for(const entry of ['openAgendaItem','editAgendaItem','openContactTaskDetail','waTaskEdit']){
@@ -47,6 +47,7 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
   await page.locator('#editTaskTitle').fill(title+' MÓVIL');const mobileSaved=page.waitForResponse(r=>r.url().includes('/rest/v1/agenda_items')&&r.request().method()==='PATCH');await page.locator('[data-action="save-task-detail"]').click();expect((await mobileSaved).ok()).toBeTruthy();await expect(page.locator('#editTaskTitle')).toHaveValue(title+' MÓVIL');
   await page.goto('/');await expect(page.locator('#app')).toBeVisible({timeout:30000});await page.evaluate(id=>window.openAgendaItem(id),id);await compact(page);await expect(page.locator('#agendaTitle')).toHaveValue(title+' MÓVIL');await close(page);
  }finally{
+  if(!id){await page.goto('/');await expect(page.locator('#app')).toBeVisible({timeout:30000});id=await page.evaluate(async title=>{const r=await sb.from('agenda_items').select('id').eq('title',title).maybeSingle();return r.data?.id;},title);}
   if(id){await page.goto('/');await expect(page.locator('#app')).toBeVisible({timeout:30000});
    const own=await page.evaluate(async id=>{const r=await sb.from('agenda_items').select('title').eq('id',id).single();return r.data?.title;},id);expect(own).toContain(title);
    page.once('dialog',dialog=>dialog.accept());const removed=page.waitForResponse(r=>r.url().includes('/rest/v1/agenda_items')&&r.request().method()==='DELETE');await page.evaluate(id=>window.deleteAgenda(id),id);expect((await removed).ok()).toBeTruthy();
