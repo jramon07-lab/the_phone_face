@@ -1,5 +1,6 @@
 const {test,expect}=require('@playwright/test');
 test.use({trace:'off',video:'off'});
+test.beforeEach(async({page})=>page.setDefaultTimeout(15000));
 async function login(page){await page.goto('/');await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();await expect(page.locator('#app')).toBeVisible({timeout:30000});}
 
 test('Plantillas: crear, buscar, favorita, editar, comprobar persistencia y borrar solo la prueba',async({page})=>{
@@ -72,10 +73,10 @@ test('Etiquetas: crear, buscar, editar y borrar una etiqueta sin asignarla a cli
  test.setTimeout(120000);await login(page);test.skip(!await page.evaluate(()=>crmCan('can_manage_labels')),'La cuenta demo no permite gestionar etiquetas.');const name='VALIDACION ETIQUETA '+Date.now();
  await page.locator('.nav[data-view="labels"]').click();await expect(page.locator('#lmNew')).toBeVisible();
  try{
-  await page.locator('#lmNew').click();await page.locator('#lmName').fill(name);await page.locator('#lmSave').click();await expect(page.locator('#lmModalBack')).toBeHidden({timeout:10000});await page.locator('#lmSearch').fill(name);await expect(page.locator('.lmCard')).toHaveCount(1);
+  await page.locator('#lmNew').click();await page.locator('#lmName').fill(name);await page.locator('#lmSave').click();await expect(page.locator('#lmModalBack')).toBeHidden({timeout:10000});await page.locator('#lmSearch').pressSequentially(name);await expect(page.locator('#lmSearch')).toHaveValue(name);await expect(page.locator('.lmCard')).toHaveCount(1);
   await page.locator('.lmCard [data-more]').click();await page.locator('.lmCard [data-edit]').click();await page.locator('#lmName').fill(name+' EDITADA');await page.locator('#lmSave').click();await expect(page.locator('#lmModalBack')).toBeHidden();await expect(page.locator('.lmCard')).toContainText(name+' EDITADA');
   const count=await page.evaluate(async name=>{const all=await sb.rpc('crm_list_labels');if(all.error)throw Error(all.error.message);const id=all.data.find(x=>x.name===name)?.id;const r=await sb.from('crm_contact_labels').select('label_id',{count:'exact',head:true}).eq('label_id',id);if(r.error)throw Error(r.error.message);return r.count;},name+' EDITADA');expect(count).toBe(0);
- }finally{
+ }catch(error){console.error('LABEL_FAILURE',error.message);throw error;}finally{
   if(await page.locator('#lmModalBack').isVisible())await page.locator('#lmCancel').click();await page.locator('.nav[data-view="dashboard"]').click();await page.locator('.nav[data-view="labels"]').click();await page.locator('#lmSearch').fill(name);const cards=page.locator('.lmCard');
   if(await cards.count()){await cards.first().locator('[data-more]').click();page.once('dialog',d=>d.accept());await cards.first().locator('[data-delete]').click();await expect(cards).toHaveCount(0);}
  }

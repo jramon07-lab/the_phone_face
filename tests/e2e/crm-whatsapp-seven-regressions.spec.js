@@ -49,19 +49,17 @@ async function expectSameWhatsAppOrigin(page, chatId) {
 }
 
 async function findChatContexts(page) {
-  const rows = page.locator('#waLiveChats .waChatRow');
-  const count = Math.min(await rows.count(), 40);
+  const chatIds=await page.locator('#waLiveChats .waChatRow [data-wa-avatar-id]').evaluateAll(nodes=>nodes.slice(0,40).map(n=>n.dataset.waAvatarId));
+  const count=chatIds.length;
   let matched = null;
   let matchedWithTasks = null;
   let unmatched = null;
 
   for (let index = 0; index < count && (!matchedWithTasks || !unmatched); index += 1) {
-    const row = rows.nth(index);
-    const chatId = await row.locator('[data-wa-avatar-id]').getAttribute('data-wa-avatar-id');
+    const chatId=chatIds[index];
     if (!chatId) continue;
-    await row.click();
-    await expect.poll(() => selectedChatId(page), { timeout: 10000 }).toBe(chatId);
-    await page.waitForTimeout(450);
+    // Finish matching and loading the sidebar before testing or changing chats.
+    await selectChat(page,chatId);
     const state = await page.evaluate(() => {
       let contact = null;
       try { contact = waLiveState?.contact || null; } catch (_) {}
@@ -88,7 +86,7 @@ async function findChatContexts(page) {
 }
 
 test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ page }) => {
-  test.setTimeout(210000);
+  test.setTimeout(210000);page.setDefaultTimeout(15000);
   // Only avatar image bytes are isolated; chat/search/navigation use the real service.
   await page.route('**/api/green?action=avatar',route=>route.fulfill({json:{ok:true,urlAvatar:'data:image/svg+xml;base64,PHN2Zy8+'}}));
   await login(page);

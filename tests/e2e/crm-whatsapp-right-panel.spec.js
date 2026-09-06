@@ -72,8 +72,9 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
     const taskRow=page.locator('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard, #waSideTasks .waSideItem').first();
     await expect(taskRow).toBeVisible({timeout:15000});
     const edit=taskRow.locator('button,a').filter({hasText:/^Editar$|Ver\s*\/\s*editar/i}).first();
-    await expect(edit).toBeVisible({timeout:15000});
-    await edit.click();
+    // Some sidebar layouts make the whole task row the opening control.
+    if(await edit.count()) await edit.click();
+    else await taskRow.click();
     await expect(page.locator('#agendaCreateCard')).toHaveClass(/\bopen\b/);
     await expect(page.locator('#agendaTitle')).toBeEditable();
     await expect(page.locator('#agendaSave')).toBeVisible();

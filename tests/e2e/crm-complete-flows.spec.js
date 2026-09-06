@@ -1,5 +1,6 @@
 const {test,expect}=require('@playwright/test');
 test.use({trace:'off',video:'off'});
+test.beforeEach(async({page})=>page.setDefaultTimeout(15000));
 async function login(page){
  await page.goto('/');
  await page.waitForFunction(()=>typeof sb!=='undefined');
@@ -65,7 +66,7 @@ test('Contactos: alta, edición PC/móvil, buscador, borrado inmediato y papeler
   await expect.poll(async()=> (await contactRows(page,marker)).length).toBe(1);
   const restored=(await contactRows(page,marker))[0];expect(restored.id,'Restaurar debe conservar la identidad para que los vínculos sigan apuntando a la misma ficha').toBe(id);
   await page.locator('.nav[data-view="database"]').click();await page.locator('#tpfContactsSearch').fill(marker);await expect(page.locator('#tpfContactsRows')).toContainText(marker+' Movil');
- }finally{await cleanOwnData(page,marker);}
+ }catch(error){console.error('FLOW_FAILURE',error.message);throw error;}finally{await cleanOwnData(page,marker);}
 });
 
 test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y móvil',async({page})=>{
@@ -88,7 +89,7 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();
   await page.setViewportSize({width:1440,height:700});
   for(const mode of ['list','board','focus']){
-   await page.locator('.nav[data-view="sales"]').click();
+   console.log('SALES_MODE',mode);
    await page.locator(mode==='list'?'#salesViewList':'#salesViewBoard').click();
    if(mode==='focus')await page.locator('#tpfBoardMode').click();
    const row=page.locator(mode==='list'?'#salesListRows .salesListRow':'#salesBoard .opp').filter({hasText:marker+' Venta'});
@@ -104,7 +105,7 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await mobile(page,'edit-opportunity/'+opp.id);await expect(page.locator('#editOppAmount')).toHaveValue('12.34',{timeout:30000});await page.locator('#editOppAmount').fill('23.45');await page.locator('[data-action="save-opportunity-detail"]').click();await expect(page.locator('#mobileView')).toContainText('23,45');
   await mobile(page,'contact/'+manager);await expect(page.locator('[data-action="profile-tab"][data-tab="opportunities"]')).toHaveText('Oportunidades (1)',{timeout:30000});
   await page.setViewportSize({width:1440,height:900});await login(page);expect(await page.evaluate(async id=>(await sb.from('sales_opportunities').select('amount').eq('id',id).single()).data.amount,opp.id)).toBe(23.45);
- }finally{await cleanOwnData(page,marker);}
+ }catch(error){console.error('FLOW_FAILURE',error.message);throw error;}finally{await cleanOwnData(page,marker);}
 });
 
 test('Móvil: todas las secciones principales abren y caben en la pantalla',async({page})=>{
@@ -119,6 +120,7 @@ test('Móvil: todas las secciones principales abren y caben en la pantalla',asyn
 
 test('Sesión: cerrar y volver a entrar mantiene la protección de datos',async({page})=>{
  await login(page);await page.locator('#logout').click();await expect(page.locator('#login')).toBeVisible();await expect(page.locator('#app')).toBeHidden();
+ await page.waitForFunction(()=>typeof sb!=='undefined');
  const session=await page.evaluate(async()=>Boolean((await sb.auth.getSession()).data.session));expect(session).toBe(false);await login(page);
  const flags=await page.evaluate(()=>Object.fromEntries(Object.entries(perms||{}).filter(([k,v])=>typeof v==='boolean')));console.log('DEMO_PERMISSION_FLAGS',JSON.stringify(flags));
 });
