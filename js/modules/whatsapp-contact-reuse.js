@@ -311,6 +311,11 @@ async function openEdit(e){
 async function createOpportunity(e){
   stop(e);
   leaveTaskMode();
+  // Changing chats clears the linked contact while the sidebar resolves the
+  // newly selected phone. A fast click must wait for that lookup.
+  if(!contact()){
+    try{if(typeof matchWaContact==='function')await matchWaContact()}catch(_){}
+  }
   if(!requireContact())return;
   try{
     if(!(salesCache?.stages||[]).length&&typeof loadSales==='function')await loadSales();
