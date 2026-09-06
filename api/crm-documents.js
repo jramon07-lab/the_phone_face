@@ -10,6 +10,8 @@ const UPLOAD_MIMES=new Set(['application/pdf','application/msword','application/
 const configured=()=>!!(KEY&&PUBLIC&&CID&&SECRET&&ENC);
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const json=(res,status,value)=>res.status(status).json(value);
+// JSONB may reorder object keys. Compare all values, not serialization order.
+const stableLink=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
 async function request(url,options={}){return fetch(url,{...options,signal:AbortSignal.timeout(20000)});}
 function seal(value){const iv=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',crypto.createHash('sha256').update(ENC).digest(),iv),body=Buffer.concat([c.update(JSON.stringify(value)),c.final()]);return Buffer.concat([iv,c.getAuthTag(),body]).toString('base64url');}
 function unseal(value){const b=Buffer.from(value,'base64url'),d=crypto.createDecipheriv('aes-256-gcm',crypto.createHash('sha256').update(ENC).digest(),b.subarray(0,12));d.setAuthTag(b.subarray(12,28));return JSON.parse(Buffer.concat([d.update(b.subarray(28)),d.final()]).toString());}
@@ -82,7 +84,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  }
  if(action==='link'||action==='bulkLink'){
   if(!who.p.is_admin||body.confirmed!==true)throw fail(403,'Confirma la carpeta con una cuenta de administrador.');
-  if(JSON.stringify(body.expectedLink||null)!==JSON.stringify(link||null))throw fail(409,'La vinculación ha cambiado. Actualiza la ficha.');
+  if(stableLink(body.expectedLink||null)!==stableLink(link||null))throw fail(409,'La vinculación ha cambiado. Actualiza la ficha.');
   const f=await folder(t,body.folderId);
   if(action==='bulkLink'){
    if(link)throw fail(409,'La ficha ya tiene una carpeta. Se conserva la vinculación existente.');
@@ -99,7 +101,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  if(action==='trash'){
   if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para retirar documentos.');
   if(body.confirmed!==true)throw fail(400,'Confirma el archivo que quieres enviar a la papelera.');
-  if(JSON.stringify(body.expectedLink)!==JSON.stringify(link))throw fail(409,'La carpeta ha cambiado. Actualiza los archivos.');
+  if(stableLink(body.expectedLink)!==stableLink(link))throw fail(409,'La carpeta ha cambiado. Actualiza los archivos.');
   if(link.provider!=='google_drive')throw fail(409,'Proveedor no disponible.');
   const fileId=folderId(body.fileId),f=await drive(t,'files/'+fileId+'?supportsAllDrives=true&fields=id,name,mimeType,parents,trashed,capabilities(canTrash)');
   if(f.mimeType===FOLDER||!f.parents?.includes(link.folder_id))throw fail(400,'El archivo no pertenece a esta carpeta.');
@@ -111,7 +113,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  }
  if(action==='upload'){
   if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para subir documentos.');
-  if(JSON.stringify(body.expectedLink)!==JSON.stringify(link))throw fail(409,'La carpeta ha cambiado. Actualiza antes de subir.');
+  if(stableLink(body.expectedLink)!==stableLink(link))throw fail(409,'La carpeta ha cambiado. Actualiza antes de subir.');
   const f=await provider.folder(t,link.folder_id);if(!f.capabilities?.canAddChildren)throw fail(403,'Google no permite subir archivos a esta carpeta.');
   const name=String(body.name||'').trim(),size=Number(body.size),mime=String(body.mimeType||'');
   if(!name||name.length>200||/[\x00-\x1f/\\]/.test(name)||!Number.isSafeInteger(size)||size<=0||size>100*1024*1024||!UPLOAD_MIMES.has(mime))throw fail(400,'Elige un documento o una fotografía de hasta 100 MB.');
