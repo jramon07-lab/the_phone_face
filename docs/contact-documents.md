@@ -28,7 +28,7 @@ El callback usa state cifrado con vencimiento, nonce en cookie HttpOnly/SameSite
 4. Si no se confirma la subida, actualizar la lista antes de reintentar. No hay reintentos automáticos de escritura. Los archivos repetidos por nombre no se sobrescriben.
 5. Vincular usa comparación de JSON previo para evitar pisar cambios concurrentes. Preserva identidad, titular, etiquetas, notas y el resto de datos.
 
-Pendientes: adaptador OneDrive, asociación automática en importación (solo sugerencias hasta confirmación), captura desde WhatsApp; interfaz /movil/ de Documentos. No se simulan estas funciones.
+Pendientes: adaptador OneDrive, asociación automática en importación (solo sugerencias hasta confirmación), captura desde WhatsApp. No se simulan estas funciones.
 
 Validación: pruebas locales con todas las llamadas de red simuladas para permisos, IDs, datos conservados, conflicto de actualización y carga. No se ejecutó E2E, no se crearon clientes/tareas/oportunidades ni se enviaron mensajes. La autorización de Google y la transferencia real necesitan completarse en la cuenta del administrador; no se declaran verificadas antes de hacerlo.
 
@@ -55,4 +55,13 @@ OCR local mediante el motor Tesseract 5.1.1 ya configurado, cargado solo al pedi
 
 POST expiry en crm-documents usa permisos actuales y RLS del usuario, snapshot completo y PATCH condicional. Conserva todos los demás campos. TPF_DNI_EXPIRY guarda por separado contact/holder, date, subject_name, subject_dni y autor/fecha de confirmación. No modifica nombre ni DNI. Si el PDF se guardó y la fecha falla, se informa del éxito parcial; no se repite el PDF automáticamente.
 
-Verificado localmente: sintaxis, matriz proyectiva, fechas imposibles/ambiguas/nacimiento, PDF de dos páginas con pdfinfo y endpoint con red simulada (permisos, confirmación, concurrencia, preservación). No hubo subida real, OCR sobre datos de cliente ni prueba visual autenticada durante el desarrollo. La interfaz independiente /movil/ sigue pendiente de integración de Documentos.
+Verificado localmente: sintaxis, matriz proyectiva, fechas imposibles/ambiguas/nacimiento, PDF de dos páginas con pdfinfo y endpoint con red simulada (permisos, confirmación, concurrencia, preservación). No hubo subida real, OCR sobre datos de cliente ni prueba visual autenticada durante el desarrollo. La interfaz /movil/ se integra en la sección siguiente.
+
+
+## Documentos en móvil (2026-09-06)
+
+Pestaña Documentos entre Tareas e Historial en la ficha móvil. Lee las vinculaciones ya guardadas en records.data.TPF_DOCUMENTS; no crea carpetas adicionales. Consulta paginada de archivos, enlaces seguros para ver/abrir Drive, subida original, enlace manual de carpeta por administrador y escáner compartido de fotos/cámara a PDF. Muestra caducidad confirmada separada para contacto/titular. La conexión inicial de Google sigue realizándose desde el PC.
+
+Módulo aislado js/mobile-documents.js con cliente autenticado móvil y contexto de contacto inyectados desde render. Conserva el contexto durante repintados del mismo cliente (incluido regresar de la cámara) y lo invalida al navegar a otra ficha/pestaña. Comprueba contexto antes y después de pedir sesión y antes de subir; mantiene expectedLink y expectedData en las escrituras. Utiliza las mismas API y permisos del escritorio. No envía WhatsApp ni modifica oportunidades/tareas.
+
+Validación: pruebas locales con red simulada para ID/carpeta, cambio de ruta durante autenticación, cierre del contexto y URLs seguras; suite de ficha móvil pasa cargando su dependencia real contact-party. No se ha probado una captura/subida real desde iPhone durante el desarrollo.

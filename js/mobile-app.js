@@ -320,13 +320,13 @@
 
   function render(){
     if(!state.user||byId('mobileApp').classList.contains('hidden'))return;
-    const current=route();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
+    const current=route();if(current.parts[0]!=='contact'||state.profileTab!=='documents')window.TPFMobileDocuments?.leave();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
     const view=byId('mobileView');
     try{
       switch(current.parts[0]){
         case 'home':view.innerHTML=renderHome();break;
         case 'contacts':view.innerHTML=renderContacts();bindContactFilters();break;
-        case 'contact':view.innerHTML=renderContact(current.parts[1]);if(state.profileTab==='history')ensureContactHistory(current.parts[1]);break;
+        case 'contact':view.innerHTML=renderContact(current.parts[1]);if(state.profileTab==='history')ensureContactHistory(current.parts[1]);if(state.profileTab==='documents')mountContactDocuments(current.parts[1]);break;
         case 'contact-text':view.innerHTML=renderContactText(current.parts[1],current.parts[2]);break;
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
         case 'contact-labels':view.innerHTML=renderProfileLabels(current.parts[1]);ensureProfileLabels(current.parts[1]);break;
@@ -610,13 +610,21 @@
     </div>${window.TPFContactParty.summary(contact.data?.TPF_TITULAR,contact)}`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
+    if(tab==='documents')body='<div id="mobileContactDocuments"></div>';
     if(tab==='history')body=renderContactHistory(id);
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
     return `<div class="m-page">${pageHead('Ficha del contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar">✎</button>`:'')}
       <div class="m-profile-hero"><div class="m-avatar">${esc(initials(contact))}</div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.dni||'Sin DNI')}</p><p>${esc(contact.phone||'Sin teléfono')}</p></div>
       ${contactPhoneActions(contact)}<div class="m-profile-actions">${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-primary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Nueva oportunidad</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" type="button">Gestionar etiquetas</button>`:''}</div>
-      <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
+      <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='documents'?'active':''}" data-action="profile-tab" data-tab="documents">Documentos</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
     </div>`;
+  }
+  function mountContactDocuments(id){
+    const contact=state.contacts.find(c=>String(c.id)===String(id));if(!contact||!has('can_view_database'))return;
+    window.TPFMobileDocuments?.mount(byId('mobileContactDocuments'),{client,contact,userId:state.user?.id,
+      isCurrent:()=>!!state.user&&has('can_view_database')&&route().parts[0]==='contact'&&route().parts[1]===String(id)&&state.profileTab==='documents',
+      update:row=>{const index=state.contacts.findIndex(c=>String(c.id)===String(row.id));if(index>=0)state.contacts[index]=mapContact(row);}
+    });
   }
   let contactHistory={id:'',rows:[],loading:false,error:'',limit:50},contactTextSaving=false;
   function contactPhoneActions(contact){
