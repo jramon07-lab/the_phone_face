@@ -11,24 +11,25 @@ vm.runInContext(source,context);
 const api=context.window.TPFOffersPro;
 assert(api,'the offer configurator exposes its deterministic helpers');
 assert.deepEqual([...api.OPERATORS],['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange']);
-const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','2 líneas principales de 160 GB','Amazon incluido'],line_options:[
+const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','160 GB','Amazon incluido'],line_options:[
   {id:'gb',name:'Fibra 1 Gb',price_delta:10,option_type:'radio',message_text:'Fibra 1 Gb',replaces_text:'Fibra 600 Mb'},
   {id:'netflix',name:'Netflix interno',price_delta:4,option_type:'radio',message_text:'Netflix incluido',replaces_text:'Amazon incluido'},
-  {id:'extra',name:'Línea adicional interna',price_delta:6,option_type:'quantity',message_text:'Línea adicional de 160 GB'}
+  {id:'extra',name:'Línea adicional interna',price_delta:6,option_type:'quantity',message_text:'160 GB extra'}
 ]};
 assert.equal(api.calculateTotal(offer,{gb:1,netflix:1,extra:2}),78,'options update the calculated total');
 const message=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','Precio válido este mes.',75);
 assert.match(message,/Hola Ana/);
 assert.match(message,/Fibra 1 Gb/);
-assert.match(message,/2 líneas principales de 160 GB/);
+assert.ok(message.indexOf('Fibra 1 Gb')<message.indexOf('160 GB'),'replacement keeps Fiber before mobile data');
 assert.match(message,/Netflix incluido/);
-assert.match(message,/Línea adicional de 160 GB × 2/);
+assert.equal((message.match(/160 GB extra/g)||[]).length,2,'two extra lines are listed without multiplication text');
 assert.match(message,/75,00 €\/mes/);
 assert.match(message,/Precio válido este mes/);
 assert.doesNotMatch(message,/NOMBRE INTERNO|Netflix interno|Vodafone/,'internal catalog names are never sent to the customer');
+assert.doesNotMatch(message,/principales|Línea adicional|× 2/i,'customer copy omits internal line wording and multiplication text');
 assert.doesNotMatch(message,/Fibra 600 Mb|Amazon incluido/,'replaced commercial features are removed');
 const hiddenMessage=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','',75,{netflix:false,extra:false});
-assert.doesNotMatch(hiddenMessage,/Netflix incluido|Línea adicional de 160 GB/,'hidden options keep their price but are omitted from the customer message');
+assert.doesNotMatch(hiddenMessage,/Netflix incluido|160 GB extra/,'hidden options keep their price but are omitted from the customer message');
 assert.match(hiddenMessage,/75,00 €\/mes/);
 
 const sql=fs.readFileSync(path.join(root,'db/proposals/offer-configurator.sql'),'utf8');
@@ -48,7 +49,7 @@ assert.match(sqlV2,/offer_record_month\(rec\.id,opp_id,now\(\)\)/);
 assert.match(sqlV2,/VDF · ESTÁNDAR 600 \+ 2×160/);
 assert.match(sqlV2,/VDF · CONTRAOFERTA 1 GB \+ 2 ILIMITADAS/);
 for(const price of ["'Fibra 1 Gb',10","'Líneas principales ilimitadas',4","'Línea adicional 160 GB',6","'Línea adicional 30 GB',30,6","'Línea adicional 60 GB',60,8.5","'Línea adicional 160 GB',160,11","'Línea adicional ilimitada',null,16"])assert.ok(sqlV2.includes(price),`expected configurable Vodafone price: ${price}`);
-assert.match(source,/crm_create_offer_execution_v2/);
+assert.match(source,/crm_create_offer_execution_v3/);
 assert.match(source,/Precio final para el cliente/);
 assert.match(source,/Nombre interno \(no se envía\)/);
 assert.match(source,/show_in_message/);
@@ -60,6 +61,19 @@ assert.match(sqlV3,/if show_message then features:=features/);
 assert.match(sqlV3,/'TV con más de 80 canales',null,0,30,'checkbox'/);
 assert.match(sqlV3,/'Amazon',null,0,40,'radio','contenido'/);
 assert.match(sqlV3,/'Netflix',null,4,50,'radio','contenido'/);
+
+const sqlV4=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-v4.sql'),'utf8');
+assert.match(sqlV4,/crm_create_offer_execution_v3/);
+assert.match(sqlV4,/'CAMBIO '\|\|upper\(offer\.operator\)/);
+assert.match(sqlV4,/process_date=today_madrid then opp_stage:=processed_stage/);
+assert.match(sqlV4,/else opp_stage:=pending_stage/);
+assert.match(sqlV4,/p_send_message/);
+assert.match(sqlV4,/manual-offer-accepted:/);
+assert.match(sqlV4,/name='VDF · ESTÁNDAR 600'/);
+assert.match(sqlV4,/base_features='\["Fibra 600 Mb","160 GB"\]'/);
+assert.match(source,/step="1"/);
+assert.match(source,/Enviar también este mensaje al cliente/);
+assert.match(source,/Fecha de tramitación/);
 
 const runner=fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/index.ts'),'utf8');
 assert.match(runner,/replaceAll\("\{oferta_mensaje\}"/);
