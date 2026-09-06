@@ -89,6 +89,8 @@ async function findChatContexts(page) {
 
 test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ page }) => {
   test.setTimeout(210000);
+  // Only avatar image bytes are isolated; chat/search/navigation use the real service.
+  await page.route('**/api/green?action=avatar',route=>route.fulfill({json:{ok:true,urlAvatar:'data:image/svg+xml;base64,PHN2Zy8+'}}));
   await login(page);
   await openWhatsApp(page);
 

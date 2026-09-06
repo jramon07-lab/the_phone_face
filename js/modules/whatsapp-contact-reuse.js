@@ -335,11 +335,14 @@ function contactTaskPrefill(extra={}){
   return {overlay:true,type:'Tarea',title:extra.title||('Llamar a '+name),description:extra.description||'',customerName:name,phone,contactId:c?.id||'',startsAt:extra.startsAt||new Date(Date.now()+60*60*1000)}
 }
 async function restoreTaskOrigin(){
+  const origin=state.taskOrigin;
   const c=contact();
   if(c&&typeof loadWaContactSideData==='function'){
     const phone=typeof waNormalizePhone==='function'?waNormalizePhone(currentChatId()):currentChatId();
     try{await loadWaContactSideData(c,phone)}catch(_){}
   }
+  // A new task may already be open while the previous sidebar refresh finishes.
+  if(state.taskOrigin!==origin)return;
   if(state.taskOrigin?.returnTo==='tasks'){
     state.taskOrigin.returnTo='chat';
     await showFocusedTasksPage();

@@ -36,6 +36,14 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
   await page.evaluate(id=>window.openAgendaItem(id),id);await page.locator('#agendaTitle').fill(title+' EDITADA');
   const updatedPromise=page.waitForResponse(r=>r.url().includes('/rest/v1/agenda_items')&&r.request().method()==='PATCH');
   await page.locator('#agendaSave').click();expect((await updatedPromise).ok()).toBeTruthy();await expect(page.locator('#agendaCreateCard')).not.toHaveClass(/open/);
+  await page.locator('#agendaFilter').selectOption('all');
+  await expect(page.locator('[data-complete-agenda="'+id+'"]')).toBeVisible();await page.locator('[data-complete-agenda="'+id+'"]:visible').first().click();
+  await expect.poll(()=>page.evaluate(async id=>(await sb.from('agenda_items').select('status').eq('id',id).single()).data.status,id)).toBe('completed');
+  await page.evaluate(id=>window.openAgendaItem(id),id);await page.locator('#agendaEditStatus').selectOption('pending');await page.locator('#agendaSave').click();await expect(page.locator('#agendaCreateCard')).not.toHaveClass(/open/);
+  await expect.poll(()=>page.evaluate(async id=>(await sb.from('agenda_items').select('status').eq('id',id).single()).data.status,id)).toBe('pending');
+  await page.locator('[data-postpone-agenda="'+id+'"]:visible').click();await compact(page);await expect(page.locator('#agendaTitle')).toHaveValue(title+' EDITADA');await close(page);
+  await page.locator('#agendaCalendarView').click();await expect(page.locator('#agendaCalendar')).toBeVisible();const month=await page.locator('.agendaMonthTitle').textContent();await page.locator('[data-agenda-month="1"]').click();await expect(page.locator('.agendaMonthTitle')).not.toHaveText(month);await page.locator('[data-agenda-month="-1"]').click();await expect(page.locator('.agendaMonthTitle')).toHaveText(month);
+  const day=page.locator('.agendaDayNumber').first(),date=await day.getAttribute('data-agenda-day');await day.click();await compact(page);await expect(page.locator('#agendaStarts')).toHaveValue(date+'T10:00');await close(page);await page.locator('#agendaListView').click();
   const facts=await page.evaluate(async()=>{const contacts=await TPFRecordLinks.load(sb);await loadSales();const lookup=TPFRecordLinks.index(contacts);return {contactId:contacts[0]?.id,opportunityId:salesCache.opportunities.find(o=>TPFRecordLinks.owner(o,lookup,'opportunity'))?.id};});
   expect(facts.contactId).toBeTruthy();await page.evaluate(id=>window.openContact(id),facts.contactId);await page.evaluate(()=>openContactTaskPage());await compact(page);await close(page);
   if(facts.opportunityId){await page.evaluate(id=>window.openSalesTaskForOpportunity(id),facts.opportunityId);await compact(page);await close(page);}
@@ -50,7 +58,7 @@ test('Demo: crear, editar y abrir una misma tarea desde las entradas del CRM y m
   if(!id){await page.goto('/');await expect(page.locator('#app')).toBeVisible({timeout:30000});id=await page.evaluate(async title=>{const r=await sb.from('agenda_items').select('id').eq('title',title).maybeSingle();return r.data?.id;},title);}
   if(id){await page.goto('/');await expect(page.locator('#app')).toBeVisible({timeout:30000});
    const own=await page.evaluate(async id=>{const r=await sb.from('agenda_items').select('title').eq('id',id).single();return r.data?.title;},id);expect(own).toContain(title);
-   page.once('dialog',dialog=>dialog.accept());const removed=page.waitForResponse(r=>r.url().includes('/rest/v1/agenda_items')&&r.request().method()==='DELETE');await page.evaluate(id=>window.deleteAgenda(id),id);expect((await removed).ok()).toBeTruthy();
+   page.once('dialog',dialog=>dialog.accept());const removed=page.waitForResponse(r=>r.url().includes('/rest/v1/agenda_items')&&r.request().method()==='DELETE');await page.evaluate(id=>window.deleteAgenda(id),id);expect((await removed).ok()).toBeTruthy();const copies=await page.evaluate(async id=>(await sb.from('crm_trash').select('id').eq('entity_type','agenda').eq('entity_id',id)).data,id);for(const row of copies){page.once('dialog',d=>d.accept());await page.evaluate(id=>window.purgeTrash(id),row.id);}
   }
  }
 });

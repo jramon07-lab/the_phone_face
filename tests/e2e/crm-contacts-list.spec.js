@@ -62,6 +62,9 @@ test('contactos: nueva pantalla, filtros, etiquetas, ficha y alta visibles', asy
   await expect(page.locator('#tpfCreateBank')).toBeVisible();
   await expect(page.locator('#tpfCreateNotes')).toBeVisible();
   await expect(page.locator('#tpfCreateObs')).toBeVisible();
+  await expect(page.locator('#tpfPickToggle')).toBeVisible();
+  await expect(page.locator('#tpfPickPanel')).toBeHidden();
+  await page.locator('#tpfPickToggle').click();
   await expect(page.locator('#tpfCreateLabels')).toBeVisible();
   await page.locator('#tpfContactsCreateCancel').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();

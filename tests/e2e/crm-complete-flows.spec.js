@@ -2,9 +2,9 @@ const {test,expect}=require('@playwright/test');
 test.use({trace:'off',video:'off'});
 async function login(page){
  await page.goto('/');
- if(await page.locator('#login').isVisible()){
-  await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();
- }
+ await page.waitForFunction(()=>typeof sb!=='undefined');
+ const session=await page.evaluate(async()=>!!(await sb.auth.getSession()).data.session);
+ if(!session){await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();}
  await expect(page.locator('#app')).toBeVisible({timeout:30000});
 }
 async function mobile(page,route){
@@ -46,6 +46,11 @@ test('Contactos: alta, edición PC/móvil, buscador, borrado inmediato y papeler
  try{
   const id=await createContact(page,marker,'Contacto');
   await page.locator('#tpfContactsSearch').fill(marker);await expect(page.locator('#tpfContactsRows tr')).toHaveCount(1);
+  if(await page.evaluate(()=>crmCan('can_export_excel'))){
+   await page.locator('#tpfContactsExport').click();const downloadPromise=page.waitForEvent('download');await page.locator('[data-export="filtered"]').click();const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+   const stream=await download.createReadStream(),chunks=[];for await(const chunk of stream)chunks.push(chunk);const bytes=[...Buffer.concat(chunks)];
+   const exported=await page.evaluate(bytes=>{const book=XLSX.read(new Uint8Array(bytes),{type:'array'});return XLSX.utils.sheet_to_json(book.Sheets[book.SheetNames[0]]);},bytes);expect(exported).toHaveLength(1);expect(exported[0]['Nombre y apellidos']).toContain(marker);
+  }
   await page.locator('#tpfContactsRows .tpfContactPencil').click();await expect(page.locator('#tpfCreateFirst')).toHaveValue(marker);
   await page.locator('#tpfCreateLast').fill('Editado');await page.locator('#tpfCreateNotes').fill('Nota de validación');await page.locator('#tpfContactsCreateSave').click();
   await expect(page.locator('#tpfContactsRows')).toContainText('Editado');expect((await contactRows(page,marker))[0].data.NOTAS).toBe('Nota de validación');

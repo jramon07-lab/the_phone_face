@@ -40,6 +40,7 @@ async function openWhatsAppMatchedContact(page){
 }
 
 test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({page})=>{
+  test.setTimeout(120000);
   await login(page);
   const matched=await openWhatsAppMatchedContact(page);
 

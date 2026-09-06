@@ -54,7 +54,8 @@ async function shot(page,name){
 
 test('cuenta demo por interfaz real: editor separado y oportunidades responden', async ({page})=>{
   await login(page);
-  const linked={recordId:'fe4b2188-8a08-445f-bbaa-6d4d5f89377d'};
+  const linked=await page.evaluate(async()=>{await loadSales();const people=await TPFRecordLinks.load(sb);const found=people.find(c=>TPFRecordLinks.related(salesCache.opportunities,people,c.id,'opportunity').length>0);return {recordId:found?.id};});
+  expect(linked.recordId,'Debe existir un contacto con oportunidades para comprobar este recorrido').toBeTruthy();
   await openRecordThroughUi(page,linked.recordId);
 
   await page.locator('#contactModal .cpRefEdit').click();
