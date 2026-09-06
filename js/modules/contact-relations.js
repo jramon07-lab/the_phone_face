@@ -4,6 +4,7 @@ const P=window.TPFContactParty;if(!P||window.TPFContactRelations)return;
 const $=id=>document.getElementById(id),clean=v=>String(v??'').trim();
 const esc=v=>clean(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const displayPhone=v=>P.displayPhone?P.displayPhone(v):clean(v);
 const original={...P},forms=new WeakMap();let opportunity=null,profileToken=0;
 function identity(r){const d=r?.data||{};return {record_id:clean(r?.id),name:clean(d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')),phone:clean(d['TELÉFONO']||d.TELEFONO||d.PHONE||d.MOVIL),dni:clean(d['DNI / NIF']||d.DNI)};}
 function links(p){return Array.isArray(p?.managed_contacts)?p.managed_contacts.filter(x=>x&&clean(x.record_id)).map(x=>({record_id:clean(x.record_id),name:clean(x.name),phone:clean(x.phone),dni:clean(x.dni)})):[];}
@@ -29,29 +30,72 @@ function compact(root,label){
  root.appendChild(details);return details;
 }
 function renderSelected(root,state){
- const list=root.querySelector('[data-rel-list]');list.innerHTML=state.items.map((x,i)=>`<div class="tpfRelRow">${button(x)}<span>${esc(x.dni||x.phone)}</span><button type="button" class="secondary" data-rel-remove="${i}" aria-label="Desvincular ${esc(x.name)}">Quitar vínculo</button></div>`).join('');
+ const list=root.querySelector('[data-rel-list]');list.innerHTML=state.items.map((x,i)=>`<div class="tpfRelRow">${button(x)}<span>${esc(x.dni||displayPhone(x.phone))}</span><button type="button" class="secondary" data-rel-remove="${i}" aria-label="Desvincular ${esc(x.name)}">Quitar vínculo</button></div>`).join('');
  root.querySelector('[data-rel-count]').textContent=state.items.length?` (${state.items.length})`:'';
 }
 function contactId(){const modal=$('tpfContactsCreateBack');return clean(modal?.dataset.editId||(modal?.dataset.tpfProfileEditing&&typeof currentContact!=='undefined'?currentContact?.id:''));}
+function newHolderData(values){
+ const first=clean(values.first),last=clean(values.last),phone=clean(values.phone),dni=clean(values.dni).toUpperCase(),email=clean(values.email);
+ if(!first&&!last)throw Error('Escribe el nombre o los apellidos del titular.');
+ if(phone&&!P.validPhone(phone))throw Error('Revisa el teléfono del titular.');
+ if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Revisa el correo electrónico.');
+ return {NOMBRE:first,APELLIDOS:last,'NOMBRE Y APELLIDOS':[first,last].filter(Boolean).join(' '),'TELÉFONO':displayPhone(phone),'DNI / NIF':dni,DNI:dni,EMAIL:email,TPF_TITULAR:{same:true,recipient:'contact'}};
+}
+async function createHolder(data,attempt,active,showDuplicates){
+ if(typeof perms==='undefined'||!(perms?.is_admin||perms?.can_create_database))throw Error('No tienes permiso para crear contactos.');
+ if(attempt.issued)throw Error('Comprueba primero en el buscador si el titular se creó. No se repetirá el envío.');
+ const ensure=()=>{if(!active())throw Error('La edición ha cambiado. No se ha creado el titular.');};ensure();
+ const result=await sb.rpc('find_possible_duplicate_contact',{phone_text:data['TELÉFONO']||null,dni_text:data.DNI||null,email_text:data.EMAIL||null});if(result.error)throw result.error;ensure();
+ const names=await searchRecords(data['NOMBRE Y APELLIDOS'],active);ensure();
+ const phones=data['TELÉFONO']?await searchRecords(data['TELÉFONO'].replace(/\D/g,''),active):[];ensure();
+ const phoneKey=v=>displayPhone(v).replace(/\D/g,'');
+ const candidates=[...new Map([...(result.data||[]).map(identity),...names.filter(x=>norm(x.name)===norm(data['NOMBRE Y APELLIDOS'])),...phones.filter(x=>phoneKey(x.phone)===phoneKey(data['TELÉFONO']))].map(x=>[x.record_id,x])).values()];
+ if(candidates.length){showDuplicates(candidates);if(!window.confirm('Hay posibles contactos duplicados. Puedes cancelar y elegir uno en los resultados. ¿Confirmas que es otra persona y quieres crear una ficha nueva?'))return null;}
+ ensure();attempt.issued=true;
+ const saved=await sb.rpc('crm_create_contact_with_welcome_variant',{p_data:data,p_labels:[],p_welcome:false,p_variant:'general'});
+ if(saved.error){if(/^[0-9A-Z]{5}$/.test(saved.error.code||''))attempt.issued=false;throw saved.error;}
+ if(!saved.data)throw Error('No se ha podido confirmar la creación. Búscalo antes de intentarlo otra vez.');
+ return identity({id:saved.data,data});
+}
 P.fillContact=function(data){
  original.fillContact(data);const root=$('tpfContactParty');if(!root)return;
+ const labels=$('tpfCompactLabels')||$('tpfCreateLabels')?.closest('label');if(labels)labels.insertAdjacentElement('afterend',root);
  const p=data?.TPF_TITULAR||{},state={items:links(data?.TPF_RELACIONES),original:p,query:0};forms.set(root,state);
  const legacy=compact(root,p.same===false?'Titular anterior: '+(p.holder_name||'Ver datos'):'Opciones de destinatario');
  if(p.same!==false)legacy.hidden=true;
  const section=document.createElement('div');section.innerHTML=`<label class="tpf-party-check"><input type="checkbox" data-rel-enabled><span>Ver / añadir titulares asociados<span data-rel-count></span></span></label><div data-rel-panel hidden><div data-rel-list></div><button type="button" class="secondary" data-rel-add>+ Añadir titular</button><div data-rel-searchbox hidden><label>Buscar contacto existente<input type="search" data-rel-search placeholder="Nombre, teléfono o DNI" autocomplete="off"></label><div data-rel-results aria-live="polite"></div><small>Si aún no tiene ficha, créala en Contactos y después vincúlala aquí. No se crean duplicados automáticamente.</small></div></div>`;
  root.prepend(section);renderSelected(root,state);
+ const searchBox=root.querySelector('[data-rel-searchbox]');searchBox.querySelector('small').textContent='Busca una ficha existente o crea un titular nuevo aquí.';
+ searchBox.insertAdjacentHTML('beforeend',`<button type="button" class="secondary" data-rel-new>+ Crear nuevo titular</button><div data-rel-newform hidden><div class="tpf-party-grid"><label>Nombre<input data-rel-newfield="first" autocomplete="off"></label><label>Apellidos<input data-rel-newfield="last" autocomplete="off"></label><label>DNI / NIF<input data-rel-newfield="dni" autocomplete="off"></label><label>Teléfono (opcional)<input data-rel-newfield="phone" inputmode="tel" autocomplete="off"></label><label>Correo electrónico (opcional)<input data-rel-newfield="email" type="email" autocomplete="off"></label></div><p>Crear titular guarda una ficha nueva. Después guarda el contacto principal para confirmar el vínculo. Si cancelas la edición, la nueva ficha seguirá en Contactos.</p><button type="button" class="primary" data-rel-create>Crear titular y añadir</button><button type="button" class="secondary" data-rel-cancelnew>Cancelar nuevo titular</button><div data-rel-createmsg role="status" aria-live="polite"></div></div>`);
+ let attempt={issued:false};
+ root.querySelector('[data-rel-new]').onclick=()=>{root.querySelector('[data-rel-newform]').hidden=false;root.querySelector('[data-rel-newfield="first"]').focus();};
+ root.querySelector('[data-rel-cancelnew]').onclick=()=>{root.querySelector('[data-rel-newform]').hidden=true;};
+ root.querySelector('[data-rel-create]').onclick=async()=>{
+  if(state.creating)return;const msg=root.querySelector('[data-rel-createmsg]');
+  const active=()=>root.isConnected&&$('tpfContactParty')===root&&!$('tpfContactsCreateBack')?.classList.contains('hidden');
+  const controls=[...root.querySelectorAll('input,button'),...['tpfContactsCreateSave','tpfContactsCreateCancel','tpfContactsCreateClose'].map($).filter(Boolean)],disabled=controls.map(x=>x.disabled);
+  try{
+   const data=newHolderData(Object.fromEntries([...root.querySelectorAll('[data-rel-newfield]')].map(x=>[x.dataset.relNewfield,x.value])));state.creating=true;controls.forEach(x=>x.disabled=true);msg.textContent='Comprobando y guardando…';
+   const x=await createHolder(data,attempt,active,rows=>{state.results=rows;root.querySelector('[data-rel-results]').innerHTML=rows.map(x=>`<button type="button" class="secondary tpfRelResult" data-rel-pick="${esc(x.record_id)}"><b>${esc(x.name)}</b><small>${esc(x.dni)} · ${esc(displayPhone(x.phone))}</small></button>`).join('');});
+   if(!x){msg.textContent='No se ha creado ninguna ficha. Puedes elegir un contacto existente en los resultados.';return;}
+   if(!active()){window.alert('El titular se ha creado. Búscalo en Contactos para vincularlo; la edición anterior se cerró.');return;}
+   state.items.push(x);renderSelected(root,state);attempt={issued:false};root.querySelectorAll('[data-rel-newfield]').forEach(x=>x.value='');root.querySelector('[data-rel-newform]').hidden=true;root.querySelector('[data-rel-results]').textContent='Titular creado y añadido. Guarda el contacto principal para confirmar el vínculo.';root.dispatchEvent(new Event('input',{bubbles:true}));
+  }catch(error){msg.textContent=(error.message||'No se pudo crear el titular.')+(attempt.issued?' Antes de volver a crear, comprueba en el buscador si ya existe.':'');}
+  finally{state.creating=false;if(active())controls.forEach((x,i)=>x.disabled=disabled[i]);}
+ };
  root.addEventListener('change',e=>{if(e.target.matches('[data-rel-enabled]'))root.querySelector('[data-rel-panel]').hidden=!e.target.checked;});
  root.addEventListener('click',e=>{
+  if(state.creating){e.preventDefault();e.stopPropagation();return;}
   if(e.target.closest('[data-rel-add]')){root.querySelector('[data-rel-searchbox]').hidden=false;root.querySelector('[data-rel-search]').focus();}
   const remove=e.target.closest('[data-rel-remove]');if(remove){state.items.splice(Number(remove.dataset.relRemove),1);renderSelected(root,state);root.dispatchEvent(new Event('input',{bubbles:true}));}
   const pick=e.target.closest('[data-rel-pick]');if(pick){const x=state.results?.find(x=>x.record_id===pick.dataset.relPick);if(!x||x.record_id===contactId()||state.items.some(y=>y.record_id===x.record_id))return;state.items.push(x);renderSelected(root,state);root.querySelector('[data-rel-results]').textContent='Titular añadido. Guarda los cambios para confirmar.';root.querySelector('[data-rel-search]').value='';root.dispatchEvent(new Event('input',{bubbles:true}));}
  });
  let timer;root.querySelector('[data-rel-search]').addEventListener('input',e=>{
   clearTimeout(timer);const token=++state.query,q=e.target.value.trim(),out=root.querySelector('[data-rel-results]');out.textContent=q.length<2?'Escribe al menos dos caracteres.':'Buscando…';if(q.length<2)return;
-  timer=setTimeout(async()=>{try{const rows=await searchRecords(q,()=>root.isConnected&&token===state.query);if(!root.isConnected||token!==state.query)return;state.results=rows.filter(x=>x.record_id!==contactId()&&!state.items.some(y=>x.record_id===y.record_id));out.innerHTML=state.results.length?state.results.map(x=>`<button type="button" class="secondary tpfRelResult" data-rel-pick="${esc(x.record_id)}"><b>${esc(x.name||'Sin nombre')}</b><small>${esc(x.dni)} · ${esc(x.phone)}</small></button>`).join(''):'No hay coincidencias disponibles.';}catch(err){if(token===state.query)out.textContent=err.message||'No se pudo buscar. Inténtalo otra vez.';}},300);
+  timer=setTimeout(async()=>{try{const rows=await searchRecords(q,()=>root.isConnected&&token===state.query);if(!root.isConnected||token!==state.query)return;state.results=rows.filter(x=>x.record_id!==contactId()&&!state.items.some(y=>x.record_id===y.record_id));out.innerHTML=state.results.length?state.results.map(x=>`<button type="button" class="secondary tpfRelResult" data-rel-pick="${esc(x.record_id)}"><b>${esc(x.name||'Sin nombre')}</b><small>${esc(x.dni)} · ${esc(displayPhone(x.phone))}</small></button>`).join(''):'No hay coincidencias disponibles.';}catch(err){if(token===state.query)out.textContent=err.message||'No se pudo buscar. Inténtalo otra vez.';}},300);
  });
 };
-function applyContactData(data,id){const state=forms.get($('tpfContactParty'));if(!state)throw Error('Vuelve a abrir el contacto para cargar sus titulares.');if(state.items.some(x=>x.record_id===clean(id||contactId())))throw Error('Un contacto no puede vincularse consigo mismo.');data.TPF_RELACIONES={version:1,managed_contacts:state.items.map(x=>({...x}))};}
+function applyContactData(data,id){const state=forms.get($('tpfContactParty'));if(!state)throw Error('Vuelve a abrir el contacto para cargar sus titulares.');if(state.creating)throw Error('Espera a que termine la creación del titular.');if(state.items.some(x=>x.record_id===clean(id||contactId())))throw Error('Un contacto no puede vincularse consigo mismo.');data.TPF_RELACIONES={version:1,managed_contacts:state.items.map(x=>({...x}))};}
 P.search=function(c){return [original.search(c),...links(c?.data?.TPF_RELACIONES||c?.TPF_RELACIONES).map(x=>[x.name,x.dni,x.phone].join(' '))].join(' ');};
 P.renderProfile=function(c){
  let box=$('tpfContactPartySummary');const anchor=document.querySelector('#contactModal .cpData');if(!anchor||!c?.id)return;
@@ -71,7 +115,7 @@ function drawOpportunity(state){
  if(state.loading){box.textContent='Comprobando titulares vinculados…';root.prepend(box);return;}
  if(state.historical){const p=state.previous,own=state.owner?identity(state.owner):null,holder=own&&norm(own.name)===norm(p.holder_name)?own:null,candidates=[...(own?[own]:[]),...state.managers.map(identity)].filter(x=>norm(x.name)===norm(p.contact_name)&&clean(x.phone)===clean(p.contact_phone)),manager=candidates.length===1?candidates[0]:null;box.innerHTML=`<div class="tpfRelRow">Titular: ${holder?button(holder):esc(p.holder_name)}</div><div class="tpfRelRow">Gestionado por: ${manager?button(manager):esc(p.contact_name)}</div>`;root.prepend(box);return;}
  const own=state.owner?identity(state.owner):null;
- box.innerHTML=`${state.items.length?`<label class="tpf-party-check"><input type="checkbox" data-rel-other ${state.selected?'checked':''}><span>La oportunidad es para otra persona</span></label><div data-rel-choices ${state.selected?'':'hidden'}><label>Buscar entre sus titulares<input type="search" data-rel-filter placeholder="Nombre, teléfono o DNI"></label><select data-rel-choice aria-label="Titular de la oportunidad"><option value="">Selecciona un titular</option>${state.items.map(x=>`<option value="${esc(x.record_id)}" ${state.selected===x.record_id?'selected':''}>${esc(x.name)} · ${esc(x.dni||x.phone)}</option>`).join('')}</select></div>`:''}${state.managers.length?`<div class="tpfRelRow">Gestionado por: ${state.managers.length===1?button(identity(state.managers[0])):`<select data-rel-manager aria-label="Elegir gestor"><option value="">Selecciona quién gestiona esta oportunidad</option>${state.managers.map(r=>`<option value="${esc(r.id)}">${esc(identity(r).name)}</option>`).join('')}</select>`}</div>`:''}<div data-rel-selection></div>`;
+ box.innerHTML=`${state.items.length?`<label class="tpf-party-check"><input type="checkbox" data-rel-other ${state.selected?'checked':''}><span>La oportunidad es para otra persona</span></label><div data-rel-choices ${state.selected?'':'hidden'}><label>Buscar entre sus titulares<input type="search" data-rel-filter placeholder="Nombre, teléfono o DNI"></label><select data-rel-choice aria-label="Titular de la oportunidad"><option value="">Selecciona un titular</option>${state.items.map(x=>`<option value="${esc(x.record_id)}" ${state.selected===x.record_id?'selected':''}>${esc(x.name)} · ${esc(x.dni||displayPhone(x.phone))}</option>`).join('')}</select></div>`:''}${state.managers.length?`<div class="tpfRelRow">Gestionado por: ${state.managers.length===1?button(identity(state.managers[0])):`<select data-rel-manager aria-label="Elegir gestor"><option value="">Selecciona quién gestiona esta oportunidad</option>${state.managers.map(r=>`<option value="${esc(r.id)}">${esc(identity(r).name)}</option>`).join('')}</select>`}</div>`:''}<div data-rel-selection></div>`;
  root.prepend(box);
  const display=()=>{const x=state.items.find(x=>x.record_id===state.selected);box.querySelector('[data-rel-selection]').innerHTML=x?`<div class="tpfRelRow">Titular: ${button(x)}</div><div class="tpfRelRow">Gestionado por: ${button(own)}</div>`:'';};display();
  box.querySelector('[data-rel-other]')?.addEventListener('change',e=>{box.querySelector('[data-rel-choices]').hidden=!e.target.checked;state.chooseOther=e.target.checked;if(!e.target.checked){state.selected='';box.querySelector('[data-rel-choice]').value='';}display();});
