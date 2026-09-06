@@ -42,6 +42,21 @@ const extraUnlimitedMessage=api.buildMessage(offer,{extraUnlimited:2},'Ana Garc�
 assert.match(extraUnlimitedMessage,/2 líneas con datos ilimitados/);
 assert.doesNotMatch(extraUnlimitedMessage,/líneas de con datos/);
 
+const masmovil={operator:'MásMóvil',name:'MM · INTERNA',base_price:34.9,base_features:['Fibra 500 Mb','2 líneas con 50 GB compartidos'],line_options:[
+  {id:'fiber1gb',name:'Fibra 1 Gb',price_delta:10,option_type:'checkbox',group_name:'fibra',message_text:'Fibra 1 Gb',replaces_text:'Fibra 500 Mb'},
+  {id:'line25',name:'Línea móvil 25 GB',data_gb:25,price_delta:5,option_type:'quantity',group_name:'shared_gb',message_text:'25 GB compartidos'},
+  {id:'line45',name:'Línea móvil 45 GB',data_gb:45,price_delta:10,option_type:'quantity',group_name:'shared_gb',message_text:'45 GB compartidos'},
+  {id:'discount15',name:'Descuento 15 €',price_delta:-15,option_type:'radio',group_name:'discount'}
+]};
+assert.equal(api.calculateTotal(masmovil,{fiber1gb:1,line25:1,line45:2,discount15:1}),54.9,'MásMóvil adds extras and applies any optional discount');
+const masmovilMessage=api.buildMessage(masmovil,{fiber1gb:1,line25:1,line45:2,discount15:1},'Rosa López','',54.9);
+assert.match(masmovilMessage,/Fibra 1 Gb/);
+assert.match(masmovilMessage,/5 líneas con 165 GB compartidos/,'additional lines are merged into the shared data pool');
+assert.doesNotMatch(masmovilMessage,/Descuento|INTERNA|Línea móvil/,'discount and internal names never reach the customer');
+const hiddenSharedMessage=api.buildMessage(masmovil,{line25:1},'Rosa López','',39.9,{line25:false});
+assert.match(hiddenSharedMessage,/2 líneas con 50 GB compartidos/,'the eye can hide the added shared data from the message without changing price');
+assert.doesNotMatch(hiddenSharedMessage,/75 GB/);
+
 const sql=fs.readFileSync(path.join(root,'db/proposals/offer-configurator.sql'),'utf8');
 for(const table of ['crm_offer_catalog','crm_offer_line_options','crm_offer_instances'])assert.match(sql,new RegExp(`alter table public\\.${table} enable row level security`));
 assert.match(sql,/p_mode not in \('followup','accepted'\)/);
@@ -93,6 +108,13 @@ assert.match(sqlV4,/900 759 004/);
 assert.match(source,/step="1"/);
 assert.match(source,/Enviar también este mensaje al cliente/);
 assert.match(source,/Fecha de tramitación/);
+
+const sqlMasMovil=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-masmovil.sql'),'utf8');
+for(const value of ["34.90::numeric,50","39.90::numeric,100","46.90::numeric,200","'Fibra 1 Gb',null,10","'TV',null,6","'Netflix',null,8.99","'Amazon',null,4","'Disney+',null,6.99","'Línea móvil 25 GB',25,5","'Línea móvil 45 GB',45,10","'Línea móvil 100 GB',100,12","'Descuento 10 €',null,-10","'Descuento 15 €',null,-15","'Descuento 17 €',null,-17"])assert.ok(sqlMasMovil.includes(value),`expected MásMóvil catalog value: ${value}`);
+assert.match(sqlMasMovil,/lower\(coalesce\(opt\.group_name,''\)\)='shared_gb'/);
+assert.match(sqlMasMovil,/shared_base_gb\+shared_added_gb/);
+assert.match(sqlMasMovil,/lower\(coalesce\(opt\.group_name,''\)\)='discount'/);
+assert.match(sqlMasMovil,/No crea envíos ni trabajos retroactivos/);
 
 const runner=fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/index.ts'),'utf8');
 assert.match(runner,/replaceAll\("\{oferta_mensaje\}"/);
