@@ -47,6 +47,9 @@ async function run(){
   board={data:{opportunities:[initial[2]]}};
   await context.loadSales();
   assert.equal(cells[0].innerHTML,'<small>Sin oportunidades</small>');
+  window.dispatchEvent(new CustomEvent('tpf:contacts-loaded',{detail:{records:[{...contacts[0],data:{NOMBRE:'Uno',TPF_RELACIONES:{managed_contacts:[{record_id:'c2'},{record_id:'c2'}]}}},contacts[1]]}}));
+  assert.match(cells[0].innerHTML,/1 oportunidad/,'Managed holder opportunity missing or duplicated');
+  assert.match(cells[1].innerHTML,/1 oportunidad/,'Holder lost own opportunity');
   console.log('PASS: deletion count, closing date, unrelated contact, stale query, failed refresh, final deletion');
 }
 run().catch(e=>{console.error(e);process.exitCode=1});
