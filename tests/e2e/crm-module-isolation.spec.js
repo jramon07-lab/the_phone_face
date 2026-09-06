@@ -30,7 +30,8 @@ test('módulo Contactos/Ventas: está aislado y Ventas abre',async({page})=>{awa
 
 test('Ventas: operador automático, contacto por DNI y filtros de fecha están disponibles',async({page})=>{
   await login(page);await page.locator('.nav[data-view="sales"]').click();await expect(page.locator('#view-sales')).toBeVisible();
-  await page.evaluate(()=>window.newOppInStage?.(salesCache?.stages?.[0]?.id));
+  await expect.poll(()=>page.evaluate(()=>salesCache?.stages?.length||0)).toBeGreaterThan(0);
+  await page.evaluate(()=>window.newOppInStage?.(salesCache.stages[0].id));
   await expect(page.locator('#oppDetailModal')).toBeVisible();
   await expect(page.locator('#oppModalDni')).toBeVisible();
   await page.locator('#oppModalTitle').fill('REVISIÓN VODAFONE');
