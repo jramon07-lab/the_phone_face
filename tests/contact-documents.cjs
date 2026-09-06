@@ -16,7 +16,7 @@ global.fetch=async(url,options={})=>{calls.push({url,options});
  if(url.includes('/drive/v3/files?'))return response({files:[{id:'file_test',name:'Factura.pdf'}]});
  throw Error('Unexpected network call: '+url);
 };
-async function invoke(action,body={},method){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app'},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456'},body:{contactId:rid,...body}},res);return result;}
+async function invoke(action,body={},method){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app'},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456'},body:{contactId:rid,...body}},res);return result;}
 (async()=>{
  assert.equal(T.folderId('https://drive.google.com/drive/u/0/folders/'+fid),fid);
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));
@@ -39,7 +39,15 @@ async function invoke(action,body={},method){let result;const res={setHeader(){r
  d=await invoke('bulkLink',{confirmed:true,expectedLink:null,expectedData:snapshot,rootId:'root_test_123456',folderId:fid,folderName:'Nombre antiguo'});assert.equal(d.status,409);
  savedLink={version:1,provider:'google_drive',folder_id:fid};
  d=await invoke('bulkLink',{confirmed:true,expectedLink:savedLink,expectedData:row().data,rootId:'root_test_123456',folderId:fid,folderName:'Carpeta verificada'});assert.equal(d.status,409);
+
+ let exp=await invoke('expiry',{confirmed:true,person:'holder',date:'2030-12-31',expectedData:row().data});assert.equal(exp.status,200);assert.equal(patch.data.TPF_DNI_EXPIRY.holder.date,'2030-12-31');assert.equal(patch.data.NOTAS,'Conservar');assert.deepEqual(patch.data.TPF_DOCUMENTS,savedLink);
+ assert.equal((await invoke('expiry',{confirmed:true,person:'contact',date:'2030-02-31',expectedData:row().data})).status,400);
+ assert.equal((await invoke('expiry',{confirmed:false,person:'contact',date:'2030-12-31',expectedData:row().data})).status,400);
+ assert.equal((await invoke('expiry',{confirmed:true,person:'contact',date:'2030-12-31',expectedData:{}})).status,409);
+ emptyPatch=true;assert.equal((await invoke('expiry',{confirmed:true,person:'contact',date:'2030-12-31',expectedData:row().data})).status,409);emptyPatch=false;
  permission={user_id:rid,is_admin:false,can_edit_records:false};
+ assert.equal((await invoke('expiry',{confirmed:true,person:'contact',date:'2030-12-31',expectedData:row().data})).status,403);
+
  for(const action of ['upload','link','bulkLink','bulkFolders','search','authorize'])assert.equal((await invoke(action,{expectedLink:savedLink,confirmed:true,folderId:fid})).status,403);
  permission=null;calls=[];assert.equal((await invoke('list')).status,403);assert.equal(calls.length,1);
  console.log('PASS: permissions, folder validation, provider guard, preservation, stale saves, upload restrictions, OAuth state, no token disclosure. All network mocked.');

@@ -35,7 +35,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const saved=await request(SB+'/rest/v1/crm_external_credentials?on_conflict=provider',{method:'POST',headers:{...serviceHeaders(),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({provider:PROVIDER,encrypted_value:seal({refresh_token:d.refresh_token}),updated_by:state.userId,updated_at:new Date().toISOString()})});if(!saved.ok)throw fail(503,'No se pudo guardar la autorización.');
   res.setHeader('Set-Cookie','tpf_docs_nonce=; Path=/api/crm-documents; HttpOnly; Secure; SameSite=Lax; Max-Age=0');res.setHeader('Location',ORIGIN+'/?documents=connected');return res.status(303).end();
  }
- const write=['authorize','link','bulkLink','upload'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
+ const write=['authorize','link','bulkLink','upload','expiry'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
  const who=await identity(req),body=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
  if(action==='status')return json(res,200,{ok:true,configured:configured(),connected:configured()?!!await credential():false,canManage:!!who.p.is_admin,canUpload:!!(who.p.is_admin||who.p.can_edit_records),callback:who.p.is_admin?CALLBACK:undefined});
  if(!configured())throw fail(503,'Falta configurar la conexión de Documentos en el servidor.');
@@ -54,6 +54,19 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   return json(res,200,{ok:true,root:{id:root.id,name:root.name},...await drive(t,'files?'+q)});
  }
  const row=await record(body.contactId||req.query?.contactId,who),link=row.data?.TPF_DOCUMENTS;
+ if(action==='expiry'){
+  if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para modificar esta ficha.');
+  if(body.confirmed!==true||!['contact','holder'].includes(body.person))throw fail(400,'Confirma la fecha y a quién pertenece el DNI.');
+  const date=String(body.date||''),parsed=new Date(date+'T12:00:00Z');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(parsed)||parsed.toISOString().slice(0,10)!==date||Number(date.slice(0,4))<1900)throw fail(400,'Fecha no válida.');
+  if(body.person==='holder'&&row.data?.TPF_TITULAR?.same!==false)throw fail(409,'No hay un titular diferente en esta ficha.');
+  const stable=v=>JSON.stringify(v,(_,x)=>x&&typeof x==='object'&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).sort(([a],[b])=>a.localeCompare(b))):x);
+  if(stable(body.expectedData)!==stable(row.data))throw fail(409,'La ficha cambió. El PDF se conserva; vuelve a revisar la fecha.');
+  const expiry={version:1,...(row.data.TPF_DNI_EXPIRY||{}),[body.person]:{date,subject_name:body.person==='holder'?row.data.TPF_TITULAR.holder_name:(row.data['NOMBRE Y APELLIDOS']||[row.data.NOMBRE,row.data.APELLIDOS].filter(Boolean).join(' ')),subject_dni:body.person==='holder'?row.data.TPF_TITULAR.holder_dni:(row.data.DNI||''),confirmed_at:new Date().toISOString(),confirmed_by:who.p.user_id}};
+  const data={...row.data,TPF_DNI_EXPIRY:expiry};
+  const q=new URLSearchParams({id:'eq.'+row.id,data:'eq.'+JSON.stringify(row.data)}),r=await request(SB+'/rest/v1/records?'+q,{method:'PATCH',headers:{...who.headers,Prefer:'return=representation'},body:JSON.stringify({data})});
+  if(!r.ok)throw fail(403,'No se pudo guardar la fecha.');const updated=await r.json();if(updated.length!==1)throw fail(409,'La ficha cambió; vuelve a revisar la fecha.');return json(res,200,{ok:true,expiry});
+ }
  const t=await token();
  if(action==='search'){
   if(!who.p.is_admin)throw fail(403,'Solo el administrador puede buscar y vincular carpetas.');
@@ -88,3 +101,4 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  }catch(e){const status=e.status||500;return json(res,status,{ok:false,error:status===500?'No se pudo completar la operación. Vuelve a intentarlo.':e.message});}
 };
 module.exports._test={folderId,adapter,seal,unseal};
+

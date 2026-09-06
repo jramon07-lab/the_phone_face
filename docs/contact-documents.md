@@ -28,7 +28,7 @@ El callback usa state cifrado con vencimiento, nonce en cookie HttpOnly/SameSite
 4. Si no se confirma la subida, actualizar la lista antes de reintentar. No hay reintentos automáticos de escritura. Los archivos repetidos por nombre no se sobrescriben.
 5. Vincular usa comparación de JSON previo para evitar pisar cambios concurrentes. Preserva identidad, titular, etiquetas, notas y el resto de datos.
 
-Pendientes: adaptador OneDrive, asociación automática en importación (solo sugerencias hasta confirmación), captura desde WhatsApp, escaneo/recorte/perspectiva y confirmación de caducidad del DNI; interfaz /movil/ de Documentos. No se simulan estas funciones.
+Pendientes: adaptador OneDrive, asociación automática en importación (solo sugerencias hasta confirmación), captura desde WhatsApp; interfaz /movil/ de Documentos. No se simulan estas funciones.
 
 Validación: pruebas locales con todas las llamadas de red simuladas para permisos, IDs, datos conservados, conflicto de actualización y carga. No se ejecutó E2E, no se crearon clientes/tareas/oportunidades ni se enviaron mensajes. La autorización de Google y la transferencia real necesitan completarse en la cuenta del administrador; no se declaran verificadas antes de hacerlo.
 
@@ -45,3 +45,14 @@ La comparación normaliza mayúsculas, tildes, espacios y puntuación, y exige n
 Al guardar, bulkLink exige administrador, confirmación explícita, ausencia de vínculo anterior, snapshot completo de datos sin cambios y carpeta con el nombre y padre de la revisión. El PATCH mantiene la protección de concurrencia del enlace individual. Guarda secuencialmente, muestra progreso y permite detener después de la ficha en curso. Se detiene ante la primera incidencia; conserva lo ya guardado y pide una nueva revisión antes de reintentar. No se reintentan escrituras automáticamente. No se crean, renombran, mueven ni eliminan carpetas/archivos.
 
 Se añadieron tests locales de coincidencias y de permisos/conflictos/ubicación para bulkLink; todas las llamadas externas están simuladas. Ninguna vinculación real se realizó durante el desarrollo. La búsqueda y confirmación masiva en la cuenta de Ramón quedan para su revisión. Los nuevos contactos importados no se vinculan automáticamente: se puede repetir esta revisión en bloque y se conservan los enlaces anteriores.
+
+
+## Fotos / cámara a PDF (2026-09-06)
+
+Botón separado de la subida original en Documentos de la ficha de escritorio. Hasta 12 fotos, 30 MB por foto; selector de cámara en navegadores compatibles. Cuatro esquinas ajustables, giro, orden y retirada de páginas. Corrección proyectiva y muestreo bilineal, máximo 1800 px por lado de salida; no reconstrucción generativa ni texto añadido. PDF JPEG multipágina generado localmente y previsualizado antes de subir. Los originales están seleccionados para conservación y se transfieren sin modificación. No se sobrescriben archivos. Una subida incierta bloquea repetir desde ese diálogo: revisar la carpeta primero. No se crean carpetas.
+
+OCR local mediante el motor Tesseract 5.1.1 ya configurado, cargado solo al pedirlo. Solo propone fechas válidas junto a VALIDEZ/CADUCIDAD/EXPIRY; no infiere la caducidad desde nacimiento ni reconoce automáticamente DNI existentes en Drive. Requiere confirmación de fecha y selección de contacto/titular; se permite entrada manual. No crea recordatorios ni envía mensajes.
+
+POST expiry en crm-documents usa permisos actuales y RLS del usuario, snapshot completo y PATCH condicional. Conserva todos los demás campos. TPF_DNI_EXPIRY guarda por separado contact/holder, date, subject_name, subject_dni y autor/fecha de confirmación. No modifica nombre ni DNI. Si el PDF se guardó y la fecha falla, se informa del éxito parcial; no se repite el PDF automáticamente.
+
+Verificado localmente: sintaxis, matriz proyectiva, fechas imposibles/ambiguas/nacimiento, PDF de dos páginas con pdfinfo y endpoint con red simulada (permisos, confirmación, concurrencia, preservación). No hubo subida real, OCR sobre datos de cliente ni prueba visual autenticada durante el desarrollo. La interfaz independiente /movil/ sigue pendiente de integración de Documentos.

@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),C=require('../js/modules/document-scan-core.js');
+assert.deepEqual(C.expiryDates('NACIMIENTO 01 01 1980\nVALIDEZ 25 12 2031'),['2031-12-25']);
+assert.deepEqual(C.expiryDates('NACIMIENTO 01/01/1980'),[]);
+assert.deepEqual(C.expiryDates('CADUCIDAD\n31/02/2030'),[]);
+assert.deepEqual(C.expiryDates('VALIDEZ 01-12-2030\nVALIDEZ 01-12-2031'),['2030-12-01','2031-12-01']);
+assert.equal(C.validDate('2028-02-29'),true);assert.equal(C.validDate('2029-02-29'),false);
+const p=[{x:10,y:20},{x:300,y:40},{x:280,y:200},{x:20,y:230}],map=C.transform(p);
+[[0,0],[1,0],[1,1],[0,1]].forEach(([u,v],i)=>{const q=map(u,v);assert.ok(Math.abs(q.x-p[i].x)<1e-6&&Math.abs(q.y-p[i].y)<1e-6);});
+assert.throws(()=>C.transform([p[0],p[2],p[1],p[3]]));
+assert.throws(()=>C.pdf([]));
+(async()=>{const bytes=new Uint8Array(Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==','base64'));const blob=C.pdf([{bytes,width:1,height:1},{bytes,width:1,height:1}]);const buf=Buffer.from(await blob.arrayBuffer()),txt=buf.toString('latin1');assert.ok(txt.includes('/Count 2'));const start=Number(txt.match(/startxref\n(\d+)/)[1]);assert.equal(buf.subarray(start,start+4).toString(),'xref');console.log('PASS: scan geometry, expiry and PDF structure.');})().catch(e=>{console.error(e);process.exit(1)});
