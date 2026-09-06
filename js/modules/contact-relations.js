@@ -5,7 +5,8 @@ const $=id=>document.getElementById(id),clean=v=>String(v??'').trim();
 const esc=v=>clean(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const displayPhone=v=>P.displayPhone?P.displayPhone(v):clean(v);
-const original={...P},forms=new WeakMap();let opportunity=null,profileToken=0;
+const displayName=v=>clean(v).toLocaleLowerCase('es').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es'));
+const original={...P},forms=new WeakMap();let opportunity=null,profileToken=0,profileRevision=0;
 function identity(r){const d=r?.data||{};return {record_id:clean(r?.id),name:clean(d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')),phone:clean(d['TELÉFONO']||d.TELEFONO||d.PHONE||d.MOVIL),dni:clean(d['DNI / NIF']||d.DNI)};}
 function links(p){return Array.isArray(p?.managed_contacts)?p.managed_contacts.filter(x=>x&&clean(x.record_id)).map(x=>({record_id:clean(x.record_id),name:clean(x.name),phone:clean(x.phone),dni:clean(x.dni)})):[];}
 function match(x,q){return norm([x.name,x.phone,x.dni].join(' ')).includes(norm(q))||(/\d{3}/.test(q)&&x.phone.replace(/\D/g,'').includes(q.replace(/\D/g,'')));}
@@ -20,7 +21,20 @@ async function searchRecords(q,active=()=>true){
  }throw Error('Demasiados contactos para esta búsqueda. Utiliza un nombre o DNI más concreto.');
 }
 function openLink(id){if(id&&typeof openContact==='function')return openContact(id);}
-function button(x){if(!x||x.record_id==='legacy')return `<span>${esc(x?.name||'Titular anterior')} · datos guardados</span>`;return `<button type="button" class="secondary tpfRelLink" data-rel-open="${esc(x.record_id)}">${esc(x.name||'Ver ficha')} ↗</button>`;}
+function button(x){if(!x||x.record_id==='legacy')return `<span>${esc(displayName(x?.name||'Titular anterior'))} · datos guardados</span>`;return `<button type="button" class="secondary tpfRelLink" data-rel-open="${esc(x.record_id)}">${esc(displayName(x.name||'Ver ficha'))} ↗</button>`;}
+function holderCard(holder,manager){
+ return `<section class="tpf-party tpf-party-summary tpfRelCard"><h3>Titular del contrato</h3>${button(holder)}<p>DNI / NIF: ${esc(holder.dni||'—')}<br>Teléfono: ${esc(displayPhone(holder.phone)||'—')}</p><div class="tpf-party-recipient"><b>WhatsApp automático</b><span>${esc(displayName(manager.name))} · ${esc(displayPhone(manager.phone)||'Sin teléfono')}</span></div></section>`;
+}
+async function currentHolders(items){
+ if(!items.length)return [];
+ const out=[];
+ for(let start=0;start<items.length;start+=100){
+  const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').in('id',items.slice(start,start+100).map(x=>x.record_id));
+  if(r.error)throw r.error;out.push(...(r.data||[]));
+ }
+ const byId=new Map(out.map(r=>[clean(r.id),identity(r)]));
+ return items.map(x=>byId.get(x.record_id)).filter(Boolean);
+}
 function compact(root,label){
  const heading=root.querySelector('h3');if(heading)heading.remove();
  const check=root.querySelector('[data-party="same"]');if(check){check.closest('label').hidden=true;}
@@ -100,12 +114,28 @@ P.search=function(c){return [original.search(c),...links(c?.data?.TPF_RELACIONES
 P.renderProfile=function(c){
  let box=$('tpfContactPartySummary');const anchor=document.querySelector('#contactModal .cpData');if(!anchor||!c?.id)return;
  if(!box){box=document.createElement('div');box.id='tpfContactPartySummary';anchor.insertAdjacentElement('afterend',box);}
- const key=JSON.stringify([c.id,c.data?.TPF_TITULAR,c.data?.TPF_RELACIONES]);if(box.dataset.relKey===key)return;box.dataset.relKey=key;
+ const key=JSON.stringify([c.id,c.data?.TPF_TITULAR,c.data?.TPF_RELACIONES,profileRevision]);if(box.dataset.relKey===key)return;
+ const wasOpen=box.dataset.relContact===clean(c.id)&&!!box.querySelector('[data-rel-holders]')?.open;
+ box.dataset.relKey=key;box.dataset.relContact=clean(c.id);
  const token=++profileToken,p=c.data?.TPF_TITULAR||{},items=links(c.data?.TPF_RELACIONES);
  const legacy=p.same===false?`<details><summary>${esc(p.holder_name)} · Titular anterior</summary>${original.summary(p,c)}<small>Datos conservados. Para abrir su ficha, vincula el contacto existente desde Editar datos.</small></details>`:'';
- box.innerHTML=`<section class="tpf-party tpfRelSummary"><details><summary>Titulares asociados (${items.length+(p.same===false?1:0)})</summary>${items.map(x=>`<div class="tpfRelRow">${button(x)}</div>`).join('')}${legacy}<small>Añade o desvincula titulares desde Editar datos.</small></details><div data-rel-managedby></div></section>`;
+ box.innerHTML=`<section class="tpf-party tpfRelSummary"><details data-rel-holders${wasOpen?' open':''}><summary>Titulares asociados (<span data-rel-total>${items.length+(p.same===false?1:0)}</span>)</summary><div data-rel-cards>${items.length?'Comprobando titulares…':''}</div>${legacy}<small>Añade o desvincula titulares desde Editar datos.</small></details><div data-rel-managedby></div></section>`;
+ const active=()=>token===profileToken&&box.isConnected;
+ const refresh=async()=>{try{
+  const holders=await currentHolders(items);if(!active())return;
+  box.querySelector('[data-rel-total]').textContent=String(holders.length+(p.same===false?1:0));
+  box.querySelector('[data-rel-cards]').innerHTML=holders.map(x=>holderCard(x,identity(c))).join('')||(!legacy?'No hay titulares vinculados disponibles.':'');
+ }catch(e){if(!active())return;const out=box.querySelector('[data-rel-cards]');out.innerHTML='<p>No se pudieron cargar los titulares. Los vínculos se conservan.</p><button type="button" class="secondary" data-rel-retry>Reintentar</button>';out.querySelector('button').onclick=refresh;}};
+ refresh();
  managers(c.id).then(rows=>{if(token!==profileToken||!box.isConnected)return;box.querySelector('[data-rel-managedby]').innerHTML=rows.length?`<div class="tpfRelRow">Gestionado por: ${rows.map(r=>button(identity(r))).join(' ')}</div>`:'';}).catch(()=>{if(token===profileToken&&box.isConnected)box.querySelector('[data-rel-managedby]').textContent='No se pudo comprobar quién gestiona esta ficha.';});
 };
+window.addEventListener('tpf:contacts-loaded',e=>{
+ profileRevision++;
+ if(typeof currentContact==='undefined'||!currentContact?.id||$('contactModal')?.classList.contains('hidden'))return;
+ const fresh=e.detail?.records?.find(r=>clean(r.id)===clean(currentContact.id));
+ if(fresh){currentContact.data=fresh.data;P.renderProfile(currentContact);}
+ else{profileToken++;const box=$('tpfContactPartySummary');if(box)box.innerHTML='Esta ficha ya no está disponible.';}
+});
 function opportunityContext(){return clean($('oppModalOpenContact')?.dataset.recordId);}
 function drawOpportunity(state){
  const root=state.root;if(opportunity!==state||!root.isConnected)return;
@@ -162,6 +192,6 @@ async function prepareOpportunity(payload){
  return party;
 }
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-rel-open]');if(!b)return;e.preventDefault();if(b.closest('#tpfContactParty')){window.alert('Guarda o cancela la edición y abre el titular desde la ficha del contacto.');return;}openLink(b.dataset.relOpen);});
-const css=document.createElement('style');css.textContent='.tpfRelRow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}.tpfRelLink{color:#2563eb!important}.tpfRelLegacy summary,.tpfRelSummary summary{cursor:pointer;font-weight:600;font-size:14px}.tpfRelLegacy{margin-top:8px}.tpfRelResult{display:flex!important;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin:5px 0}.tpf-party [data-rel-panel],.tpf-party [data-rel-choices]{margin-top:12px}.tpf-party [data-rel-list]{margin-bottom:8px}.tpf-party [data-rel-searchbox]{margin-top:12px}.tpf-party [data-rel-results]{max-height:220px;overflow:auto}.tpf-party[hidden]{display:none!important}';document.head.appendChild(css);
+const css=document.createElement('style');css.textContent='.tpfRelRow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}.tpfRelLink{color:#2563eb!important;text-transform:none!important}.tpfRelCard{margin-top:12px}.tpfRelCard>.tpfRelLink{background:transparent!important;border:0!important;padding:0!important;text-align:left;font-size:16px;font-weight:700}.tpfRelLegacy summary,.tpfRelSummary summary{cursor:pointer;font-weight:600;font-size:14px}.tpfRelLegacy{margin-top:8px}.tpfRelResult{display:flex!important;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin:5px 0}.tpf-party [data-rel-panel],.tpf-party [data-rel-choices]{margin-top:12px}.tpf-party [data-rel-list]{margin-bottom:8px}.tpf-party [data-rel-searchbox]{margin-top:12px}.tpf-party [data-rel-results]{max-height:220px;overflow:auto}.tpf-party[hidden]{display:none!important}';document.head.appendChild(css);
 window.TPFContactRelations={prepareOpportunity,applyContactData,identity,links,match};
 })();
