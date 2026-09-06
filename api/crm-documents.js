@@ -35,7 +35,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const saved=await request(SB+'/rest/v1/crm_external_credentials?on_conflict=provider',{method:'POST',headers:{...serviceHeaders(),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({provider:PROVIDER,encrypted_value:seal({refresh_token:d.refresh_token}),updated_by:state.userId,updated_at:new Date().toISOString()})});if(!saved.ok)throw fail(503,'No se pudo guardar la autorización.');
   res.setHeader('Set-Cookie','tpf_docs_nonce=; Path=/api/crm-documents; HttpOnly; Secure; SameSite=Lax; Max-Age=0');res.setHeader('Location',ORIGIN+'/?documents=connected');return res.status(303).end();
  }
- const write=['authorize','link','bulkLink','upload','expiry'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
+ const write=['authorize','link','bulkLink','upload','expiry','trash'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
  const who=await identity(req),body=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
  if(action==='status')return json(res,200,{ok:true,configured:configured(),connected:configured()?!!await credential():false,canManage:!!who.p.is_admin,canUpload:!!(who.p.is_admin||who.p.can_edit_records),callback:who.p.is_admin?CALLBACK:undefined});
  if(!configured())throw fail(503,'Falta configurar la conexión de Documentos en el servidor.');
@@ -89,6 +89,19 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  }
  const provider=adapter(link);
  if(action==='list'){const f=await provider.folder(t,link.folder_id);return json(res,200,{ok:true,folder:{id:f.id,name:f.name,canUpload:!!f.capabilities?.canAddChildren},...await provider.list(t,link.folder_id,req.query?.page)});}
+ if(action==='trash'){
+  if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para retirar documentos.');
+  if(body.confirmed!==true)throw fail(400,'Confirma el archivo que quieres enviar a la papelera.');
+  if(JSON.stringify(body.expectedLink)!==JSON.stringify(link))throw fail(409,'La carpeta ha cambiado. Actualiza los archivos.');
+  if(link.provider!=='google_drive')throw fail(409,'Proveedor no disponible.');
+  const fileId=folderId(body.fileId),f=await drive(t,'files/'+fileId+'?supportsAllDrives=true&fields=id,name,mimeType,parents,trashed,capabilities(canTrash)');
+  if(f.mimeType===FOLDER||!f.parents?.includes(link.folder_id))throw fail(400,'El archivo no pertenece a esta carpeta.');
+  if(f.trashed)throw fail(409,'El archivo ya está en la papelera. Actualiza la lista.');
+  if(f.name!==body.fileName)throw fail(409,'El archivo cambió de nombre. Revísalo antes de borrarlo.');
+  if(!f.capabilities?.canTrash)throw fail(403,'Google no permite enviar este archivo a la papelera.');
+  await drive(t,'files/'+fileId+'?supportsAllDrives=true&fields=id,trashed',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})});
+  return json(res,200,{ok:true});
+ }
  if(action==='upload'){
   if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para subir documentos.');
   if(JSON.stringify(body.expectedLink)!==JSON.stringify(link))throw fail(409,'La carpeta ha cambiado. Actualiza antes de subir.');
@@ -101,4 +114,5 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  }catch(e){const status=e.status||500;return json(res,status,{ok:false,error:status===500?'No se pudo completar la operación. Vuelve a intentarlo.':e.message});}
 };
 module.exports._test={folderId,adapter,seal,unseal};
+
 

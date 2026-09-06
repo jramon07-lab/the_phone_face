@@ -65,3 +65,12 @@ Pestaña Documentos entre Tareas e Historial en la ficha móvil. Lee las vincula
 Módulo aislado js/mobile-documents.js con cliente autenticado móvil y contexto de contacto inyectados desde render. Conserva el contexto durante repintados del mismo cliente (incluido regresar de la cámara) y lo invalida al navegar a otra ficha/pestaña. Comprueba contexto antes y después de pedir sesión y antes de subir; mantiene expectedLink y expectedData en las escrituras. Utiliza las mismas API y permisos del escritorio. No envía WhatsApp ni modifica oportunidades/tareas.
 
 Validación: pruebas locales con red simulada para ID/carpeta, cambio de ruta durante autenticación, cierre del contexto y URLs seguras; suite de ficha móvil pasa cargando su dependencia real contact-party. No se ha probado una captura/subida real desde iPhone durante el desarrollo.
+
+
+## Papelera y preparación de fotos de DNI (2026-09-06)
+
+Borrar en escritorio/móvil pide confirmación explícita y usa POST trash. Verifica permisos de edición, vínculo esperado, nombre actual, archivo (no carpeta), pertenencia directa a la carpeta vinculada y permiso canTrash de Google. Solo PATCH trashed=true; no hay borrado definitivo. No se ha eliminado ningún archivo real durante el desarrollo.
+
+Una selección compuesta solo por fotos desde Subir PDF/fotos abre el escáner con esas fotos. Selecciones con PDF conservan la subida original. Tipo DNI por defecto: propone contorno de una región clara rectangular sobre fondo contrastado; si no hay candidato suficiente se conserva el encuadre completo y se pide ajuste manual. Es una sugerencia revisable, no detección garantizada. Los puntos siguen siendo editables antes de preparar. El PDF DNI usa página A4 blanca con imagen centrada, sin títulos. Otro documento conserva página ajustada a imagen. Leer caducidad se inicia al preparar un DNI; confirmación de persona/fecha sigue siendo obligatoria. Se conserva la opción de guardar originales.
+
+Verificaciones locales adicionales: papelera con permisos, carpeta incorrecta, nombres cambiados, confirmación y vínculo concurrente (red simulada); detector con fondo uniforme y tarjeta contrastada; PDF A4 comprobado con pdfinfo. Pendiente de prueba real del recorte en las fotos del usuario.
