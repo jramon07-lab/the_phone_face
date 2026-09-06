@@ -6,7 +6,7 @@
   let openMenuId=null,activeRow=null;
 
   function allTypes(){
-    const buttons=[...document.querySelectorAll("#agendaTypeChoices [data-type]")].map(b=>({name:b.dataset.type,icon:(b.textContent||"").trim().split(/\\s+/)[0]}));
+    const buttons=[...document.querySelectorAll("#agendaTypeChoices [data-type]")].map(b=>({name:b.dataset.type,icon:(b.textContent||"").trim().split(/\s+/)[0]}));
     return buttons.length?buttons:[{name:"Tarea",icon:"✓"},{name:"Llamada",icon:"☎"},{name:"Cita",icon:"◷"},{name:"WhatsApp",icon:"💬"}];
   }
   function ensureEditor(){
@@ -63,11 +63,13 @@
     if(standalone){
       modal?.classList.add("tpfTaskStandalone");
       document.body.classList.add("agendaDetailOpen");
+      window.TPFAgendaCompact?.detail(true);
       const columns=document.querySelector("#contactModal .cpColumns");if(columns)columns.style.display="none";
       const top=document.querySelector("#contactModal .cpTop");if(top)top.style.display="none";
     }
   }
   function cleanupTaskShell(){
+    window.TPFAgendaCompact?.detail(false);
     const modal=$id("contactModal");
     modal?.classList.remove("tpfTaskStandalone");
     document.body.classList.remove("agendaDetailOpen");
@@ -76,6 +78,8 @@
   }
 
   const originalOpen=window.openContactTaskDetail;
+  const detailVisibility=new MutationObserver(()=>{if($id("cpTaskDetailPage")?.classList.contains("hidden")&&document.body.classList.contains("agendaDetailOpen"))cleanupTaskShell()});
+  if($id("cpTaskDetailPage"))detailVisibility.observe($id("cpTaskDetailPage"),{attributes:true,attributeFilter:["class"]});
   window.openContactTaskDetail=async id=>{
     if(typeof originalOpen!=="function"){alert("No está disponible la ficha de tarea.");return}
     const modal=$id("contactModal");
@@ -90,6 +94,7 @@
     $id("agendaDetailCustomer").value=row.customer_name||"";
     $id("agendaDetailPhone").value=row.customer_phone||"";
     renderType(row.agenda_type||"Tarea",row.agenda_meta||{});
+    window.TPFAgendaCompact?.syncDetail(row,standalone);
   };
   window.editAgendaItem=id=>window.openContactTaskDetail(id);
   window.openAgendaItem=id=>window.openContactTaskDetail(id);
@@ -118,12 +123,16 @@
       $id("cpTaskMarkDone").classList.toggle("hidden",data.status==="completed");
       $id("cpTaskReopen").classList.toggle("hidden",data.status!=="completed");
       if(typeof loadAgenda==="function")await loadAgenda();
+      if(document.body.classList.contains("agendaDetailOpen"))$id("cpTaskDetailBack")?.click();
     }catch(e){$id("cpTaskDetailMsg").textContent=e?.message||"No se pudieron guardar los cambios"}finally{save.disabled=false}
   };
 
+  async function awaitPostpone(id){await window.openContactTaskDetail(id);$id("cpTaskDetailStarts")?.focus();}
   function closeMenu(){document.querySelector(".agendaPopMenu")?.remove();openMenuId=null}
   const list=$id("agendaList");
   if(list)list.onclick=e=>{
+    const person=e.target.closest("[data-agenda-contact]");if(person)return window.openContact?.(person.dataset.agendaContact);
+    const postpone=e.target.closest("[data-postpone-agenda]");if(postpone){awaitPostpone(postpone.dataset.postponeAgenda);return;}
     const a=e.target.closest("[data-open-agenda]"),c=e.target.closest("[data-complete-agenda]"),m=e.target.closest("[data-more-agenda]");
     if(a){closeMenu();return window.openContactTaskDetail(a.dataset.openAgenda)}
     if(c){closeMenu();return window.completeAgenda(c.dataset.completeAgenda)}
@@ -136,4 +145,83 @@
     menu.onclick=ev=>{if(ev.target.closest("[data-agenda-edit]"))window.editAgendaItem(id);else if(ev.target.closest("[data-agenda-cancel]"))window.cancelAgenda(id);else if(ev.target.closest("[data-agenda-delete]"))window.deleteAgenda(id);closeMenu()};
     setTimeout(()=>document.addEventListener("click",ev=>{if(!menu.contains(ev.target)&&ev.target!==m)closeMenu()},{once:true}),0);
   };
+})();
+
+/* Agenda-only compact shells. Existing fields and handlers are retained. */
+(()=>{
+ const $=id=>document.getElementById(id);
+ let createState=null,detailState=null,focusOrigin=null;
+ function rememberMove(state,node,parent){if(!node)return;state.moves.push({node,parent:node.parentNode,next:node.nextSibling});parent.appendChild(node)}
+ function restore(state){if(!state)return;state.moves.reverse().forEach(({node,parent,next})=>parent?.insertBefore(node,next?.parentNode===parent?next:null));state.extra.forEach(node=>node.remove())}
+ function reminder(state,id){
+  const input=$(id),box=id==="agendaReminder"?input?.parentElement:input?.closest("label");if(!box)return;
+  const label=document.createElement("label");label.className="agendaExtraCheck";
+  const check=document.createElement("input");check.type="checkbox";check.checked=!!input.value;label.append(check,document.createTextNode(" Añadir otro aviso"));box.before(label);state.extra.push(label);
+  let previous=input.value;
+  const sync=()=>{box.classList.toggle("agendaOptionalHidden",!check.checked)};
+  check.onchange=()=>{if(!check.checked){previous=input.value;input.value=""}else input.value=previous;input.__tpfSyncFromHidden?.();sync()};
+  sync();state.reminder={check,box,input,sync};
+ }
+ function options(state,host,nodes){
+  const details=document.createElement("details");details.className="agendaCompactOptions";
+  const summary=document.createElement("summary");summary.textContent="Más opciones";details.appendChild(summary);host.appendChild(details);state.extra.push(details);
+  nodes.filter(Boolean).forEach(n=>rememberMove(state,n,details));
+ }
+ function create(open){
+  if(!open){if(createState){const state=createState;state.reminder?.box.classList.remove("agendaOptionalHidden");restore(state);state.parent.insertBefore(state.card,state.next?.parentNode===state.parent?state.next:null);state.back.remove();createState=null;focusOrigin?.focus?.();}return}
+  const card=$("agendaCreateCard");if(createState||card?.dataset.contactDialog==="true"||$("view-agenda")?.classList.contains("hidden"))return;
+  focusOrigin=document.activeElement;
+  const state={card,parent:card.parentNode,next:card.nextSibling,moves:[],extra:[]};createState=state;
+  const back=document.createElement("div");back.className="agendaCompactBackdrop";back.setAttribute("role","dialog");back.setAttribute("aria-modal","true");back.setAttribute("aria-label","Crear tarea");state.back=back;
+  const head=card.querySelector(".agendaComposerHead"),save=$("agendaSave"),msg=$("agendaMsg");
+  const body=document.createElement("div");body.className="agendaCompactBody";
+  const footer=document.createElement("div");footer.className="agendaCompactFooter";
+  [...card.children].filter(n=>n!==head&&n!==save&&n!==msg).forEach(n=>rememberMove(state,n,body));
+  card.append(body,footer);state.extra.push(body,footer);
+  const cancel=document.createElement("button");cancel.type="button";cancel.className="secondary";cancel.textContent="Cancelar";cancel.onclick=()=>window.TPFAgendaComposer.close();footer.appendChild(cancel);
+  rememberMove(state,msg,footer);rememberMove(state,save,footer);
+  const dni=document.createElement("small");dni.id="agendaCompactDni";dni.className="agendaCompactDni";$("agendaPhone").after(dni);state.extra.push(dni);
+  options(state,body,[$("agendaCreateDetails"),$("agendaManageTypes"),body.querySelector('label[for="agendaDescription"]'),$("agendaDescription"),body.querySelector(".agendaOptions")]);
+  reminder(state,"agendaReminder");
+  back.appendChild(card);document.body.appendChild(back);refreshCreateDni();
+ }
+ async function refreshCreateDni(){
+  const node=$("agendaCompactDni");if(!node)return;
+  node.textContent="DNI/NIF: —";
+  const id=$("agendaCustomer")?.dataset.contactId;
+  if(!id){node.textContent="Selecciona un contacto para ver su DNI";return}
+  const record=await agendaResolveContact({related_record_id:id});
+  if(node.isConnected&&$("agendaCustomer")?.dataset.contactId===id)node.textContent="DNI/NIF: "+(agendaDni(record)||"Sin DNI");
+ }
+ function detail(open){
+  if(!open){if(detailState){detailState.reminder?.box.classList.remove("agendaOptionalHidden");restore(detailState);detailState=null;}return}
+  if(detailState)return;
+  const page=$("cpTaskDetailPage"),state={moves:[],extra:[]};detailState=state;
+  rememberMove(state,page,$("contactModal"));
+  const footer=document.createElement("div");footer.className="agendaCompactFooter";page.appendChild(footer);state.extra.push(footer);
+  rememberMove(state,$("cpTaskDetailBack"),footer);rememberMove(state,$("cpTaskDetailSave"),footer);
+ }
+ async function syncDetail(row,standalone){
+  if(!standalone||!detailState)return;
+  const state=detailState;
+  if(!state.reminder)reminder(state,"cpTaskDetailReminder");
+  state.reminder.check.checked=!!$("cpTaskDetailReminder").value;state.reminder.sync();
+  let dni=$("agendaDetailDni");if(!dni){dni=document.createElement("small");dni.id="agendaDetailDni";$("agendaDetailPhone").parentElement.appendChild(dni);state.extra.push(dni);}
+  dni.textContent="DNI/NIF: —";
+  if(!state.options){const host=$("cpTaskDetailTitle").closest(".cpTaskFormCard"),notes=$("cpTaskDetailNotes");options(state,host,[$("agendaDetailDynamic"),notes.previousElementSibling,notes,host.querySelector(".cpTaskOptions")]);state.options=true;}
+  const record=await agendaResolveContact(row);
+  if(dni.isConnected&&$("cpTaskDetailId")?.value===String(row.id))dni.textContent="DNI/NIF: "+(agendaDni(record)||"Sin DNI");
+ }
+ document.addEventListener("click",e=>{if(e.target.closest("#agendaCustomerResults"))setTimeout(refreshCreateDni,0)});
+ $("agendaCustomer")?.addEventListener("input",refreshCreateDni);
+ document.addEventListener("keydown",e=>{
+  const dialog=createState?.back||(!document.body.classList.contains("agendaDetailOpen")?null:$("cpTaskDetailPage"));if(!dialog)return;
+  if(e.key==="Escape"&&detailState){e.preventDefault();$("cpTaskDetailBack")?.click();}
+  if(e.key!=="Tab")return;
+  const nodes=[...dialog.querySelectorAll("button,input,select,textarea,summary,[tabindex]")].filter(n=>!n.disabled&&n.tabIndex>=0&&n.getClientRects().length);
+  const first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}
+ });
+ window.TPFAgendaCompact={create,detail,syncDetail};
+ const composerVisibility=new MutationObserver(()=>{if(createState&&!$("agendaCreateCard").classList.contains("open"))create(false)});
+ if($("agendaCreateCard"))composerVisibility.observe($("agendaCreateCard"),{attributes:true,attributeFilter:["class"]});
 })();
