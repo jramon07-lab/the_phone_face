@@ -50,15 +50,27 @@ async function dni(id,name,mime,ctx){
  refresh:()=>{}});
 }
 const pending=new Set();
+function askName(name,mime){
+ const original=imageName(name,mime),ext=original.match(/\.[a-z0-9]{2,5}$/i)?.[0]||'';
+ const value=window.prompt('Nombre del archivo para guardar en documentos'+(ext?' (se conserva '+ext+')':'')+':',ext?original.slice(0,-ext.length):original);
+ if(value===null)return null;
+ let result=value.trim();
+ if(!result||/[\x00-\x1f/\\]/.test(result))throw Error('Escribe un nombre válido, sin barras.');
+ if(ext&&!result.toLowerCase().endsWith(ext.toLowerCase()))result+=ext;
+ if(result.length>200)throw Error('El nombre del archivo es demasiado largo.');
+ return result;
+}
 async function act(target){
  const action=target.dataset.waDocAction,id=safe(target.dataset.waDocId),name=safe(target.dataset.waDocName),mime=safe(target.dataset.waDocMime),chatId=safe(target.dataset.waDocChat),key=chatId+':'+id;
  if(!action||!id||target.disabled||pending.has(key))return;
  try{
   if(chatId!==safe(live()?.selected?.id))throw Error('El chat ha cambiado. Vuelve a abrir el archivo.');
   let ctx=capture();target.disabled=true;pending.add(key);
+  let saveName=name;
+  if(action==='drive'){saveName=askName(name,mime);if(saveName===null)return;ctx.check();}
   if(action==='drive'||action==='dni')ctx=await prepare(ctx);
   if(action==='pc')savePc(id,name,mime);
-  if(action==='drive')await saveDrive(id,name,mime,ctx);
+  if(action==='drive')await saveDrive(id,saveName,mime,ctx);
   if(action==='dni')await dni(id,name,mime,ctx);
  }catch(error){show(error.message||'No se pudo completar la acción.','error');}
  finally{target.disabled=false;pending.delete(key);}
