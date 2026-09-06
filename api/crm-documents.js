@@ -6,6 +6,7 @@ const CID=process.env.GOOGLE_DRIVE_CLIENT_ID||'',SECRET=process.env.GOOGLE_DRIVE
 const ORIGIN=process.env.CRM_DOCUMENTS_ORIGIN||'https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app';
 const CALLBACK=ORIGIN+'/api/crm-documents?action=callback';
 const PROVIDER='google_drive_documents',FOLDER='application/vnd.google-apps.folder';
+const UPLOAD_MIMES=new Set(['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/rtf','text/plain','image/jpeg','image/png','image/webp','image/heic','image/heif']);
 const configured=()=>!!(KEY&&PUBLIC&&CID&&SECRET&&ENC);
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const json=(res,status,value)=>res.status(status).json(value);
@@ -107,12 +108,11 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   if(JSON.stringify(body.expectedLink)!==JSON.stringify(link))throw fail(409,'La carpeta ha cambiado. Actualiza antes de subir.');
   const f=await provider.folder(t,link.folder_id);if(!f.capabilities?.canAddChildren)throw fail(403,'Google no permite subir archivos a esta carpeta.');
   const name=String(body.name||'').trim(),size=Number(body.size),mime=String(body.mimeType||'');
-  if(!name||name.length>200||/[\x00-\x1f/\\]/.test(name)||!Number.isSafeInteger(size)||size<=0||size>100*1024*1024||!['application/pdf','image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(mime))throw fail(400,'Elige un PDF o una fotografía de hasta 100 MB.');
+  if(!name||name.length>200||/[\x00-\x1f/\\]/.test(name)||!Number.isSafeInteger(size)||size<=0||size>100*1024*1024||!UPLOAD_MIMES.has(mime))throw fail(400,'Elige un documento o una fotografía de hasta 100 MB.');
   const r=await request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(size),Origin:ORIGIN},body:JSON.stringify({name,mimeType:mime,parents:[f.id]})});const url=r.headers.get('location');if(!r.ok||!url||new URL(url).origin!=='https://www.googleapis.com')throw fail(502,'Google no pudo preparar la subida.');return json(res,200,{ok:true,uploadUrl:url});
  }
  throw fail(400,'Acción no disponible.');
  }catch(e){const status=e.status||500;return json(res,status,{ok:false,error:status===500?'No se pudo completar la operación. Vuelve a intentarlo.':e.message});}
 };
 module.exports._test={folderId,adapter,seal,unseal};
-
 
