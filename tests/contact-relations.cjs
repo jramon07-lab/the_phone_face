@@ -39,6 +39,11 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'jose'));
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'600000001'));
  const P=context.TPFContactParty;
+ const linkedHint=P.hint(manager,[manager,father]);assert(linkedHint.includes('Titular: Torcuato García González'));assert(!linkedHint.includes('Marido'));
+ assert(P.hint(manager).includes('Titulares: Torcuato · Marido'));
+ assert.equal(P.hint({data:{}}),'');assert.equal(P.hint(manager,[]),'');
+ assert(P.hint({data:{TPF_TITULAR:{same:false,holder_name:'TORCUATO'}}}).includes('Titular: Torcuato'));
+ assert(!P.hint({TPF_RELACIONES:{managed_contacts:[{record_id:'x',name:'<script>'}]}}).includes('<script>'));
  assert.equal(P.displayPhone('+34 618 788 514'),'618788514');assert.equal(P.displayPhone('0034618788514'),'618788514');assert.equal(P.displayPhone('+44 7911 123456'),'+44 7911 123456');assert.equal(P.displayPhone('341234567'),'341234567');
  const raw={same:false,holder_name:'Prueba',holder_phone:'+34618788514',recipient:'holder'};
  assert.equal(P.snapshot(raw,{name:'Gestor'}).recipient_phone,'+34618788514');assert(!P.summary(raw,{name:'Gestor'}).includes('+34618788514'));
