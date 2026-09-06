@@ -17,8 +17,9 @@ const sb={rpc:async()=>({data:guard,error:null}),from(table){return {
 let source=runner.replace(/^import .*;\n/gm,'');
 source=stripTypeScriptTypes(source)+'\nglobalThis.api={expandFlow,processJob,complete,eventBase};';
 const helper=stripTypeScriptTypes(fs.readFileSync(root+'/supabase/functions/crm-automation-runner/lifecycle.ts','utf8')).replaceAll('export ','');
+const businessTime=stripTypeScriptTypes(fs.readFileSync(root+'/supabase/functions/crm-automation-runner/business-time.ts','utf8')).replaceAll('export ','');
 const ctx={createClient:()=>sb,Deno:{env:{get:()=>''},serve:()=>{}},fetch:()=>{fetches++;throw Error('Network forbidden')},Response,Intl,Date,console};
-vm.createContext(ctx);vm.runInContext(helper+'\n'+source,ctx);
+vm.createContext(ctx);vm.runInContext(helper+'\n'+businessTime+'\n'+source,ctx);
 (async()=>{
  const action=type=>({kind:'action',action_type:type,config:{}});
  const steps=[action('record_sale_month'),{kind:'wait',value:2,unit:'days'},action('send_template'),{kind:'wait',value:5,unit:'days'},action('send_template')];
@@ -44,5 +45,13 @@ vm.createContext(ctx);vm.runInContext(helper+'\n'+source,ctx);
  assert(updates.at(-1).conditions.some(([k,v])=>k==='status'&&v==='running'),'requeue cannot revive cancelled jobs');
  await ctx.api.complete(job,'done');
  assert(updates.at(-1).conditions.some(([k,v])=>k==='status'&&v==='running'),'completion cannot overwrite cancellation');
+ emitted=[];guard={allow:true};
+ const scheduled={...job,event_key:'stage:business',context:{event_at:'2026-09-12T15:30:00.000Z',lifecycle:{mode:'after_sale'}},action_config:{steps:[action('record_sale_month'),{kind:'wait',value:1,unit:'days',business_schedule:'phone_house'},action('send_template')]}};
+ await ctx.api.expandFlow(scheduled);
+ assert.equal(emitted[1].run_at,'2026-09-14T15:30:00.000Z','Saturday 17:30 Madrid skips Sunday and preserves Monday 17:30');
+ emitted=[];
+ await ctx.api.expandFlow({...scheduled,event_key:'stage:late',context:{event_at:'2026-09-12T20:00:00.000Z',lifecycle:{mode:'after_sale'}}});
+ assert.equal(emitted[1].run_at,'2026-09-14T08:00:00.000Z','Saturday 22:00 Madrid moves to Monday 10:00');
+ assert.equal(ctx.nextBusinessSendAt(new Date('2026-09-08T14:00:00.000Z'),1).toISOString(),'2026-09-09T15:30:00.000Z','16:00 Madrid moves to 17:30 next day');
  console.log('PASS: transport preserved; stage timing; ordered actions; deduplication; cancellation; retries; legacy compatibility. No network or real-data writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -15,7 +15,8 @@ const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base
   {id:'gb',name:'Fibra 1 Gb',price_delta:10,option_type:'radio',message_text:'Fibra 1 Gb',replaces_text:'Fibra 600 Mb'},
   {id:'unlimited',name:'Datos ilimitados',price_delta:4,option_type:'radio',message_text:'2 líneas con datos ilimitados',replaces_text:'2 líneas de 160 GB'},
   {id:'netflix',name:'Netflix interno',price_delta:4,option_type:'radio',message_text:'Netflix incluido',replaces_text:'Amazon incluido'},
-  {id:'extra',name:'Línea adicional interna',price_delta:6,option_type:'quantity',message_text:'30 GB'}
+  {id:'extra',name:'Línea adicional interna',price_delta:6,option_type:'quantity',message_text:'30 GB'},
+  {id:'extraUnlimited',name:'Línea con datos ilimitados',price_delta:6,option_type:'quantity',message_text:'con datos ilimitados'}
 ]};
 assert.equal(api.calculateTotal(offer,{gb:1,netflix:1,extra:2}),78,'options update the calculated total');
 const message=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','Precio válido este mes.',75);
@@ -37,6 +38,9 @@ const unlimitedMessage=api.buildMessage(offer,{gb:1,unlimited:1,extra:1},'Ana Ga
 assert.match(unlimitedMessage,/2 líneas con datos ilimitados/);
 assert.match(unlimitedMessage,/1 línea de 30 GB/);
 assert.doesNotMatch(unlimitedMessage,/2 líneas de 160 GB/);
+const extraUnlimitedMessage=api.buildMessage(offer,{extraUnlimited:2},'Ana García','',64);
+assert.match(extraUnlimitedMessage,/2 líneas con datos ilimitados/);
+assert.doesNotMatch(extraUnlimitedMessage,/líneas de con datos/);
 
 const sql=fs.readFileSync(path.join(root,'db/proposals/offer-configurator.sql'),'utf8');
 for(const table of ['crm_offer_catalog','crm_offer_line_options','crm_offer_instances'])assert.match(sql,new RegExp(`alter table public\\.${table} enable row level security`));
@@ -77,11 +81,15 @@ assert.match(sqlV4,/p_send_message/);
 assert.match(sqlV4,/manual-offer-accepted:/);
 assert.match(sqlV4,/name='VDF · ESTÁNDAR 600'/);
 assert.match(sqlV4,/base_features='\["Fibra 600 Mb","2 líneas de 160 GB"\]'/);
-assert.match(sqlV4,/qty\|\|case when qty=1 then ' línea de ' else ' líneas de ' end/);
+assert.match(sqlV4,/case when coalesce\(opt\.message_text,opt\.name\)~\*'\^con/);
 assert.match(sqlV4,/jsonb_array_elements\(line_features\)/);
 assert.match(sqlV4,/jsonb_array_elements\(service_features\)/);
 assert.match(sqlV4,/Netflix y devolución de router/);
-assert.match(sqlV4,/set enabled=false/);
+assert.match(sqlV4,/set enabled=true/);
+assert.match(sqlV4,/required_offer_flag/);
+assert.match(sqlV4,/business_schedule','phone_house'/);
+assert.match(sqlV4,/Línea con datos ilimitados/);
+assert.match(sqlV4,/900 759 004/);
 assert.match(source,/step="1"/);
 assert.match(source,/Enviar también este mensaje al cliente/);
 assert.match(source,/Fecha de tramitación/);

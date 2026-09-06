@@ -1,3 +1,44 @@
+-- Seguimiento Vodafone: solo Netflix visible y programación comercial en Madrid.
+create or replace function crm_private.offer_netflix_visible(p_snapshot jsonb)
+returns boolean language sql immutable set search_path='' as $$
+  select coalesce((p_snapshot->>'netflix_followup')::boolean,(
+    select coalesce(bool_or(
+      lower(coalesce(item->>'name','')) like 'netflix%'
+      and coalesce((item->>'quantity')::integer,0)>0
+      and coalesce((item->>'show_in_message')::boolean,true)
+    ),false)
+    from jsonb_array_elements(case when jsonb_typeof(p_snapshot->'selections')='array' then p_snapshot->'selections' else '[]'::jsonb end) item
+  ),false)
+$$;
+revoke all on function crm_private.offer_netflix_visible(jsonb) from public,anon,authenticated;
+
+create or replace function crm_private.enqueue_opportunity_stage(p_opportunity_id uuid)
+returns integer language plpgsql security definer set search_path='' as $$
+declare
+  opp public.sales_opportunities%rowtype;inst public.crm_offer_instances%rowtype;r public.crm_automations%rowtype;
+  ctx jsonb;wanted text;required_flag text;made integer:=0;netflix_followup boolean:=false;
+begin
+  if not public.crm_server_automations_enabled() then return 0;end if;
+  select * into opp from public.sales_opportunities where id=p_opportunity_id;if not found then return 0;end if;
+  select * into inst from public.crm_offer_instances where opportunity_id=opp.id order by created_at desc limit 1;
+  if found then netflix_followup:=crm_private.offer_netflix_visible(inst.snapshot);end if;
+  ctx:=public.crm_server_context_for_contact(opp.record_id,opp.phone)||jsonb_build_object(
+    'opportunity_id',opp.id,'stage_id',opp.stage_id,'name',coalesce(opp.client_name,''),
+    'phone',public.crm_server_normalize_phone(opp.phone),'operator',coalesce(inst.operator,''),
+    'offer_instance_id',inst.id,'netflix_followup',netflix_followup,'event_at',now()
+  );
+  for r in select * from public.crm_automations where enabled and trigger_type='opportunity_stage' and coalesce(trigger_config->>'stage_id','')=coalesce(opp.stage_id::text,'') loop
+    wanted:=coalesce(nullif(btrim(r.trigger_config->>'automation_operator'),''),nullif(btrim(r.trigger_config->>'operator'),''),'General');
+    required_flag:=nullif(btrim(r.trigger_config->>'required_offer_flag'),'');
+    if (wanted='General' or lower(wanted)=lower(coalesce(inst.operator,'')))
+       and (required_flag is null or lower(coalesce(ctx->>required_flag,'false'))='true') then
+      perform public.crm_server_enqueue(r,'oppstage:'||opp.id::text||':'||coalesce(opp.stage_id::text,''),ctx);made:=made+1;
+    end if;
+  end loop;
+  return made;
+end $$;
+revoke all on function crm_private.enqueue_opportunity_stage(uuid) from public,anon,authenticated;
+
 -- Orden estable del mensaje, aceptación con fecha y envío opcional.
 create or replace function public.crm_create_offer_execution_v3(
   p_contact_id uuid,
@@ -39,7 +80,7 @@ begin
       if show_message then features:=jsonb_set(features,array[replace_index::text],to_jsonb(coalesce(opt.message_text,opt.name)),false);else features:=features-replace_index;end if;
     elsif show_message then
       if opt.option_type='quantity' then
-        line_features:=line_features||jsonb_build_array(qty||case when qty=1 then ' línea de ' else ' líneas de ' end||coalesce(opt.message_text,opt.name));
+        line_features:=line_features||jsonb_build_array(qty||case when qty=1 then ' línea' else ' líneas' end||case when coalesce(opt.message_text,opt.name)~*'^con[[:space:]]' then ' ' else ' de ' end||coalesce(opt.message_text,opt.name));
       else
         service_features:=service_features||jsonb_build_array(coalesce(opt.message_text,opt.name));
       end if;
@@ -69,12 +110,13 @@ begin
   insert into public.sales_opportunities(pipeline_id,stage_id,record_id,title,client_name,phone,amount,expected_date,owner_user_id,status,notes)
   values(opp_stage.pipeline_id,opp_stage.id,rec.id,'CAMBIO '||upper(offer.operator),nm,phone,total,process_date,uid,'open','Oferta creada desde el configurador') returning id into opp_id;
   insert into public.crm_offer_instances(opportunity_id,contact_id,catalog_offer_id,created_by,operator,offer_name,base_price,total_price,snapshot,message_text,extra_text,status,accepted_at,processed_at)
-  values(opp_id,rec.id,offer.id,uid,offer.operator,offer.name,offer.base_price,total,jsonb_build_object('operator',offer.operator,'offer_name',offer.name,'base_features',offer.base_features,'selections',chosen,'computed_price',computed,'total_price',total,'is_counteroffer',offer.is_counteroffer,'send_message',p_mode='followup' or p_send_message,'processing_date',process_date),message,nullif(btrim(coalesce(p_extra_text,'')),''),result_status,case when p_mode='accepted' then now() end,case when result_status='processed' then now() end) returning id into instance_id;
+  values(opp_id,rec.id,offer.id,uid,offer.operator,offer.name,offer.base_price,total,jsonb_build_object('operator',offer.operator,'offer_name',offer.name,'base_features',offer.base_features,'selections',chosen,'netflix_followup',crm_private.offer_netflix_visible(jsonb_build_object('selections',chosen)),'computed_price',computed,'total_price',total,'is_counteroffer',offer.is_counteroffer,'send_message',p_mode='followup' or p_send_message,'processing_date',process_date),message,nullif(btrim(coalesce(p_extra_text,'')),''),result_status,case when p_mode='accepted' then now() end,case when result_status='processed' then now() end) returning id into instance_id;
   if offer.is_counteroffer then perform crm_private.offer_add_label(rec.id,'CONTRAOFERTA '||upper(offer.operator),'Contraofertas');end if;
   if p_mode='accepted' then
     perform crm_private.offer_record_month(rec.id,opp_id,now());
     if result_status='processed' then select * into inst from public.crm_offer_instances where id=instance_id;perform crm_private.offer_record_sale(inst,now());end if;
   end if;
+  if result_status='processed' then perform crm_private.enqueue_opportunity_stage(opp_id);end if;
   if p_mode='followup' or p_send_message then
     perform pg_advisory_xact_lock(hashtextextended(uid::text,9417));select * into rule from public.crm_automations where user_id=uid and trigger_type='manual_offer' order by created_at limit 1;
     if not found then insert into public.crm_automations(user_id,name,enabled,trigger_type,trigger_config,action_type,action_config) values(uid,'OFERTAS · Seguimiento general',true,'manual_offer',jsonb_build_object('automation_operator','General','automation_category','Seguimiento'),'flow_v1',jsonb_build_object('version',1,'steps',jsonb_build_array())) returning * into rule;elsif p_mode='followup' and not rule.enabled then raise exception 'La automatización general de ofertas está pausada';end if;
@@ -99,9 +141,17 @@ do $$declare standard_id uuid;counter_id uuid;begin
   update public.crm_offer_catalog set base_features='["Fibra 1 Gb","2 líneas con datos ilimitados"]' where id=counter_id;
   update public.crm_offer_line_options set name='Datos ilimitados',message_text='2 líneas con datos ilimitados',replaces_text='2 líneas de 160 GB' where offer_id=standard_id and group_name='lineas_principales';
   update public.crm_offer_line_options set message_text=case when data_gb is null then 'Datos ilimitados' else data_gb||' GB' end where offer_id in (standard_id,counter_id) and option_type='quantity';
+  if not exists(select 1 from public.crm_offer_line_options where offer_id=standard_id and option_type='quantity' and data_gb is null and lower(name) like '%ilimitad%') then
+    insert into public.crm_offer_line_options(offer_id,name,data_gb,price_delta,position,option_type,group_name,message_text,replaces_text,default_selected,active)
+    values(standard_id,'Línea con datos ilimitados',null,6,coalesce((select max(position)+10 from public.crm_offer_line_options where offer_id=standard_id),60),'quantity',null,'con datos ilimitados',null,false,true);
+  end if;
+  update public.crm_offer_line_options set name='Línea con datos ilimitados',price_delta=6,message_text='con datos ilimitados',active=true
+  where offer_id=standard_id and option_type='quantity' and data_gb is null and lower(name) like '%ilimitad%';
+  update public.crm_offer_line_options set message_text='con datos ilimitados'
+  where offer_id=counter_id and option_type='quantity' and data_gb is null and lower(name) like '%ilimitad%';
 end $$;
 
--- Borrador seguro: queda visible y editable, pero no enviará nada hasta activarlo.
+-- Plantilla aprobada y flujo activo, sin retroactividad: solo se dispara al entrar en Tramitado.
 do $$
 declare vodafone_rule public.crm_automations%rowtype;template_id bigint;
 begin
@@ -110,23 +160,42 @@ begin
     where trigger_type='opportunity_stage'
       and lower(coalesce(trigger_config->>'automation_operator',''))='vodafone'
   loop
+    template_id:=null;
     select id into template_id from public.wa_templates
     where user_id=vodafone_rule.user_id and lower(btrim(name))='netflix y devolución de router'
     order by created_at limit 1;
     if template_id is null then
       insert into public.wa_templates(user_id,name,body,category,shortcut)
-      values(vodafone_rule.user_id,'Netflix y devolución de router','Hola {nombre}, recuerda activar Netflix y realizar la devolución del router anterior. Si ya lo has hecho, ignora este mensaje. Si necesitas ayuda, escríbenos.','Vodafone',null)
+      values(vodafone_rule.user_id,'Netflix y devolución de router',$body$Hola {nombre} 👋
+
+Cuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.
+
+⚠️ Activa Netflix solo cuando tu línea ya esté en Vodafone: entra en vodafone.es/entretenimiento, introduce tu número y el código SMS. Usa tu cuenta habitual; si no recuerdas los datos, llama al 900 759 004.
+
+⚠️ Selecciona el plan Estándar con anuncios, incluido en tu tarifa.
+
+📦 Las instrucciones para devolver el router anterior pueden tardar hasta 15 días.$body$,'Vodafone',null)
       returning id into template_id;
     end if;
+    update public.wa_templates set body=$body$Hola {nombre} 👋
+
+Cuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.
+
+⚠️ Activa Netflix solo cuando tu línea ya esté en Vodafone: entra en vodafone.es/entretenimiento, introduce tu número y el código SMS. Usa tu cuenta habitual; si no recuerdas los datos, llama al 900 759 004.
+
+⚠️ Selecciona el plan Estándar con anuncios, incluido en tu tarifa.
+
+📦 Las instrucciones para devolver el router anterior pueden tardar hasta 15 días.$body$,category='Vodafone',updated_at=now() where id=template_id;
     update public.crm_automations
-    set enabled=false,
+    set enabled=true,
         name='TRAMITACIÓN · Vodafone',
+        trigger_config=trigger_config||jsonb_build_object('required_offer_flag','netflix_followup'),
         action_config=jsonb_build_object(
           'version',1,
           'lifecycle',jsonb_build_object('mode','after_sale','version',1),
           'steps',jsonb_build_array(
             jsonb_build_object('kind','action','action_type','record_sale_month','config',jsonb_build_object()),
-            jsonb_build_object('kind','wait','unit','days','value',2),
+            jsonb_build_object('kind','wait','unit','days','value',1,'business_schedule','phone_house'),
             jsonb_build_object('kind','action','action_type','send_template','config',jsonb_build_object('template_id',template_id::text))
           )
         ),
@@ -134,4 +203,13 @@ begin
     where id=vodafone_rule.id;
   end loop;
 end $$;
+
+create or replace function public.crm_server_on_opportunity_stage()
+returns trigger language plpgsql security definer set search_path='' as $$
+begin
+  if tg_op='UPDATE' and new.stage_id is not distinct from old.stage_id then return new;end if;
+  perform crm_private.enqueue_opportunity_stage(new.id);
+  return new;
+end $$;
+revoke all on function public.crm_server_on_opportunity_stage() from public,anon,authenticated;
 notify pgrst,'reload schema';

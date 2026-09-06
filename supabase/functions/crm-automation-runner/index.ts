@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { lifecycleEnabled, orderedConfig } from "./lifecycle.ts";
 import { businessContext } from "./contact-party.ts";
+import { nextBusinessSendAt } from "./business-time.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")||"";
 const SERVICE_KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -46,17 +47,17 @@ async function hasResponseSince(ctx:any){const chat=phoneToChat(ctx);const since
 async function shouldSkip(job:any){const a=job.action_config||{},ctx=job.context||{},business=businessContext(ctx);if(a.__flow_guard==="no_response"&&await hasResponseSince(ctx))return "El cliente respondió: condición no cumplida";if(a.__stop_if_response&&await hasResponseSince(ctx))return "El cliente respondió: repetición detenida";return "";}
 
 async function enqueueChild(job:any,eventKey:string,actionType:string,config:any,context:any,runAt:string){const {error}=await sb.from("crm_server_automation_jobs").upsert({automation_id:job.automation_id,user_id:job.user_id,event_key:eventKey,action_type:actionType,action_config:config||{},context,run_at:runAt,status:"pending"},{onConflict:"automation_id,event_key",ignoreDuplicates:true});if(error)throw error;}
-async function expandFlow(job:any){const steps=Array.isArray(job.action_config?.steps)?job.action_config.steps:[];if(!steps.length)throw new Error("El flujo no tiene pasos");const origin=eventBase(job.context||{});const started=origin.toISOString();const root=`${job.event_key}:flow`;let delay=0;let guard="";let previous:any=null;let actionNo=0;let previousEvent:string|null=null;
+async function expandFlow(job:any){const steps=Array.isArray(job.action_config?.steps)?job.action_config.steps:[];if(!steps.length)throw new Error("El flujo no tiene pasos");const origin=eventBase(job.context||{});const started=origin.toISOString();const root=`${job.event_key}:flow`;let cursor=new Date(origin);let guard="";let previous:any=null;let actionNo=0;let previousEvent:string|null=null;
   for(let i=0;i<steps.length;i++){const s=steps[i]||{};
-    if(s.kind==="wait"){delay+=durationMs(s.value,s.unit);continue;}
+    if(s.kind==="wait"){cursor=s.business_schedule==="phone_house"?nextBusinessSendAt(cursor,s.value):new Date(cursor.getTime()+durationMs(s.value,s.unit));continue;}
     if(s.kind==="condition"){guard=String(s.condition_type||"");continue;}
     if(s.kind==="action"){
       const type=s.action_type==="send_whatsapp_now"?"__send_whatsapp":String(s.action_type||"");if(!type)throw new Error(`Paso ${i+1}: acción vacía`);actionNo++;
-      const cfg={...(s.config||{}),__flow_guard:guard||null,__flow_step:i+1};const ctx={...(job.context||{}),flow_root:root,flow_started_at:started};const runAt=new Date(origin.getTime()+delay).toISOString();const key=`${root}:action:${actionNo}`;await enqueueChild(job,key,type,orderedConfig(cfg,ctx,previousEvent),ctx,runAt);previousEvent=key;previous={type,config:{...(s.config||{})},guard,baseIndex:actionNo};continue;
+      const cfg={...(s.config||{}),__flow_guard:guard||null,__flow_step:i+1};const ctx={...(job.context||{}),flow_root:root,flow_started_at:started};const runAt=cursor.toISOString();const key=`${root}:action:${actionNo}`;await enqueueChild(job,key,type,orderedConfig(cfg,ctx,previousEvent),ctx,runAt);previousEvent=key;previous={type,config:{...(s.config||{})},guard,baseIndex:actionNo};continue;
     }
     if(s.kind==="repeat"){
       if(!previous)throw new Error(`Paso ${i+1}: no hay acción anterior para repetir`);const every=durationMs(s.every_value,s.every_unit);const times=Math.max(1,Math.min(100,Number(s.times||1)));if(!every)throw new Error(`Paso ${i+1}: intervalo de repetición inválido`);
-      for(let k=1;k<=times;k++){delay+=every;const cfg={...previous.config,__flow_guard:previous.guard||null,__stop_if_response:!!s.stop_if_response,__flow_repeat:k};const ctx={...(job.context||{}),flow_root:root,flow_started_at:started};const key=`${root}:repeat:${previous.baseIndex}:${k}`;await enqueueChild(job,key,previous.type,orderedConfig(cfg,ctx,previousEvent),ctx,new Date(origin.getTime()+delay).toISOString());previousEvent=key;}
+      for(let k=1;k<=times;k++){cursor=new Date(cursor.getTime()+every);const cfg={...previous.config,__flow_guard:previous.guard||null,__stop_if_response:!!s.stop_if_response,__flow_repeat:k};const ctx={...(job.context||{}),flow_root:root,flow_started_at:started};const key=`${root}:repeat:${previous.baseIndex}:${k}`;await enqueueChild(job,key,previous.type,orderedConfig(cfg,ctx,previousEvent),ctx,cursor.toISOString());previousEvent=key;}
     }
   }
   return {children:actionNo,flow_root:root};
