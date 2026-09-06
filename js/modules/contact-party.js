@@ -32,6 +32,12 @@ function snapshot(p,c={}){
 }
 function search(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;return p?.same===false?[p.holder_name,p.holder_dni,p.holder_phone].map(clean).join(' '):'';}
 function hint(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;return p?.same===false?`<small class="tpf-party-hint">Titular: ${esc(p.holder_name)}</small>`:'';}
+function opportunityIdentity(o={},record){
+ const p=o.contract_party||{},v=record&&String(record.id)===String(o.record_id)?contactValues(record):{};
+ // Frozen contract identities take precedence. Never borrow a manager's DNI.
+ return {holder:nameCase(p.holder_name||o.client_name||v.name||'Sin titular indicado'),dni:clean(p.holder_dni||(p.same===false?'':v.dni)),manager:p.same===false?nameCase(p.contact_name||'Sin gestor indicado'):'',unlinked:!o.record_id&&!p.holder_name};
+}
+function opportunityHint(o,record){const x=opportunityIdentity(o,record);return `<small class="tpf-party-hint">Titular: ${esc(x.holder)}${x.manager?` · Gestionado por: ${esc(x.manager)}`:''}</small>`;}
 function html(id,p={},opportunity=false){
   const x=normalize(p);
   return `<section id="${esc(id)}" class="tpf-party full" data-party-form><h3>Titular del contrato</h3><label class="tpf-party-check"><input data-party="same" type="checkbox" ${x.same?'checked':''}><span>El contacto es también el titular</span></label><div class="tpf-party-other" ${x.same?'hidden':''}><p>La persona de contacto sigue siendo quien gestiona el contrato.</p>${p?.holder_name&&!Object.hasOwn(p,'holder_first_name')&&!Object.hasOwn(p,'holder_last_name')?'<small>El nombre se guardó junto. Revisa la separación si tiene un nombre compuesto.</small>':''}<div class="tpf-party-grid"><label>Nombre del titular<input data-party="holder_first_name" value="${esc(x.holder_first_name)}" autocomplete="off"></label><label>Apellidos del titular<input data-party="holder_last_name" value="${esc(x.holder_last_name)}" autocomplete="off"></label><label>DNI / NIF del titular<input data-party="holder_dni" value="${esc(x.holder_dni)}" autocomplete="off"></label><label>Teléfono del titular (opcional)<input data-party="holder_phone" value="${esc(displayPhone(x.holder_phone))}" data-original-phone="${esc(x.holder_phone)}" inputmode="tel" autocomplete="off"></label></div></div><div class="tpf-party-recipient"><label>Enviar los WhatsApp automáticos a<select data-party="recipient"><option value="contact" ${x.recipient==='contact'?'selected':''}>Persona de contacto</option><option value="holder" ${x.recipient==='holder'?'selected':''} ${x.same?'disabled':''}>Titular del contrato</option></select></label><small>El saludo utilizará el nombre de quien recibe el mensaje. El teléfono del titular solo es necesario si lo eliges como destinatario.</small></div>${opportunity?'<small class="tpf-party-foot">Estos datos se guardan en esta oportunidad. Editar después el contacto no cambia este contrato.</small>':''}</section>`;
@@ -65,7 +71,7 @@ function mountOpportunity(p){
   el('tpfOpportunityParty').dataset.snapshot=JSON.stringify(p?.recipient_name!==undefined?p:null);
 }
 function readOpportunity(){const p=read('tpfOpportunityParty'),previous=JSON.parse(el('tpfOpportunityParty').dataset.snapshot||'null'),c={name:el('oppModalClient')?.value,phone:el('oppModalPhone')?.value,dni:previous?.contact_dni??el('oppModalDni')?.value};if(previous&&JSON.stringify(normalize(previous))===JSON.stringify(p)&&clean(c.name)===clean(previous.contact_name)&&clean(c.phone)===clean(previous.contact_phone))return previous;return snapshot(p,c);}
-W.TPFContactParty={normalize,validate,snapshot,search,hint,html,read,fillContact,summary,renderProfile,mountOpportunity,readOpportunity,validPhone,displayPhone};
+W.TPFContactParty={normalize,validate,snapshot,search,hint,opportunityIdentity,opportunityHint,html,read,fillContact,summary,renderProfile,mountOpportunity,readOpportunity,validPhone,displayPhone};
 if(typeof document==='undefined')return;
 const style=document.createElement('style');style.id='tpfContactPartyStyles';style.textContent=`
 .tpf-party{box-sizing:border-box;grid-column:1/-1;background:#fff;border:1px solid #ddd6fe;border-top:3px solid #8b5cf6;border-radius:12px;padding:16px;margin:12px 0;color:#17243b;min-width:0}
