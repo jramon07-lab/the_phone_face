@@ -120,6 +120,7 @@
       const d={...(q.data?.data||{})};
       d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d.APODO=nickname;d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;d.NOTAS=notes;d.OBSERVACIONES=obs;
       d.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
+      window.TPFContactRelations?.applyContactData(d,s.id);
       const u=await sb.from('records').update({data:d}).eq('id',s.id);if(u.error)throw u.error;
       const ids=[...byId('tpfCreateLabels')?.querySelectorAll('input:checked')||[]].map(x=>x.value);
       const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:String(s.id),p_label_ids:ids});if(lr.error)throw lr.error;
@@ -412,5 +413,3 @@
     }
   });
 })();
-
-
