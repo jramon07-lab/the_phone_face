@@ -8,6 +8,7 @@ const el=id=>document.getElementById(id);
 const nameCase=v=>clean(v).toLocaleLowerCase('es').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es'));
 function phone(v){let p=clean(v).replace(/\D/g,'');if(p.startsWith('00'))p=p.slice(2);if(p.length===9)p='34'+p;return p;}
 const validPhone=v=>/^[1-9][0-9]{7,14}$/.test(phone(v));
+function displayPhone(v){const raw=clean(v),digits=raw.replace(/\D/g,'');const local=digits.startsWith('0034')?digits.slice(4):digits.startsWith('34')?digits.slice(2):'';return /^[6789]\d{8}$/.test(local)?local:raw;}
 function normalize(p={}){
   p=p||{};
   const same=p.same!==false,parts=clean(p.holder_name).split(' '),structured=Object.hasOwn(p,'holder_first_name')||Object.hasOwn(p,'holder_last_name');
@@ -33,12 +34,13 @@ function search(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITUL
 function hint(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;return p?.same===false?`<small class="tpf-party-hint">Titular: ${esc(p.holder_name)}</small>`:'';}
 function html(id,p={},opportunity=false){
   const x=normalize(p);
-  return `<section id="${esc(id)}" class="tpf-party full" data-party-form><h3>Titular del contrato</h3><label class="tpf-party-check"><input data-party="same" type="checkbox" ${x.same?'checked':''}><span>El contacto es también el titular</span></label><div class="tpf-party-other" ${x.same?'hidden':''}><p>La persona de contacto sigue siendo quien gestiona el contrato.</p>${p?.holder_name&&!Object.hasOwn(p,'holder_first_name')&&!Object.hasOwn(p,'holder_last_name')?'<small>El nombre se guardó junto. Revisa la separación si tiene un nombre compuesto.</small>':''}<div class="tpf-party-grid"><label>Nombre del titular<input data-party="holder_first_name" value="${esc(x.holder_first_name)}" autocomplete="off"></label><label>Apellidos del titular<input data-party="holder_last_name" value="${esc(x.holder_last_name)}" autocomplete="off"></label><label>DNI / NIF del titular<input data-party="holder_dni" value="${esc(x.holder_dni)}" autocomplete="off"></label><label>Teléfono del titular (opcional)<input data-party="holder_phone" value="${esc(x.holder_phone)}" inputmode="tel" autocomplete="off"></label></div></div><div class="tpf-party-recipient"><label>Enviar los WhatsApp automáticos a<select data-party="recipient"><option value="contact" ${x.recipient==='contact'?'selected':''}>Persona de contacto</option><option value="holder" ${x.recipient==='holder'?'selected':''} ${x.same?'disabled':''}>Titular del contrato</option></select></label><small>El saludo utilizará el nombre de quien recibe el mensaje. El teléfono del titular solo es necesario si lo eliges como destinatario.</small></div>${opportunity?'<small class="tpf-party-foot">Estos datos se guardan en esta oportunidad. Editar después el contacto no cambia este contrato.</small>':''}</section>`;
+  return `<section id="${esc(id)}" class="tpf-party full" data-party-form><h3>Titular del contrato</h3><label class="tpf-party-check"><input data-party="same" type="checkbox" ${x.same?'checked':''}><span>El contacto es también el titular</span></label><div class="tpf-party-other" ${x.same?'hidden':''}><p>La persona de contacto sigue siendo quien gestiona el contrato.</p>${p?.holder_name&&!Object.hasOwn(p,'holder_first_name')&&!Object.hasOwn(p,'holder_last_name')?'<small>El nombre se guardó junto. Revisa la separación si tiene un nombre compuesto.</small>':''}<div class="tpf-party-grid"><label>Nombre del titular<input data-party="holder_first_name" value="${esc(x.holder_first_name)}" autocomplete="off"></label><label>Apellidos del titular<input data-party="holder_last_name" value="${esc(x.holder_last_name)}" autocomplete="off"></label><label>DNI / NIF del titular<input data-party="holder_dni" value="${esc(x.holder_dni)}" autocomplete="off"></label><label>Teléfono del titular (opcional)<input data-party="holder_phone" value="${esc(displayPhone(x.holder_phone))}" data-original-phone="${esc(x.holder_phone)}" inputmode="tel" autocomplete="off"></label></div></div><div class="tpf-party-recipient"><label>Enviar los WhatsApp automáticos a<select data-party="recipient"><option value="contact" ${x.recipient==='contact'?'selected':''}>Persona de contacto</option><option value="holder" ${x.recipient==='holder'?'selected':''} ${x.same?'disabled':''}>Titular del contrato</option></select></label><small>El saludo utilizará el nombre de quien recibe el mensaje. El teléfono del titular solo es necesario si lo eliges como destinatario.</small></div>${opportunity?'<small class="tpf-party-foot">Estos datos se guardan en esta oportunidad. Editar después el contacto no cambia este contrato.</small>':''}</section>`;
 }
 function read(id){
   const root=el(id);if(!root)throw new Error('No se han cargado los datos del titular. Cierra y vuelve a abrir el formulario.');
   const get=k=>root.querySelector(`[data-party="${k}"]`);
-  return validate({same:get('same').checked,holder_first_name:get('holder_first_name').value,holder_last_name:get('holder_last_name').value,holder_dni:get('holder_dni').value,holder_phone:get('holder_phone').value,recipient:get('recipient').value});
+  const input=get('holder_phone'),raw=input.dataset?.originalPhone,holderPhone=raw!==undefined&&input.value===displayPhone(raw)?raw:input.value;
+  return validate({same:get('same').checked,holder_first_name:get('holder_first_name').value,holder_last_name:get('holder_last_name').value,holder_dni:get('holder_dni').value,holder_phone:holderPhone,recipient:get('recipient').value});
 }
 function fillContact(data={}){
   let root=el('tpfContactParty');const anchor=el('tpfCreateBank')?.closest('label');
@@ -48,7 +50,7 @@ function fillContact(data={}){
 function summary(p,c){
   if(!p)return '';
   let s;try{s=p.recipient_name!==undefined?p:snapshot(p,c);}catch(_){return '';}
-  return `<section class="tpf-party tpf-party-summary"><h3>Titular del contrato</h3><strong>${esc(s.holder_name||'Sin indicar')}</strong><p>${s.same?'Es la persona de contacto':`DNI / NIF: ${esc(s.holder_dni||'Sin indicar')}<br>Teléfono: ${esc(s.holder_phone||'No indicado')}`}</p><div class="tpf-party-recipient"><b>WhatsApp automático</b><span>${esc(s.recipient_name||'Sin nombre')} · ${esc(s.recipient_phone||'Falta teléfono: no se podrá enviar')}</span></div></section>`;
+  return `<section class="tpf-party tpf-party-summary"><h3>Titular del contrato</h3><strong>${esc(s.holder_name||'Sin indicar')}</strong><p>${s.same?'Es la persona de contacto':`DNI / NIF: ${esc(s.holder_dni||'Sin indicar')}<br>Teléfono: ${esc(displayPhone(s.holder_phone)||'No indicado')}`}</p><div class="tpf-party-recipient"><b>WhatsApp automático</b><span>${esc(s.recipient_name||'Sin nombre')} · ${esc(displayPhone(s.recipient_phone)||'Falta teléfono: no se podrá enviar')}</span></div></section>`;
 }
 function renderProfile(c){
   const anchor=document.querySelector('#contactModal .cpData');if(!anchor)return;
@@ -63,7 +65,7 @@ function mountOpportunity(p){
   el('tpfOpportunityParty').dataset.snapshot=JSON.stringify(p?.recipient_name!==undefined?p:null);
 }
 function readOpportunity(){const p=read('tpfOpportunityParty'),previous=JSON.parse(el('tpfOpportunityParty').dataset.snapshot||'null'),c={name:el('oppModalClient')?.value,phone:el('oppModalPhone')?.value,dni:previous?.contact_dni??el('oppModalDni')?.value};if(previous&&JSON.stringify(normalize(previous))===JSON.stringify(p)&&clean(c.name)===clean(previous.contact_name)&&clean(c.phone)===clean(previous.contact_phone))return previous;return snapshot(p,c);}
-W.TPFContactParty={normalize,validate,snapshot,search,hint,html,read,fillContact,summary,renderProfile,mountOpportunity,readOpportunity,validPhone};
+W.TPFContactParty={normalize,validate,snapshot,search,hint,html,read,fillContact,summary,renderProfile,mountOpportunity,readOpportunity,validPhone,displayPhone};
 if(typeof document==='undefined')return;
 const style=document.createElement('style');style.id='tpfContactPartyStyles';style.textContent=`
 .tpf-party{box-sizing:border-box;grid-column:1/-1;background:#fff;border:1px solid #ddd6fe;border-top:3px solid #8b5cf6;border-radius:12px;padding:16px;margin:12px 0;color:#17243b;min-width:0}
