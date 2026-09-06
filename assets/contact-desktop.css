@@ -209,3 +209,4 @@ body.agendaDetailOpen #cpTaskDetailPage textarea{min-height:70px!important;max-h
 .agendaDayNumber{border:0;background:transparent;font-weight:650;cursor:pointer;padding:4px}
 @media(max-width:700px){.agendaItem{grid-template-columns:75px 28px 1fr!important}.agendaItemPerson{display:block!important;grid-column:3}.agendaItemState{grid-column:3}.agendaCompactBackdrop{padding:10px}.agendaCompactBackdrop #agendaCreateCard.open{max-height:calc(100dvh - 20px)!important}.agendaCompactBody{padding:12px 16px}}
 body.agendaDetailOpen #contactModal.tpfTaskStandalone>.contactProfile{display:none!important}
+body.agendaComposerOpen #agendaTypeModal:not(.hidden){z-index:100200!important}
