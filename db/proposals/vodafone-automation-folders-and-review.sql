@@ -64,13 +64,13 @@ begin
 
 ⚠️ Ten cuidado con llamadas que anuncien subidas de precio o amenacen con cortar tus líneas. No facilites datos y consúltanos antes.
 
-📱 Si te llaman ofreciendo un terminal gratis o financiado, consúltanos antes. Pueden aplicarte permanencias elevadas de 24 o 36 meses y después no respetar el precio que te ofrecieron.$body$,'Vodafone',null) returning id into template_id;
+📱 Si te llaman ofreciendo un terminal gratis o financiado, consúltanos antes. Pueden aplicarte permanencias elevadas de 24, 36 o 48 meses.$body$,'Vodafone',null) returning id into template_id;
    else
      update public.wa_templates set body=$body$Hola {nombre} 👋 ¿Qué tal va todo con Vodafone?
 
 ⚠️ Ten cuidado con llamadas que anuncien subidas de precio o amenacen con cortar tus líneas. No facilites datos y consúltanos antes.
 
-📱 Si te llaman ofreciendo un terminal gratis o financiado, consúltanos antes. Pueden aplicarte permanencias elevadas de 24 o 36 meses y después no respetar el precio que te ofrecieron.$body$,category='Vodafone',updated_at=now() where id=template_id;
+📱 Si te llaman ofreciendo un terminal gratis o financiado, consúltanos antes. Pueden aplicarte permanencias elevadas de 24, 36 o 48 meses.$body$,category='Vodafone',updated_at=now() where id=template_id;
    end if;
 
    select id into posventa_id from public.crm_automations where user_id=base_rule.user_id and trigger_config->>'automation_code'='vodafone_security_3_months' limit 1;
