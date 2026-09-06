@@ -1573,6 +1573,7 @@ function renderSalesList(){
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
       <div class="salesListTitle">${esc(o.title||"Oportunidad")}</div>
       <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
+      <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
       <div>${esc(o.phone||"—")}</div>
       <div>${esc(fmtMoney(o.amount||0))}</div>
       <div>
