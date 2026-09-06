@@ -18,7 +18,7 @@ test('Plantillas: crear, buscar, favorita, editar, comprobar persistencia y borr
 });
 
 test('Automatizaciones: crear y editar borrador pausado sin ejecutar acciones',async({page})=>{
- test.setTimeout(120000);await login(page);const name='Validacion flujo '+Date.now();let id;
+ test.setTimeout(120000);page.setDefaultTimeout(15000);await login(page);const name='Validacion flujo '+Date.now();let id;
  try{
   await page.locator('.nav[data-view="automations"]').click();await page.locator('#tpfAutoNew').click();await page.locator('[data-presentation="advanced"]').click();
   await page.locator('#tpfFlowName').fill(name);await page.locator('#tpfFlowEnabled').selectOption('0');await page.locator('#tpfFlowTrigger').selectOption('message_contains');await page.locator('[data-trigger-key="keyword"]').fill(name);

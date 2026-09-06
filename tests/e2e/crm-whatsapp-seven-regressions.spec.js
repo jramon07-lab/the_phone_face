@@ -68,7 +68,7 @@ async function findChatContexts(page) {
       return {
         matched: Boolean(contact?.id),
         contactId: String(contact?.id || ''),
-        taskCount: document.querySelectorAll('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard').length,
+        taskCount: document.querySelectorAll('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard, #waSideTasks .waSideItem').length,
         createVisible: [...document.querySelectorAll('#waSideCreateContact, #waCreateContactTop')]
           .some(node => !node.classList.contains('hidden') && getComputedStyle(node).display !== 'none')
       };

@@ -5,10 +5,17 @@ function opp(id){try{return(salesCache?.opportunities||[]).find(o=>String(o.id)=
 let dniRecords=new Map(),dniPending=new Set(),dniRevision=0;
 function decorateIdentity(){
  const wanted=new Set();
- document.querySelectorAll('#salesListRows .salesListRow').forEach(row=>{
-  const o=opp(row.querySelector('.salesListCheck')?.dataset.oppId);if(!o)return;
+ document.querySelectorAll('#salesListRows .salesListRow,#salesBoard .opp').forEach(row=>{
+  const o=opp(row.dataset.oppId||row.querySelector('.salesListCheck')?.dataset.oppId);if(!o)return;
   const info=window.TPFContactParty?.opportunityIdentity(o,dniRecords.get(String(o.record_id)));if(!info)return;
-  const cell=row.querySelector('.tpfSalesDni');if(cell&&cell.textContent!==(info.dni||'—'))cell.textContent=info.dni||'—';
+  let cell=row.querySelector('.tpfSalesDni');
+  if(!cell&&row.matches('#salesBoard .opp')){
+    const line=document.createElement('div'),label=document.createElement('span');
+    label.className='label';label.textContent='DNI/NIF: ';
+    cell=document.createElement('span');cell.className='tpfSalesDni';line.append(label,cell);
+    row.querySelector('.oppInfo')?.appendChild(line);
+  }
+  if(cell&&cell.textContent!==(info.dni||'—'))cell.textContent=info.dni||'—';
   const client=row.querySelector('.salesClientLink')?.parentElement;if(client){let note=client.querySelector('.tpfSalesManager');if(info.manager&&!note){note=document.createElement('small');note.className='tpfSalesManager';client.appendChild(note);}if(note){const text=info.manager?'Gestionado por: '+info.manager:'';if(note.textContent!==text)note.textContent=text;}}
   const id=String(o.record_id||'');if(id&&!info.dni&&!dniRecords.has(id)&&!dniPending.has(id))wanted.add(id);
  });
@@ -22,5 +29,5 @@ function close(){document.querySelectorAll('.tpfListMenu').forEach(x=>x.remove()
 function wa(o,schedule){const p=String(o?.phone||'').trim();if(!p)return alert('Esta oportunidad no tiene teléfono.');if(typeof openWaQuick==='function'){openWaQuick({phone:p,name:String(o?.client_name||''),message:''});if(schedule)setTimeout(()=>document.getElementById('waScheduleBtn')?.click(),20);return}if(document.getElementById('waQuickPhone'))document.getElementById('waQuickPhone').value=p;document.getElementById('waQuickModal')?.classList.remove('hidden');if(schedule)document.getElementById('waQuickSend')?.click()}
 function menu(ev,id){ev.preventDefault();ev.stopPropagation();close();const o=opp(id),m=document.createElement('div');m.className='tpfListMenu';const add=(t,f,c='')=>{const b=document.createElement('button');b.textContent=t;b.className=c;b.onclick=e=>{e.preventDefault();e.stopPropagation();close();f()};m.appendChild(b)};add('Ver / Editar',()=>open(id));add('Mover de estado',()=>document.querySelector(`#salesListRows .salesListCheck[data-opp-id="${CSS.escape(String(id))}"]`)?.closest('.salesListRow')?.querySelector('select')?.focus());add('Crear tarea',()=>window.openSalesTaskForOpportunity?.(id));add('WhatsApp',()=>wa(o,false));add('Programar WhatsApp',()=>wa(o,true));add('Eliminar',()=>window.deleteOpp?.(id),'danger');document.body.appendChild(m);const r=ev.currentTarget.getBoundingClientRect();m.style.left=Math.max(8,Math.min(innerWidth-223,r.right-215))+'px';m.style.top=Math.max(8,Math.min(innerHeight-m.offsetHeight-8,r.bottom+4))+'px'}
 function decorate(){decorateIdentity();document.querySelectorAll('#salesListRows .salesListRow').forEach(row=>{const cb=row.querySelector('.salesListCheck'),id=cb?.dataset.oppId;if(!id)return;row.dataset.oppId=id;row.onclick=e=>{if(e.target.closest('input,select,button,a,.tpfListMenu'))return;e.preventDefault();e.stopPropagation();open(id)};const title=row.querySelector('.salesListTitle');if(title){title.style.cursor='pointer';title.onclick=e=>{e.preventDefault();e.stopPropagation();open(id)}}const o=opp(id),raw=String(o?.expected_date||'');if(raw){const x=new Date(raw+'T00:00:00'),n=new Date();n.setHours(0,0,0,0);const diff=Math.round((x-n)/86400000);row.classList.toggle('tpfListExpired',diff<0);row.classList.toggle('tpfListToday',diff===0);row.classList.toggle('tpfListSoon',diff>0&&diff<=7)}let b=row.querySelector('.tpfListMenuBtn');if(!b){b=document.createElement('button');b.type='button';b.className='tpfListMenuBtn';b.textContent='•••';b.title='Acciones';row.appendChild(b)}b.onclick=e=>menu(e,id)})}
-M.register('sales-list-ui',{install(){css();decorate();const r=document.getElementById('salesListRows');if(r)new MutationObserver(()=>requestAnimationFrame(decorate)).observe(r,{childList:true,subtree:true});document.addEventListener('click',e=>{if(!e.target.closest('.tpfListMenu,.tpfListMenuBtn'))close()})}});
+M.register('sales-list-ui',{install(){css();decorate();for(const id of ['salesListRows','salesBoard']){const r=document.getElementById(id);if(r)new MutationObserver(()=>requestAnimationFrame(decorate)).observe(r,{childList:true,subtree:true});}document.addEventListener('click',e=>{if(!e.target.closest('.tpfListMenu,.tpfListMenuBtn'))close()})}});
 })();

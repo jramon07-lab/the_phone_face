@@ -44,7 +44,7 @@ function applyFinalFix(html){
   const autoUi='<script src="/js/modules/automations-ui-polish.js"></script>';
   if(!html.includes('/js/modules/automations-ui-polish.js')) html=html.includes('</body>')?html.replace('</body>',autoUi+'\n</body>'):html+autoUi;
   const autoFlow='<script src="/js/modules/automations-flow-builder.js"></script>';
-  if(!html.includes('/js/modules/automations-flow-builder.js')) html=html.includes('</body>')?html.replace('</body>',autoFlow+'\n</body>'):html+autoFlow;
+  if(!html.includes('/js/modules/automations-flow-builder.js')&&!html.includes('/js/modules/runtime.js')) html=html.includes('</body>')?html.replace('</body>',autoFlow+'\n</body>'):html+autoFlow;
   const autoSource='<script src="/js/modules/automations-contact-source-ui.js"></script>';
   if(!html.includes('/js/modules/automations-contact-source-ui.js')) html=html.includes('</body>')?html.replace('</body>',autoSource+'\n</body>'):html+autoSource;
   const contactProfile='<script src="/js/modules/contact-profile.js"></script>';

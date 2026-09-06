@@ -47,7 +47,7 @@ async function openWhatsAppMatchedContact(page){
     if(matched){
       await expect(page.locator('#waSideOpenContact')).toBeVisible({timeout:10000});
       if(firstMatched<0)firstMatched=i;
-      const taskRows=page.locator('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard');
+      const taskRows=page.locator('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard, #waSideTasks .waSideItem');
       if(await taskRows.count()){
         console.log('MATCHED_CHAT_INDEX',i);
         console.log('TPF_MODULES',JSON.stringify(await page.evaluate(()=>window.TPFModules?.status?.()||[])));
@@ -69,7 +69,7 @@ test('WhatsApp reutiliza oportunidad y tareas nativas de Contactos', async ({pag
   const matched=await openWhatsAppMatchedContact(page);
 
   if(matched.hasTask){
-    const taskRow=page.locator('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard').first();
+    const taskRow=page.locator('#waSideTasks .cpTaskWrap, #waSideTasks .waTaskCard, #waSideTasks .waSideItem').first();
     await expect(taskRow).toBeVisible({timeout:15000});
     const edit=taskRow.locator('button,a').filter({hasText:/^Editar$|Ver\s*\/\s*editar/i}).first();
     await expect(edit).toBeVisible({timeout:15000});

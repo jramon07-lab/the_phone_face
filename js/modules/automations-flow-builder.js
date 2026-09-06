@@ -1,5 +1,7 @@
 (function(){
   'use strict';
+  if(window.__tpfAutomationFlowInitialized)return;
+  window.__tpfAutomationFlowInitialized=true;
   const $=id=>document.getElementById(id);
   const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const units=[['minutes','minutos'],['hours','horas'],['days','días'],['weeks','semanas']];
