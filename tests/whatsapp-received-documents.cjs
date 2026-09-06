@@ -22,7 +22,7 @@ let fetchHook=null,authHook=null,scanner=null;
 const ctx=vm.createContext({document,console,File,URLSearchParams,Date,Response,Blob,
   setTimeout(fn){timers.push(fn);return timers.length;},clearTimeout(){},requestAnimationFrame(fn){frames.push(fn);},
   MutationObserver:class{constructor(fn){observers.push(fn);}observe(){}},
-  fetch:async(url,options={})=>{calls.push({url,options});if(fetchHook)await fetchHook(url,options);if(url.startsWith('/api/green?'))return new Response('test-photo',{headers:{'Content-Type':'image/jpeg'}});if(url.startsWith('/api/crm-documents?'))return Response.json({ok:true,uploadUrl:'https://upload.test/file',expiry:{contact:{date:'2030-01-01'}}});if(url==='https://upload.test/file')return new Response('{}');throw Error('Unexpected network call');},
+  fetch:async(url,options={})=>{calls.push({url,options});if(fetchHook)await fetchHook(url,options);if(url.includes('action=ensureFolder')){const body=JSON.parse(options.body),link=client(body.contactId).data.TPF_DOCUMENTS;return Response.json({ok:true,created:true,link,data:{...body.expectedData,TPF_DOCUMENTS:link},folder:{id:link.folder_id,name:link.folder_name,canUpload:true}});}if(url.startsWith('/api/green?'))return new Response('test-photo',{headers:{'Content-Type':'image/jpeg'}});if(url.startsWith('/api/crm-documents?'))return Response.json({ok:true,uploadUrl:'https://upload.test/file',expiry:{contact:{date:'2030-01-01'}}});if(url==='https://upload.test/file')return new Response('{}');throw Error('Unexpected network call');},
   sb:{auth:{async getSession(){if(authHook)await authHook();return {data:{session:{access_token:'test-only'}}};}}},
 });
 ctx.window=ctx;
@@ -49,7 +49,12 @@ const button=(id,action)=>box.querySelectorAll('[data-wa-doc-action]').find(b=>b
   const upload=calls.find(call=>call.url.includes('action=upload'));assert(upload,'Drive button must reach upload API');assert.equal(JSON.parse(upload.options.body).contactId,'client-a');assert.equal(JSON.parse(upload.options.body).expectedLink.folder_id,'folder-client-a');assert(calls.some(call=>call.options.method==='PUT'));
   await ctx.testReceived.act(button('photo1','dni'));assert(scanner,'DNI button opens existing scanner');assert.equal(scanner.initialFiles.length,1);assert.equal(scanner.initialFiles[0].type,'image/jpeg');assert.equal(scanner.folderName,'Carpeta client-a');
   calls.length=0;state().contact=null;await ctx.testReceived.act(button('photo1','drive'));assert.equal(calls.length,0,'No upload/download without linked contact');
-  state().contact=client();delete state().contact.data.TPF_DOCUMENTS;await ctx.testReceived.act(button('photo1','drive'));assert.equal(calls.length,0,'No upload/download without folder');
+  vm.runInContext(fs.readFileSync('js/modules/document-folder-auto.js','utf8'),ctx);
+  state().contact=client();delete state().contact.data.TPF_DOCUMENTS;await ctx.testReceived.act(button('photo1','drive'));assert(calls[0].url.includes('action=ensureFolder'),'Prepare missing folder before downloading/uploading');assert(calls.some(c=>c.options.method==='PUT'));assert.equal(state().contact.data.TPF_DOCUMENTS.folder_id,'folder-client-a');
+  calls.length=0;delete state().contact.data.TPF_DOCUMENTS;scanner=null;await ctx.testReceived.act(button('photo1','dni'));assert(calls[0].url.includes('action=ensureFolder'));assert(scanner,'DNI scanner should open after creating folder');
+  calls.length=0;delete state().contact.data.TPF_DOCUMENTS;fetchHook=async url=>{if(url.includes('action=ensureFolder')){state().selected={id:'chat-b'};state().contact=client('client-b');}};
+  await ctx.testReceived.act(button('photo1','drive'));assert(!calls.some(c=>c.url.startsWith('/api/green?')),'Stop if chat changes during folder preparation');
+  fetchHook=null;state().selected={id:'chat-a'};
   state().contact=client();calls.length=0;
   fetchHook=async url=>{if(url.startsWith('/api/green?')){state().selected={id:'chat-b'};state().contact=client('client-b');}};
   await ctx.testReceived.act(button('photo1','drive'));assert(!calls.some(c=>c.url.includes('action=upload')),'Switching chat during download must not save to another client');
