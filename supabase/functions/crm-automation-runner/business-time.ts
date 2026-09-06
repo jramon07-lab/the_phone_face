@@ -25,10 +25,25 @@ function addLocalDays(parts:MadridParts,days:number):MadridParts {
   return {year:date.getUTCFullYear(),month:date.getUTCMonth()+1,day:date.getUTCDate(),hour:parts.hour,minute:parts.minute};
 }
 
+function daysInMonth(year:number,month:number){return new Date(Date.UTC(year,month,0)).getUTCDate();}
+
+function addLocalMonths(parts:MadridParts,months:number):MadridParts {
+  const total=parts.year*12+(parts.month-1)+months;
+  const year=Math.floor(total/12),month=((total%12)+12)%12+1;
+  return {...parts,year,month,day:Math.min(parts.day,daysInMonth(year,month))};
+}
+
 function isSunday(parts:MadridParts){return new Date(Date.UTC(parts.year,parts.month-1,parts.day)).getUTCDay()===0;}
 
-export function nextBusinessSendAt(origin:Date,days=1):Date {
-  let target=addLocalDays(madridParts(origin),Math.max(0,Math.floor(Number(days)||0)));
+export function madridDateAfter(origin:Date,value=1,unit="days"):string {
+  const amount=Math.max(0,Math.floor(Number(value)||0)),parts=madridParts(origin);
+  const target=unit==="years"?addLocalMonths(parts,amount*12):unit==="months"?addLocalMonths(parts,amount):addLocalDays(parts,amount);
+  return `${target.year}-${String(target.month).padStart(2,"0")}-${String(target.day).padStart(2,"0")}`;
+}
+
+export function nextBusinessSendAt(origin:Date,value=1,unit="days"):Date {
+  const amount=Math.max(0,Math.floor(Number(value)||0)),parts=madridParts(origin);
+  let target=unit==="months"?addLocalMonths(parts,amount):unit==="years"?addLocalMonths(parts,amount*12):addLocalDays(parts,amount);
   let minute=target.hour*60+target.minute;
   let searchFrom=localDate(target.year,target.month,target.day,minute);
   for(let guard=0;guard<8;guard++){

@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 import { lifecycleEnabled, orderedConfig } from "./lifecycle.ts";
 import { businessContext } from "./contact-party.ts";
-import { nextBusinessSendAt } from "./business-time.ts";
+import { madridDateAfter, nextBusinessSendAt } from "./business-time.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")||"";
 const SERVICE_KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -49,7 +49,7 @@ async function shouldSkip(job:any){const a=job.action_config||{},ctx=job.context
 async function enqueueChild(job:any,eventKey:string,actionType:string,config:any,context:any,runAt:string){const {error}=await sb.from("crm_server_automation_jobs").upsert({automation_id:job.automation_id,user_id:job.user_id,event_key:eventKey,action_type:actionType,action_config:config||{},context,run_at:runAt,status:"pending"},{onConflict:"automation_id,event_key",ignoreDuplicates:true});if(error)throw error;}
 async function expandFlow(job:any){const steps=Array.isArray(job.action_config?.steps)?job.action_config.steps:[];if(!steps.length)throw new Error("El flujo no tiene pasos");const origin=eventBase(job.context||{});const started=origin.toISOString();const root=`${job.event_key}:flow`;let cursor=new Date(origin);let guard="";let previous:any=null;let actionNo=0;let previousEvent:string|null=null;
   for(let i=0;i<steps.length;i++){const s=steps[i]||{};
-    if(s.kind==="wait"){cursor=s.business_schedule==="phone_house"?nextBusinessSendAt(cursor,s.value):new Date(cursor.getTime()+durationMs(s.value,s.unit));continue;}
+    if(s.kind==="wait"){cursor=s.business_schedule==="phone_house"?nextBusinessSendAt(cursor,s.value,s.unit):new Date(cursor.getTime()+durationMs(s.value,s.unit));continue;}
     if(s.kind==="condition"){guard=String(s.condition_type||"");continue;}
     if(s.kind==="action"){
       const type=s.action_type==="send_whatsapp_now"?"__send_whatsapp":String(s.action_type||"");if(!type)throw new Error(`Paso ${i+1}: acción vacía`);actionNo++;
@@ -86,6 +86,10 @@ async function processJob(job:any){try{
       const {data,error}=await sb.rpc("crm_lifecycle_month_label",{p_job:job.id});if(error)throw error;if(data?.allow!==true)return "requeued";
     }else if(job.action_type==="move_opportunity"){
       const oid=ctx.opportunity_id;if(!oid)throw new Error("No hay oportunidad relacionada para mover");if(!a.stage_id)throw new Error("Falta la columna de destino");const {error}=await sb.from("sales_opportunities").update({stage_id:a.stage_id,updated_at:new Date().toISOString()}).eq("id",oid);if(error)throw error;
+    }else if(job.action_type==="set_review_date"){
+      const oid=ctx.opportunity_id;if(!oid)throw new Error("No hay oportunidad relacionada para fechar");const expected=madridDateAfter(eventBase(ctx),a.value||1,a.unit||"years");const {error}=await sb.from("sales_opportunities").update({expected_date:expected,updated_at:new Date().toISOString()}).eq("id",oid);if(error)throw error;
+    }else if(job.action_type==="prepare_operator_review"){
+      const oid=ctx.opportunity_id;if(!oid)throw new Error("No hay oportunidad relacionada para revisar");if(!a.stage_id)throw new Error("Falta la columna Próximo");const {error}=await sb.from("sales_opportunities").update({stage_id:a.stage_id,title:vars(a.title||"REVISIÓN VODAFONE",business),updated_at:new Date().toISOString()}).eq("id",oid);if(error)throw error;
     }else if(job.action_type==="schedule_whatsapp"||job.action_type==="__send_whatsapp"){
       if(!(await preflight(job)))return "requeued";await sendGreen(phoneToChat(job.context),vars(String(a.text||""),job.context));
     }else if(job.action_type==="send_template"){

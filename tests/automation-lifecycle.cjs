@@ -53,5 +53,7 @@ vm.createContext(ctx);vm.runInContext(helper+'\n'+businessTime+'\n'+source,ctx);
  await ctx.api.expandFlow({...scheduled,event_key:'stage:late',context:{event_at:'2026-09-12T20:00:00.000Z',lifecycle:{mode:'after_sale'}}});
  assert.equal(emitted[1].run_at,'2026-09-14T08:00:00.000Z','Saturday 22:00 Madrid moves to Monday 10:00');
  assert.equal(ctx.nextBusinessSendAt(new Date('2026-09-08T14:00:00.000Z'),1).toISOString(),'2026-09-09T15:30:00.000Z','16:00 Madrid moves to 17:30 next day');
+ assert.equal(ctx.nextBusinessSendAt(new Date('2026-09-06T10:00:00.000Z'),3,'months').toISOString(),'2026-12-07T11:00:00.000Z','three calendar months landing on Sunday moves to Monday and preserves 12:00 Madrid');
+ assert.equal(ctx.madridDateAfter(new Date('2028-02-29T10:00:00.000Z'),1,'years'),'2029-02-28','annual review clamps leap day safely');
  console.log('PASS: transport preserved; stage timing; ordered actions; deduplication; cancellation; retries; legacy compatibility. No network or real-data writes.');
 })().catch(e=>{console.error(e);process.exitCode=1});
