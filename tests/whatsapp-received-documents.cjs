@@ -26,6 +26,7 @@ const ctx=vm.createContext({document,console,File,URLSearchParams,Date,Response,
   sb:{auth:{async getSession(){if(authHook)await authHook();return {data:{session:{access_token:'test-only'}}};}}},
 });
 ctx.window=ctx;
+ctx.prompt=(_,suggested)=>suggested;
 ctx.TPFModules={register(name,def){assert.equal(name,'whatsapp-received-documents');def.install();}};
 ctx.TPFDocumentScanner={open(options){scanner=options;}};
 // Match the real CRM: a global `let` is NOT a property of window.
@@ -47,6 +48,10 @@ const button=(id,action)=>box.querySelectorAll('[data-wa-doc-action]').find(b=>b
   await ctx.testReceived.act(button('pdf2','pc'));assert.equal(downloads.length,1);assert.equal(downloads[0].name,'contrato.pdf');assert.match(downloads[0].href,/chatId=chat-a/);assert.match(downloads[0].href,/idMessage=pdf2/);
   await ctx.testReceived.act(button('photo1','drive'));
   const upload=calls.find(call=>call.url.includes('action=upload'));assert(upload,'Drive button must reach upload API');assert.equal(JSON.parse(upload.options.body).contactId,'client-a');assert.equal(JSON.parse(upload.options.body).expectedLink.folder_id,'folder-client-a');assert(calls.some(call=>call.options.method==='PUT'));
+  calls.length=0;ctx.prompt=()=> 'Contrato firmado';await ctx.testReceived.act(button('pdf2','drive'));assert.equal(JSON.parse(calls.find(c=>c.url.includes('action=upload')).options.body).name,'Contrato firmado.pdf');
+  calls.length=0;ctx.prompt=()=> 'Foto cliente';await ctx.testReceived.act(button('photo1','drive'));assert.equal(JSON.parse(calls.find(c=>c.url.includes('action=upload')).options.body).name,'Foto cliente.jpg');
+  for(const value of [null,'','carpeta/archivo']){calls.length=0;ctx.prompt=()=>value;await ctx.testReceived.act(button('photo1','drive'));assert.equal(calls.length,0,'Cancel or invalid name must not create folder or upload');}
+  ctx.prompt=(_,suggested)=>suggested;
   await ctx.testReceived.act(button('photo1','dni'));assert(scanner,'DNI button opens existing scanner');assert.equal(scanner.initialFiles.length,1);assert.equal(scanner.initialFiles[0].type,'image/jpeg');assert.equal(scanner.folderName,'Carpeta client-a');
   calls.length=0;state().contact=null;await ctx.testReceived.act(button('photo1','drive'));assert.equal(calls.length,0,'No upload/download without linked contact');
   vm.runInContext(fs.readFileSync('js/modules/document-folder-auto.js','utf8'),ctx);
