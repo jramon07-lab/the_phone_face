@@ -984,30 +984,57 @@
   </div>
 </div>
 <section id="view-whatsapp" class="view hidden">
-  <div class="pageHeader">
+  <div class="pageHeader wapPageHeader">
     <div>
       <h2>WhatsApp programados</h2>
-      <div class="small">Agenda independiente para preparar mensajes de WhatsApp. El envío final lo confirmas tú en WhatsApp.</div>
+      <div class="small">Prepara, revisa y controla todos los mensajes programados desde una sola pantalla.</div>
     </div>
+    <div class="wapHeaderActions">
+      <button id="waNewProgram" class="primary" type="button">＋ Nuevo mensaje</button>
+      <button class="primary ccLaunch" type="button">📨 Control de envíos</button>
+      <button id="waReload" class="secondary" type="button">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div class="wapKpis" aria-label="Resumen de WhatsApp programados">
+    <button type="button" data-wap-filter="due"><span>Listos para enviar</span><b id="wapKpiDue">0</b><small>Ahora</small></button>
+    <button type="button" data-wap-filter="future"><span>Próximos</span><b id="wapKpiFuture">0</b><small>Programados</small></button>
+    <button type="button" data-wap-filter="completed"><span>Enviados</span><b id="wapKpiSent">0</b><small>Completados</small></button>
+    <button type="button" data-wap-filter="error" class="warning"><span>Necesitan revisión</span><b id="wapKpiIssues">0</b><small>Fallidos o inciertos</small></button>
+  </div>
+
   <div class="card waToolbar">
-    <div class="row">
+    <div class="wapFilterTabs" id="wapFilterTabs">
+      <button type="button" data-wap-filter="pending" class="active">Pendientes</button>
+      <button type="button" data-wap-filter="due">Listos ahora</button>
+      <button type="button" data-wap-filter="future">Próximos</button>
+      <button type="button" data-wap-filter="completed">Enviados</button>
+      <button type="button" data-wap-filter="error">Incidencias</button>
+      <button type="button" data-wap-filter="paused">Pausados</button>
+      <button type="button" data-wap-filter="cancelled">Cancelados</button>
+      <button type="button" data-wap-filter="all">Todos</button>
+    </div>
+    <div class="row wapSearchRow">
       <select id="waFilter">
         <option value="all">Todos</option>
         <option value="pending" selected>Pendientes</option>
         <option value="due">Listos para enviar</option>
         <option value="future">Programados</option>
         <option value="completed">Completados</option>
+        <option value="error">Incidencias</option>
+        <option value="paused">Pausados</option>
         <option value="cancelled">Cancelados</option>
       </select>
       <input id="waSearch" placeholder="Buscar contacto, teléfono o mensaje">
-      <button id="waReload" class="secondary">Actualizar</button>
+      <span id="wapResultCount" class="small"></span>
     </div>
   </div>
 
-  </div>
-
-  <div class="card">
-    <h3>Programar WhatsApp</h3>
+  <div class="card wapComposer hidden" id="wapComposer">
+    <div class="wapSectionHead">
+      <div><h3>Nuevo mensaje programado</h3><span class="small">Elige el contacto, el mensaje y cuándo debe enviarse.</span></div>
+      <button id="waCloseComposer" class="secondary" type="button">× Cerrar</button>
+    </div>
     <input type="hidden" id="waEditId">
     <div class="row">
       <input id="waCustomer" placeholder="Contacto / cliente">
@@ -1021,7 +1048,7 @@
     </div>
   </div>
 
-  <div class="card scroll">
+  <div class="card scroll wapListCard">
     <table>
       <thead>
         <tr><th>Fecha / hora</th><th>Contacto</th><th>Teléfono</th><th>Mensaje</th><th>Estado</th><th>Acciones</th></tr>
@@ -1029,6 +1056,11 @@
       <tbody id="waRows"></tbody>
     </table>
     <div id="waEmpty" class="small">No hay WhatsApp programados.</div>
+    <div class="wapPagination" id="wapPagination">
+      <button id="wapPrev" class="secondary" type="button">← Anterior</button>
+      <span id="wapPageInfo" class="small">Página 1</span>
+      <button id="wapNext" class="secondary" type="button">Siguiente →</button>
+    </div>
   </div>
 </section>
 
@@ -1524,11 +1556,12 @@
 <script src="/js/modules/system-status-core.js?v=20260907-stability-1"></script>
 <!-- TPF-MODULAR-RUNTIME-v1 -->
 <script src="/js/modules/runtime.js?v=20260907-stability-2"></script>
-<script src="/js/modules/automation-control-center.js?v=20260907-control-center-2"></script>
+<script src="/js/modules/automation-control-center.js?v=20260907-control-center-3"></script>
 <script src="/js/modules/automations-operator-folders.js?v=20260906-folders-1"></script>
 <script src="/js/modules/alerts-pro-v2.js?v=20260902-01"></script>
 <script src="/js/modules/contact-profile-clean-v2.js?v=20260902-06"></script>
 <script src="/js/modules/whatsapp.js"></script>
+<script src="/js/modules/whatsapp-programs-pro.js?v=20260907-programs-pro-1"></script>
 <script src="/js/modules/agenda.js"></script>
 <script src="/js/modules/contacts-sales.js?v=20260906-sales-identity-1"></script>
 <script src="/js/modules/automations-settings.js"></script>
