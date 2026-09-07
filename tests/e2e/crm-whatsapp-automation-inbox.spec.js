@@ -29,8 +29,7 @@ test('WhatsApp separa los automáticos hasta que el cliente responde',async({pag
       const chain={select(){return chain},eq(){return chain},in(){return chain},gte(){return chain},order(){return chain},limit(){return Promise.resolve(result)}};
       return chain;
     }};
-    document.querySelector('.waTabs').addEventListener('click',event=>{
-      const button=event.target.closest('[data-wa-tab]');if(!button)return;
+    document.querySelectorAll('[data-wa-tab]').forEach(button=>button.onclick=()=>{
       document.querySelectorAll('[data-wa-tab]').forEach(node=>node.classList.toggle('active',node===button));
       window.waLiveState.filter=button.dataset.waTab;window.renderWhatsAppChats();
     });
@@ -44,6 +43,7 @@ test('WhatsApp separa los automáticos hasta que el cliente responde',async({pag
   await expect(page.locator('#waLiveChats')).toContainText('Cliente normal');
 
   await page.locator('[data-wa-tab="automatic"]').click();
+  await expect(page.locator('[data-wa-tab="automatic"]')).toHaveClass(/active/);
   await expect(page.locator('#waLiveChats .waChatRow')).toHaveCount(1);
   await expect(page.locator('#waLiveChats')).toContainText('Cliente automático');
   await expect(page.locator('.waAutomaticFlag')).toContainText('esperando respuesta');
@@ -53,8 +53,8 @@ test('WhatsApp separa los automáticos hasta que el cliente responde',async({pag
     window.renderWhatsAppChats();
   },now);
   await expect(page.locator('#waLiveChats .waChatRow')).toHaveCount(0);
+  await expect(page.locator('#waLiveChats .waLiveEmpty')).toHaveText('No hay mensajes automáticos pendientes.');
   await page.locator('[data-wa-tab="all"]').click();
   await expect(page.locator('#waLiveChats .waChatRow')).toHaveCount(2);
   await expect(page.locator('#waLiveChats')).toContainText('Cliente automático');
 });
-
