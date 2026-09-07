@@ -1,5 +1,6 @@
 (function(){
 'use strict';
+window.__tpfAutomationsFinalUi=true;
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const q=(s,r=document)=>r.querySelector(s);
