@@ -9,6 +9,7 @@ assert.match(cards,/summaryNow-waLastHybridSummary>60000/,'El resumen de WhatsAp
 const green=fs.readFileSync('api/green.js','utf8');
 assert.match(green,/summary:\$\{minutes\}`,[\s\S]*freshMs: 60000, staleMs: 600000/);
 assert.match(green,/history:\$\{chatId\}:\$\{count\}`,[\s\S]*freshMs: 8000, staleMs: 300000/);
+assert.match(green,/providerStatus === 429[\s\S]*\["state", "summary", "chats", "history", "previews"\][\s\S]*rateLimited: true/);
 
 const health=fs.readFileSync('api/green-health.js','utf8');
 assert.match(health,/getStateInstance/);
@@ -18,6 +19,9 @@ assert.match(health,/healthInFlight/,'Las comprobaciones simultáneas deben comp
 const status=fs.readFileSync('api/green-status.js','utf8');
 assert.match(status,/statusInFlight/,'Los estados simultáneos deben compartir una sola petición');
 assert.match(status,/FRESH_MS = 60000/);
+
+const performance=fs.readFileSync('js/modules/whatsapp-performance-max.js','utf8');
+assert.match(performance,/if\(r\?\.degraded\)return;/,'Un límite temporal debe conservar el historial ya visible');
 
 const lifecycle=fs.readFileSync('db/proposals/automation_preserve_review_completion.sql','utf8');
 assert.match(lifecycle,/action_type not in \('record_offer_month','record_sale_month','prepare_operator_review'\)/);

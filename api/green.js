@@ -602,6 +602,20 @@ export default async function handler(req, res) {
         timedOut: true
       });
     }
+    if (providerStatus === 429 && ["state", "summary", "chats", "history", "previews"].includes(failedAction)) {
+      const fallback = failedAction === "history" ? { messages: [] }
+        : failedAction === "previews" ? { previews: [] }
+        : failedAction === "state" ? { state: "unknown", data: null }
+        : { chats: [] };
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil(Number(e?.retryAfterMs || 60000) / 1000))));
+      return res.status(200).json({
+        ok: true,
+        ...fallback,
+        degraded: true,
+        rateLimited: true,
+        providerStatus: 429
+      });
+    }
     console.error("GREEN_API_ERROR", {
       action: failedAction,
       requestMethod: req.method,

@@ -144,6 +144,19 @@ async function run() {
     assert.equal(responses[3].body.messages[0].idMessage, 'm1');
   }
 
+  {
+    const handler = loadHandler(async (url) => {
+      if (!String(url).includes('/getChatHistory/')) throw new Error(`URL inesperada: ${url}`);
+      return response(429, { message: 'Too Many Requests' }, { 'retry-after': '60' });
+    });
+    const limited = await call(handler, 'POST', 'history', { chatId: '34600000001@c.us', count: 40 });
+    assert.equal(limited.statusCode, 200, 'un límite de lectura no debe convertirse en avería del CRM');
+    assert.equal(limited.body.ok, true);
+    assert.equal(limited.body.degraded, true);
+    assert.equal(limited.body.rateLimited, true);
+    assert.equal(Array.from(limited.body.messages).length, 0);
+  }
+
   console.log('GREEN-API rate limit guard OK');
 }
 

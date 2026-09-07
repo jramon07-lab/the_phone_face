@@ -232,6 +232,7 @@ function install(){
       if(!waLiveState.selected)return;
       try{
         const r=await waApi('history',{chatId:waLiveState.selected.id,count:40});
+        if(r?.degraded)return;
         const nextHistory=Array.isArray(r.messages)?r.messages:[];
         if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)){
           waLiveState.history=nextHistory;

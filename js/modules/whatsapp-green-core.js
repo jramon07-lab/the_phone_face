@@ -355,6 +355,7 @@ function waApplySummaryChats(chats){
 async function waRefreshHybridSummary(){
   try{
     const r=await waApi("summary");
+    if(r?.degraded)return;
     waApplySummaryChats(r.chats);
     if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
   }catch(e){waBackoffRateLimit(e);console.warn("WhatsApp hybrid summary",e)}
@@ -371,7 +372,7 @@ async function loadWhatsAppLive(){
     const connected=st==="authorized"||st==="online"||st==="connected";
     $("waLiveStatus").textContent=connected?"Conectado":"Estado: "+(st||"desconocido");
     $("waLiveStatus").className="waLiveStatus "+(connected?"ok":"error");
-    waApplySummaryChats(summaryR.chats);
+    if(!summaryR?.degraded)waApplySummaryChats(summaryR.chats);
     waLastHybridSummary=Date.now();
     renderWhatsAppChats();
 
@@ -889,6 +890,7 @@ async function waRefreshRecentPreviews(){
   }
 
   const r=await waApi("previews",{chatIds:batch});
+  if(r?.degraded)return;
   const rows=Array.isArray(r?.previews)?r.previews:[];
   let changed=false;
 
