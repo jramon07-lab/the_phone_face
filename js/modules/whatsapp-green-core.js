@@ -663,7 +663,7 @@ function oppUnifiedCard(o,{compact=false}={}){
       </select>
     </div>
     <div class="oppUnifiedActions">
-      <button type="button" onclick="event.stopPropagation();openOpportunityFull('${esc(o.id||"")}')">Ver / editar</button>
+      <button type="button" onclick="event.stopPropagation();${compact?"openOpportunityFull":"openOpportunityCard"}('${esc(o.id||"")}')">Ver / editar</button>
       <button type="button" class="danger" onclick="event.stopPropagation();oppUnifiedDelete('${esc(o.id||"")}')">Eliminar</button>
     </div>
   </div>`;
@@ -988,7 +988,7 @@ async function waPollOnce(){
     // que su orden puede actualizarse con menos frecuencia. El preview en vivo
     // de arriba no depende de este refresco.
     const summaryNow=Date.now();
-    if(summaryNow-waLastHybridSummary>30000){
+    if(summaryNow-waLastHybridSummary>60000){
       waLastHybridSummary=summaryNow;
       try{await waRefreshHybridSummary()}catch(e){}
     }

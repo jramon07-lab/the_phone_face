@@ -261,7 +261,7 @@ export default async function handler(req, res) {
 
     if (req.method === "GET" && action === "state") {
       const now = Date.now();
-      if (greenStateCache.data && now - greenStateCache.at < 30000) {
+      if (greenStateCache.data && now - greenStateCache.at < 60000) {
         return res.status(200).json({ ok: true, state: greenStateCache.data?.stateInstance || "", data: greenStateCache.data, cached: true });
       }
       if (greenStateCache.data && now < greenStateBackoffUntil) {
@@ -334,7 +334,7 @@ export default async function handler(req, res) {
 
     if (req.method === "GET" && action === "summary") {
       const minutes = Math.max(60, Math.min(43200, Number(req.query.minutes || 10080)));
-      const result = await cachedGreenRead(`summary:${minutes}`, { freshMs: 45000, staleMs: 300000 }, async () => {
+      const result = await cachedGreenRead(`summary:${minutes}`, { freshMs: 60000, staleMs: 600000 }, async () => {
         const chatsData = await greenFetch("getChats");
         const chats = Array.isArray(chatsData) ? chatsData.filter(c => c && c.id) : [];
 
@@ -367,7 +367,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET" && action === "chats") {
-      const result = await cachedGreenRead("chats", { freshMs: 15000, staleMs: 180000 }, async () => {
+      const result = await cachedGreenRead("chats", { freshMs: 30000, staleMs: 300000 }, async () => {
         const data = await greenFetch("getChats");
         const chats = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
         return { ok: true, chats };
@@ -468,7 +468,7 @@ export default async function handler(req, res) {
       const rawIds = Array.isArray(body.chatIds) ? body.chatIds : [];
       const chatIds = [...new Set(rawIds.map(normalizeChatId).filter(Boolean))].slice(0, 4);
       const key = `previews:${chatIds.join(",")}`;
-      const result = await cachedGreenRead(key, { freshMs: 15000, staleMs: 180000 }, async () => {
+      const result = await cachedGreenRead(key, { freshMs: 30000, staleMs: 300000 }, async () => {
         const previews = [];
         for (const chatId of chatIds) {
           try {
@@ -496,7 +496,7 @@ export default async function handler(req, res) {
       const count = Math.max(1, Math.min(200, Number(body.count || 100)));
       if (!chatId) return res.status(400).json({ ok: false, error: "Falta chatId." });
 
-      const result = await cachedGreenRead(`history:${chatId}:${count}`, { freshMs: 2500, staleMs: 180000 }, async () => {
+      const result = await cachedGreenRead(`history:${chatId}:${count}`, { freshMs: 8000, staleMs: 300000 }, async () => {
         const data = await greenFetch("getChatHistory", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

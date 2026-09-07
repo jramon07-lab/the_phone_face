@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+
+const cards=fs.readFileSync('js/modules/whatsapp-green-core.js','utf8');
+assert.match(cards,/compact\?"openOpportunityFull":"openOpportunityCard"/,'La ficha del contacto debe abrir el editor de la oportunidad');
+assert.match(cards,/summaryNow-waLastHybridSummary>60000/,'El resumen de WhatsApp no debe consultarse cada 30 segundos');
+
+const green=fs.readFileSync('api/green.js','utf8');
+assert.match(green,/summary:\$\{minutes\}`,[\s\S]*freshMs: 60000, staleMs: 600000/);
+assert.match(green,/history:\$\{chatId\}:\$\{count\}`,[\s\S]*freshMs: 8000, staleMs: 300000/);
+
+const health=fs.readFileSync('api/green-health.js','utf8');
+assert.match(health,/getStateInstance/);
+assert.doesNotMatch(health,/getSettings/,'La comprobación de salud no debe duplicar consultas de configuración');
+assert.match(health,/healthInFlight/,'Las comprobaciones simultáneas deben compartir una sola petición');
+
+const status=fs.readFileSync('api/green-status.js','utf8');
+assert.match(status,/statusInFlight/,'Los estados simultáneos deben compartir una sola petición');
+assert.match(status,/FRESH_MS = 60000/);
+
+const lifecycle=fs.readFileSync('db/proposals/automation_preserve_review_completion.sql','utf8');
+assert.match(lifecycle,/action_type not in \('record_offer_month','record_sale_month','prepare_operator_review'\)/);
+
+const system=fs.readFileSync('js/modules/system-status-core.js','utf8');
+assert.match(system,/text\.includes\('\/api\/green-status'\)[\s\S]*signal is aborted/,'Un timeout controlado no debe aparecer como avería');
+
+console.log('permanent stability fixes ok');

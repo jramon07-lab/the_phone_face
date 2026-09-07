@@ -1,4 +1,32 @@
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let healthCache = { at: 0, payload: null };
+let healthInFlight = null;
+let healthBackoffUntil = 0;
+
+const FRESH_MS = 60000;
+const STALE_MS = 600000;
+
+function retryAfterMs(headers) {
+  const raw = String(headers?.get?.('retry-after') || '').trim();
+  if (!raw) return 0;
+  const seconds = Number(raw);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds * 1000);
+  const date = Date.parse(raw);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : 0;
+}
+
+function degradedPayload(providerStatus = null, error = '') {
+  const stale = healthCache.payload;
+  return {
+    ok: true,
+    providerHealthy: false,
+    degraded: true,
+    instanceConfigured: true,
+    state: stale?.state || 'unknown',
+    cached: Boolean(stale),
+    providerStatus,
+    checks: [{ method: 'getStateInstance', ok: false, status: providerStatus, ms: 0, attempts: 1, error: error || 'Comprobación temporalmente limitada.' }]
+  };
+}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -8,109 +36,60 @@ export default async function handler(req, res) {
   const base = String(process.env.GREEN_API_API_URL || 'https://7107.api.greenapi.com').replace(/\/$/, '');
 
   if (!id || !token) {
-    return res.status(500).json({
-      ok: false,
-      stage: 'env',
-      hasInstanceId: Boolean(id),
-      hasToken: Boolean(token),
-      error: 'Faltan credenciales GREEN-API en Vercel.'
-    });
+    return res.status(500).json({ ok: false, stage: 'env', hasInstanceId: Boolean(id), hasToken: Boolean(token), error: 'Faltan credenciales GREEN-API en Vercel.' });
   }
 
-  const call = async (method) => {
-    const url = `${base}/waInstance${id}/${method}/${token}`;
-    const started = Date.now();
-    let last = null;
+  const now = Date.now();
+  const age = healthCache.payload ? now - healthCache.at : Infinity;
+  if (age < FRESH_MS) return res.status(200).json({ ...healthCache.payload, cached: true });
+  if (now < healthBackoffUntil) return res.status(200).json(degradedPayload(429));
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+  if (!healthInFlight) {
+    healthInFlight = (async () => {
+      const started = Date.now();
       try {
-        const r = await fetch(url, { method: 'GET' });
-        const text = await r.text();
+        const response = await fetch(`${base}/waInstance${id}/getStateInstance/${token}`, { method: 'GET' });
+        const text = await response.text();
         let data;
-        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-
-        if (r.ok) {
-          return {
-            method,
-            ok: true,
-            status: r.status,
-            ms: Date.now() - started,
-            attempts: attempt + 1,
-            data,
-            error: null
-          };
+        try { data = text ? JSON.parse(text) : null; } catch { data = null; }
+        if (!response.ok) {
+          const error = new Error(data?.message || data?.error || response.statusText || `HTTP ${response.status}`);
+          error.status = response.status;
+          error.retryAfterMs = retryAfterMs(response.headers);
+          throw error;
         }
-
-        last = {
-          method,
-          ok: false,
-          status: r.status,
-          ms: Date.now() - started,
-          attempts: attempt + 1,
-          error: data?.message || data?.error || String(data || r.statusText)
+        const state = String(data?.stateInstance || 'unknown');
+        const payload = {
+          ok: true,
+          providerHealthy: true,
+          degraded: false,
+          instanceConfigured: true,
+          state,
+          checks: [{ method: 'getStateInstance', ok: true, status: response.status, ms: Date.now() - started, attempts: 1, error: null }]
         };
-
-        const transient = r.status === 404 || r.status === 429 || r.status >= 500;
-        if (!transient || attempt === 2) return last;
-        await sleep(r.status === 429 ? 1000 * (attempt + 1) : 500 * (attempt + 1));
-      } catch (e) {
-        last = {
-          method,
-          ok: false,
-          status: null,
-          ms: Date.now() - started,
-          attempts: attempt + 1,
-          error: e?.message || String(e)
-        };
-        if (attempt === 2) return last;
-        await sleep(500 * (attempt + 1));
+        healthCache = { at: Date.now(), payload };
+        healthBackoffUntil = 0;
+        return payload;
+      } catch (error) {
+        const status = Number(error?.status || 0) || null;
+        const transient = status === null || status === 404 || status === 429 || status >= 500;
+        if (transient) {
+          if (status === 429) healthBackoffUntil = Date.now() + Math.max(60000, Number(error?.retryAfterMs || 0));
+          if (healthCache.payload && Date.now() - healthCache.at < STALE_MS) return degradedPayload(status, error?.message);
+          return degradedPayload(status, error?.message);
+        }
+        const hard = new Error(error?.message || String(error));
+        hard.status = status;
+        throw hard;
+      } finally {
+        healthInFlight = null;
       }
-    }
-
-    return last || { method, ok: false, status: null, ms: Date.now() - started, attempts: 3, error: 'GREEN-API no respondió.' };
-  };
-
-  const state = await call('getStateInstance');
-  await sleep(250);
-  const settings = await call('getSettings');
-
-  const checks = [state, settings];
-  const isTransientFailure = (check) => !check.ok && (check.status === null || check.status === 404 || check.status === 429 || check.status >= 500);
-  const hardFailure = checks.some((check) => !check.ok && !isTransientFailure(check));
-  const providerHealthy = checks.every((check) => check.ok);
-  const authorized = state.ok && String(state.data?.stateInstance || '').toLowerCase() === 'authorized';
-
-  if (hardFailure) {
-    return res.status(502).json({
-      ok: false,
-      providerHealthy: false,
-      degraded: false,
-      instanceConfigured: true,
-      state: state.ok ? state.data?.stateInstance || null : null,
-      checks: checks.map((check) => ({
-        method: check.method,
-        ok: check.ok,
-        status: check.status,
-        ms: check.ms,
-        attempts: check.attempts,
-        error: check.error || null
-      }))
-    });
+    })();
   }
 
-  return res.status(200).json({
-    ok: true,
-    providerHealthy,
-    degraded: !providerHealthy,
-    instanceConfigured: true,
-    state: authorized ? 'authorized' : (state.ok ? state.data?.stateInstance || null : 'unknown'),
-    checks: checks.map((check) => ({
-      method: check.method,
-      ok: check.ok,
-      status: check.status,
-      ms: check.ms,
-      attempts: check.attempts,
-      error: check.error || null
-    }))
-  });
+  try {
+    return res.status(200).json(await healthInFlight);
+  } catch (error) {
+    return res.status(502).json({ ok: false, providerHealthy: false, degraded: false, instanceConfigured: true, state: 'unknown', error: error?.message || String(error) });
+  }
 }

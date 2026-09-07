@@ -130,7 +130,7 @@ async function run() {
 
     responses.push(await call(handler, 'POST', 'history', { chatId: '34600000000@c.us', count: 40 }));
     responses.push(await call(handler, 'POST', 'history', { chatId: '34600000000@c.us', count: 40 }));
-    now = 3000;
+    now = 9000;
     failWith429 = true;
     responses.push(await call(handler, 'POST', 'history', { chatId: '34600000000@c.us', count: 40 }));
     responses.push(await call(handler, 'POST', 'history', { chatId: '34600000000@c.us', count: 40 }));
