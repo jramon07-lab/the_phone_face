@@ -1,0 +1,11 @@
+const fs=require('fs');
+const assert=require('assert');
+const source=fs.readFileSync('js/modules/contact-desktop-layout.js','utf8');
+const css=fs.readFileSync('assets/contact-desktop.css','utf8');
+const index=fs.readFileSync('index.html','utf8');
+assert(source.includes("querySelector('.cpRefPhoto')"),'El visor debe usar la foto real cargada en la ficha');
+assert(source.includes("viewer.className='tpfAvatarModal tpfContactAvatarModal'"),'La ficha debe abrir un visor de foto como WhatsApp');
+assert(source.includes("e.key==='Enter'||e.key===' '"),'La foto debe poder abrirse también con teclado');
+assert(source.includes("e.key==='Escape'"),'El visor debe cerrarse con Escape');
+assert(css.includes('.tpfContactAvatarModal'),'El visor debe tener presentación de pantalla completa');
+assert(index.includes('contact-desktop-layout.js?v=20260907-avatar-preview-1'),'El navegador debe recibir la versión nueva del visor');
