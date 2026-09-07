@@ -26,7 +26,7 @@ window.TPFOffersPro={OPERATORS,calculateTotal,buildMessage,directSaleMessage,mon
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-let catalog=[],selected=null,quantities={},visibility={},activeOperator='',instances=[],busy=false,finalPriceManual=false,directOperator=OPERATORS[0],shopGift=false,permanenceRefund=false,permanenceAmount='';
+let catalog=[],selected=null,quantities={},visibility={},activeOperator='',instances=[],busy=false,finalPriceManual=false,directOperator=OPERATORS[0],shopGift=false,permanenceRefund=false,permanenceAmount='',offerMode='followup';
 const current=()=>{try{return currentContact||null}catch(_){return null}};
 const isAdmin=()=>{try{return !!perms?.is_admin}catch(_){return false}};
 
@@ -119,7 +119,7 @@ async function control(id,action){if(busy)return;const label={pause:'pausar',res
 function operatorList(){const custom=catalog.map(o=>o.operator).filter(Boolean);return [...new Set([...OPERATORS,...custom])]}
 async function openConfigurator(){
   const c=current();if(!c)return alert('Abre primero la ficha de un cliente.');ensureUi();$('opOfferModal').classList.remove('hidden');$('opCustomer').textContent=`Cliente: ${$('contactName')?.value||'Contacto'}`;$('opContent').innerHTML='<div class="opEmpty">Cargando ofertas…</div>';
-  try{await loadCatalog();activeOperator=operatorList().find(op=>catalog.some(o=>o.active&&o.operator===op))||operatorList()[0];selected=null;quantities={};finalPriceManual=false;shopGift=false;permanenceRefund=false;permanenceAmount='';renderTabs();renderConfigurator()}catch(e){$('opContent').innerHTML=`<div class="opEmpty">No se pudo cargar el catálogo.<br>${esc(e?.message||e)}</div>`}
+  try{await loadCatalog();activeOperator=operatorList().find(op=>catalog.some(o=>o.active&&o.operator===op))||operatorList()[0];selected=null;quantities={};finalPriceManual=false;shopGift=false;permanenceRefund=false;permanenceAmount='';offerMode='followup';renderTabs();renderConfigurator()}catch(e){$('opContent').innerHTML=`<div class="opEmpty">No se pudo cargar el catálogo.<br>${esc(e?.message||e)}</div>`}
 }
 function closeModal(){if(busy)return;$('opOfferModal')?.classList.add('hidden')}
 function renderTabs(){const root=$('opTabs');root.innerHTML=operatorList().map(op=>`<button type="button" data-op="${esc(op)}" class="${op===activeOperator?'active':''}">${esc(op)}</button>`).join('')+(isAdmin()?'<button type="button" id="opManageCatalog">⚙ Catálogo</button>':'');root.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{activeOperator=b.dataset.op;selected=null;quantities={};finalPriceManual=false;renderTabs();renderConfigurator()});$('opManageCatalog')?.addEventListener('click',openCatalog)}
@@ -131,7 +131,18 @@ function benefitText(){
   return rows.join('\n');
 }
 function completeExtraText(){return [benefitText(),$('opExtra')?.value?.trim()||''].filter(Boolean).join('\n\n')}
+function setOfferMode(mode){
+  offerMode=mode==='accepted'?'accepted':'followup';
+  const root=$('opContent'),followup=root?.querySelector('input[name="opMode"][value="followup"]'),accepted=root?.querySelector('input[name="opMode"][value="accepted"]');
+  if(followup)followup.checked=offerMode==='followup';
+  if(accepted)accepted.checked=offerMode==='accepted';
+  if($('opAcceptedOptions'))$('opAcceptedOptions').hidden=offerMode!=='accepted';
+  if($('opSubmit'))$('opSubmit').textContent=offerMode==='followup'?'Crear y enviar oferta':'Crear oferta aceptada';
+}
+document.addEventListener('change',event=>{const input=event.target;if(input?.matches?.('#opContent input[name="opMode"]'))setOfferMode(input.value)});
+document.addEventListener('click',event=>{if(event.target?.closest?.('#opSubmit'))setOfferMode(offerMode)},true);
 function renderConfigurator(){
+  setTimeout(()=>setOfferMode(offerMode),0);
   const options=catalog.filter(o=>o.active&&o.operator===activeOperator);if(!selected||!options.some(o=>o.id===selected.id)){selected=options[0]||null;resetSelections(selected)}
   if(!selected){$('opContent').innerHTML=`<div class="opEmpty"><b>No hay ofertas activas de ${esc(activeOperator)}.</b><br>Un administrador debe añadir precios y condiciones reales antes de poder enviar.${isAdmin()?'<br><button id="opEmptyManage" class="primary" style="margin-top:12px">Gestionar catálogo</button>':''}</div>`;$('opEmptyManage')?.addEventListener('click',openCatalog);return}
   const eye=line=>String(line.group_name||'').toLowerCase()==='discount'?'':`<button type="button" class="opVisibility ${visibility[line.id]===false?'off':''}" data-visibility data-line="${line.id}" title="${visibility[line.id]===false?'Mostrar en el mensaje':'Ocultar del mensaje'}" ${quantities[line.id]?'':'hidden'}>${visibility[line.id]===false?'◉':'👁'}</button>`;

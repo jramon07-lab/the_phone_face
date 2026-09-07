@@ -115,6 +115,10 @@ assert.match(source,/Venta directa/);
 assert.match(source,/50 € de regalo para gastar en tienda/);
 assert.match(source,/Abono de permanencia/);
 assert.match(source,/completeExtraText\(\)/);
+assert.match(source,/offerMode='followup'/);
+assert.match(source,/setOfferMode\(offerMode\)/);
+assert.match(source,/Crear y enviar oferta/);
+assert.match(source,/event\.target\?\.closest\?\.\('#opSubmit'\)/);
 
 const directSaleSql=fs.readFileSync(path.join(root,'db/proposals/direct-sale.sql'),'utf8');
 assert.match(directSaleSql,/security definer\s+set search_path=''/);
