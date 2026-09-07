@@ -1,4 +1,7 @@
 let greenStateCache = { at: 0, data: null };
+const GREEN_PROTECTED_TEST_BRANCH = String(process.env.VERCEL_GIT_COMMIT_REF || "") === "desarrollo-crm";
+const GREEN_TEST_PHONE = "695661409";
+const isAllowedTestRecipient = (chatId) => String(chatId || "").replace(/\D/g, "").slice(-9) === GREEN_TEST_PHONE;
 let greenStateBackoffUntil = 0;
 const greenReadCache = new Map();
 const greenReadInFlight = new Map();
@@ -514,6 +517,9 @@ export default async function handler(req, res) {
       if (!chatId || !message) {
         return res.status(400).json({ ok: false, error: "Faltan chatId o message." });
       }
+      if (GREEN_PROTECTED_TEST_BRANCH && !isAllowedTestRecipient(chatId)) {
+        return res.status(403).json({ ok: false, error: "CRM DE PRUEBAS: solo se permiten envíos al 695 661 409." });
+      }
 
       const data = await greenFetch("sendMessage", {
         method: "POST",
@@ -548,6 +554,9 @@ export default async function handler(req, res) {
       const mimeType = String(body.mimeType || "application/octet-stream");
       const caption = String(body.caption || "").trim();
       const dataUrl = String(body.dataUrl || "");
+      if (GREEN_PROTECTED_TEST_BRANCH && !isAllowedTestRecipient(chatId)) {
+        return res.status(403).json({ ok: false, error: "CRM DE PRUEBAS: solo se permiten envíos al 695 661 409." });
+      }
       if (!chatId || !dataUrl.includes(",")) return res.status(400).json({ ok: false, error: "Faltan chatId o archivo." });
       const raw = dataUrl.slice(dataUrl.indexOf(",") + 1);
       const bytes = Buffer.from(raw, "base64");
