@@ -11,6 +11,7 @@ vm.runInContext(source,context);
 const api=context.window.TPFOffersPro;
 assert(api,'the offer configurator exposes its deterministic helpers');
 assert.deepEqual([...api.OPERATORS],['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange']);
+assert.equal(api.directSaleMessage('Vodafone',52,'Ana García'),'Hola Ana, te envío lo que hemos comentado:\n• Operador: Vodafone\nPrecio final: 52,00 €/mes');
 const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','2 líneas de 160 GB'],line_options:[
   {id:'gb',name:'Fibra 1 Gb',price_delta:10,option_type:'radio',message_text:'Fibra 1 Gb',replaces_text:'Fibra 600 Mb'},
   {id:'unlimited',name:'Datos ilimitados',price_delta:4,option_type:'radio',message_text:'2 líneas con datos ilimitados',replaces_text:'2 líneas de 160 GB'},
@@ -108,6 +109,19 @@ assert.match(sqlV4,/900 759 004/);
 assert.match(source,/step="1"/);
 assert.match(source,/Enviar también este mensaje al cliente/);
 assert.match(source,/Fecha de tramitación/);
+assert.match(source,/crm_create_direct_sale/);
+assert.match(source,/waSideDirectSale/);
+assert.match(source,/Venta directa/);
+
+const directSaleSql=fs.readFileSync(path.join(root,'db/proposals/direct-sale.sql'),'utf8');
+assert.match(directSaleSql,/security definer\s+set search_path=''/);
+assert.match(directSaleSql,/current_user_can\('can_edit_sales'\)/);
+assert.match(directSaleSql,/'CAMBIO '\|\|upper\(operator_name\)/);
+assert.match(directSaleSql,/lower\(btrim\(name\)\)='tramitado'/);
+assert.match(directSaleSql,/offer_record_sale\(inst,now\(\)\)/);
+assert.match(directSaleSql,/enqueue_opportunity_stage\(opp_id\)/);
+assert.match(directSaleSql,/direct-sale:/);
+assert.match(directSaleSql,/revoke all on function public\.crm_create_direct_sale/);
 
 const sqlMasMovil=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-masmovil.sql'),'utf8');
 for(const value of ["34.90::numeric,50","39.90::numeric,100","46.90::numeric,200","'Fibra 1 Gb',null,10","'TV',null,6","'Netflix',null,8.99","'Amazon',null,4","'Disney+',null,6.99","'Línea móvil 25 GB',25,5","'Línea móvil 45 GB',45,10","'Línea móvil 100 GB',100,12","'Descuento 10 €',null,-10","'Descuento 15 €',null,-15","'Descuento 17 €',null,-17"])assert.ok(sqlMasMovil.includes(value),`expected MásMóvil catalog value: ${value}`);
