@@ -24,8 +24,8 @@ function install(){
     `;document.head.appendChild(style);
   }
   const input=composer();if(input&&!input.dataset.tpfAutogrow){input.dataset.tpfAutogrow='1';input.addEventListener('input',()=>schedule(true));input.addEventListener('paste',()=>setTimeout(()=>resize(true),0));resize()}
-  document.addEventListener('click',e=>{if(e.target.closest?.('#waComposerSend,[data-use],[data-template-use],.waSlashItem')){setTimeout(()=>resize(true),0);setTimeout(()=>resize(),350)}});
-  document.addEventListener('keydown',e=>{if(e.target?.id==='waComposerText'&&e.key==='Enter'&&!e.shiftKey)setTimeout(()=>resize(),350)});
+  document.addEventListener('click',e=>{if(e.target.closest?.('#waComposerSend,[data-use],[data-template-use],.waSlashItem')){setTimeout(()=>resize(true),0);[350,1200,2500].forEach(delay=>setTimeout(()=>resize(),delay))}});
+  document.addEventListener('keydown',e=>{if(e.target?.id==='waComposerText'&&e.key==='Enter'&&!e.shiftKey)[350,1200,2500].forEach(delay=>setTimeout(()=>resize(),delay))});
   addEventListener('resize',()=>schedule());
 }
 window.tpfResizeWhatsAppComposer=resize;
