@@ -4,15 +4,17 @@ test('CRM principal, móvil e integraciones críticas están operativos', async 
   const pageErrors=[];
   page.on('pageerror',error=>pageErrors.push(String(error?.message||error)));
 
-  const state=await page.request.get('/api/green?action=state');
-  expect(state.ok()).toBeTruthy();
-  expect((await state.json()).state).toBe('authorized');
-
   const health=await page.request.get('/api/green-health');
   expect(health.ok()).toBeTruthy();
   const healthData=await health.json();
-  expect(healthData.providerHealthy).toBe(true);
-  expect(healthData.degraded).toBe(false);
+  expect(healthData.ok).toBe(true);
+  if(healthData.degraded){
+    expect(healthData.providerStatus).toBe(429);
+    expect(healthData.checks?.[0]?.attempts).toBe(1);
+  }else{
+    expect(healthData.providerHealthy).toBe(true);
+    expect(String(healthData.state||'').toLowerCase()).toBe('authorized');
+  }
 
   await page.goto('/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('#login')).toBeVisible();

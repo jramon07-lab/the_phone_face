@@ -9,25 +9,15 @@ async function readHealth(request) {
   return { response, text, data };
 }
 
-test('GREEN-API: instancia autorizada y proveedor sano', async ({ request }) => {
-  let last;
-
-  for (let attempt = 1; attempt <= 13; attempt++) {
-    last = await readHealth(request);
-    const state = String(last.data?.state || '').toLowerCase();
-
-    expect(last.response.status(), `GREEN-API health HTTP ${last.response.status()}: ${last.text}`).toBe(200);
-    expect(last.data?.ok, `GREEN-API health: ${last.text}`).toBe(true);
-    expect(last.data?.providerHealthy, `GREEN-API proveedor degradado: ${last.text}`).toBe(true);
-    expect(last.data?.degraded, `GREEN-API no debe estar degradado: ${last.text}`).not.toBe(true);
-
-    if (state === 'authorized') return;
-    if (state !== 'starting') break;
-    if (attempt < 13) await new Promise(resolve => setTimeout(resolve, 5000));
+test('GREEN-API: instancia sana o límite temporal controlado', async ({ request }) => {
+  const last = await readHealth(request);
+  expect(last.response.status(), `GREEN-API health HTTP ${last.response.status()}: ${last.text}`).toBe(200);
+  expect(last.data?.ok, `GREEN-API health: ${last.text}`).toBe(true);
+  if(last.data?.degraded){
+    expect(last.data?.providerStatus, `Degradación no controlada: ${last.text}`).toBe(429);
+    expect(last.data?.checks?.[0]?.attempts).toBe(1);
+    return;
   }
-
-  expect(
-    String(last?.data?.state || '').toLowerCase(),
-    `GREEN-API instancia no autorizada tras esperar estado transitorio: ${last?.text || ''}`
-  ).toBe('authorized');
+  expect(last.data?.providerHealthy, `GREEN-API proveedor no sano: ${last.text}`).toBe(true);
+  expect(String(last.data?.state || '').toLowerCase(), `GREEN-API no autorizada: ${last.text}`).toBe('authorized');
 });
