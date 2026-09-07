@@ -138,16 +138,20 @@
   document.removeEventListener('keydown',closePhotoOnKey);
  }
  function closePhotoOnKey(e){if(e.key==='Escape')closePhotoModal();}
- function openPhotoModal(){
-  const source=avatar?.querySelector('.cpRefPhoto');
-  if(!source?.src)return;
+ function showPhotoModal(url,name){
+  if(!url)return;
   closePhotoModal();
   const viewer=document.createElement('div');viewer.className='tpfAvatarModal tpfContactAvatarModal';viewer.setAttribute('role','dialog');viewer.setAttribute('aria-modal','true');viewer.setAttribute('aria-label','Foto del contacto ampliada');
   const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Cerrar foto');
-  const image=document.createElement('img');image.src=source.src;image.alt='Foto de '+String($('contactName')?.value||'contacto').trim();image.referrerPolicy='no-referrer';
+  const image=document.createElement('img');image.src=url;image.alt='Foto de '+String(name||'contacto').trim();image.referrerPolicy='no-referrer';
   viewer.append(close,image);viewer.addEventListener('click',e=>{if(e.target===viewer||e.target===close)closePhotoModal();});
   document.body.appendChild(viewer);document.addEventListener('keydown',closePhotoOnKey);close.focus();
  }
+ function openPhotoModal(){
+  const source=avatar?.querySelector('.cpRefPhoto');
+  if(source?.src)showPhotoModal(source.src,$('contactName')?.value);
+ }
+ window.TPFContactPhotoViewer={open:showPhotoModal,close:closePhotoModal};
  if(avatar){
   avatar.addEventListener('click',openPhotoModal);
   avatar.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&avatar.querySelector('.cpRefPhoto')){e.preventDefault();openPhotoModal();}});
