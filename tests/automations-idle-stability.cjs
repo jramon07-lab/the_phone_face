@@ -11,6 +11,6 @@ assert.match(finalUi,/window\.__tpfAutomationsFinalUi=true/,'la interfaz final d
 assert.match(legacy,/if\(window\.__tpfAutomationsFinalUi\|\|!viewVisible\(\)\)return/,'el decorador antiguo no debe reescribir la interfaz final');
 assert.match(legacy,/if\(meta\.innerHTML!==html\)meta\.innerHTML=html/,'el modo de reserva también debe ser idempotente');
 assert.match(runtime,/automations-pro-v2\.js'\|\|file==='automations-pro-v2-fix\.js'\?'20260907-idle-stable-1'/,'el navegador debe recibir los módulos corregidos sin reutilizar caché');
-assert.match(browserSpec,/rows\.length>0&&rows\.every\(row=>row\.dataset\.afId\)/,'la prueba de reposo debe comenzar después de la carga y decoración iniciales');
+assert.match(browserSpec,/row\.dataset\.afId&&row\.querySelector\('\.afOperator'\)&&row\.querySelector\('\[data-ac-cancel-all\]'\)/,'la prueba de reposo debe comenzar después de todos los controles iniciales');
 
 console.log('automation idle stability guard ok');
