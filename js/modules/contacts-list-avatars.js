@@ -23,7 +23,7 @@ async function run(){
  while(queue.length){
   const phone=queue.shift();queued.delete(phone);if(!matching(phone).length)continue;
   try{
-   if(typeof waLoadAvatar!=='function'||typeof contactCanUseWhatsapp!=='function'||!contactCanUseWhatsapp()){cache.set(phone,'');continue;}
+   if(typeof waLoadAvatar!=='function'){cache.set(phone,'');continue;}
    const url=await waLoadAvatar(phone+'@c.us');cache.set(phone,url||'');if(url)matching(phone).forEach(el=>decorate(el,url));
   }catch(_){cache.set(phone,'');}
   await new Promise(resolve=>setTimeout(resolve,280));
