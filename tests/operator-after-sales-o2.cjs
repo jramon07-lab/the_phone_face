@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const sql=fs.readFileSync(path.resolve(__dirname,'../db/proposals/operator-after-sales-o2.sql'),'utf8');
+for(const code of ['o2_day_one','o2_security_3_months','o2_annual_review'])assert.match(sql,new RegExp(code));
+assert.match(sql,/TRAMITACIÓN · O2/);
+assert.match(sql,/POSVENTA · O2 · 3 meses/);
+assert.match(sql,/RENOVACIÓN · O2 · 11 meses/);
+assert.match(sql,/REVISIÓN O2/);
+assert.match(sql,/'value',1,'unit','years'/);
+assert.match(sql,/'unit','months','value',11/);
+assert.ok((sql.match(/'business_schedule','phone_house'/g)||[]).length>=3);
+assert.match(sql,/devolver el router anterior pueden tardar hasta 15 días/);
+assert.match(sql,/No facilites datos y consúltanos antes/);
+assert.doesNotMatch(sql,/terminal|permanencia|24, 36|48 meses/i);
+assert.match(sql,/No crea ejecuciones retroactivas/);
+console.log('PASS: O2 after-sales uses business hours and the approved messages without retroactive jobs.');
