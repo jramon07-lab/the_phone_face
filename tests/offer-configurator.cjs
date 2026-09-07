@@ -112,6 +112,9 @@ assert.match(source,/Fecha de tramitación/);
 assert.match(source,/crm_create_direct_sale/);
 assert.match(source,/waSideDirectSale/);
 assert.match(source,/Venta directa/);
+assert.match(source,/50 € de regalo para gastar en tienda/);
+assert.match(source,/Abono de permanencia/);
+assert.match(source,/completeExtraText\(\)/);
 
 const directSaleSql=fs.readFileSync(path.join(root,'db/proposals/direct-sale.sql'),'utf8');
 assert.match(directSaleSql,/security definer\s+set search_path=''/);
