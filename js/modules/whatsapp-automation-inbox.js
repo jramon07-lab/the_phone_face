@@ -12,6 +12,13 @@
   let loading=false;
   let timer=0;
 
+  function liveState(){
+    try{return typeof waLiveState!=='undefined'?waLiveState:null}catch(_){return null}
+  }
+  function database(){
+    try{return typeof sb!=='undefined'&&sb?.from?sb:(window.sb?.from?window.sb:null)}catch(_){return window.sb?.from?window.sb:null}
+  }
+
   const digits=value=>String(value??'').replace(/\D/g,'');
   function localPhone(value){
     let valueDigits=digits(value);
@@ -38,7 +45,7 @@
   }
   function preview(chat){
     const id=String(chat?.id||'');
-    const live=window.waLiveState?.livePreview?.[id]||null;
+    const live=liveState()?.livePreview?.[id]||null;
     const last=live||(chat?._lastMessage||null);
     const timestamp=Number(live?.timestamp||(typeof window.waMessageTimestamp==='function'?window.waMessageTimestamp(last):0)||chat?.lastMessageTime||chat?.lastMessageTimestamp||chat?.timestamp||chat?.lastActivityTime||0);
     const outgoing=typeof live?.outgoing==='boolean'?live.outgoing:(typeof window.waMessageDirection==='function'?window.waMessageDirection(last)==='out':false);
@@ -67,11 +74,12 @@
     return next.size;
   }
   async function loadAutomaticSends(){
-    if(loading||!window.sb?.from)return;
+    const client=database();
+    if(loading||!client)return;
     loading=true;
     try{
       const since=new Date(Date.now()-120*86400000).toISOString();
-      const result=await window.sb.from('crm_server_automation_jobs')
+      const result=await client.from('crm_server_automation_jobs')
         .select('id,action_type,context,completed_at,updated_at')
         .eq('status','done')
         .in('action_type',SEND_ACTIONS)
@@ -85,7 +93,7 @@
     }catch(error){console.warn('Bandeja de WhatsApp automáticos',error)}
     finally{loading=false}
   }
-  function automaticChats(){return (window.waLiveState?.chats||[]).filter(isAutomaticWaiting)}
+  function automaticChats(){return (liveState()?.chats||[]).filter(isAutomaticWaiting)}
   function updateAutomaticCount(){
     const badge=document.getElementById('waAutomaticCount');if(!badge)return;
     const count=automaticChats().length;
@@ -104,7 +112,7 @@
     updateAutomaticCount();
   }
   function decorateAutomaticRows(){
-    if(window.waLiveState?.filter!=='automatic')return;
+    if(liveState()?.filter!=='automatic')return;
     const empty=document.querySelector('#waLiveChats .waLiveEmpty');
     if(empty)empty.textContent='No hay mensajes automáticos pendientes.';
     document.querySelectorAll('#waLiveChats .waChatRow .waChatMeta').forEach(meta=>{
@@ -117,7 +125,7 @@
     });
   }
   function openAutomaticTab(tab){
-    const state=window.waLiveState;if(!state)return;
+    const state=liveState();if(!state)return;
     document.querySelectorAll('#view-whatsapplive [data-wa-tab]').forEach(button=>button.classList.toggle('active',button===tab));
     state.filter='automatic';
     window.renderWhatsAppChats?.();
@@ -126,7 +134,7 @@
     const base=window.renderWhatsAppChats;
     if(typeof base!=='function'||base.__tpfAutomationInbox)return false;
     const wrapped=function(...args){
-      const state=window.waLiveState;
+      const state=liveState();
       if(!state)return base.apply(this,args);
       const chats=state.chats,filter=state.filter||'all';
       if(filter==='automatic'){
@@ -152,7 +160,7 @@
   }
   function bindManualComposer(){
     const markLater=()=>{
-      const chatId=window.waLiveState?.selected?.id;if(!chatId)return;
+      const chatId=liveState()?.selected?.id;if(!chatId)return;
       setTimeout(()=>{
         const text=String(document.getElementById('waComposerText')?.value||'');
         if(!text.trim()){rememberManual(chatId);window.renderWhatsAppChats?.()}
@@ -168,7 +176,7 @@
     document.addEventListener('click',event=>{
       const tab=event.target.closest?.('#view-whatsapplive [data-wa-tab]');
       if(tab?.dataset.waTab==='automatic'){
-        event.preventDefault();event.stopPropagation();openAutomaticTab(tab);
+        event.preventDefault();openAutomaticTab(tab);
       }
       if(tab)setTimeout(()=>{ensureTab();updateAutomaticCount();if(tab.dataset.waTab==='automatic')decorateAutomaticRows()},0);
       if(event.target.closest?.('.nav[data-view="whatsapplive"],#waLiveRefresh'))setTimeout(loadAutomaticSends,180);
