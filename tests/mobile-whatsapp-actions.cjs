@@ -49,7 +49,7 @@ const rpcResults={
 };
 const client={
   auth:{async getSession(){return {data:{session:{access_token:'token'}},error:null};}},
-  async rpc(name,args){rpcCalls.push({name,args});return rpcResults[name]||{data:null,error:null};},
+  async rpc(name,args){rpcCalls.push({name,args});if(name==='crm_create_opportunity_guarded'){inserts.push({table:'sales_opportunities',row:{pipeline_id:args.p_pipeline_id,stage_id:args.p_stage_id,record_id:args.p_record_id,title:args.p_title,client_name:args.p_client_name,phone:args.p_phone,amount:args.p_amount,expected_date:args.p_expected_date,notes:args.p_notes,contract_party:args.p_contract_party}});return {data:'sales_opportunities-1',error:null};}return rpcResults[name]||{data:null,error:null};},
   from(table){return {insert(row){inserts.push({table,row});return this;},select(){return this;},eq(){return this;},maybeSingle(){return Promise.resolve(table==='app_settings'?{data:{value:{'label-1':'Seguimiento'}},error:null}:{data:null,error:null});},single(){return Promise.resolve({data:{id:`${table}-1`},error:null});}};}
 };
 let fetchCount=0;

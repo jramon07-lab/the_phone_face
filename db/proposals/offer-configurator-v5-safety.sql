@@ -20,8 +20,8 @@ declare
   uid uuid:=auth.uid();
   rec public.records%rowtype;
   result jsonb;
-  offer_id uuid;
-  opportunity_id uuid;
+  v_offer_id uuid;
+  v_opportunity_id uuid;
   expected_event_key text;
   message_requested boolean:=p_mode='followup' or p_send_message;
   normalized_phone text;
@@ -45,16 +45,16 @@ begin
     p_contact_id,p_catalog_offer_id,p_selections,p_extra_text,p_mode,
     p_final_price,p_send_message,p_processing_date
   );
-  offer_id:=nullif(result->>'offer_id','')::uuid;
-  opportunity_id:=nullif(result->>'opportunity_id','')::uuid;
+  v_offer_id:=nullif(result->>'offer_id','')::uuid;
+  v_opportunity_id:=nullif(result->>'opportunity_id','')::uuid;
 
-  if offer_id is null or opportunity_id is null
+  if v_offer_id is null or v_opportunity_id is null
      or not exists(
        select 1
        from public.crm_offer_instances i
        join public.sales_opportunities o on o.id=i.opportunity_id
-       where i.id=offer_id
-         and i.opportunity_id=opportunity_id
+       where i.id=v_offer_id
+         and i.opportunity_id=v_opportunity_id
          and i.contact_id=p_contact_id
          and i.created_by=uid
          and o.record_id=p_contact_id
@@ -65,8 +65,8 @@ begin
 
   if message_requested then
     expected_event_key:=case when p_mode='followup'
-      then 'manual-offer:'||offer_id
-      else 'manual-offer-accepted:'||offer_id
+      then 'manual-offer:'||v_offer_id
+      else 'manual-offer-accepted:'||v_offer_id
     end;
 
     if not exists(
@@ -75,8 +75,8 @@ begin
       where j.user_id=uid
         and j.event_key=expected_event_key
         and j.action_type='flow_v1'
-        and j.context->>'offer_instance_id'=offer_id::text
-        and j.context->>'opportunity_id'=opportunity_id::text
+        and j.context->>'offer_instance_id'=v_offer_id::text
+        and j.context->>'opportunity_id'=v_opportunity_id::text
         and j.status in ('pending','running','done')
     ) then
       raise exception 'Protección CRM: no se creó el trabajo del WhatsApp inicial; no se ha guardado nada';

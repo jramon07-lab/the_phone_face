@@ -1178,6 +1178,14 @@
   }
   function mobileWaChatPath(chatId){return `whatsapp-chat/${encodeURIComponent(String(chatId||''))}`;}
   function mobileWaReturnPath(contactId,kind=''){const chatId=mobileWaQueryChatId();if(chatId)return mobileWaChatPath(chatId);if(route().query.get('origin')==='quick'&&['task','opportunity'].includes(kind))return `choose-contact/${kind}`;return `contact/${contactId}`;}
+  async function createMobileOpportunityGuarded(row,allowDuplicate=false){
+    const result=await client.rpc('crm_create_opportunity_guarded',{p_pipeline_id:row.pipeline_id,p_stage_id:row.stage_id,p_record_id:row.record_id||null,p_title:row.title,p_client_name:row.client_name||null,p_phone:row.phone||null,p_amount:row.amount??null,p_expected_date:row.expected_date||null,p_notes:row.notes||null,p_contract_party:row.contract_party||null,p_allow_duplicate:allowDuplicate});
+    if(result.error&&String(result.error.message||'').includes('DUPLICATE_OPPORTUNITY:')){
+      if(confirm('Ya existe una oportunidad abierta con el mismo cliente y título. ¿Seguro que quieres crear otra?'))return createMobileOpportunityGuarded(row,true);
+      throw new Error('No se creó: abre la oportunidad existente.');
+    }
+    if(result.error)throw result.error;return{id:result.data};
+  }
   function renderContactOpportunity(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId)),back=mobileWaReturnPath(contactId,'opportunity');
     if(!contact||!has('can_view_sales')||!has('can_edit_sales'))return `<div class="m-page">${pageHead('Nueva oportunidad',back)}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
@@ -1202,7 +1210,7 @@
         party=window.TPFContactParty.snapshot({same:false,holder_first_name:holder.first,holder_last_name:holder.last,holder_dni:holder.dni,holder_phone:holder.phone,recipient:'contact'},manager);
       }
       const row={contract_party:party,pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:holder.id,title,client_name:holder.fullName||null,phone:(manager||holder).phone||null,amount,expected_date:byId('contactOppDate')?.value||null,owner_user_id:state.user.id,notes:clean(byId('contactOppNotes')?.value)||null};
-      const {error}=await client.from('sales_opportunities').insert(row).select('id').single();if(error)throw error;await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='opportunities';go(`contact/${contact.id}`,back==='choose-contact/opportunity');}toast('Oportunidad creada y sincronizada.','success');
+      await createMobileOpportunityGuarded(row);await refreshData({silent:true});if(back.startsWith('whatsapp-chat/'))go(back,true);else{state.profileTab='opportunities';go(`contact/${contact.id}`,back==='choose-contact/opportunity');}toast('Oportunidad creada y sincronizada.','success');
     }catch(error){if(msg)msg.textContent=error?.message||'No se pudo crear la oportunidad.';}
     finally{savingMobileOpportunities.delete(writeKey);if(button)button.disabled=false;}
   }
@@ -1340,7 +1348,8 @@
   async function continueDetected(){
     let contact;try{contact=await captureDraftContact();}catch(error){byId('mobileDetectedMsg').textContent=error.message;return;}if(!contact.first&&!contact.last){byId('mobileDetectedMsg').textContent='Escribe el nombre o los apellidos.';return;}
     if(!has('can_create_database')||!has('can_view_database')){byId('mobileDetectedMsg').textContent='No tienes permiso para crear y consultar contactos.';return;}
-    await checkDuplicates();
+    const duplicates=await checkDuplicates();
+    if((duplicates||[]).length){const msg=byId('mobileDetectedMsg');if(msg)msg.textContent='No se creó: abre y utiliza el contacto existente.';return;}
     if(!has('can_edit_sales')||!has('can_view_sales')){state.draft.includeOpportunity=false;go('review');return;}
     state.draft.includeOpportunity=true;go('new-opportunity');
   }
@@ -1380,7 +1389,7 @@
       if(includeOpportunity&&!state.createdOpportunityId){
         setCreationStep('createOpportunityStep','active');const stage=state.board.stages.find(row=>String(row.id)===String(opp.stageId));if(!stage)throw new Error('La columna seleccionada ya no existe.');
         const amount=opp.amount===''?null:Number(String(opp.amount).replace(',','.'));if(amount!==null&&!Number.isFinite(amount))throw new Error('El importe no es válido.');
-        const result=await client.from('sales_opportunities').insert({pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:state.createdContactId,title:opp.title,client_name:fullName||null,phone:contact.phone||null,amount,expected_date:opp.expectedDate||null,owner_user_id:state.user.id,notes:opp.notes||null}).select('id').single();if(result.error)throw result.error;state.createdOpportunityId=result.data.id;setCreationStep('createOpportunityStep','done');
+        const result=await createMobileOpportunityGuarded({pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:state.createdContactId,title:opp.title,client_name:fullName||null,phone:contact.phone||null,amount,expected_date:opp.expectedDate||null,owner_user_id:state.user.id,notes:opp.notes||null});state.createdOpportunityId=result.id;setCreationStep('createOpportunityStep','done');
       }
       setCreationStep('createSyncStep','active');
       if(includeOpportunity&&opp.reminder&&opp.expectedDate&&has('can_manage_agenda')){

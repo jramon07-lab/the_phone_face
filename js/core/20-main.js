@@ -562,6 +562,15 @@ $("oppDetailModal").onclick=async(e)=>{
   await closeOpportunityCard();
 };
 
+async function tpfCreateOpportunityGuarded(payload,pipelineId,allowDuplicate=false){
+  const {data,error}=await sb.rpc('crm_create_opportunity_guarded',{p_pipeline_id:pipelineId,p_stage_id:payload.stage_id,p_record_id:payload.record_id||null,p_title:payload.title,p_client_name:payload.client_name||null,p_phone:payload.phone||null,p_amount:payload.amount??null,p_expected_date:payload.expected_date||null,p_notes:payload.notes||null,p_contract_party:payload.contract_party||null,p_allow_duplicate:allowDuplicate});
+  if(error&&String(error.message||'').includes('DUPLICATE_OPPORTUNITY:')){
+    if(confirm('Ya existe una oportunidad abierta con el mismo cliente y título. ¿Seguro que quieres crear otra?'))return tpfCreateOpportunityGuarded(payload,pipelineId,true);
+    throw new Error('No se creó: abre la oportunidad existente.');
+  }
+  if(error)throw error;return{id:data};
+}
+
 $("oppModalSave").onclick=async()=>{
   const id=$("oppModalId").value;
   const title=$("oppModalTitle").value.trim();
@@ -588,13 +597,7 @@ $("oppModalSave").onclick=async()=>{
       ?await window.TPFContactRelations.prepareOpportunity(payload)
       :window.TPFContactParty.readOpportunity();
     if(!id){
-      const {data:created,error}=await sb.from("sales_opportunities").insert({
-        pipeline_id:stage.pipeline_id,
-        stage_id:stage.id,
-        record_id:pendingOpportunityRecordId||null,
-        ...payload
-      }).select("id").single();
-      if(error)throw error;
+      const created=await tpfCreateOpportunityGuarded(payload,stage.pipeline_id);
       pendingOpportunityRecordId=null;
       await saveDetectedOperator(created?.id,title);
       await runOpportunityAutomations(created?.id);
@@ -712,12 +715,10 @@ window.createOppFromRecord=async(payload)=>{
  const notes=prompt("Notas","")||"";
  const stageName=prompt("Columna inicial",stages[0].name)||stages[0].name;
  const stage=stages.find(s=>s.name.toLowerCase()===stageName.toLowerCase())||stages[0];
- const {error:e}=await sb.from("sales_opportunities").insert({
-   pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:c.id||null,title,
-   client_name:c.name||null,phone:c.phone||null,
-   amount:amount?Number(String(amount).replace(",",".")):null,expected_date:date||null,notes:notes||null
- });
- if(e)alert(e.message);else alert("Oportunidad creada");
+ try{
+   await tpfCreateOpportunityGuarded({stage_id:stage.id,record_id:c.id||null,title,client_name:c.name||null,phone:c.phone||null,amount:amount?Number(String(amount).replace(",",".")):null,expected_date:date||null,notes:notes||null},stage.pipeline_id);
+   alert("Oportunidad creada");
+ }catch(e){alert(e?.message||'No se pudo crear la oportunidad');}
 };
 
 window.createAgendaFromRecord=async(payload)=>{

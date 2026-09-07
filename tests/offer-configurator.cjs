@@ -75,13 +75,26 @@ assert.match(sqlV2,/offer_record_month\(rec\.id,opp_id,now\(\)\)/);
 assert.match(sqlV2,/VDF · ESTÁNDAR 600 \+ 2×160/);
 assert.match(sqlV2,/VDF · CONTRAOFERTA 1 GB \+ 2 ILIMITADAS/);
 for(const price of ["'Fibra 1 Gb',10","'Líneas principales ilimitadas',4","'Línea adicional 160 GB',6","'Línea adicional 30 GB',30,6","'Línea adicional 60 GB',60,8.5","'Línea adicional 160 GB',160,11","'Línea adicional ilimitada',null,16"])assert.ok(sqlV2.includes(price),`expected configurable Vodafone price: ${price}`);
-assert.match(source,/crm_create_offer_execution_v4/);
+assert.match(source,/crm_create_offer_execution_v5/);
 assert.match(source,/p_test_mode:CRM_TEST_MODE/);
 assert.match(source,/CRM_TEST_PHONE='695661409'/);
+assert.match(source,/p_request_key:offerRequestKey/);
+assert.match(source,/crm_offer_delivery_status/);
 assert.match(source,/Precio final para el cliente/);
 assert.match(source,/Nombre interno \(no se envía\)/);
 assert.match(source,/show_in_message/);
 assert.match(source,/Ocultar del mensaje/);
+
+const sqlV6=fs.readFileSync(path.join(root,'db/proposals/crm-integrity-v6.sql'),'utf8');
+assert.match(sqlV6,/crm_offer_instances_request_key_uidx/);
+assert.match(sqlV6,/crm_create_contact_guarded/);
+assert.match(sqlV6,/crm_create_opportunity_guarded/);
+assert.match(sqlV6,/crm_create_offer_execution_v5/);
+assert.match(sqlV6,/crm_offer_delivery_status/);
+const sqlSafety=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-v5-safety.sql'),'utf8');
+assert.match(sqlSafety,/v_offer_id uuid/);
+assert.match(sqlSafety,/v_opportunity_id uuid/);
+assert.doesNotMatch(sqlSafety,/\n\s*opportunity_id uuid;/);
 
 const sqlV3=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-v3.sql'),'utf8');
 assert.match(sqlV3,/show_in_message/);
