@@ -1,0 +1,11 @@
+const fs=require('fs');
+const assert=require('assert');
+const source=fs.readFileSync('js/modules/contacts-list-avatars.js','utf8');
+const profile=fs.readFileSync('js/modules/contact-desktop-layout.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
+assert(source.includes("await waLoadAvatar(phone+'@c.us')"),'Las fotos deben reutilizar el cargador seguro de WhatsApp');
+assert(source.includes('setTimeout(resolve,280)'),'Las fotos deben solicitarse de forma controlada');
+assert(source.includes('TPFContactPhotoViewer'),'Al pulsar la foto debe abrirse el visor compartido');
+assert(source.includes("e.key!=='Enter'&&e.key!==' '"),'Los avatares deben ser accesibles con teclado');
+assert(profile.includes('window.TPFContactPhotoViewer'),'La ficha debe compartir su visor con la lista');
+assert(index.includes('contacts-list-avatars.js?v=20260907-list-avatar-1'),'El navegador debe cargar el módulo de fotos de la lista');
