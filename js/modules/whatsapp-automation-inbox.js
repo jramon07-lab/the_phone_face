@@ -105,6 +105,8 @@
   }
   function decorateAutomaticRows(){
     if(window.waLiveState?.filter!=='automatic')return;
+    const empty=document.querySelector('#waLiveChats .waLiveEmpty');
+    if(empty)empty.textContent='No hay mensajes automáticos pendientes.';
     document.querySelectorAll('#waLiveChats .waChatRow .waChatMeta').forEach(meta=>{
       if(meta.querySelector('.waAutomaticFlag'))return;
       meta.insertAdjacentHTML('afterbegin','<span class="waAutomaticFlag">⚡ Automático · esperando respuesta</span> ');
@@ -113,6 +115,12 @@
       if(row.querySelector('.waChatMeta'))return;
       row.querySelector('.waChatRowMain')?.insertAdjacentHTML('beforeend','<div class="waChatMeta"><span class="waAutomaticFlag">⚡ Automático · esperando respuesta</span></div>');
     });
+  }
+  function openAutomaticTab(tab){
+    const state=window.waLiveState;if(!state)return;
+    document.querySelectorAll('#view-whatsapplive [data-wa-tab]').forEach(button=>button.classList.toggle('active',button===tab));
+    state.filter='automatic';
+    window.renderWhatsAppChats?.();
   }
   function wrapRenderer(){
     const base=window.renderWhatsAppChats;
@@ -159,6 +167,9 @@
     styles();ensureTab();bindManualComposer();
     document.addEventListener('click',event=>{
       const tab=event.target.closest?.('#view-whatsapplive [data-wa-tab]');
+      if(tab?.dataset.waTab==='automatic'){
+        event.preventDefault();event.stopPropagation();openAutomaticTab(tab);
+      }
       if(tab)setTimeout(()=>{ensureTab();updateAutomaticCount();if(tab.dataset.waTab==='automatic')decorateAutomaticRows()},0);
       if(event.target.closest?.('.nav[data-view="whatsapplive"],#waLiveRefresh'))setTimeout(loadAutomaticSends,180);
     },true);
@@ -174,4 +185,3 @@
   window.TPFAutomationInbox={isAutomaticWaiting,ingestJobs,reload:loadAutomaticSends};
   M.register('whatsapp-automation-inbox',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();
-
