@@ -138,7 +138,7 @@ function close(){$('ccDetail')?.close();$('ccPanel')?.remove()}
 function launchButton(container,label='Control de envíos'){if(!container||container.querySelector('.ccLaunch'))return;const button=document.createElement('button');button.type='button';button.className='primary ccLaunch';button.textContent='📨 '+label;button.onclick=panel;container.appendChild(button)}
 function ensureLaunchers(){
  const autoHead=$('view-automations')?.querySelector('.pageHeader');launchButton(autoHead,'Control de envíos');
- const waHead=$('view-whatsapplive')?.querySelector('.waLiveTopActions,.pageHeader .row,.pageHeader');launchButton(waHead,'Envíos');
+ const waHead=$('view-whatsapplive')?.querySelector('.waLiveHeaderActions,.waLiveTopActions,.pageHeader .row,.pageHeader');launchButton(waHead,'Envíos');
 }
 function bind(){if(state.bound)return;state.bound=true;css();ensureLaunchers();document.addEventListener('click',event=>{if(event.target.closest?.('.nav[data-view="automations"],.nav[data-view="whatsapplive"]'))setTimeout(ensureLaunchers,180)},true);document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('ccPanel'))close()});const observer=new MutationObserver(()=>setTimeout(ensureLaunchers,30));observer.observe(document.body,{childList:true,subtree:true});state.timer=setInterval(()=>{if($('ccPanel'))load()},60000)}
 window.TPFAutomationControlCenter={statusOf,operatorOf,makeRows,open:panel,reload:()=>load(true)};

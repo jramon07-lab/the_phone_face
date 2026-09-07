@@ -21,6 +21,7 @@ assert.match(source,/crm_cancel_automation_job/,'debe cancelar sin borrar el his
 assert.match(source,/crm_retry_automation_step/,'debe reutilizar el reintento seguro y deduplicado');
 assert.match(source,/Posibles duplicados activos/,'debe señalar posibles duplicados');
 assert.match(source,/Resultado incierto|Revisar antes de reenviar/,'debe impedir reenvíos ciegos');
+assert.match(source,/\.waLiveHeaderActions,\.waLiveTopActions/,'el botón debe insertarse en la cabecera real de WhatsApp');
 assert.doesNotMatch(source,/\.delete\(/,'el centro no debe borrar trabajos ni mensajes');
 
 const sql=fs.readFileSync('db/proposals/automation_control_center.sql','utf8');
