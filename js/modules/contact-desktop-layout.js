@@ -80,7 +80,7 @@
    modal.querySelector('.cpTop')?.appendChild(edit);
    modal.classList.add('tpfContactReference');select(selected);updateCall();
   }else if(!on&&mounted){
-   mounted=false;photoEpoch++;avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
+   mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
    sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();call.remove();
   }
@@ -129,13 +129,36 @@
  // Reuse the existing read-only avatar loader and its shared in-memory cache.
  let photoKey='',photoEpoch=0;
  const avatar=$('cpAvatar');
+ function clearPhotoReady(){
+  if(!avatar)return;
+  avatar.classList.remove('cpRefPhotoReady');avatar.removeAttribute('role');avatar.removeAttribute('tabindex');avatar.removeAttribute('title');avatar.removeAttribute('aria-label');
+ }
+ function closePhotoModal(){
+  document.querySelector('.tpfContactAvatarModal')?.remove();
+  document.removeEventListener('keydown',closePhotoOnKey);
+ }
+ function closePhotoOnKey(e){if(e.key==='Escape')closePhotoModal();}
+ function openPhotoModal(){
+  const source=avatar?.querySelector('.cpRefPhoto');
+  if(!source?.src)return;
+  closePhotoModal();
+  const viewer=document.createElement('div');viewer.className='tpfAvatarModal tpfContactAvatarModal';viewer.setAttribute('role','dialog');viewer.setAttribute('aria-modal','true');viewer.setAttribute('aria-label','Foto del contacto ampliada');
+  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Cerrar foto');
+  const image=document.createElement('img');image.src=source.src;image.alt='Foto de '+String($('contactName')?.value||'contacto').trim();image.referrerPolicy='no-referrer';
+  viewer.append(close,image);viewer.addEventListener('click',e=>{if(e.target===viewer||e.target===close)closePhotoModal();});
+  document.body.appendChild(viewer);document.addEventListener('keydown',closePhotoOnKey);close.focus();
+ }
+ if(avatar){
+  avatar.addEventListener('click',openPhotoModal);
+  avatar.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&avatar.querySelector('.cpRefPhoto')){e.preventDefault();openPhotoModal();}});
+ }
  function refreshPhoto(){
   if(!avatar)return;
   let contact=null;try{contact=typeof currentContact!=='undefined'?currentContact:null;}catch(_){}
   let phone=String($('contactPhone')?.value||'').replace(/[^0-9]/g,'');
   if(phone.startsWith('00'))phone=phone.slice(2);if(phone.length===9)phone='34'+phone;
   const key=String(contact?.id||'')+':'+phone;
-  if(key!==photoKey){photoKey=key;photoEpoch++;avatar.querySelector('.cpRefPhoto')?.remove();}
+  if(key!==photoKey){photoKey=key;photoEpoch++;closePhotoModal();clearPhotoReady();avatar.querySelector('.cpRefPhoto')?.remove();}
   if(!mounted||modal.classList.contains('hidden')||!contact?.id||!/^[0-9]{10,15}$/.test(phone))return;
   if(typeof waLoadAvatar!=='function'||typeof contactCanUseWhatsapp!=='function'||!contactCanUseWhatsapp())return;
   if(avatar.querySelector('.cpRefPhoto'))return;
@@ -145,7 +168,7 @@
    if(!/^https:\/\//i.test(url)&&!/^data:image\/(jpeg|png|webp);base64,/i.test(url))return;
    const img=new Image();img.className='cpRefPhoto';img.alt='';img.decoding='async';img.referrerPolicy='no-referrer';
    let expired=false;const timer=setTimeout(()=>{expired=true;img.onload=null;img.onerror=null;},4000);
-   img.onload=()=>{clearTimeout(timer);if(!expired&&epoch===photoEpoch&&key===photoKey&&mounted&&!modal.classList.contains('hidden')){avatar.querySelector('.cpRefPhoto')?.remove();avatar.appendChild(img);}};
+   img.onload=()=>{clearTimeout(timer);if(!expired&&epoch===photoEpoch&&key===photoKey&&mounted&&!modal.classList.contains('hidden')){avatar.querySelector('.cpRefPhoto')?.remove();avatar.appendChild(img);avatar.classList.add('cpRefPhotoReady');avatar.setAttribute('role','button');avatar.tabIndex=0;avatar.title='Ampliar foto';avatar.setAttribute('aria-label','Ampliar foto del contacto');}};
    img.onerror=()=>{clearTimeout(timer);};img.src=url;
   }).catch(()=>{});
  }
