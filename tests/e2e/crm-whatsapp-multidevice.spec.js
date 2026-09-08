@@ -24,13 +24,20 @@ async function select(page,id){
 async function summary(page){
   return page.evaluate(()=>({unread:document.getElementById('waStatUnread').textContent,waiting:document.getElementById('waStatWaiting').textContent,handled:document.getElementById('waStatHandled').textContent}));
 }
-async function protectDatabase(context,archive){
+async function protectDatabase(context,archive,control={}){
   await context.route('**/rest/v1/**',async route=>{
     const req=route.request(),url=new URL(req.url()),method=req.method();
     if(url.pathname.endsWith('/crm_whatsapp_chat_state')&&archive){
-      if(method==='GET')return route.fulfill({json:[...archive.values()]});
+      if(method==='GET'){
+        const after=(url.searchParams.get('chat_id')||'').replace(/^gt\./,''),limit=Number(url.searchParams.get('limit')||1000);
+        const rows=[...archive.values()].sort((a,b)=>a.chat_id.localeCompare(b.chat_id)).filter(row=>!after||row.chat_id>after).slice(0,limit);
+        return route.fulfill({json:rows});
+      }
       const row=req.postDataJSON();
       if(![A,B].includes(row.chat_id))throw Error('La prueba intentó modificar un chat ajeno');
+      if(control.failWrites)return route.fulfill({status:503,json:{message:'Interrupción de archivo simulada',code:'TEST_OFFLINE'}});
+      if(control.holdWrite){const hold=control.holdWrite;control.holdWrite=null;await hold;}
+      if(req.headers().prefer?.includes('resolution=ignore-duplicates')&&archive.has(row.chat_id))return route.fulfill({status:201,json:[]});
       archive.set(row.chat_id,{...archive.get(row.chat_id),...row});
       return route.fulfill({status:201,json:row});
     }
@@ -54,9 +61,10 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
   let failSummary=false,failHistory=false,delayA=false,releaseA;
   const heldA=new Promise(r=>releaseA=r);
   const errors=[];
+  const archiveControl={};
   try{
     for(const [index,device] of [one,two].entries()){
-      await protectDatabase(device.context,archive);
+      await protectDatabase(device.context,archive,index===0?archiveControl:{});
       await device.context.addInitScript(({A,B,index})=>{
         localStorage.setItem('tpf_wa_unread',JSON.stringify({[A]:index?59:2}));
         localStorage.setItem('tpf_wa_chat_meta_v3',JSON.stringify({[A]:{lastIncomingAt:index?1:200},[B]:{lastOutgoingAt:index?0:500}}));
@@ -97,6 +105,26 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
       await expect(two.page.locator('#waArchiveChat')).toContainText('Desarchivar',{timeout:35000});
       await two.page.locator('#waArchiveChat').click();
       await expect(one.page.locator('#waArchiveChat')).toContainText('Archivar conversación',{timeout:35000});
+    });
+    await test.step('Un archivo rechazado avisa y no deja los PCs con estados diferentes',async()=>{
+      archiveControl.failWrites=true;
+      await one.page.locator('#waArchiveChat').click();
+      await expect(one.page.locator('#waArchiveSaveError')).toContainText('No se confirmó el cambio de archivo');
+      await expect(one.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
+      await expect(two.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
+      expect(archive.get(A).archived).toBe(false);archiveControl.failWrites=false;
+    });
+    await test.step('Archivar y deshacer con guardado lento conserva el último cambio',async()=>{
+      let releaseWrite;archiveControl.holdWrite=new Promise(resolve=>releaseWrite=resolve);
+      try{
+        await one.page.locator('#waArchiveChat').click();
+        await one.page.locator('#waArchiveUndo button').click();
+      }finally{releaseWrite();archiveControl.holdWrite=null;}
+      await expect(one.page.locator('#waArchiveSaveError')).toHaveCount(0);
+      await expect.poll(()=>archive.get(A).archived).toBe(false);
+      await expect(one.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
+      await two.page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+      await expect(two.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
     });
 
     await test.step('Una respuesta atrasada de A no se dibuja dentro de B ni borra su borrador',async()=>{

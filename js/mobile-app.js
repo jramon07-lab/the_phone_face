@@ -1565,7 +1565,17 @@
   }
   const mobileWaArchiveSeconds=value=>{if(!value)return 0;const numeric=Number(value);if(Number.isFinite(numeric)&&numeric>0)return numeric>1e12?numeric/1000:numeric;const parsed=Date.parse(value);return Number.isFinite(parsed)?parsed/1000:0;};
   async function loadMobileWaArchiveStates(){
-    try{const {data,error}=await client.from('crm_whatsapp_chat_state').select('chat_id,archived,archived_at,reopened_at,updated_at');if(error)throw error;const next={};for(const row of data||[])next[String(row.chat_id)]={archived:!!row.archived,archivedAt:mobileWaArchiveSeconds(row.archived_at),updatedAt:mobileWaArchiveSeconds(row.updated_at)};state.whatsapp.archiveStates=next;return next;}catch(_){return state.whatsapp.archiveStates||{};}
+    try{
+      const next={};let after='';
+      for(;;){
+        let query=client.from('crm_whatsapp_chat_state').select('chat_id,archived,archived_at,reopened_at,updated_at').order('chat_id',{ascending:true}).limit(500);
+        if(after)query=query.gt('chat_id',after);
+        const {data,error}=await query;if(error)throw error;const page=data||[];
+        for(const row of page)next[String(row.chat_id)]={archived:!!row.archived,archivedAt:mobileWaArchiveSeconds(row.archived_at),updatedAt:mobileWaArchiveSeconds(row.updated_at)};
+        if(page.length<500)break;const last=String(page[page.length-1].chat_id);if(last<=after)throw Error('Lectura incompleta de archivados');after=last;
+      }
+      state.whatsapp.archiveStates=next;return next;
+    }catch(_){return state.whatsapp.archiveStates||{};}
   }
   async function saveMobileWaArchiveState(chatId,archived,archivedAt=0){
     if(!chatId)return;const now=new Date().toISOString(),payload={chat_id:String(chatId),archived:!!archived,updated_at:now};if(archived)payload.archived_at=new Date((archivedAt||Date.now()/1000)*1000).toISOString();else payload.reopened_at=now;const {error}=await client.from('crm_whatsapp_chat_state').upsert(payload,{onConflict:'chat_id'});if(error)throw error;

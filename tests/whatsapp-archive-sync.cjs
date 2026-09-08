@@ -11,7 +11,7 @@ const meta={chat:{archived:false,lastIncomingAt:0,lastOutgoingAt:0}};
 const writes=[];
 const listeners={};
 const button={textContent:'',title:'',setAttribute(name,value){this[name]=value;}};
-const db={auth:{async getSession(){return {data:{session:{user:{id:'test'}}}};}},from(table){assert.equal(table,'crm_whatsapp_chat_state');return {select:async()=>({data:[],error:null}),upsert:async payload=>{writes.push(payload);return {error:null};}};}};
+const db={auth:{async getSession(){return {data:{session:{user:{id:'test'}}}};}},from(table){assert.equal(table,'crm_whatsapp_chat_state');return {select(){const q={order(){return q},limit(){return q},then(ok){return Promise.resolve({data:[],error:null}).then(ok)}};return q},upsert:async payload=>{writes.push(payload);return {error:null};}};}};
 const context={
   console,Date,clearTimeout,setTimeout(){return 1;},
   document:{hidden:false,getElementById(id){return id==='waArchiveChat'?button:null;},addEventListener(name,fn){listeners[name]=fn;}},
@@ -46,7 +46,7 @@ assert.match(migration,/after insert on public\.wa_messages/i);
 assert.match(migration,/message_at > archived_at/i);
 assert.doesNotMatch(migration,/to anon/i);
 
-Promise.resolve().then(()=>{
+new Promise(resolve=>setImmediate(resolve)).then(()=>{
   assert.ok(writes.some(row=>row.archived===true));
   assert.ok(writes.some(row=>row.archived===false));
   console.log('WhatsApp archive sync and automatic recovery: ok');
