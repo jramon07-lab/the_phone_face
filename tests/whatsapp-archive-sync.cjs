@@ -11,7 +11,7 @@ const meta={chat:{archived:false,lastIncomingAt:0,lastOutgoingAt:0}};
 const writes=[];
 const listeners={};
 const button={textContent:'',title:'',setAttribute(name,value){this[name]=value;}};
-const db={from(table){assert.equal(table,'crm_whatsapp_chat_state');return {select:async()=>({data:[],error:null}),upsert:async payload=>{writes.push(payload);return {error:null};}};}};
+const db={auth:{async getSession(){return {data:{session:{user:{id:'test'}}}};}},from(table){assert.equal(table,'crm_whatsapp_chat_state');return {select:async()=>({data:[],error:null}),upsert:async payload=>{writes.push(payload);return {error:null};}};}};
 const context={
   console,Date,clearTimeout,setTimeout(){return 1;},
   document:{hidden:false,getElementById(id){return id==='waArchiveChat'?button:null;},addEventListener(name,fn){listeners[name]=fn;}},

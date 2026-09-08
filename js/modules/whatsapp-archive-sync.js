@@ -18,6 +18,7 @@ async function persist(chatId,archived,archivedAt=0){
 async function sync(){
   const db=client();if(!db||syncing||document.hidden)return;syncing=true;
   try{
+    if(db.auth?.getSession){const {data}=await db.auth.getSession();if(!data?.session){schedule();return}}
     const {data,error}=await db.from('crm_whatsapp_chat_state').select('chat_id,archived,archived_at,reopened_at,updated_at');
     if(error)throw error;
     const remote=new Map((data||[]).map(row=>[String(row.chat_id),row]));
