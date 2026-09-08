@@ -22,14 +22,16 @@ const context={
     waRefreshChatTopButtons(){button.textContent=meta.chat.archived?'↥':'⌄';},
     addEventListener(name,fn){listeners[name]=fn;},TPFModules:{register(_name,definition){definition.install();},report(error){throw error;}}}
 };
-vm.createContext(context);vm.runInContext(moduleSource,context);
+vm.createContext(context);
+vm.runInContext('let waLiveState=window.waLiveState; delete window.waLiveState;',context);
+vm.runInContext(moduleSource,context);
 
 context.window.waMetaSave('chat',{archived:true});
 assert.equal(meta.chat.archived,true);
 assert.ok(meta.chat.archivedAt>0);
 assert.equal(button.textContent,'✓ Archivar conversación');
 context.window.waRefreshChatTopButtons();
-assert.equal(button.textContent,'↥ Recuperar conversación');
+assert.equal(button.textContent,'↥ Desarchivar');
 context.window.waTrackDirection('chat',{direction:'in',timestamp:meta.chat.archivedAt-1});
 assert.equal(meta.chat.archived,true,'Un mensaje anterior al archivo no debe recuperar el chat');
 context.window.waTrackDirection('chat',{direction:'in',timestamp:meta.chat.archivedAt+1});

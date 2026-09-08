@@ -9,7 +9,7 @@ const errors=fs.readFileSync('js/modules/automations-execution-controls.js','utf
 const sql=fs.readFileSync('db/proposals/vodafone-day-one-variants.sql','utf8');
 
 assert.match(archive,/Archivar conversación/);
-assert.match(archive,/Recuperar conversación/);
+assert.match(archive,/Desarchivar/);
 assert.match(archive,/Deshacer/);
 assert.doesNotMatch(waFixes,/b\.textContent=done\?'✓ Atendida':'✓ Marcar atendida'/);
 

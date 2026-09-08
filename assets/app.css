@@ -1459,7 +1459,7 @@ body.wa-fullscreen-mode #mainContent{
 }
 body.wa-fullscreen-mode .topbar,
 body.wa-fullscreen-mode .top-bar,
-body.wa-fullscreen-mode header:not(.waChatHeader){display:none!important}
+body.wa-fullscreen-mode header:not(.waChatHeader):not(.ccHead){display:none!important}
 
 /* El contenedor de WhatsApp llena la ventana */
 body.wa-fullscreen-mode #whatsappSection,

@@ -3,6 +3,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 
 const source=fs.readFileSync('js/modules/automation-control-center.js','utf8');
+assert.match(fs.readFileSync('assets/app.css','utf8'),/header:not\(\.waChatHeader\):not\(\.ccHead\)/,'fullscreen must not hide control center header');
 assert.match(source,/\.ccHead\{position:sticky;top:0/,'la cabecera del control debe permanecer visible');
 assert.match(source,/root\.scrollTop=0/,'el control debe abrirse desde arriba');
 const context={window:{TPFModules:{register(){}}}};
