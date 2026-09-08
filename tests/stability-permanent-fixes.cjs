@@ -21,7 +21,8 @@ assert.match(status,/statusInFlight/,'Los estados simultáneos deben compartir u
 assert.match(status,/FRESH_MS = 60000/);
 
 const performance=fs.readFileSync('js/modules/whatsapp-performance-max.js','utf8');
-assert.match(performance,/if\(r\?\.degraded\)return;/,'Un límite temporal debe conservar el historial ya visible');
+assert.match(performance,/if\(r\?\.degraded\)\{/,'Un límite temporal debe gestionar recuperación sin sustituir el historial');
+assert.match(performance,/if\(box&&!waLiveState.history.length\)/,'El aviso solo sustituye una conversación todavía vacía');
 
 const lifecycle=fs.readFileSync('db/proposals/automation_preserve_review_completion.sql','utf8');
 assert.match(lifecycle,/action_type not in \('record_offer_month','record_sale_month','prepare_operator_review'\)/);

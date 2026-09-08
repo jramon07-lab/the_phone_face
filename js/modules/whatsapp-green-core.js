@@ -357,6 +357,7 @@ async function waRefreshHybridSummary(){
     const r=await waApi("summary");
     if(r?.degraded)return;
     waApplySummaryChats(r.chats);
+    waUpdateStats();
     if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
   }catch(e){waBackoffRateLimit(e);console.warn("WhatsApp hybrid summary",e)}
 }
@@ -1016,7 +1017,9 @@ async function waPollOnce(){
     if(touched){
       try{
         const chatsR=await waApi("chats");
-        const nextChats=Array.isArray(chatsR.chats)?chatsR.chats:[];
+        if(chatsR?.degraded)return;
+        const previous=new Map((waLiveState.chats||[]).map(c=>[c.id,c]));
+        const nextChats=Array.isArray(chatsR.chats)?chatsR.chats.map(c=>({...c,_lastMessage:previous.get(c.id)?._lastMessage||c.lastMessage||null})):[];
         if(waStableSig(nextChats)!==waStableSig(waLiveState.chats)){
           waLiveState.chats=nextChats;
           if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
@@ -1231,7 +1234,11 @@ window.addEventListener("storage",e=>{if(e.key!==WA_META_KEY)return;waMetaCache=
 function waCacheHistory(chatId,rows){try{const all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-500);localStorage.setItem(WA_HISTORY_KEY,JSON.stringify(all))}catch(e){}}
 function waCachedHistory(chatId){try{return JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}")[chatId]||[]}catch(e){return []}}
 function waIsUnanswered(chatId){
-  const m=waMeta(chatId);return Number(m.lastIncomingAt||0)>Number(m.lastOutgoingAt||0);
+  const chat=(waLiveState.chats||[]).find(c=>String(c.id)===String(chatId));
+  const shared=chat?._lastMessage||chat?.lastMessage;
+  const live=waLiveState.livePreview?.[chatId];
+  const message=live&&Number(live.timestamp||0)>Number(waMessageTimestamp(shared)||0)?live:shared;
+  return !!message&&typeof message==='object'&&waMessageDirection(message)==='in';
 }
 function waUpdateStats(){
   const chats=waLiveState.chats||[];

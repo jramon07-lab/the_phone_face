@@ -342,8 +342,8 @@ export default async function handler(req, res) {
         const chats = Array.isArray(chatsData) ? chatsData.filter(c => c && c.id) : [];
 
         const [incoming, outgoing] = await Promise.all([
-          greenFetchUrl(`${apiUrl("lastIncomingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastIncomingMessages").catch(()=>[]),
-          greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastOutgoingMessages").catch(()=>[])
+          greenFetchUrl(`${apiUrl("lastIncomingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastIncomingMessages"),
+          greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastOutgoingMessages")
         ]);
 
         const latest = new Map();

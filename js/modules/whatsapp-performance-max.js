@@ -22,7 +22,6 @@ function waPerformanceUnread(chat){
   return Math.max(local,server);
 }
 function waPerformanceUnanswered(chat){
-  if(chat&&typeof chat==='object'&&typeof chat.__tpfPending==='boolean')return chat.__tpfPending;
   const chatId=chat&&typeof chat==='object'?chat.id:chat;
   return typeof waIsUnanswered==='function'&&waIsUnanswered(chatId);
 }
@@ -228,7 +227,7 @@ function install(){
   try{
     if(typeof hydrateWaAvatars==='function')window.hydrateWaAvatars=async function(chatIds=[]){waPerformanceHydrateVisible(chatIds)};
 
-    if(typeof loadWaHistory==='function')window.loadWaHistory=async function(scrollBottom=true){
+    if(typeof loadWaHistory==='function')window.loadWaHistory=async function(scrollBottom=true,retry=0){
       if(!waLiveState.selected)return;
       const chatId=waLiveState.selected.id;
       const selection=waLiveState.selectionVersion;
@@ -237,9 +236,17 @@ function install(){
       try{
         const r=await waApi('history',{chatId,count:40});
         if(!current())return;
-        if(r?.degraded)return;
+        if(r?.degraded){
+          const box=document.getElementById('waMessages');
+          if(box&&!waLiveState.history.length){
+            box.innerHTML='<div class="waLiveEmpty">WhatsApp está limitando temporalmente la carga. '+(retry<3?'Reintentando…':'<button type="button">Reintentar carga</button>')+'</div>';
+            const button=box.querySelector?.('button');if(button)button.onclick=()=>window.loadWaHistory(true);
+          }
+          if(retry<3)setTimeout(()=>{if(current())window.loadWaHistory(scrollBottom,retry+1)},10000);
+          return;
+        }
         const nextHistory=Array.isArray(r.messages)?r.messages:[];
-        if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)){
+        if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)||!nextHistory.length){
           waLiveState.history=nextHistory;
           renderWaMessages(scrollBottom);
         }else if(scrollBottom){
@@ -248,6 +255,7 @@ function install(){
       }catch(e){
         if(!current())return;
         const box=document.getElementById('waMessages');if(box)box.innerHTML=`<div class="waLiveEmpty">${esc(e.message||'No se pudo cargar la conversación')}</div>`;
+        if(box){const button=document.createElement('button');button.type='button';button.textContent='Reintentar carga';button.onclick=()=>window.loadWaHistory(true);box.appendChild(button)}
       }
     };
 
