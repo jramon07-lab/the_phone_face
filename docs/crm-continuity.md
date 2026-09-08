@@ -1,18 +1,28 @@
 # The Phone Face CRM — punto de continuidad
 
-## Revisión en curso — 2026-09-08, 22:32 UTC
+## Verificación completada — 2026-09-08, 22:48 UTC
 
-- Petición del usuario: volver a verificar los fallos de dos ordenadores; no crear otro CRM.
-- Recuperado de GitHub: estable `dfa73486f5506d79fe701db87a02679cdf1860cc`, desarrollo `eb2eacc44d163fe6ad3c300f8a9a0186d73da712`. Alias estable mantiene `dpl_CETsB7jttidLH4eEz936nFDiwvsT`, READY, mismo enlace.
-- Repetido `npm run verify` antes de cambios: 144/144 JavaScript válidos y 92/92 regresiones. Salud en el alias estable: `/api/green-health` HTTP 200, authorized, providerHealthy true, degraded false, 2026-09-08 22:29 UTC.
-- Se encontró una ejecución posterior, `34279779860`, con 45 Chrome superadas, 1 fallida y 3 omitidas: ambos escenarios de dos sesiones pasaron, pero Cancelar en el editor de contactos permaneció abierto. Esta ejecución no invalida el resultado histórico de la entrega de abajo, pero revela un fallo intermitente del mismo código.
-- Se solicitó una nueva ejecución contra el despliegue estable original: Actions `34279134442`, intento 2, trabajo `102261946796`. Resultado pendiente al guardar este punto.
-- Fallo del editor reproducido con prueba local roja; corregido con referencia inicial tras rellenar el formulario y descarte de respuestas de etiquetas de una edición cerrada. Prueba específica verde; Chrome ampliado para mantener la protección de borradores reales.
-- Este punto se guarda primero en desarrollo. La versión estable sigue en `dfa7348` hasta verificar el candidato en Chrome.
+**Versión estable actual: `734db09915a7dbf0b6cbc876264274768120838e`. Publicada y verificada antes y después de publicar.**
+
+- Enlace habitual conservado: https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app/ .
+- Vercel: `dpl_2tuWoJUjgqSu8MJfth4u4TdnS8pS`, READY, commit `734db09`, rama `tmp/contact-profile-recover-20260901`, sin error de alias. Despliegue inmutable: `the-phone-face-app-whatsapp-fotos-y-multimedia-78ncdsijp.vercel.app`.
+- Antes de cambios, se repitió la versión anterior `dfa7348`: 92/92 regresiones locales y **46 Chrome superadas, 3 omitidas, 0 fallidas** contra su despliegue estable. Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34279134442 , intento 2, trabajo `102261946796`.
+- Se encontró además una ejecución posterior de desarrollo, https://github.com/jramon07-lab/the_phone_face/actions/runs/34279779860 , con **45 Chrome superadas, 1 fallida y 3 omitidas**. Ambos escenarios de dos sesiones pasaron, pero Cancelar en el editor de contactos permaneció abierto. Se investigó el fallo intermitente; no se ocultó repitiendo esa ejecución hasta que pasase.
+- Causa reproducida con prueba local roja: el enfoque automático podía registrar el nombre vacío antes de rellenar los datos; la protección de navegación confundía la carga con un cambio del usuario. El editor establece ahora la referencia inicial después de rellenar los datos, antes de esperar las etiquetas. Las respuestas de etiquetas de una edición ya cerrada no reinstalan sus controles.
+- Pruebas añadidas: `tests/contact-editor-loading.cjs` comprueba carga inicial, borrador real durante la espera y Cancelar antes de recibir etiquetas. El recorrido Chrome de contactos comprueba Cancelar sin cambios, proteger un borrador y recuperar el valor original, sin guardar cambios en ese contacto.
+- Candidato en desarrollo, antes de publicar: **93/93 regresiones y 46 Chrome superadas, 3 omitidas, 0 fallidas**. Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34286517219 , trabajo `102263724158`, commit `734db09`, destino `the-phone-face-app-whatsapp-fotos-y-multimedia-diji4jhdf.vercel.app`.
+- Después de publicar: **144/144 JavaScript válidos y 93/93 regresiones**. Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34287234178 , trabajo `102265514603`.
+- Chrome sobre el despliegue estable publicado: **46 superadas, 3 omitidas, 0 fallidas**. Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34287248785 , trabajo `102265564685`. El log confirma commit `734db09` y destino `78ncdsijp`.
+- En esa última ronda, dos sesiones autenticadas coincidieron en **2.266 conversaciones**, 68 con mensaje reciente, historial y contadores. Salud GREEN: HTTP 200, authorized, providerHealthy true, degraded false. Los ensayos de archivo compartido, error al guardar, deshacer lento, respuestas atrasadas y recuperación de conexión pasaron.
+- La entrada HTML del enlace habitual referencia la versión correcta; `contact-profile.js` y `runtime.js` servidos por ese enlace coinciden exactamente con el código verificado.
+- Preservación: no se migró la base ni se cambiaron proveedores. Las escrituras de la suite general se limitan a registros sintéticos con limpieza; la lectura real de WhatsApp no envía ni marca leído. Los ensayos de archivado en navegador usan un almacén compartido simulado; no se presentan como una escritura de archivo real entre los ordenadores físicos.
+- Siguen fuera Microsoft 365 (2 pruebas omitidas) y diagnóstico administrativo (1 omitida); se conservan los límites de la sección final y de `docs/crm-functional-validation.md`.
+- Para cargar la corrección en pestañas ya abiertas: guardar lo pendiente y recargar una vez en ambos ordenadores.
+- Este informe final se guarda en desarrollo como cambio exclusivamente documental. La rama estable conserva exactamente `734db09`; no se debe confundir el commit documental posterior con una nueva versión funcional publicada.
 
 ## Entrega comprobada — 2026-09-08, 21:16 UTC
 
-**Última versión funcional estable: `dfa73486f5506d79fe701db87a02679cdf1860cc`. Publicada y verificada.**
+**Versión histórica de esta entrega: `dfa73486f5506d79fe701db87a02679cdf1860cc`. Sustituida por la versión verificada indicada arriba.**
 
 - El enlace habitual sigue siendo https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app/ .
 - Alias estable comprobado: `dpl_CETsB7jttidLH4eEz936nFDiwvsT`, READY, commit `dfa7348`, rama `tmp/contact-profile-recover-20260901`, sin error de alias.

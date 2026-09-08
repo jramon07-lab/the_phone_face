@@ -71,3 +71,5 @@ La primera validación de desarrollo de este refuerzo (`34277615556`) detectó u
 - El editor establece ahora su referencia después de rellenar los datos, antes de esperar las etiquetas. Una respuesta de etiquetas posterior a Cancelar no puede reinstalar los controles del editor cerrado. Se comprueba que las modificaciones del usuario mientras cargan las etiquetas conservan su protección.
 - El recorrido Chrome de contactos comprueba cancelar sin editar, rechazar la salida de un borrador y volver al valor original, sin guardar cambios en el contacto.
 - Verificación y publicación de esta corrección: consultar `docs/crm-continuity.md`; no inferirlas del texto de cobertura.
+
+Resultado de esta revisión: corrección `734db09915a7dbf0b6cbc876264274768120838e` publicada en el mismo enlace estable tras 93/93 regresiones y 46 Chrome superadas en desarrollo. La repetición tras publicar pasó 93/93 regresiones (Actions `34287234178`) y 46 Chrome, 3 omitidas, 0 fallidas (Actions `34287248785`), incluidas dos sesiones con 2.266 conversaciones, historial y contadores coincidentes. Evidencia y límites completos en `docs/crm-continuity.md`.
