@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const s=fs.readFileSync('js/modules/contact-activity-tabs.js','utf8'),ctx={};
+vm.createContext(ctx);vm.runInContext(s.slice(s.indexOf('function classify('),s.indexOf('function tabs(')),ctx);
+assert.equal(ctx.classify({className:'cpEvent cpEvent-wa_in',textContent:'Tengo una oportunidad y una tarea'}),'otros');
+assert.equal(ctx.classify({className:'cpEvent cpEvent-opportunity_updated',textContent:'CAMBIO VODAFONE'}),'oportunidades');
+assert.equal(ctx.classify({className:'cpEvent cpEvent-label',textContent:'OFERTA y notas'}),'otros');
+assert.equal(ctx.classify({className:'cpEvent cpEvent-task_done',textContent:'Llamar'}),'tareas');
+assert.match(s,/MutationObserver/);assert.match(s,/aria-pressed/);assert.match(s,/3px solid transparent/);
+const core=fs.readFileSync('js/modules/contacts-sales-core.js','utf8');
+assert.match(core,/TPFAuthorship.author\(x.author\)/);
+assert.doesNotMatch(core,/TPFAuthorship.line\(x.author,false\)/);
+console.log('PASS activity categories: message text cannot change category; selected tab and single author timestamp');

@@ -223,6 +223,15 @@ table{width:100%;border-collapse:collapse;min-width:780px;background:#fff}th,td{
 .cpEvent-opportunity_closed .cpDot{background:#16a66c}
 .cpEvent-opportunity .cpDot{background:#2d7df4}
 .cpEventBody div{white-space:pre-wrap}
+#contactModal .cpTabs>[data-tpf-activity-tab]{height:48px;display:flex;align-items:center;padding:0 3px!important;white-space:nowrap}
+#contactModal.tpfContactCleanV2 #cpTimeline .cpEvent{padding:12px 8px 12px 24px;min-height:0}
+#contactModal.tpfContactCleanV2 #cpTimeline .cpDot{left:4px;top:18px;width:7px;height:7px;border-radius:50%;box-shadow:none;background:#688dbb}
+#contactModal.tpfContactCleanV2 #cpTimeline .cpEventBody{gap:4px;line-height:1.45}
+#contactModal.tpfContactCleanV2 #cpTimeline .cpEventBody b{font-size:13px}
+#contactModal .cpActivityAuthor{font-size:11px;color:#667085}
+#contactModal .cpFullHistoryHead h3{display:none}
+#cpCurrentLabels{padding:12px 14px;background:#f5f8fc;border:1px solid #e3eaf2;border-radius:10px;margin:10px 0 14px;font-size:12px}
+#cpCurrentLabels b,#cpCurrentLabels span{display:block}#cpCurrentLabels span{margin-top:5px;color:#475467}#cpCurrentLabels:empty,#cpCurrentLabels[hidden]{display:none!important}
 
 
 /* Configuración de columnas por archivo */

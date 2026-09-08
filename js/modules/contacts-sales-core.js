@@ -101,7 +101,7 @@ $("cpOpportunities").innerHTML=opps.length
    const closed=(o.status==="won"||o.status==="lost");
    return {
      date:o.updated_at?new Date(o.updated_at).toLocaleString("es-ES"):(o.expected_date?fmtDateOnly(o.expected_date):""),
-     title:(closed?"Oportunidad cerrada · ":"Oportunidad · ")+(o.title||""),
+     title:"Estado actual · "+(o.title||""),
      text:`${stage?.name||""}${o.amount!=null?" · "+fmtMoney(o.amount):""}`,
      type:closed?"opportunity_closed":"opportunity"
    };
@@ -135,7 +135,7 @@ $("cpOpportunities").innerHTML=opps.length
        <small>${esc(x.date)}</small>
        <b>${esc(x.title)}</b>
        <div>${esc(x.text)}</div>
-       ${x.author&&window.TPFAuthorship?window.TPFAuthorship.line(x.author,false):""}
+       ${x.author&&window.TPFAuthorship?'<span class="cpActivityAuthor">Por: '+esc(window.TPFAuthorship.author(x.author))+'</span>':""}
      </div>
    </div>`).join("");
 }
@@ -814,4 +814,3 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
-

@@ -341,7 +341,7 @@ async function enrichContactHistory(){
       if(!error)(data||[]).slice(-40).forEach(m=>extra.push({date:new Date(Number(m.ts||0)*1000),title:m.direction==="in"?"WhatsApp recibido":"WhatsApp enviado",text:m.text_content||m.type_message||"Mensaje",type:m.direction==="in"?"wa_in":"wa_out"}))
     }catch(e){}
   }
-  try{const labs=await crmGetContactLabels(currentContact.id);if(labs?.length)extra.push({date:new Date(),title:"Etiquetas actuales",text:labs.map(x=>x.name).join(", "),type:"label"})}catch(e){}
+  try{const labs=await crmGetContactLabels(currentContact.id);let box=document.getElementById('cpCurrentLabels');if(!box){box=document.createElement('div');box.id='cpCurrentLabels';$("cpTimeline").before(box)}box.innerHTML=labs?.length?'<b>Etiquetas actuales</b><span>'+labs.map(x=>esc(x.name)).join(' · ')+'</span>':'';box.hidden=!!document.querySelector('#contactModal .tpfActivityTabActive:not([data-tpf-activity-tab="todos"])')}catch(e){}
   if(extra.length){
     const extraHtml=extra.sort((a,b)=>b.date-a.date).map(x=>`<div class="cpEvent cpEvent-${x.type}" data-crm-extra-history="1"><div class="cpDot"></div><div class="cpEventBody"><small>${x.date.toLocaleString("es-ES")}</small><b>${esc(x.title)}</b><div>${esc(x.text)}</div></div></div>`).join("");
     $("cpTimeline").insertAdjacentHTML("afterbegin",extraHtml)
