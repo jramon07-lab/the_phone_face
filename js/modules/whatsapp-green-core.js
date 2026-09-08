@@ -58,6 +58,11 @@ function waSaveUnread(){try{localStorage.setItem("tpf_wa_unread",JSON.stringify(
 function waUnreadCount(chatId){return Math.max(0,Number(waLiveState.unread?.[String(chatId||"")]||0))}
 function waSetUnread(chatId,n){const id=String(chatId||"");if(!id)return;waLiveState.unread[id]=Math.max(0,Number(n||0));waSaveUnread()}
 function waIncUnread(chatId){const id=String(chatId||"");if(!id)return;waSetUnread(id,waUnreadCount(id)+1)}
+window.addEventListener("storage",event=>{
+  if(event.key!=="tpf_wa_unread")return;
+  try{waLiveState.unread=JSON.parse(event.newValue||"{}")||{}}catch(_){waLiveState.unread={}}
+  try{renderWhatsAppChats();waUpdateStats()}catch(_){}
+});
 
 
 function waChatServerPreview(c){
@@ -339,7 +344,12 @@ async function waApi(action,payload={}){
 
 function waApplySummaryChats(chats){
   waLiveState.chats=Array.isArray(chats)?chats:[];
+  // GREEN-API es la fuente compartida entre equipos. El contador local sirve
+  // para reflejar un mensaje entrante al instante, pero cada resumen completo
+  // debe reconciliarlo para que dos PCs no acumulen cifras diferentes.
+  const sharedUnread={};
   for(const c of waLiveState.chats){
+    if(c?.id)sharedUnread[String(c.id)]=waChatServerUnread(c);
     if(!c?._lastMessage || !c?.id)continue;
     const id=String(c.id);
     const incomingTs=Number(waMessageTimestamp(c._lastMessage)||0);
@@ -351,6 +361,8 @@ function waApplySummaryChats(chats){
       waRememberLivePreview(id,c._lastMessage);
     }
   }
+  waLiveState.unread=sharedUnread;
+  waSaveUnread();
 }
 async function waRefreshHybridSummary(){
   try{
