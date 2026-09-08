@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const OPERATORS=['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange'];
-const CRM_TEST_MODE=true;
+const CRM_TEST_MODE=typeof document==='undefined'||document.querySelector?.('meta[name="tpf-crm-mode"]')?.content!=='stable';
 const CRM_TEST_PHONE='695661409';
 const phoneDigits=value=>String(value||'').replace(/\D/g,'').slice(-9);
 const money=value=>`${Number(value||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €`;

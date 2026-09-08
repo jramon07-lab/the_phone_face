@@ -36,6 +36,8 @@ module.exports=async function(req,res){
     const commit=String(process.env.VERCEL_GIT_COMMIT_SHA||'local');
     const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
     const shortCommit=commit.slice(0,8);
+    const stable=branch==='tmp/contact-profile-recover-20260901';
+    html=html.replace('</head>',`<meta name="tpf-crm-mode" content="${stable?'stable':'test'}">\n</head>`);
 
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
 
@@ -47,7 +49,7 @@ module.exports=async function(req,res){
       html=html.replace(grid,bar+'\n    '+grid);
     }
 
-    const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">PRUEBAS · ${branch} · ${shortCommit}</div>`;
+    const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">${stable?'ESTABLE':'PRUEBAS'} · ${shortCommit}</div>`;
     if(!html.includes('id="tpfBuildBadge"'))html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
 
     html=html.includes('</head>')?html.replace('</head>',MENU_CLEAN+'\n</head>'):MENU_CLEAN+html;
