@@ -53,6 +53,8 @@ async function shot(page,name){
 }
 
 test('cuenta demo por interfaz real: editor separado y oportunidades responden', async ({page})=>{
+  const dialogs=[];
+  page.on('dialog',async dialog=>{dialogs.push(dialog.type());await dialog.dismiss();});
   await login(page);
   const linked=await page.evaluate(async()=>{await loadSales();const people=await TPFRecordLinks.load(sb);const found=people.find(c=>TPFRecordLinks.related(salesCache.opportunities,people,c.id,'opportunity').length>0);return {recordId:found?.id};});
   expect(linked.recordId,'Debe existir un contacto con oportunidades para comprobar este recorrido').toBeTruthy();
@@ -67,6 +69,19 @@ test('cuenta demo por interfaz real: editor separado y oportunidades responden',
   await shot(page,'demo-ui-01-editor-separado');
   await page.locator('#tpfContactsCreateCancel').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeHidden({timeout:5000});
+  expect(dialogs,'Cargar los datos del contacto no debe pedir descartar cambios').toEqual([]);
+
+  await page.locator('#contactModal .cpRefEdit').click();
+  await expect(page.locator('#tpfContactsCreateSave')).toHaveText('Guardar cambios');
+  const first=page.locator('#tpfCreateFirst'),original=await first.inputValue();
+  await first.fill(original+' Control sin guardar');
+  await page.locator('#tpfContactsCreateCancel').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeVisible();
+  expect(dialogs,'Los cambios escritos sí deben estar protegidos').toEqual(['confirm']);
+  await first.fill(original);
+  await page.locator('#tpfContactsCreateCancel').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
+  expect(dialogs,'Al recuperar el valor original no debe aparecer otro aviso').toEqual(['confirm']);
 
   await page.locator('#cpNewOpp').click();
   await expect(page.locator('#oppDetailModal')).toBeVisible({timeout:5000});

@@ -153,11 +153,17 @@
     setCreateValue('tpfCreateNotes',byId('contactNotes')?.value||recordField(d,'NOTAS','NOTES'));
     setCreateValue('tpfCreateObs',byId('contactObservations')?.value||recordField(d,'OBSERVACIONES','OBSERVACION'));
     window.TPFContactParty?.fillContact(d);
+    // Autofocus can precede the profile values. Loading those values is not a
+    // user edit; establish the baseline before waiting for remote labels.
+    window.dispatchEvent(new CustomEvent('tpf:editor-baseline',{detail:{root:back}}));
+    const openingState=createEditState;
     try{
       const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:String(id)});if(r.error)throw r.error;
+      if(createEditState!==openingState)return;
       const ids=new Set((r.data||[]).map(x=>String(x.id??x.label_id??x.value??'')));
       byId('tpfCreateLabels')?.querySelectorAll('input').forEach(x=>x.checked=ids.has(String(x.value)));
     }catch(_){}
+    if(createEditState!==openingState)return;
     window.TPFContactLabelPicker?.reset();
     if(title)title.textContent='Editar contacto';
     if(subtitle)subtitle.textContent='Modifica los datos del contacto.';

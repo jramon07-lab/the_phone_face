@@ -1,5 +1,15 @@
 # The Phone Face CRM — punto de continuidad
 
+## Revisión en curso — 2026-09-08, 22:32 UTC
+
+- Petición del usuario: volver a verificar los fallos de dos ordenadores; no crear otro CRM.
+- Recuperado de GitHub: estable `dfa73486f5506d79fe701db87a02679cdf1860cc`, desarrollo `eb2eacc44d163fe6ad3c300f8a9a0186d73da712`. Alias estable mantiene `dpl_CETsB7jttidLH4eEz936nFDiwvsT`, READY, mismo enlace.
+- Repetido `npm run verify` antes de cambios: 144/144 JavaScript válidos y 92/92 regresiones. Salud en el alias estable: `/api/green-health` HTTP 200, authorized, providerHealthy true, degraded false, 2026-09-08 22:29 UTC.
+- Se encontró una ejecución posterior, `34279779860`, con 45 Chrome superadas, 1 fallida y 3 omitidas: ambos escenarios de dos sesiones pasaron, pero Cancelar en el editor de contactos permaneció abierto. Esta ejecución no invalida el resultado histórico de la entrega de abajo, pero revela un fallo intermitente del mismo código.
+- Se solicitó una nueva ejecución contra el despliegue estable original: Actions `34279134442`, intento 2, trabajo `102261946796`. Resultado pendiente al guardar este punto.
+- Fallo del editor reproducido con prueba local roja; corregido con referencia inicial tras rellenar el formulario y descarte de respuestas de etiquetas de una edición cerrada. Prueba específica verde; Chrome ampliado para mantener la protección de borradores reales.
+- Este punto se guarda primero en desarrollo. La versión estable sigue en `dfa7348` hasta verificar el candidato en Chrome.
+
 ## Entrega comprobada — 2026-09-08, 21:16 UTC
 
 **Última versión funcional estable: `dfa73486f5506d79fe701db87a02679cdf1860cc`. Publicada y verificada.**

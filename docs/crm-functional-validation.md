@@ -4,7 +4,7 @@ Esta revisión usa la cuenta demo y el despliegue de pruebas. La base de datos c
 
 ## Cómo repetirla
 
-- `npm run verify`: estructura, sintaxis y todas las comprobaciones de regresión descubiertas en `tests/` (92 tras el refuerzo de archivado y recuperación de lecturas del 8 de septiembre).
+- `npm run verify`: estructura, sintaxis y todas las comprobaciones de regresión descubiertas en `tests/` (93 tras comprobar la carga y cancelación del editor el 8 de septiembre).
 - El flujo **CRM Browser Validation** instala Chromium, usa las credenciales demo de los secretos de GitHub y prueba el despliegue que acaba de publicarse. Chrome es el navegador oficial acordado; WebKit es una comprobación adicional fuera de esta validación.
 - Los escenarios se ejecutan con un solo proceso y sin reintentos: comparten la cuenta demo y la prueba de cierre de sesión puede revocar las sesiones de otras pruebas si se ejecutan a la vez.
 - Las capturas y los resultados se adjuntan a cada ejecución como **crm-browser-evidence**. Las grabaciones y trazas de autenticación están desactivadas.
@@ -63,3 +63,11 @@ Consultar `docs/crm-continuity.md` antes de continuar. La recuperación contrast
 - Microsoft 365, diagnóstico administrativo, envío final a destinatarios y restauración completa conservan los límites anteriores.
 
 La primera validación de desarrollo de este refuerzo (`34277615556`) detectó un 429 real con respuestas distintas entre servidores. La nueva regresión `green-multiserver-recovery.cjs` reproduce ese caso sin red y comprueba recuperación de resumen e historial, espera solicitada larga, límite persistente y ausencia de reintentos de envío. El cambio está en la recuperación del servidor; no se relajan los criterios de la prueba Chrome ni se oculta el 429. Ver la explicación y el estado de entrega en `docs/crm-continuity.md`.
+
+## Revisión solicitada el 8 de septiembre, 22:28 UTC
+
+- La ejecución posterior de desarrollo `34279779860` pasó los dos escenarios de dos sesiones: 2.266 chats iguales, historial y contadores iguales, archivo y fallos simulados. Falló el cierre del editor de contactos; total 45 Chrome superadas, 1 fallida y 3 omitidas. No se debe presentar esa ejecución como completamente verde.
+- Se reprodujo con los módulos reales en `tests/contact-editor-loading.cjs`: el enfoque automático podía guardar el campo vacío como referencia antes de cargar el nombre. El protector de navegación interpretaba la carga como un borrador y bloqueaba Cancelar. La prueba falla con el código anterior.
+- El editor establece ahora su referencia después de rellenar los datos, antes de esperar las etiquetas. Una respuesta de etiquetas posterior a Cancelar no puede reinstalar los controles del editor cerrado. Se comprueba que las modificaciones del usuario mientras cargan las etiquetas conservan su protección.
+- El recorrido Chrome de contactos comprueba cancelar sin editar, rechazar la salida de un borrador y volver al valor original, sin guardar cambios en el contacto.
+- Verificación y publicación de esta corrección: consultar `docs/crm-continuity.md`; no inferirlas del texto de cobertura.
