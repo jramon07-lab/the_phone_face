@@ -112,6 +112,7 @@ function waLivePreviewText(msg){
 }
 function waRememberLivePreview(chatId,msg){
   const id=String(chatId||""); if(!id||!msg)return;
+  if(Number(waLiveState.livePreview[id]?.timestamp||0)>Number(waMessageTimestamp(msg)||0))return;
   waLiveState.livePreview[id]={
     idMessage:String(msg?.idMessage||""),
     text:waLivePreviewText(msg),
@@ -335,10 +336,15 @@ async function waApi(action,payload={}){
     opts.method="POST";
     opts.body=JSON.stringify(payload);
   }
-  const r=await fetch(url,opts);
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok||j.ok===false)throw new Error(j.error||`Error ${r.status}`);
-  return j;
+  const controller=['state','summary','chats','history','previews'].includes(action)?new AbortController():null;
+  const timeout=controller?setTimeout(()=>controller.abort(),20000):null;
+  if(controller)opts.signal=controller.signal;
+  try{
+    const r=await fetch(url,opts);
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.ok===false){const error=new Error(j.error||`Error ${r.status}`);error.status=r.status;throw error}
+    return j;
+  }finally{if(timeout)clearTimeout(timeout)}
 }
 
 
@@ -367,12 +373,44 @@ function waApplySummaryChats(chats){
 async function waRefreshHybridSummary(){
   try{
     const r=await waApi("summary");
-    if(r?.degraded)return;
+    if(r?.degraded){waSharedSyncStatus(false);return false}
     waApplySummaryChats(r.chats);
     waUpdateStats();
     if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
-  }catch(e){waBackoffRateLimit(e);console.warn("WhatsApp hybrid summary",e)}
+    waSharedSyncStatus(true);return true;
+  }catch(e){waSharedSyncStatus(false);console.warn("WhatsApp hybrid summary",e);return false}
 }
+
+// Cada navegador consulta la fuente compartida aunque otro esté consumiendo
+// la cola de avisos. Nunca se reutiliza el bloqueo ni el backoff de esa cola.
+let waSharedSyncTimer=0,waSharedSyncBusy=false;
+const WA_SHARED_SYNC_MS=15000;
+function waSharedSyncStatus(ok){
+  const node=$("waLiveStatus");if(!node)return;
+  if(ok){
+    if(node.dataset.syncDelayed==='1'){node.textContent='Conectado';node.className='waLiveStatus ok'}
+    node.dataset.syncDelayed='0';node.dataset.lastSync=String(Date.now());
+    node.title='Lista actualizada: '+new Date().toLocaleTimeString('es-ES');
+  }else{
+    node.dataset.syncDelayed='1';node.textContent='Sincronización pendiente · reintentando';node.className='waLiveStatus warn';
+  }
+}
+function waScheduleSharedSync(){clearTimeout(waSharedSyncTimer);waSharedSyncTimer=setTimeout(waSyncSharedView,WA_SHARED_SYNC_MS)}
+async function waSyncSharedView(){
+  if(waSharedSyncBusy)return;
+  const view=$("view-whatsapplive"),app=$("app");
+  if(document.hidden||!view||view.classList.contains('hidden')||app?.classList.contains('hidden')||waLiveState.loading){waScheduleSharedSync();return}
+  waSharedSyncBusy=true;
+  try{
+    await Promise.all([waRefreshHybridSummary(),waLiveState.selected?window.loadWaHistory(false):Promise.resolve()]);
+  }catch(e){waSharedSyncStatus(false)}
+  finally{waSharedSyncBusy=false;waScheduleSharedSync()}
+}
+function waWakeSharedSync(){if(waLiveState.poll&&!document.hidden){clearTimeout(waSharedSyncTimer);void waSyncSharedView()}}
+window.addEventListener('focus',waWakeSharedSync);
+window.addEventListener('online',waWakeSharedSync);
+document.addEventListener('visibilitychange',waWakeSharedSync);
+window.addEventListener('pagehide',()=>clearTimeout(waSharedSyncTimer));
 
 async function loadWhatsAppLive(){
   if(waLiveState.loading)return;
@@ -386,7 +424,7 @@ async function loadWhatsAppLive(){
     $("waLiveStatus").textContent=connected?"Conectado":"Estado: "+(st||"desconocido");
     $("waLiveStatus").className="waLiveStatus "+(connected?"ok":"error");
     if(!summaryR?.degraded)waApplySummaryChats(summaryR.chats);
-    waLastHybridSummary=Date.now();
+    if(!summaryR?.degraded)waSharedSyncStatus(true);else waSharedSyncStatus(false);
     renderWhatsAppChats();
 
     if(waLiveState.selected){
@@ -858,7 +896,6 @@ function waStableSig(v){try{return JSON.stringify(v||[])}catch(_){return ""}}
 let waPreviewCursor=0;
 let waLastPreviewSweep=0;
 let waPreviewPrimed=false;
-let waLastHybridSummary=0;
 let waPollBackoffUntil=0;
 function waIsRateLimitError(e){
   const status=Number(e?.status||e?.greenStatus||0);
@@ -1017,21 +1054,15 @@ async function waPollOnce(){
       try{renderWhatsAppChats()}catch(_){}
     }
 
-    // getChats sirve para nombres/orden/base de chats, pero GREEN-API avisa
-    // que su orden puede actualizarse con menos frecuencia. El preview en vivo
-    // de arriba no depende de este refresco.
-    const summaryNow=Date.now();
-    if(summaryNow-waLastHybridSummary>60000){
-      waLastHybridSummary=summaryNow;
-      try{await waRefreshHybridSummary()}catch(e){}
-    }
-
     if(touched){
       try{
         const chatsR=await waApi("chats");
         if(chatsR?.degraded)return;
         const previous=new Map((waLiveState.chats||[]).map(c=>[c.id,c]));
-        const nextChats=Array.isArray(chatsR.chats)?chatsR.chats.map(c=>({...c,_lastMessage:previous.get(c.id)?._lastMessage||c.lastMessage||null})):[];
+        const nextChats=Array.isArray(chatsR.chats)?chatsR.chats.map(c=>({...c,
+          _lastMessage:previous.get(c.id)?._lastMessage||c.lastMessage||null,
+          _lastIncomingAt:previous.get(c.id)?._lastIncomingAt||0,
+          _lastOutgoingAt:previous.get(c.id)?._lastOutgoingAt||0})):[];
         if(waStableSig(nextChats)!==waStableSig(waLiveState.chats)){
           waLiveState.chats=nextChats;
           if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
@@ -1053,6 +1084,7 @@ function startWaPolling(){
   if(waLiveState.poll)clearInterval(waLiveState.poll);
   waPollOnce();
   waLiveState.poll=setInterval(waPollOnce,5000);
+  waScheduleSharedSync();
 }
 
 
@@ -1541,7 +1573,7 @@ loadWaHistory=async function(scrollBottom=true){
 
 function waResponseDurations(){
   const out=[];(waLiveState.chats||[]).forEach(c=>{
-    const m=waMeta(c.id),inc=Number(m.lastIncomingAt||0),outg=Number(m.lastOutgoingAt||0);
+    const inc=Number(c._lastIncomingAt||0),outg=Number(c._lastOutgoingAt||0);
     if(inc&&outg&&outg>=inc)out.push(outg-inc);
   });return out;
 }
@@ -1553,20 +1585,27 @@ function waFmtDuration(sec){
 }
 function waUpdateAdvancedMetrics(){
   const chats=waLiveState.chats||[],unread=chats.reduce((n,c)=>n+waUnreadCount(c.id),0),waiting=chats.filter(c=>waIsUnanswered(c.id)).length;
-  const handled=chats.filter(c=>Number(waMeta(c.id).lastOutgoingAt||0)>0).length,durs=waResponseDurations(),avg=durs.length?durs.reduce((a,b)=>a+b,0)/durs.length:NaN;
+  const handled=chats.filter(c=>Number(c._lastOutgoingAt||0)>0).length,durs=waResponseDurations(),avg=durs.length?durs.reduce((a,b)=>a+b,0)/durs.length:NaN;
+  if($("waStatHandled"))$("waStatHandled").title='Conversaciones con respuesta enviada en los últimos 7 días';
+  if($("waStatAvgResponse"))$("waStatAvgResponse").title='Estimación entre los últimos mensajes recibidos y enviados de los últimos 7 días';
   if($("waStatAvgResponse"))$("waStatAvgResponse").textContent=waFmtDuration(avg);
   if($("waStatHandled"))$("waStatHandled").textContent=handled;
   if($("waAUnread"))$("waAUnread").textContent=unread;if($("waAWaiting"))$("waAWaiting").textContent=waiting;if($("waAHandled"))$("waAHandled").textContent=handled;if($("waAAvg"))$("waAAvg").textContent=waFmtDuration(avg);
-  const waitingRows=chats.filter(c=>waIsUnanswered(c.id)).map(c=>({c,age:Math.max(0,Math.floor(Date.now()/1000)-Number(waMeta(c.id).lastIncomingAt||0))})).sort((a,b)=>b.age-a.age);
+  const waitingRows=chats.filter(c=>waIsUnanswered(c.id)).map(c=>({c,age:Math.max(0,Math.floor(Date.now()/1000)-waSharedIncomingAt(c.id))})).sort((a,b)=>b.age-a.age);
   if($("waAnalyticsWaitingList"))$("waAnalyticsWaitingList").innerHTML=waitingRows.map(({c,age})=>`<div class="waWaitingRow" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}');$('waAnalyticsModal').classList.add('hidden')"><div><b>${esc(c.name||waNormalizePhone(c.id)||"WhatsApp")}</b><small>${esc(waNormalizePhone(c.id))}</small></div><small>${esc(waFmtDuration(age))} esperando</small></div>`).join("")||'<div class="small">Ninguna conversación pendiente.</div>';
   waRenderSla();
 }
 function waRenderSla(){
-  const id=waLiveState.selected?.id;if(!id||!$("waSlaState"))return;const m=waMeta(id);
+  const id=waLiveState.selected?.id;if(!id||!$("waSlaState"))return;
   if(!waIsUnanswered(id)){$("waSlaState").textContent="Al día";$("waSlaState").className="waSlaState ok";return}
-  const age=Math.max(0,Math.floor(Date.now()/1000)-Number(m.lastIncomingAt||0));
+  const age=Math.max(0,Math.floor(Date.now()/1000)-waSharedIncomingAt(id));
   $("waSlaState").textContent=`Pendiente de respuesta · ${waFmtDuration(age)}`;
   $("waSlaState").className="waSlaState "+(age>=7200?"danger":age>=1800?"warn":"");
+}
+function waSharedIncomingAt(id){
+  const chat=waLiveState.chats.find(c=>c.id===id),last=chat?._lastMessage||chat?.lastMessage;
+  const live=waLiveState.livePreview[id];
+  return Math.max(Number(chat?._lastIncomingAt||0),last&&waMessageDirection(last)==='in'?Number(waMessageTimestamp(last)||0):0,live&&!live.outgoing?Number(live.timestamp||0):0);
 }
 $("waAnalyticsBtn").onclick=()=>{waUpdateAdvancedMetrics();$("waAnalyticsModal").classList.remove("hidden")};
 $("waAnalyticsClose").onclick=()=>$("waAnalyticsModal").classList.add("hidden");$("waAnalyticsModal").onclick=e=>{if(e.target===$("waAnalyticsModal"))$("waAnalyticsModal").classList.add("hidden")};

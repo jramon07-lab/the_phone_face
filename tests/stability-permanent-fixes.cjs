@@ -4,10 +4,11 @@ const fs=require('node:fs');
 
 const cards=fs.readFileSync('js/modules/whatsapp-green-core.js','utf8');
 assert.match(cards,/compact\?"openOpportunityFull":"openOpportunityCard"/,'La ficha del contacto debe abrir el editor de la oportunidad');
-assert.match(cards,/summaryNow-waLastHybridSummary>60000/,'El resumen de WhatsApp no debe consultarse cada 30 segundos');
+assert.match(cards,/WA_SHARED_SYNC_MS=15000/,'Los dos equipos deben actualizar sin depender de la cola de avisos');
+assert.match(cards,/if\(waSharedSyncBusy\)return/,'La sincronización no debe solapar peticiones');
 
 const green=fs.readFileSync('api/green.js','utf8');
-assert.match(green,/summary:\$\{minutes\}`,[\s\S]*freshMs: 60000, staleMs: 600000/);
+assert.match(green,/summary:\$\{minutes\}`,[\s\S]*freshMs: 15000, staleMs: 600000/);
 assert.match(green,/history:\$\{chatId\}:\$\{count\}`,[\s\S]*freshMs: 8000, staleMs: 300000/);
 assert.match(green,/providerStatus === 429[\s\S]*\["state", "summary", "chats", "history", "previews"\][\s\S]*rateLimited: true/);
 

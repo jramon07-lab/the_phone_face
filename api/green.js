@@ -337,7 +337,7 @@ export default async function handler(req, res) {
 
     if (req.method === "GET" && action === "summary") {
       const minutes = Math.max(60, Math.min(43200, Number(req.query.minutes || 10080)));
-      const result = await cachedGreenRead(`summary:${minutes}`, { freshMs: 60000, staleMs: 600000 }, async () => {
+      const result = await cachedGreenRead(`summary:${minutes}`, { freshMs: 15000, staleMs: 600000 }, async () => {
         const chatsData = await greenFetch("getChats");
         const chats = Array.isArray(chatsData) ? chatsData.filter(c => c && c.id) : [];
 
@@ -346,7 +346,13 @@ export default async function handler(req, res) {
           greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastOutgoingMessages")
         ]);
 
-        const latest = new Map();
+        const latest = new Map(), lastIncomingAt = new Map(), lastOutgoingAt = new Map();
+        for (const [rows, times] of [[incoming, lastIncomingAt], [outgoing, lastOutgoingAt]]) {
+          for (const msg of Array.isArray(rows) ? rows : []) {
+            const chatId = normalizeChatId(msg?.chatId), ts = Number(msg?.timestamp || 0);
+            if (chatId && ts > (times.get(chatId) || 0)) times.set(chatId, ts);
+          }
+        }
         for (const msg of [
           ...(Array.isArray(incoming)?incoming:[]),
           ...(Array.isArray(outgoing)?outgoing:[])
@@ -363,7 +369,9 @@ export default async function handler(req, res) {
         // dispara una ráfaga adicional de getChatHistory (límite: 1/segundo).
         return {
           ok:true,
-          chats:chats.map(c=>({...c,_lastMessage:latest.get(normalizeChatId(c.id))||c.lastMessage||null}))
+          chats:chats.map(c=>({...c,_lastMessage:latest.get(normalizeChatId(c.id))||c.lastMessage||null,
+            _lastIncomingAt:lastIncomingAt.get(normalizeChatId(c.id))||0,
+            _lastOutgoingAt:lastOutgoingAt.get(normalizeChatId(c.id))||0}))
         };
       });
       return sendCachedGreenRead(res, result);
