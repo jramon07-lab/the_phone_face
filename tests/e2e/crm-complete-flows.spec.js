@@ -7,6 +7,7 @@ async function login(page){
  const session=await page.evaluate(async()=>!!(await sb.auth.getSession()).data.session);
  if(!session){await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();}
  await expect(page.locator('#app')).toBeVisible({timeout:30000});
+ await page.waitForFunction(()=>typeof window.openContact==='function'&&window.TPFModules?.status?.().some(x=>x.name==='contact-open'&&x.state==='ready'),null,{timeout:30000});
 }
 async function mobile(page,route){
  await page.setViewportSize({width:390,height:844});await page.goto('/movil/#/'+route);

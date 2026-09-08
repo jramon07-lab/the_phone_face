@@ -12,7 +12,7 @@ function requestHeaders(userAgent){
 
 function getText(url){
   return new Promise((resolve,reject)=>{
-    https.get(url,{headers:requestHeaders('The-Phone-Face-Vercel-Fix')},r=>{
+    https.get(new URL(url),{headers:requestHeaders('The-Phone-Face-Vercel-Fix')},r=>{
       if(r.statusCode>=300 && r.statusCode<400 && r.headers.location){
         r.resume(); return getText(r.headers.location).then(resolve,reject);
       }

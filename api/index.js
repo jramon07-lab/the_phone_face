@@ -13,7 +13,7 @@ function rawIndexUrl(){
 
 function getText(url){
   return new Promise((resolve,reject)=>{
-    https.get(url,{headers:{'User-Agent':'The-Phone-Face-Vercel'}},r=>{
+    https.get(new URL(url),{headers:{'User-Agent':'The-Phone-Face-Vercel'}},r=>{
       if(r.statusCode>=300 && r.statusCode<400 && r.headers.location){
         r.resume(); return getText(r.headers.location).then(resolve,reject);
       }

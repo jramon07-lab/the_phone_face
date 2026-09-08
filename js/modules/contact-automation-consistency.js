@@ -45,7 +45,18 @@ async function refreshVisibleContact(){
 function wrapOpenContact(){
   const original=window.openContact;
   if(typeof original!=='function'||original.__tpfFreshOpportunities)return;
-  const wrapped=async function(){await refreshSales();return original.apply(this,arguments)};
+  const wrapped=function(id){
+    // Abrir la ficha en cuanto el contacto esté disponible. La actualización de
+    // oportunidades no debe bloquear la interfaz si la red va lenta.
+    const refresh=refreshSales();
+    const result=original.apply(this,arguments);
+    Promise.resolve(refresh).then(async()=>{
+      const current=activeContact();
+      if(!current||String(current.id)!==String(id)||typeof renderContactProfile!=='function')return;
+      try{await renderContactProfile()}catch(error){console.warn('Actualizar oportunidades de la ficha',error)}
+    });
+    return result;
+  };
   wrapped.__tpfFreshOpportunities=true;
   wrapped.__tpfOriginal=original;
   window.openContact=wrapped;
