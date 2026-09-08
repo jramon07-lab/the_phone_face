@@ -30,6 +30,7 @@
     queued=false;const modal=document.getElementById('contactModal');if(!modal||modal.classList.contains('hidden'))return;ensureTabState();
     const timeline=document.getElementById('cpTimeline');if(!timeline)return;const rows=[...timeline.querySelectorAll('.cpEvent')];let shown=0;
     rows.forEach(row=>{const visible=current==='todos'||classify(row)===current;row.style.display=visible?'':'none';if(visible)shown++;});
+    timeline.querySelectorAll('.tpfHistoryDay').forEach(day=>{let next=day.nextElementSibling,visible=false;while(next&&!next.classList.contains('tpfHistoryDay')){if(next.classList.contains('cpEvent')&&next.style.display!=='none')visible=true;next=next.nextElementSibling}day.style.display=visible?'':'none'});
     let empty=document.getElementById('tpfActivityFilterEmpty');if(!empty){empty=document.createElement('div');empty.id='tpfActivityFilterEmpty';empty.className='cpEmpty';timeline.appendChild(empty);}
     empty.textContent='No hay '+labels[current].toLowerCase()+' en el historial.';empty.style.display=shown?'none':'';
   }

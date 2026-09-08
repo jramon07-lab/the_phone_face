@@ -107,6 +107,7 @@ function polishTimeline(){
   const existing=root.querySelector('.tpfTechnicalActivity');if(existing){[...existing.querySelectorAll('.cpEvent')].forEach(x=>root.appendChild(x));existing.remove()}
   const events=[...root.querySelectorAll(':scope > .cpEvent')],technical=[];let last='';
   events.forEach(event=>{
+   if(event.style.display==='none')return;
    const title=event.querySelector('.cpEventBody b')?.textContent||'';
    if(/^Tarea(?: completada)?\s*[·:-]\s*TPF prueba editar tarea/i.test(title)){technical.push(event);return}
    const label=dayLabel(event.querySelector('.cpEventBody small')?.textContent);

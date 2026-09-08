@@ -46,6 +46,7 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel{padding:14px;min-height:470px;box-sizing:border-box}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight [data-cp-ref-pane]{display:none!important}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="documentos"] #cpDocumentsPending,
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="notas"] [data-cp-ref-pane="notas"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="oportunidades"] [data-cp-ref-pane="oportunidades"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="tareas"] [data-cp-ref-pane="tareas"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="historial"] [data-cp-ref-pane="historial"],

@@ -26,16 +26,18 @@
  }
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
-  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['documentos','Documentos'],['historial','Historial']
+  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['notas','Notas'],['documentos','Documentos'],['historial','Historial']
  ];
  panels.forEach(([key,label])=>{
   const b=document.createElement('button');b.type='button';b.id='cpRefTab-'+key;b.dataset.cpRefTab=key;b.textContent=label;b.setAttribute('role','tab');b.setAttribute('aria-controls','cpRefPanel');tabs.appendChild(b);
  });
  const panel=document.createElement('div');panel.id='cpRefPanel';panel.setAttribute('role','tabpanel');panel.tabIndex=0;
+ const notes=document.createElement('section');notes.id='cpNotesPanel';notes.className='cpSideSection';right.appendChild(notes);
  const sections=[...right.children];sections.forEach(section=>{
   section.dataset.cpRefPane=section.contains($('cpOpportunities'))?'oportunidades':section.contains($('cpTasks'))?'tareas':section.contains($('cpWhatsappPrograms'))?'programados':section.id==='cpDocumentsPending'?'documentos':'informacion';
  });
  center.dataset.cpRefPane='historial';
+ notes.dataset.cpRefPane='notas';
  const docs=$('cpDocumentsPending');
  if(docs){
   docs.innerHTML='<div class="cpRefDrive"><strong>Google Drive</strong><span class="cpPendingBadge">Pendiente de conectar</span></div><div class="cpRefDocActions"><button type="button" disabled>Subir archivos</button><button type="button" disabled>Escanear / Crear PDF</button><button type="button" disabled>Abrir en Drive</button></div><div class="cpRefDocumentEmpty"><span class="cpRefDocumentIcon" aria-hidden="true">▤</span><h3 id="cpDocumentsTitle">Documentos del cliente</h3><p>La conexión con Google Drive todavía está pendiente.</p><p>Podrás vincular una carpeta existente y reunir aquí los PDF y fotografías de este cliente.</p><span>Subida de archivos y escaneo de DNI: pendientes</span></div>';

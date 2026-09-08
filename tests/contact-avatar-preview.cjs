@@ -8,4 +8,4 @@ assert(source.includes("viewer.className='tpfAvatarModal tpfContactAvatarModal'"
 assert(source.includes("e.key==='Enter'||e.key===' '"),'La foto debe poder abrirse también con teclado');
 assert(source.includes("e.key==='Escape'"),'El visor debe cerrarse con Escape');
 assert(css.includes('.tpfContactAvatarModal'),'El visor debe tener presentación de pantalla completa');
-assert(index.includes('contact-desktop-layout.js?v=20260907-list-avatar-1'),'El navegador debe recibir la versión nueva del visor');
+assert(index.includes('contact-desktop-layout.js?v=20260908-notes-1'),'El navegador debe recibir la versión nueva del visor');
