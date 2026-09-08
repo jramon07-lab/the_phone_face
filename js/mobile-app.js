@@ -19,7 +19,7 @@
     agenda:{date:'',rows:[],loading:false,loaded:false,error:'',requestId:0},
     draft:null,createdContactId:null,createdOpportunityId:null,creationError:null,creating:false,
     library:{templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:60},
-    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
+    whatsapp:{chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},archiveStates:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''}
   };
   let profileLabels={contactId:'',loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
   const deletingProfileOpportunities=new Set();
@@ -95,7 +95,7 @@
   const CONTACT_FILTERS=['all','opportunities','tasks','untracked','incomplete'];
   const CONTACT_PAGE_SIZE=60;
   const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
-  const MOBILE_WA_FILTERS=['all','unread','contacts','groups'];
+  const MOBILE_WA_FILTERS=['all','unread','contacts','groups','archived'];
   const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
   const taskIsPending=task=>taskStatus(task)==='pending';
@@ -235,7 +235,7 @@
     taskDetail={id:'',row:null,loading:false,error:''};
     profileLabels={contactId:'',loaded:false,loading:false,saving:false,error:'',labels:[],initial:[],selected:new Set()};
     stopMobileWaRefresh();stopGuidedCamera();mobileTemplateRequestId+=1;mobileLabelRequestId+=1;if(state.scanUrl)URL.revokeObjectURL(state.scanUrl);state.scanFile=null;state.scanUrl='';state.draft=null;
-    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);window.TPFMobileSystem?.stop();await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
+    clearTimeout(contactSearchTimer);clearTimeout(opportunitySearchTimer);closeMobileWaSheet(false);window.TPFMobileSystem?.stop();await client.auth.signOut();state.user=null;state.perms=null;state.contacts=[];state.tasks=[];state.board={stages:[],opportunities:[],fields:[]};state.agenda={date:'',rows:[],loading:false,loaded:false,error:'',requestId:0};state.alertFilter='all';state.alertLimit=ALERT_PAGE_SIZE;state.contactQuery='';state.contactFilter='all';state.contactLimit=CONTACT_PAGE_SIZE;state.opportunityQuery='';state.opportunityFilter='all';state.opportunityStage='';state.ocrDebugText='';state.cameraError='';state.cameraPaused=false;state.library={templates:[],templatesLoaded:false,templatesLoading:false,templatesError:'',templateQuery:'',templateCategory:'',labels:[],labelCounts:{},labelCategories:{},labelsLoaded:false,labelsLoading:false,labelsError:'',labelQuery:'',labelCategory:'',contactQuery:'',contactLimit:CONTACT_PAGE_SIZE};state.whatsapp={chats:[],messages:[],selectedId:'',query:'',filter:'all',limit:60,loaded:false,loadingChats:false,loadingHistory:false,historyLoadingId:'',historyRequestId:0,sending:false,sendingChatId:'',pendingFileChatId:'',readAt:{},archiveStates:{},listScroll:0,lastSync:0,providerState:'',error:'',historyError:'',templates:[],templateQuery:'',templateCategory:'',templatesLoading:false,templatesError:'',labels:[],labelIds:[],labelQuery:'',labelCategory:'',labelsLoading:false,labelsSaving:false,labelsError:''};location.hash='';showLogin();
   }
 
   async function fetchAllMobileContacts(){
@@ -1480,13 +1480,17 @@
   function mobileWaSortedChats(chats=state.whatsapp.chats){
     return [...(chats||[])].filter(chat=>chat?.id).sort((a,b)=>mobileWaChatTimestamp(b)-mobileWaChatTimestamp(a)||mobileWaChatName(a).localeCompare(mobileWaChatName(b),'es'));
   }
+  const mobileWaArchiveState=chatId=>state.whatsapp.archiveStates?.[String(chatId)]||{archived:false,archivedAt:0};
+  const mobileWaIsArchived=chatId=>!!mobileWaArchiveState(chatId).archived;
   function mobileWaFilterCounts(chats=state.whatsapp.chats){
-    const rows=chats||[];return {all:rows.length,unread:rows.filter(chat=>mobileWaUnread(chat)>0).length,contacts:rows.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:rows.filter(chat=>String(chat.id||'').includes('@g.us')).length};
+    const rows=chats||[],active=rows.filter(chat=>!mobileWaIsArchived(chat.id)),archived=rows.filter(chat=>mobileWaIsArchived(chat.id));return {all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
   }
   function mobileWaFilteredChats(){
     const query=clean(state.whatsapp.query).toLowerCase(),queryDigits=digits(query),filter=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
     return mobileWaSortedChats().filter(chat=>{
-      const group=String(chat.id||'').includes('@g.us');
+      const group=String(chat.id||'').includes('@g.us'),archived=mobileWaIsArchived(chat.id);
+      if(filter==='archived'&&!archived)return false;
+      if(filter!=='archived'&&archived)return false;
       if(filter==='unread'&&mobileWaUnread(chat)<1)return false;
       if(filter==='contacts'&&group)return false;if(filter==='groups'&&!group)return false;
       const haystack=`${mobileWaChatName(chat)} ${mobileWaNormalizePhone(chat.id)}`.toLowerCase();
@@ -1518,7 +1522,7 @@
   }
   function renderMobileWaFilters(){
     const counts=mobileWaFilterCounts(),active=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
-    const options=[['all','Todos'],['unread','No leídos'],['contacts','Contactos'],['groups','Grupos']];
+    const options=[['all','Todos'],['unread','No leídos'],['contacts','Contactos'],['groups','Grupos'],['archived','Archivados']];
     return options.map(([key,label])=>`<button class="m-wa-filter ${active===key?'active':''}" data-action="wa-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
   }
   function renderMobileWaChatRow(chat){
@@ -1559,16 +1563,31 @@
     const status=byId('mobileWaStatus'),filters=byId('mobileWaFilters'),list=byId('mobileWaList'),button=document.querySelector('[data-action="wa-refresh"]');
     if(status)status.innerHTML=renderMobileWaStatus();if(filters)filters.innerHTML=renderMobileWaFilters();if(list)list.innerHTML=renderMobileWaListBody();if(button)button.disabled=state.whatsapp.loadingChats;
   }
+  const mobileWaArchiveSeconds=value=>{if(!value)return 0;const numeric=Number(value);if(Number.isFinite(numeric)&&numeric>0)return numeric>1e12?numeric/1000:numeric;const parsed=Date.parse(value);return Number.isFinite(parsed)?parsed/1000:0;};
+  async function loadMobileWaArchiveStates(){
+    try{const {data,error}=await client.from('crm_whatsapp_chat_state').select('chat_id,archived,archived_at,reopened_at,updated_at');if(error)throw error;const next={};for(const row of data||[])next[String(row.chat_id)]={archived:!!row.archived,archivedAt:mobileWaArchiveSeconds(row.archived_at),updatedAt:mobileWaArchiveSeconds(row.updated_at)};state.whatsapp.archiveStates=next;return next;}catch(_){return state.whatsapp.archiveStates||{};}
+  }
+  async function saveMobileWaArchiveState(chatId,archived,archivedAt=0){
+    if(!chatId)return;const now=new Date().toISOString(),payload={chat_id:String(chatId),archived:!!archived,updated_at:now};if(archived)payload.archived_at=new Date((archivedAt||Date.now()/1000)*1000).toISOString();else payload.reopened_at=now;const {error}=await client.from('crm_whatsapp_chat_state').upsert(payload,{onConflict:'chat_id'});if(error)throw error;
+  }
+  function reopenMobileWaFromMessages(chatId,messages){
+    const current=mobileWaArchiveState(chatId);if(!current.archived)return false;const incoming=(messages||[]).filter(message=>mobileWaMessageDirection(message)==='in').some(message=>mobileWaArchiveSeconds(mobileWaMessageTimestamp(message))>Number(current.archivedAt||0));if(!incoming)return false;state.whatsapp.archiveStates[String(chatId)]={...current,archived:false,updatedAt:Date.now()/1000};saveMobileWaArchiveState(chatId,false).catch(()=>{});return true;
+  }
+  async function toggleMobileWaArchive(){
+    const chatId=String(state.whatsapp.selectedId||'');if(!chatId)return;const previous=mobileWaArchiveState(chatId),archived=!previous.archived,archivedAt=archived?Date.now()/1000:Number(previous.archivedAt||0);state.whatsapp.archiveStates[chatId]={...previous,archived,archivedAt,updatedAt:Date.now()/1000};closeMobileWaSheet(false);if(archived)go('whatsapp',true);else render();
+    try{await saveMobileWaArchiveState(chatId,archived,archivedAt);toast(archived?'Conversación archivada. Volverá si el cliente escribe.':'Conversación devuelta a activas.','success');}catch(error){state.whatsapp.archiveStates[chatId]=previous;render();toast(error?.message||'No se pudo cambiar el archivo.','error');}
+  }
   async function loadMobileWaChats({silent=false,light=false}={}){
     if(!has('can_use_whatsapp')||state.whatsapp.loadingChats)return;
     state.whatsapp.loadingChats=true;state.whatsapp.error='';if(!silent)updateMobileWaListDom();
     try{
       const action=light&&state.whatsapp.loaded?'chats':'summary';
-      const [result,status]=await Promise.all([mobileWaApi(action),mobileWaApi('state').catch(()=>null)]),rows=Array.isArray(result?.chats)?result.chats.filter(chat=>chat?.id):[];
+      const [result,status]=await Promise.all([mobileWaApi(action),mobileWaApi('state').catch(()=>null),loadMobileWaArchiveStates()]),rows=Array.isArray(result?.chats)?result.chats.filter(chat=>chat?.id):[];
       if(action==='chats'){
         const previous=new Map(state.whatsapp.chats.map(chat=>[String(chat.id),chat]));
         state.whatsapp.chats=rows.map(chat=>{const old=previous.get(String(chat.id))||{};return {...old,...chat,_lastMessage:chat?._lastMessage||chat?.lastMessage||old?._lastMessage||old?.lastMessage||null};});
       }else state.whatsapp.chats=rows;
+      for(const chat of state.whatsapp.chats){const last=chat?._lastMessage||chat?.lastMessage;if(last)reopenMobileWaFromMessages(chat.id,[last]);}
       state.whatsapp.loaded=true;state.whatsapp.lastSync=Date.now();state.whatsapp.providerState=status?.state||status?.data?.stateInstance||'';
     }catch(error){state.whatsapp.error=error?.message||'No se pudieron cargar las conversaciones.';}
     finally{state.whatsapp.loadingChats=false;if(route().parts[0]==='whatsapp')updateMobileWaListDom();scheduleMobileWaRefresh();}
@@ -1633,7 +1652,7 @@
   }
   function renderMobileWaActions(){
     const chatId=state.whatsapp.selectedId,contact=mobileWaFindContact(chatId),linked=!!contact,linkHint=linked?contact.fullName:'Primero crea o vincula el contacto';
-    return `<div class="m-wa-sheet-options">${mobileWaActionOption('wa-choose-file','⌁','Foto o archivo','Envía una imagen, vídeo, audio o documento')}${mobileWaActionOption('wa-show-templates','▤','Usar plantilla',has('can_manage_templates')?'Prepara un texto guardado':'No tienes permiso para usar plantillas',has('can_manage_templates'))}${mobileWaActionOption('wa-create-task','▣','Crear tarea',linked?(has('can_manage_agenda')?`Vinculada a ${linkHint}`:'No tienes permiso para crear tareas'):linkHint,linked&&has('can_manage_agenda'))}${mobileWaActionOption('wa-create-opportunity','◇','Crear oportunidad',linked?(has('can_view_sales')&&has('can_edit_sales')?`Vinculada a ${linkHint}`:'No tienes permiso para crear oportunidades'):linkHint,linked&&has('can_view_sales')&&has('can_edit_sales'))}${mobileWaActionOption('wa-show-labels','◆','Añadir etiqueta',linked?(has('can_manage_labels')?`Gestiona las etiquetas de ${linkHint}`:'No tienes permiso para gestionar etiquetas'):linkHint,linked&&has('can_manage_labels'))}</div>`;
+    const archived=mobileWaIsArchived(chatId);return `<div class="m-wa-sheet-options">${mobileWaActionOption('wa-toggle-archive',archived?'↥':'✓',archived?'Recuperar conversación':'Archivar conversación',archived?'Devuélvela a conversaciones activas':'Se aparta y vuelve sola si el cliente escribe')}${mobileWaActionOption('wa-choose-file','⌁','Foto o archivo','Envía una imagen, vídeo, audio o documento')}${mobileWaActionOption('wa-show-templates','▤','Usar plantilla',has('can_manage_templates')?'Prepara un texto guardado':'No tienes permiso para usar plantillas',has('can_manage_templates'))}${mobileWaActionOption('wa-create-task','▣','Crear tarea',linked?(has('can_manage_agenda')?`Vinculada a ${linkHint}`:'No tienes permiso para crear tareas'):linkHint,linked&&has('can_manage_agenda'))}${mobileWaActionOption('wa-create-opportunity','◇','Crear oportunidad',linked?(has('can_view_sales')&&has('can_edit_sales')?`Vinculada a ${linkHint}`:'No tienes permiso para crear oportunidades'):linkHint,linked&&has('can_view_sales')&&has('can_edit_sales'))}${mobileWaActionOption('wa-show-labels','◆','Añadir etiqueta',linked?(has('can_manage_labels')?`Gestiona las etiquetas de ${linkHint}`:'No tienes permiso para gestionar etiquetas'):linkHint,linked&&has('can_manage_labels'))}</div>`;
   }
   function openMobileWaActions(trigger){
     if(!state.whatsapp.selectedId||state.whatsapp.sending)return;mobileWaSheetTrigger=trigger||null;if(trigger)trigger.setAttribute('aria-expanded','true');setMobileWaSheet('actions','Acciones del chat',renderMobileWaActions());
@@ -1719,6 +1738,7 @@
       const result=await mobileWaApi('history',{chatId,count:100}),providerMessages=Array.isArray(result?.messages)?result.messages:[],providerIds=new Set(providerMessages.map(message=>String(message?.idMessage||'')).filter(Boolean));
       if(Number(state.whatsapp.historyRequestId)!==requestId||String(state.whatsapp.selectedId)!==String(chatId))return;
       const recentLocal=state.whatsapp.messages.filter(message=>message?.__mobilePending&&!providerIds.has(String(message?.idMessage||''))&&Date.now()-Number(mobileWaMessageTimestamp(message)||0)*1000<120000),messages=[...providerMessages,...recentLocal];
+      reopenMobileWaFromMessages(chatId,providerMessages);
       const changed=mobileWaHistorySignature(messages)!==mobileWaHistorySignature(state.whatsapp.messages);state.whatsapp.messages=messages;if(changed||!silent)updateMobileWaMessagesDom({scrollBottom:scrollBottom||!silent});
     }catch(error){if(Number(state.whatsapp.historyRequestId)===requestId&&String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.historyError=error?.message||'No se pudo cargar el historial.';updateMobileWaMessagesDom();}}
     finally{if(Number(state.whatsapp.historyRequestId)!==requestId)return;state.whatsapp.loadingHistory=false;state.whatsapp.historyLoadingId='';const refresh=document.querySelector('[data-action="wa-refresh-chat"]');if(refresh)refresh.disabled=false;scheduleMobileWaRefresh();}
@@ -1905,6 +1925,7 @@
     if(action==='wa-refresh-chat')loadMobileWaHistory(state.whatsapp.selectedId,{scrollBottom:false});
     if(action==='wa-send')sendMobileWaMessage();
     if(action==='wa-attach')openMobileWaActions(target);
+    if(action==='wa-toggle-archive')toggleMobileWaArchive();
     if(action==='wa-close-sheet')closeMobileWaSheet();
     if(action==='wa-choose-file'){const chatId=mobileWaSheetChatId();if(!chatId)return;state.whatsapp.pendingFileChatId=chatId;closeMobileWaSheet(false);byId('mobileWhatsAppFileInput').click();}
     if(action==='wa-show-templates')openMobileWaTemplates();

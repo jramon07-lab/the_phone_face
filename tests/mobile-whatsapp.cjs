@@ -9,11 +9,11 @@ const testSource=source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`
 window.__mobileWhatsAppTest={
   state,MOBILE_WA_FILTERS,MOBILE_WA_PAGE_SIZE,
   mobileWaNormalizePhone,mobileWaUnread,mobileWaMessageText,mobileWaMessageDirection,
-  mobileWaPreview,mobileWaFilterCounts,mobileWaFilteredChats,mobileWaFindContact,
+  mobileWaPreview,mobileWaFilterCounts,mobileWaFilteredChats,mobileWaFindContact,mobileWaIsArchived,
   renderHome,renderMobileWhatsApp,renderMobileWaFilters,renderMobileWaListBody,
   renderMobileWaMessages,renderMobileWhatsAppChat,mobileWaApi,
   updateMobileWaMessagesDom,loadMobileWaHistory,sendMobileWaMessage,sendMobileWaFile,
-  renderMobileWaActions,renderMobileWaTemplatesSheet,resolveMobileWaTemplate,renderMobileWaLabelsSheet
+  renderMobileWaActions,renderMobileWaTemplatesSheet,resolveMobileWaTemplate,renderMobileWaLabelsSheet,reopenMobileWaFromMessages
 };
 })();`);
 assert.notEqual(testSource,source,'No se pudo preparar mobile-app.js para la prueba');
@@ -54,7 +54,7 @@ function response(status,payload){return {ok:status>=200&&status<300,status,asyn
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 
 async function run(){
-  assert.deepEqual(Array.from(api.MOBILE_WA_FILTERS),['all','unread','contacts','groups']);
+  assert.deepEqual(Array.from(api.MOBILE_WA_FILTERS),['all','unread','contacts','groups','archived']);
   assert.equal(api.MOBILE_WA_PAGE_SIZE,60);
   assert.equal(api.mobileWaNormalizePhone('+34 695 661 409@c.us'),'34695661409');
   assert.equal(api.mobileWaNormalizePhone('123456789012345@lid'),'');
@@ -65,7 +65,14 @@ async function run(){
     {id:'34600111222@c.us',name:'María López',unreadMessagesCount:1,_lastMessage:{timestamp:100,message:'Respuesta anterior'}}
   ];
   api.state.whatsapp.chats=chats;
-  assert.deepEqual(plain(api.mobileWaFilterCounts()),{all:3,unread:2,contacts:2,groups:1});
+  api.state.whatsapp.archiveStates={};
+  assert.deepEqual(plain(api.mobileWaFilterCounts()),{all:3,unread:2,contacts:2,groups:1,archived:0});
+
+  api.state.whatsapp.archiveStates['34600111222@c.us']={archived:true,archivedAt:50};
+  assert.deepEqual(plain(api.mobileWaFilterCounts()),{all:2,unread:1,contacts:1,groups:1,archived:1});
+  api.state.whatsapp.filter='archived';api.state.whatsapp.query='';
+  assert.deepEqual(Array.from(api.mobileWaFilteredChats(),chat=>chat.id),['34600111222@c.us']);
+  api.state.whatsapp.archiveStates={};
 
   api.state.whatsapp.filter='groups';api.state.whatsapp.query='';
   assert.deepEqual(Array.from(api.mobileWaFilteredChats(),chat=>chat.id),['1203630@g.us']);
@@ -100,6 +107,7 @@ async function run(){
   api.state.perms={is_admin:false,can_use_whatsapp:true,can_view_database:true};
   assert.match(api.renderMobileWhatsApp(),/id="mobileWaSearch"/);
   assert.match(api.renderMobileWaFilters(),/No leídos/);
+  assert.match(api.renderMobileWaFilters(),/Archivados/);
 
   const home=api.renderHome();
   assert.match(home,/data-action="route" data-route="whatsapp"[^>]*><span>◉<\/span><small>WhatsApp<\/small>/);
@@ -114,7 +122,12 @@ async function run(){
   api.state.whatsapp.selectedId='34695661409@c.us';
   api.state.perms={is_admin:true};
   const actions=api.renderMobileWaActions();
-  for(const label of ['Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
+  for(const label of ['Archivar conversación','Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
+  api.state.whatsapp.archiveStates['34695661409@c.us']={archived:true,archivedAt:100};
+  assert.match(api.renderMobileWaActions(),/Recuperar conversación/);
+  assert.equal(api.reopenMobileWaFromMessages('34695661409@c.us',[{type:'incoming',timestamp:99,message:'Antiguo'}]),false);
+  assert.equal(api.mobileWaIsArchived('34695661409@c.us'),true);
+  api.state.whatsapp.archiveStates={};
   assert.doesNotMatch(actions,/data-action="wa-create-task"[^>]* disabled/);
   assert.equal(api.resolveMobileWaTemplate('Hola {nombre}. {nombre_completo} · {dni} · {telefono}','34695661409@c.us'),'Hola María. María López · 12345678Z · 695661409');
   api.state.whatsapp.templates=[{name:'Saludo',category:'Atención',text:'Hola {nombre}'}];api.state.whatsapp.templatesLoading=false;api.state.whatsapp.templatesError='';
