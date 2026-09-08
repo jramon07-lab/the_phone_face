@@ -1,5 +1,22 @@
 # The Phone Face CRM — punto de continuidad
 
+## Entrega comprobada — 2026-09-08, 21:16 UTC
+
+**Última versión funcional estable: `dfa73486f5506d79fe701db87a02679cdf1860cc`. Publicada y verificada.**
+
+- El enlace habitual sigue siendo https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app/ .
+- Alias estable comprobado: `dpl_CETsB7jttidLH4eEz936nFDiwvsT`, READY, commit `dfa7348`, rama `tmp/contact-profile-recover-20260901`, sin error de alias.
+- Antes de publicar: **92/92 locales y 46 Chrome superadas**, Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34278428861 .
+- Después de publicar: **144/144 JavaScript válidos y 92/92 regresiones** en la rama estable, Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34279107877 .
+- Navegador contra el propio despliegue estable: **46 superadas, 3 omitidas, 0 fallidas**, Actions https://github.com/jramon07-lab/the_phone_face/actions/runs/34279134442 . El log confirma el destino `the-phone-face-app-whatsapp-fotos-y-multimedia-pc7wf7ipj.vercel.app` y el commit `dfa7348`.
+- Dos sesiones autenticadas devolvieron el mismo resumen de **2.266 conversaciones**, historial y contadores. Salud GREEN: authorized, providerHealthy true, degraded false.
+- El módulo de archivado y la aplicación móvil servidos por el alias estable coinciden byte a byte con el código verificado. Las entradas PC y `/movil/` cargan sus versiones actualizadas.
+- Pruebas SQL sintéticas de archivado con ROLLBACK: fechas y atribución correctas; comprobado después que quedan **0 registros sintéticos** de ese ensayo.
+- Para cargar la actualización en pestañas que ya estuvieran abiertas: guardar el trabajo pendiente y recargar una vez en ambos ordenadores.
+- Este registro final se guarda en **desarrollo** como cambio exclusivamente documental. No sustituye la versión funcional estable `dfa7348` ni publica otro cambio de aplicación.
+
+Los fallos reproducidos de archivado y recuperación de lecturas están corregidos y comprobados. No convertir las 3 pruebas omitidas ni los límites descritos abajo en funciones certificadas.
+
 ## Reglas de trabajo
 
 - Repositorio único: `jramon07-lab/the_phone_face`.
@@ -32,9 +49,7 @@ PC y móvil leen el archivo compartido completo por páginas. Si una página fal
 - Prueba SQL con rol autenticado y permiso WhatsApp: registro sintético `__crm_validation_a114d734ae59__`, archivado/recuperado dentro de una transacción y ROLLBACK. No se migró el esquema.
 - Documentación de cobertura: `docs/crm-functional-validation.md`.
 
-## Límites que siguen siendo explícitos
-
-### Incidencia encontrada en la validación de desarrollo
+## Incidencia encontrada en la validación de desarrollo
 
 El commit de archivado `f0a0eb867c14dabfce37946c92f1ff282924a45a` pasó la prueba de dos PCs con archivo, fallo de guardado y deshacer lento en Actions `34277615556`, pero **no fue publicado en estable**: la prueba de lectura real falló por `providerStatus:429`. Un servidor devolvía 2.266 conversaciones y otro una respuesta degradada vacía. No se reintentó la ejecución para ocultar el fallo.
 
@@ -43,6 +58,8 @@ Se reprodujo con dos servidores independientes en `tests/green-multiserver-recov
 `api/green.js` ahora recupera límites breves únicamente en métodos de lectura explícitos: espera al menos 1,25 segundos con variación entre procesos y hasta dos reintentos, respetando `Retry-After`. Esperas solicitadas mayores de 5 segundos se delegan al mecanismo de espera existente. Los envíos, ajustes y consumo de notificaciones no se reintentan por esta vía. No se cambia esquema, infraestructura ni datos de clientes.
 
 Verificación local con ambas correcciones: **92/92**. El resultado Chrome válido debe corresponder al commit que incorpora esta recuperación, no al fallido `f0a0eb8`. Referencia del límite del proveedor: https://green-api.com/en/docs/api/ratelimiter/ .
+
+## Límites que siguen siendo explícitos
 
 - Microsoft 365 pausado (2 pruebas omitidas) y diagnóstico administrativo omitido para la cuenta demo.
 - Los ensayos Chrome usan dos contextos independientes, no los dos ordenadores físicos de la tienda.
