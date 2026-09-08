@@ -4,6 +4,8 @@ const source=fs.readFileSync('js/modules/whatsapp-programs-pro.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 
 assert.match(html,/id="waNewProgram"/,'debe existir un acceso compacto para crear mensajes');
+assert.match(html,/id="waProgramsBack"[\s\S]*← Volver/,'debe permitir volver a las conversaciones');
+assert.match(source,/openAppView\('whatsapplive'\)/,'volver debe abrir WhatsApp');
 assert.match(html,/wapHeaderActions[\s\S]*ccLaunch[\s\S]*Control de envíos/,'el control de envíos debe estar visible en la cabecera');
 assert.match(html,/id="wapKpiDue"/,'debe mostrar mensajes listos para enviar');
 assert.match(html,/data-wap-filter="paused"/,'debe filtrar los envíos pausados');

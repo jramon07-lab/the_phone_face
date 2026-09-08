@@ -138,6 +138,7 @@ function toggleComposer(show){
 function bind(){
  if(state.bound)return;state.bound=true;addStyles();
  const liveButton=document.querySelector('#view-whatsapplive .ccLaunch');liveButton?.remove();
+ $('waProgramsBack').onclick=()=>{if(typeof window.openAppView==='function')window.openAppView('whatsapplive');else document.querySelector('.nav[data-view="whatsapplive"]')?.click()};
  $('waNewProgram').onclick=()=>toggleComposer(true);$('waCloseComposer').onclick=()=>toggleComposer(false);
  $('wapPrev').onclick=()=>{state.page=Math.max(1,state.page-1);decorate()};
  $('wapNext').onclick=()=>{state.page++;decorate()};
