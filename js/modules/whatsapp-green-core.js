@@ -402,7 +402,8 @@ async function waSyncSharedView(){
   if(document.hidden||!view||view.classList.contains('hidden')||app?.classList.contains('hidden')||waLiveState.loading){waScheduleSharedSync();return}
   waSharedSyncBusy=true;
   try{
-    await Promise.all([waRefreshHybridSummary(),waLiveState.selected?window.loadWaHistory(false):Promise.resolve()]);
+    const results=await Promise.all([waRefreshHybridSummary(),waLiveState.selected?window.loadWaHistory(false):Promise.resolve()]);
+    if(results.some(ok=>ok===false))waSharedSyncStatus(false);
   }catch(e){waSharedSyncStatus(false)}
   finally{waSharedSyncBusy=false;waScheduleSharedSync()}
 }

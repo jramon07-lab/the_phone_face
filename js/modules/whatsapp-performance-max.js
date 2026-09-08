@@ -243,19 +243,28 @@ function install(){
             const button=box.querySelector?.('button');if(button)button.onclick=()=>window.loadWaHistory(true);
           }
           if(retry<3)setTimeout(()=>{if(current())window.loadWaHistory(scrollBottom,retry+1)},10000);
-          return;
+          return false;
         }
         const nextHistory=Array.isArray(r.messages)?r.messages:[];
-        if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)||!nextHistory.length){
+        const box=document.getElementById('waMessages');
+        if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)||!nextHistory.length||box?.dataset.historyLoadFailed==='1'){
           waLiveState.history=nextHistory;
           renderWaMessages(scrollBottom);
         }else if(scrollBottom){
           const box=document.getElementById('waMessages');if(box)box.scrollTop=box.scrollHeight;
         }
+        if(box)delete box.dataset.historyLoadFailed;
+        return true;
       }catch(e){
         if(!current())return;
-        const box=document.getElementById('waMessages');if(box)box.innerHTML=`<div class="waLiveEmpty">${esc(e.message||'No se pudo cargar la conversación')}</div>`;
-        if(box){const button=document.createElement('button');button.type='button';button.textContent='Reintentar carga';button.onclick=()=>window.loadWaHistory(true);box.appendChild(button)}
+        const box=document.getElementById('waMessages');
+        if(box){
+          box.dataset.historyLoadFailed='1';
+          if(!waLiveState.history.length)box.innerHTML=`<div class="waLiveEmpty">${esc(e.message||'No se pudo cargar la conversación')}</div>`;
+          box.querySelector('.waHistoryRetry')?.remove();
+          const button=document.createElement('button');button.type='button';button.className='waHistoryRetry';button.textContent='Actualización pendiente · Reintentar carga';button.onclick=()=>window.loadWaHistory(false);box.prepend(button);
+        }
+        return false;
       }
     };
 

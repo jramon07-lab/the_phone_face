@@ -8,6 +8,12 @@ on:
     # 05:00 en España peninsular durante horario de verano.
     - cron: '0 3 * * *'
 
+# Las validaciones usan la misma cuenta: una sesión de cierre de otra
+# ejecución no puede invalidar la prueba de dos dispositivos en curso.
+concurrency:
+  group: crm-browser-shared-test-account
+  cancel-in-progress: false
+
 jobs:
   e2e:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event.deployment_status.state == 'success'
@@ -40,7 +46,9 @@ jobs:
         # All authenticated tests share the demo account. A parallel logout can
         # revoke another test's session, so validate flows one at a time.
         # Safari is optional compatibility coverage, outside the Chrome gate.
-        run: npx playwright test tests/e2e/crm-*.spec.js --workers=1 --retries=0
+        run: |
+          npx playwright test tests/e2e/crm-whatsapp-multidevice.spec.js --workers=1 --retries=0
+          npx playwright test tests/e2e/crm-*.spec.js --workers=1 --retries=0 --grep-invert 'Dos PCs:|Dos sesiones autenticadas:'
       - name: Upload browser evidence
         if: always()
         uses: actions/upload-artifact@v4

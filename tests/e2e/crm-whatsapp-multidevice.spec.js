@@ -51,7 +51,7 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
   messages.set(A,[make(A,'Control A inicial',now)]);messages.set(B,[make(B,'Control B independiente',now,true)]);
   const chats=()=>[A,B].map(id=>({id,name:id===A?'Control A':'Control B',unreadCount:counts.get(id),_lastMessage:messages.get(id).at(-1),_lastIncomingAt:id===A?now:0,_lastOutgoingAt:id===B?now:0}));
   let releaseNotifications;const notificationGate=new Promise(r=>releaseNotifications=r);
-  let failSummary=false,delayA=false,releaseA;
+  let failSummary=false,failHistory=false,delayA=false,releaseA;
   const heldA=new Promise(r=>releaseA=r);
   const errors=[];
   try{
@@ -69,6 +69,7 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
         if(action==='chats')return route.fulfill({json:{ok:true,chats:chats()}});
         if(action==='notifications'||action==='notification'){await notificationGate;return route.fulfill({json:{ok:true,notifications:[]}}).catch(()=>{});}
         if(action==='history'){
+          if(failHistory)return route.fulfill({status:503,json:{ok:false,error:'Interrupción temporal simulada'}});
           const {chatId}=route.request().postDataJSON();
           if(delayA&&chatId===A)await heldA;
           return route.fulfill({json:{ok:true,messages:messages.get(chatId)||[]}});
@@ -117,6 +118,14 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
       await expect(two.page.locator('#waMessages')).toContainText('Control A después de reconectar',{timeout:35000});
       await expect(two.page.locator('#waLiveStatus')).toHaveText('Conectado');
     });
+    await test.step('Un fallo del historial conserva los mensajes y recupera incluso contenido idéntico',async()=>{
+      failHistory=true;await two.page.evaluate(()=>window.dispatchEvent(new Event('online')));
+      await expect(two.page.locator('.waHistoryRetry')).toBeVisible({timeout:25000});
+      await expect(two.page.locator('#waMessages')).toContainText('Control A después de reconectar');
+      failHistory=false;await two.page.locator('.waHistoryRetry').click();
+      await expect(two.page.locator('.waHistoryRetry')).toHaveCount(0);
+      await expect(two.page.locator('#waMessages')).toContainText('Control A después de reconectar');
+    });
     expect(errors).toEqual([]);
   }finally{
     releaseA();releaseNotifications();
@@ -142,9 +151,13 @@ test('Dos sesiones autenticadas: resumen e historial reales coinciden sin enviar
     await expect.poll(async()=>{
       const results=await Promise.all([one.page.request.get('/api/green?action=summary'),two.page.request.get('/api/green?action=summary')]);
       const data=await Promise.all(results.map(r=>r.json()));
-      if(data.some(r=>r.degraded||!r.chats?.length))return false;
+      if(data.some(r=>r.degraded||!r.chats?.length)){
+        console.log('MULTIDEVICE_SUMMARY_RETRY',data.map((r,i)=>({status:results[i].status(),ok:r.ok,degraded:!!r.degraded,cached:!!r.cached,count:r.chats?.length||0,providerStatus:r.providerStatus||null})));
+        return false;
+      }
       const signature=r=>r.chats.map(c=>[c.id,c.unreadCount,c._lastMessage?.idMessage||'',c._lastIncomingAt,c._lastOutgoingAt]).sort((a,b)=>a[0].localeCompare(b[0]));
       sharedId=data[0].chats.find(c=>c._lastMessage&&!c.id.includes('@g.us'))?.id||'';
+      console.log('MULTIDEVICE_SUMMARY_COMPARE',{counts:data.map(r=>r.chats.length),recent:data.map(r=>r.chats.filter(c=>c._lastMessage).length),equal:digest(signature(data[0]))===digest(signature(data[1]))});
       return !!sharedId&&digest(signature(data[0]))===digest(signature(data[1]));
     },{timeout:45000,intervals:[15000]}).toBe(true);
     await Promise.all([select(one.page,sharedId),select(two.page,sharedId)]);
@@ -152,6 +165,7 @@ test('Dos sesiones autenticadas: resumen e historial reales coinciden sin enviar
       const states=await Promise.all([one.page,two.page].map(page=>page.evaluate(()=>({selected:waLiveState.selected?.id,messages:waLiveState.history.map(m=>[m.idMessage,m.chatId||m.senderData?.chatId||'']).sort()}))));
       return states.every(s=>s.selected===sharedId&&s.messages.length>0&&s.messages.every(m=>!m[1]||m[1]===sharedId))&&digest(states[0])===digest(states[1]);
     },{timeout:45000,intervals:[3000]}).toBe(true);
+    await expect.poll(async()=>JSON.stringify(await summary(one.page))===JSON.stringify(await summary(two.page)),{timeout:45000,intervals:[3000]}).toBe(true);
     console.log('MULTIDEVICE_REAL_READ_OK: dos sesiones, resumen e historial coincidentes; sin envíos ni lecturas marcadas.');
   }finally{await Promise.all([one.context.close(),two.context.close()]);}
 });

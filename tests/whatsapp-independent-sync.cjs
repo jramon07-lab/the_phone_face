@@ -24,6 +24,10 @@ vm.createContext(context);vm.runInContext(source.slice(from,to),context);
   context.document.hidden=false;listeners.online();assert.equal(calls.length,4,'Reconectar consulta sin esperar otro aviso');
   finishSummary(false);finishHistory();await new Promise(r=>setImmediate(r));
   assert.equal(timers.at(-1).ms,15000,'Un fallo no detiene la siguiente sincronización');
+  for(let cycle=0;cycle<240;cycle++){
+    const next=timers.at(-1).fn();finishSummary(true);finishHistory();await next;
+  }
+  assert.equal(calls.length,484,'Una hora de ciclos simulados sigue leyendo ambos recursos con la cola bloqueada');
   assert.doesNotMatch(source.slice(from,to),/waApi\(['"](?:send|sendfile|read|notifications)/);
   console.log('Shared history and counters refresh independently of notification queue, lease and backoff');
 })().catch(error=>{console.error(error);process.exitCode=1;});

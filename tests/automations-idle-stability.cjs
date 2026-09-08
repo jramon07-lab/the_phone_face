@@ -10,6 +10,7 @@ const browserSpec=fs.readFileSync('tests/e2e/crm-visual.spec.js','utf8');
 assert.match(finalUi,/window\.__tpfAutomationsFinalUi=true/,'la interfaz final debe declarar que es la propietaria de los metadatos');
 assert.match(legacy,/if\(window\.__tpfAutomationsFinalUi\|\|!viewVisible\(\)\)return/,'el decorador antiguo no debe reescribir la interfaz final');
 assert.match(legacy,/if\(meta\.innerHTML!==html\)meta\.innerHTML=html/,'el modo de reserva también debe ser idempotente');
+assert.doesNotMatch(legacy,/setTimeout\(closeBuilder,450\)/,'Guardar no puede cerrar el editor por tiempo antes de confirmar la operación');
 assert.match(runtime,/automations-pro-v2\.js'\|\|file==='automations-pro-v2-fix\.js'\?'20260907-idle-stable-1'/,'el navegador debe recibir los módulos corregidos sin reutilizar caché');
 assert.match(browserSpec,/row\.dataset\.afId&&row\.querySelector\('\.afOperator'\)&&row\.querySelector\('\[data-ac-cancel-all\]'\)/,'la prueba de reposo debe comenzar después de todos los controles iniciales');
 
