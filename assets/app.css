@@ -1460,6 +1460,11 @@ body.wa-fullscreen-mode #mainContent{
 body.wa-fullscreen-mode .topbar,
 body.wa-fullscreen-mode .top-bar,
 body.wa-fullscreen-mode header:not(.waChatHeader):not(.ccHead){display:none!important}
+.acCustomer{margin:12px 0;border:1px solid #dce5f0;border-radius:12px;background:white;overflow:hidden;text-align:left}
+.acCustomer>summary{cursor:pointer;padding:17px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f5f9ff}
+.acCustomerName strong,.acCustomerName small{display:block}.acCustomerName strong{font-size:15px;color:#173b67}.acCustomerName small{margin-top:5px;color:#667085;font-size:12px}
+.acCustomerCounts{font-size:12px;color:#475467}.acCustomerCounts b{display:block;color:#175cd3;margin-top:5px}.acCustomerBody{padding:0 14px 14px}.acSale h4{font-size:12px;color:#475467;overflow-wrap:anywhere;margin:16px 0 10px}
+@media(max-width:700px){.acCustomer>summary{align-items:flex-start;flex-direction:column}.acCustomerCounts{font-size:11px}}
 
 /* El contenedor de WhatsApp llena la ventana */
 body.wa-fullscreen-mode #whatsappSection,

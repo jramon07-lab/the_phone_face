@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('js/modules/automations-execution-controls.js','utf8');
+const code=source.slice(source.indexOf('function customerGroups('),source.indexOf('const expandedCustomers='));
+const ctx={};vm.createContext(ctx);vm.runInContext(code,ctx);
+const rows=[{key:'a',contactId:'1',name:'Same',ctx:{opportunity_id:'sale1'}},{key:'b',contactId:'1',ctx:{opportunity_id:'sale1'}},{key:'c',contactId:'1',ctx:{opportunity_id:'sale2'}},{key:'d',contactId:'2',name:'Same',ctx:{}},{key:'e',ctx:{}},{key:'f',ctx:{}}];
+const groups=ctx.customerGroups(rows);
+assert.equal(groups.length,4);
+assert.equal(groups[0].items.length,3);
+assert.equal(groups[0].sales.size,2);
+assert.equal(groups[0].sales.get('sale:sale1').items.length,2);
+assert.equal(groups[1].sales.has('unlinked'),true);
+assert.equal(ctx.customerGroups(Array.from({length:150},(_,i)=>({key:String(i),contactId:'1',ctx:{}})))[0].items.length,150);
+assert.match(source,/Ver pasos →/);
+console.log('PASS customer grouping: linked identity, separate sales, unlinked records, no 100-row truncation');

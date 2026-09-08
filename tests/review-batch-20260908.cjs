@@ -28,7 +28,7 @@ assert.match(sql,/create or replace function public\.crm_create_direct_sale_v2/)
 assert.match(sql,/'netflix_followup',operator_name='Vodafone'/);
 assert.match(sql,/revoke all on function public\.crm_create_direct_sale_v2/);
 
-for(const value of ['Centro de control','acOverview','acOperatorFilter','acAutomationFilter','acErrorTypeFilter','Cliente','Detalle →','Reintentar paso'])assert.match(errors,new RegExp(value));
+for(const value of ['Centro de control','acOverview','acOperatorFilter','acAutomationFilter','acErrorTypeFilter','Cliente','Ver pasos →','Reintentar paso'])assert.match(errors,new RegExp(value));
 assert.match(errors,/firstFailure/);
 assert.match(errors,/error_message/);
 
