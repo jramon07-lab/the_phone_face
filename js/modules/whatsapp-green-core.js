@@ -425,7 +425,15 @@ function renderWhatsAppChats(){
 
 window.selectWhatsAppChat=async(chatId)=>{
   const chat=(waLiveState.chats||[]).find(c=>c.id===chatId)||{id:chatId};
+  waLiveState.drafts=waLiveState.drafts||{};
+  if(waLiveState.selected)waLiveState.drafts[waLiveState.selected.id]=$("waComposerText").value;
+  $("waComposerText").value=waLiveState.drafts[chatId]||"";
+  $("waComposerMsg").textContent="";
+  window.dispatchEvent(new Event('tpf:wa-chat-changing'));
   waLiveState.selected=chat;
+  waLiveState.selectionVersion=(waLiveState.selectionVersion||0)+1;
+  waLiveState.history=[];
+  $("waMessages").innerHTML='<div class="waLiveEmpty">Cargando conversación…</div>';
   waSetUnread(chatId,0);
   renderWhatsAppChats();
   try{localStorage.setItem("tpf_wa_unread",JSON.stringify(waLiveState.unread||{}))}catch(_){}
@@ -438,7 +446,7 @@ window.selectWhatsAppChat=async(chatId)=>{
   const initials=waInitials(name);
   $("waChatAvatar").dataset.waAvatarId=chat.id; $("waChatAvatar").dataset.waInitials=initials; waApplyAvatar($("waChatAvatar"),waLiveState.avatars[chat.id]||"",initials);
   $("waSideAvatar").dataset.waAvatarId=chat.id; $("waSideAvatar").dataset.waInitials=initials; waApplyAvatar($("waSideAvatar"),waLiveState.avatars[chat.id]||"",initials);
-  waLoadAvatar(chat.id).then(url=>{waApplyAvatar($("waChatAvatar"),url,initials);waApplyAvatar($("waSideAvatar"),url,initials)});
+  waLoadAvatar(chat.id).then(url=>{if(waLiveState.selected?.id!==chat.id)return;waApplyAvatar($("waChatAvatar"),url,initials);waApplyAvatar($("waSideAvatar"),url,initials)});
   $("waSideName").textContent=name;
   $("waSidePhone").textContent=String(chat.id||"").includes("@g.us")?"Grupo":("+"+waNormalizePhone(chat.id));
   $("waContactEmpty").classList.add("hidden");
@@ -449,8 +457,10 @@ window.selectWhatsAppChat=async(chatId)=>{
 
 async function loadWaHistory(scrollBottom=true){
   if(!waLiveState.selected)return;
+  const selection=waLiveState.selectionVersion;
   try{
     const r=await waApi("history",{chatId:waLiveState.selected.id,count:100});
+    if(waLiveState.selectionVersion!==selection)return;
     const nextHistory=Array.isArray(r.messages)?r.messages:[];
     if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)){
       waLiveState.history=nextHistory;
@@ -459,7 +469,7 @@ async function loadWaHistory(scrollBottom=true){
       const box=$("waMessages"); if(box)box.scrollTop=box.scrollHeight;
     }
   }catch(e){
-    $("waMessages").innerHTML=`<div class="waLiveEmpty">${esc(e.message)}</div>`;
+    if(waLiveState.selectionVersion===selection)$("waMessages").innerHTML=`<div class="waLiveEmpty">${esc(e.message)}</div>`;
   }
 }
 function renderWaMessages(scrollBottom){
@@ -484,6 +494,7 @@ function renderWaMessages(scrollBottom){
 
 async function matchWaContact(){
   const chat=waLiveState.selected;
+  const selection=waLiveState.selectionVersion;
   waLiveState.contact=null;
   $("waOpenContactTop").classList.add("hidden");
   $("waCreateContactTop").classList.add("hidden");
@@ -510,10 +521,12 @@ async function matchWaContact(){
   for(const q of waPhoneVariants(phone)){
     try{
       const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:10});
+      if(waLiveState.selected?.id!==chat.id||waLiveState.selectionVersion!==selection)return;
       if(Array.isArray(data)&&data.length){found=data[0];break}
     }catch(e){}
   }
 
+  if(waLiveState.selected?.id!==chat.id||waLiveState.selectionVersion!==selection)return;
   if(!found){
     $("waContactState").innerHTML='<span class="pill amber">No está en Contactos</span>';
     
@@ -681,11 +694,13 @@ function hydrateOpportunityStageNames(opps){
 
 
 async function loadWaContactSideData(rec,phone){
+  const selection=waLiveState.selectionVersion;
   try{
     const [oppR,taskR]=await Promise.all([
       sb.from("sales_opportunities").select("*").or(`record_id.eq.${rec.id},phone.ilike.%${phone.slice(-9)}%`).order("updated_at",{ascending:false}).limit(20),
       sb.from("agenda_items").select("*").eq("status","pending").ilike("customer_phone",`%${phone.slice(-9)}%`).order("starts_at",{ascending:true}).limit(20)
     ]);
+    if(waLiveState.selectionVersion!==selection||waLiveState.contact?.id!==rec.id)return;
     const opps=oppR.data||[],tasks=taskR.data||[];
     $("waSideOppCount").textContent=opps.length;
     $("waSideTaskCount").textContent=tasks.length;
@@ -801,8 +816,11 @@ async function sendWaLiveMessage(){
   $("waComposerMsg").textContent="Enviando…";
   try{
     const r=await waApi("send",{chatId:chat.id,message:text});
-    $("waComposerText").value="";
-    $("waComposerMsg").textContent="Enviado";
+    if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
+    if(waLiveState.selected?.id===chat.id){
+      if($("waComposerText").value.trim()===text)$("waComposerText").value="";
+      $("waComposerMsg").textContent="Enviado";
+    }
     const localMsg={
       type:"outgoing",
       outgoing:true,
@@ -812,12 +830,12 @@ async function sendWaLiveMessage(){
       statusMessage:"sent",
       sendByApi:true
     };
-    waPushLiveMessage(localMsg,true);
+    if(waLiveState.selected?.id===chat.id)waPushLiveMessage(localMsg,true);
     waRememberLivePreview(chat.id,localMsg);
     renderWhatsAppChats();
-    setTimeout(()=>{$("waComposerMsg").textContent=""},1800);
+    setTimeout(()=>{if(waLiveState.selected?.id===chat.id)$("waComposerMsg").textContent=""},1800);
   }catch(e){
-    $("waComposerMsg").textContent=e.message||"No se pudo enviar.";
+    if(waLiveState.selected?.id===chat.id)$("waComposerMsg").textContent=e.message||"No se pudo enviar.";
   }finally{$("waComposerSend").disabled=false}
 }
 
@@ -1298,13 +1316,16 @@ const _loadWaHistoryTotal=loadWaHistory;
 loadWaHistory=async function(scrollBottom=true){
   if(!waLiveState.selected)return;
   const chatId=waLiveState.selected.id;
+  const selection=waLiveState.selectionVersion;
   try{
     const r=await waApi("history",{chatId,count:200});
+    if(waLiveState.selectionVersion!==selection)return;
     const remote=Array.isArray(r.messages)?r.messages:[],cached=waCachedHistory(chatId),map=new Map();
     [...cached,...remote].forEach(x=>map.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
     waLiveState.history=[...map.values()];
     waLiveState.history.forEach(m=>waTrackDirection(chatId,m,{persist:false,render:false}));waFlushMeta();waCacheHistory(chatId,waLiveState.history);renderWaMessages(scrollBottom);waScheduleMetaUi(chatId);
   }catch(e){
+    if(waLiveState.selectionVersion!==selection)return;
     const cached=waCachedHistory(chatId);if(cached.length){waLiveState.history=cached;renderWaMessages(scrollBottom)}else $("waMessages").innerHTML=`<div class="waLiveEmpty">${esc(e.message)}</div>`;
   }
 };
@@ -1478,8 +1499,10 @@ const _loadWaHistoryPersistent=loadWaHistory;
 loadWaHistory=async function(scrollBottom=true){
   if(!waLiveState.selected)return;
   const chatId=waLiveState.selected.id;
+  const selection=waLiveState.selectionVersion;
   try{
     const [r,persisted]=await Promise.all([waApi("history",{chatId,count:200}),waLoadRemoteHistory(chatId)]);
+    if(waLiveState.selectionVersion!==selection)return;
     const remote=Array.isArray(r.messages)?r.messages:[],cached=waCachedHistory(chatId),map=new Map();
     [...persisted,...cached,...remote].forEach(x=>map.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
     waLiveState.history=[...map.values()];
@@ -1491,6 +1514,7 @@ loadWaHistory=async function(scrollBottom=true){
     waUpdateAdvancedMetrics();waScheduleMetaUi(chatId);
   }catch(e){
     const persisted=await waLoadRemoteHistory(chatId);
+    if(waLiveState.selectionVersion!==selection)return;
     if(persisted.length){waLiveState.history=persisted;renderWaMessages(scrollBottom)}
     else _loadWaHistoryPersistent(scrollBottom);
   }

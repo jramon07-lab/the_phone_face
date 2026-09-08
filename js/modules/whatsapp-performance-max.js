@@ -230,8 +230,13 @@ function install(){
 
     if(typeof loadWaHistory==='function')window.loadWaHistory=async function(scrollBottom=true){
       if(!waLiveState.selected)return;
+      const chatId=waLiveState.selected.id;
+      const selection=waLiveState.selectionVersion;
+      const request=waLiveState.historyRequest=(waLiveState.historyRequest||0)+1;
+      const current=()=>waLiveState.selected?.id===chatId&&waLiveState.selectionVersion===selection&&waLiveState.historyRequest===request;
       try{
-        const r=await waApi('history',{chatId:waLiveState.selected.id,count:40});
+        const r=await waApi('history',{chatId,count:40});
+        if(!current())return;
         if(r?.degraded)return;
         const nextHistory=Array.isArray(r.messages)?r.messages:[];
         if(waStableSig(nextHistory)!==waStableSig(waLiveState.history)){
@@ -241,6 +246,7 @@ function install(){
           const box=document.getElementById('waMessages');if(box)box.scrollTop=box.scrollHeight;
         }
       }catch(e){
+        if(!current())return;
         const box=document.getElementById('waMessages');if(box)box.innerHTML=`<div class="waLiveEmpty">${esc(e.message||'No se pudo cargar la conversación')}</div>`;
       }
     };
