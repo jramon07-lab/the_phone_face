@@ -26,6 +26,20 @@ const GREEN_METHOD_SPACING_MS = new Map([
 
 const greenDelay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Los límites son por instancia GREEN, incluso cuando Vercel atiende cada PC
+// en un proceso distinto. Reintentar solo lecturas tras la ventana de un
+// segundo recupera esa colisión sin repetir envíos ni consumir notificaciones.
+const GREEN_RATE_LIMIT_READS=new Set(['getSettings','getStateInstance','getChats','getChatHistory','lastIncomingMessages','lastOutgoingMessages','getAvatar','downloadFile']);
+function greenReadRetryWait(error,method,attempt,retryable){
+  if(Number(error?.status)===429&&GREEN_RATE_LIMIT_READS.has(method)&&attempt<2){
+    const requested=Number(error?.retryAfterMs||0);
+    if(requested>5000)return null; // Dejar que la caché respete esperas largas.
+    return Math.max(1100,requested)+150+Math.floor(Math.random()*500);
+  }
+  if(retryable&&attempt<1&&(!error?.status||error.status>=500))return 250*(attempt+1);
+  return null;
+}
+
 async function waitForGreenMethodSlot(method) {
   const spacing = Number(GREEN_METHOD_SPACING_MS.get(String(method || "")) || 0);
   if (!spacing) return;
@@ -179,7 +193,7 @@ export default async function handler(req, res) {
   async function greenFetchUrl(url, opts = {}, greenMethod = "") {
     const retryable = String(opts.method || "GET").toUpperCase() === "GET";
     let lastError;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await waitForGreenMethodSlot(greenMethod);
         const r = await greenTimedFetch(url, opts);
@@ -195,12 +209,13 @@ export default async function handler(req, res) {
         err.retryAfterMs = retryAfterMs(r.headers);
         if (greenMethod) err.greenMethod = greenMethod;
         lastError = err;
-        if (!(retryable && r.status >= 500 && attempt < 1)) throw err;
+        throw err;
       } catch (err) {
         lastError = err;
-        if (!(retryable && attempt < 1 && (!err?.status || err.status >= 500))) throw err;
+        const wait=greenReadRetryWait(err,greenMethod,attempt,retryable);
+        if(wait===null)throw err;
+        await greenSleep(wait);
       }
-      await greenSleep(250 * (attempt + 1));
     }
     throw lastError || new Error("GREEN-API no respondió.");
   }
@@ -208,7 +223,7 @@ export default async function handler(req, res) {
   async function greenFetch(method, opts = {}) {
     const retryable = GREEN_RETRYABLE_METHODS.has(method);
     let lastError;
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await waitForGreenMethodSlot(method);
         const r = await greenTimedFetch(apiUrl(method), opts);
@@ -224,13 +239,14 @@ export default async function handler(req, res) {
         err.greenMethod = method;
         err.retryAfterMs = retryAfterMs(r.headers);
         lastError = err;
-        if (!(retryable && r.status >= 500 && attempt < 1)) throw err;
+        throw err;
       } catch (err) {
         if (!err.greenMethod) err.greenMethod = method;
         lastError = err;
-        if (!(retryable && attempt < 1 && (!err?.status || err.status >= 500))) throw err;
+        const wait=greenReadRetryWait(err,method,attempt,retryable);
+        if(wait===null)throw err;
+        await greenSleep(wait);
       }
-      await greenSleep(250 * (attempt + 1));
     }
     throw lastError || new Error(`GREEN-API ${method} no respondió.`);
   }

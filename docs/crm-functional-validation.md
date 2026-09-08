@@ -4,7 +4,7 @@ Esta revisión usa la cuenta demo y el despliegue de pruebas. La base de datos c
 
 ## Cómo repetirla
 
-- `npm run verify`: estructura, sintaxis y todas las comprobaciones de regresión descubiertas en `tests/` (91 tras el refuerzo de archivado del 8 de septiembre).
+- `npm run verify`: estructura, sintaxis y todas las comprobaciones de regresión descubiertas en `tests/` (92 tras el refuerzo de archivado y recuperación de lecturas del 8 de septiembre).
 - El flujo **CRM Browser Validation** instala Chromium, usa las credenciales demo de los secretos de GitHub y prueba el despliegue que acaba de publicarse. Chrome es el navegador oficial acordado; WebKit es una comprobación adicional fuera de esta validación.
 - Los escenarios se ejecutan con un solo proceso y sin reintentos: comparten la cuenta demo y la prueba de cierre de sesión puede revocar las sesiones de otras pruebas si se ejecutan a la vez.
 - Las capturas y los resultados se adjuntan a cada ejecución como **crm-browser-evidence**. Las grabaciones y trazas de autenticación están desactivadas.
@@ -61,3 +61,5 @@ Consultar `docs/crm-continuity.md` antes de continuar. La recuperación contrast
 - Prueba SQL transaccional adicional: usuario con permiso WhatsApp sin rol administrador; archivar y recuperar un identificador sintético, comprobando RLS, fechas y atribución, seguido de ROLLBACK. No cambia conversaciones ni datos persistentes.
 - Los intervalos actuales son 15 segundos para resumen/historial de escritorio y 20 segundos para archivado, con consulta adicional al recuperar foco o conexión. La sincronización es eventual; no implica igualdad instantánea en el milisegundo del clic.
 - Microsoft 365, diagnóstico administrativo, envío final a destinatarios y restauración completa conservan los límites anteriores.
+
+La primera validación de desarrollo de este refuerzo (`34277615556`) detectó un 429 real con respuestas distintas entre servidores. La nueva regresión `green-multiserver-recovery.cjs` reproduce ese caso sin red y comprueba recuperación de resumen e historial, espera solicitada larga, límite persistente y ausencia de reintentos de envío. El cambio está en la recuperación del servidor; no se relajan los criterios de la prueba Chrome ni se oculta el 429. Ver la explicación y el estado de entrega en `docs/crm-continuity.md`.

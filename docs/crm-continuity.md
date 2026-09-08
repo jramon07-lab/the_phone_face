@@ -34,6 +34,16 @@ PC y móvil leen el archivo compartido completo por páginas. Si una página fal
 
 ## Límites que siguen siendo explícitos
 
+### Incidencia encontrada en la validación de desarrollo
+
+El commit de archivado `f0a0eb867c14dabfce37946c92f1ff282924a45a` pasó la prueba de dos PCs con archivo, fallo de guardado y deshacer lento en Actions `34277615556`, pero **no fue publicado en estable**: la prueba de lectura real falló por `providerStatus:429`. Un servidor devolvía 2.266 conversaciones y otro una respuesta degradada vacía. No se reintentó la ejecución para ocultar el fallo.
+
+Se reprodujo con dos servidores independientes en `tests/green-multiserver-recovery.cjs`. La caché y separación de consultas en memoria solo se comparten dentro del mismo proceso de Vercel; un proceso nuevo que chocaba con otra consulta quedaba en espera de 45 segundos.
+
+`api/green.js` ahora recupera límites breves únicamente en métodos de lectura explícitos: espera al menos 1,25 segundos con variación entre procesos y hasta dos reintentos, respetando `Retry-After`. Esperas solicitadas mayores de 5 segundos se delegan al mecanismo de espera existente. Los envíos, ajustes y consumo de notificaciones no se reintentan por esta vía. No se cambia esquema, infraestructura ni datos de clientes.
+
+Verificación local con ambas correcciones: **92/92**. El resultado Chrome válido debe corresponder al commit que incorpora esta recuperación, no al fallido `f0a0eb8`. Referencia del límite del proveedor: https://green-api.com/en/docs/api/ratelimiter/ .
+
 - Microsoft 365 pausado (2 pruebas omitidas) y diagnóstico administrativo omitido para la cuenta demo.
 - Los ensayos Chrome usan dos contextos independientes, no los dos ordenadores físicos de la tienda.
 - La lectura real de WhatsApp no envía mensajes ni marca leído; el cambio de archivo entre pantallas se prueba con almacén compartido simulado, más el ensayo SQL real reversible.
