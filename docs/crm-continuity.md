@@ -1,3 +1,10 @@
+## Checkpoint — permisos del motor y diagnóstico, 9 de septiembre, 08:13 UTC
+
+- Desarrollo guardado `8a768a7f975fca730daafba5f58ec57cb253d557`: corrección de origen Drive, 98/98 regresiones. Chrome `34327435911` y ensayo real `34327416743` en curso; esperar ambos antes de cambiar ese destino.
+- **Migración aplicada** `20260909081241 crm_server_switch_permissions`: reserva al administrador la escritura de `crm_server_automations_enabled` y `crm_server_scheduled_whatsapp_enabled`. Se reprodujo escritura permitida al rol limitado; propuesta y prueba con ROLLBACK aprobadas; repetición después de aplicar aprobada. Ambos interruptores siguen true y quedan 0 ajustes sintéticos. Preferencias ordinarias conservan sus permisos.
+- Corrección adicional preparada: Estado del sistema comprueba `current_user_permissions` en servidor y ya no usa solo la sesión en caché; el banner describe comprobaciones básicas. Prueba roja antes/verde después con sesión válida, caducada y respuesta vacía. Verificación completa 99/99 y 147/147 JavaScript.
+- Browser administrativo sigue bloqueado por confirmación nativa de copia; apertura de pestaña nueva también falló. SQL confirma que no hubo copia nueva. Conservar sesión y solicitar intervención del navegador cuando el resto de comprobaciones termine.
+
 ## Checkpoint — Drive y acceso administrativo, 9 de septiembre
 
 - `b888d3b`: Chrome `34325439846`, job `102381506539`, concluido success: 49 aprobadas (2 + 47), 3 omitidas. Dos sesiones: 2266/2266 y firma igual; automatizaciones en reposo: 0 mutaciones.

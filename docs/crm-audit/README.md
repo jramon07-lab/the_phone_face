@@ -58,7 +58,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 | 38 | Microsoft 365 | Conexión, permisos, plantillas, envío y automatizaciones | Cuenta autorizada conectada y prueba de entrega real | 0 buzones; integración pausada | BLOQUEADO |
 | 39 | Móvil completo | Todas las rutas, accesos rápidos, formularios, búsquedas y retorno | Sin desbordamiento; mismas entidades y permisos que PC | crm-complete-flows; mobile-* | PARCIAL |
 | 40 | Dos puestos y resistencia | Usuarios distintos, sesiones largas, pestañas, desconexión y límites | Coherencia tras recuperar conexión; conflictos de edición visibles | dos contextos probados; ensayo prolongado pendiente | PARCIAL |
-| 41 | Seguridad y API | Sin sesión, rol limitado, entradas inválidas y acceso directo | RLS y autorización por función; sin secretos en cliente, logs o diagnóstico | API WhatsApp/Telegram protegidas y probadas; etiquetas RLS corregido; app_settings/asignación de etiquetas requieren revisión adicional | PARCIAL |
+| 41 | Seguridad y API | Sin sesión, rol limitado, entradas inválidas y acceso directo | RLS y autorización por función; sin secretos en cliente, logs o diagnóstico | API WhatsApp/Telegram protegidas y probadas; etiquetas e interruptores globales RLS corregidos; otros ajustes/asignación de etiquetas requieren revisión adicional | PARCIAL |
 | 42 | Despliegue y continuidad | Commit, alias, caché, versión PC/móvil y recuperación de código | Enlace estable conserva versión comprobada y evidencia de ese commit | Estable 734db09 READY; candidato b888d3b, 49 Chrome aprobadas + 3 omitidas; promoción pendiente | PARCIAL |
 
 ## Hallazgos de recuperación
@@ -86,7 +86,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 
 ### Límites operativos que impiden cerrar la auditoría
 
-1. Microsoft 365 sigue pausado y sin buzones; falta conexión y consentimiento administrativo.
+1. Microsoft 365 sigue pausado y sin buzones. Además del consentimiento administrativo, su interfaz de correo contiene elementos pendientes: la bandeja no carga mensajes y Redactar muestra un aviso; conectar una cuenta por sí solo no completa estos recorridos.
 2. Acceso administrativo resuelto mediante entrada segura del usuario. El navegador dejó de responder al abrir la confirmación de copia; exportación y copia manual siguen pendientes. La cuenta automática es demo.
 3. La recuperación completa necesita un volcado con acceso privado a PostgreSQL y la configuración externa; no basta con validar un archivo cifrado.
 4. Producción Vercel conserva el despliegue antiguo del 29 de agosto. Sus ejecutores de Supabase llaman a ese dominio sin sesión CRM. Antes de promoverlo hay que preparar autenticación de servicio y probar los ejecutores; cambiarlo ahora podría detener automatizaciones. No hay credenciales de administración de Vercel disponibles para cambiar sus variables privadas.
@@ -99,3 +99,9 @@ La matriz permanece abierta. Las filas PARCIAL/PENDIENTE conservan los pasos con
 La sesión administrativa ya se abrió mediante entrada segura. Estado del sistema y procesos reales cargaron. La exportación del diagnóstico y la copia manual aún no terminaron: el navegador dejó de responder al abrir la confirmación. Se conserva el estado para recuperarlo.
 
 Drive: ensayo 34325419583 mostró error de confirmación aunque el PDF se guardó; descarga independiente e igualdad de bytes comprobadas (618 bytes, SHA256 76b734f8fbe3f8304fd29f77373ce6c2a73c4a3d87a3d128fdf33b9e39c3534d). Corrección del origen de subida preparada y probada localmente. Dos artefactos sintéticos de esa ejecución siguen conservados porque la revisión automática rechazó su borrado permanente; no se reintentará por otra vía.
+
+### Permisos del motor y estado del servidor
+
+Migración 20260909081241 crm_server_switch_permissions aplicada tras prueba con ROLLBACK y verificada después. Un rol limitado ya no puede cambiar, sobrescribir ni renombrar un ajuste para sustituir los dos interruptores globales de los ejecutores. Lectura compartida, preferencias ordinarias y gestión del administrador verificadas. Ambos interruptores permanecen activados; no quedan filas sintéticas. Otras políticas amplias de app_settings siguen pendientes.
+
+El diagnóstico mostraba Todo operativo tras cuatro sondas y validaba Supabase mediante una sesión local. Corrección candidata: consulta de permisos al servidor, rechazo de respuesta vacía/caducada y texto Comprobaciones básicas correctas. Prueba funcional local añadida; 99 regresiones aprobadas. La exportación real sigue pendiente del navegador administrativo.
