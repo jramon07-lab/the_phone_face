@@ -11,3 +11,6 @@ Changes: parse both history and webhook envelopes in PC, mobile and runner; disp
 Checks: parser tests for all three options in all three consumers; future-job scanner tests (answered/silent/provider failure); existing response synchronization test; full npm run verify. Database transactional rehearsal using the real decline confirmed both day-2 and day-5 jobs cancel, then rolled back. No messages sent by this review.
 
 Limits: this is minute polling plus provider history latency, not an instant webhook. GREEN documents up to two minutes for journal availability. Batches rotate if there are more than 20 pending reminder jobs. Unavailable provider retains pre-send fail-closed guard. Browser gate and final deployment/real cancellation still to verify at this checkpoint.
+
+## Live verification after deployment
+Runner v12 minute tick at 2026-09-09 13:42 UTC synchronized the user's actual decline and cancelled both reminders for the reported offer. The database contains the selected text, No me interesa. No outgoing job claimed or sent during that tick. Additional guard added for HTTP-200 degraded/rate-limited/malformed history; such responses must defer, never infer silence. Development browser gate: GitHub Actions 34358638046 (UI commit 21d655fc); result still pending while this checkpoint is written.
