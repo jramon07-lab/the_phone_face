@@ -14,7 +14,8 @@ function response(status, payload, headers = {}) {
     status,
     statusText: status === 429 ? 'Too Many Requests' : '',
     headers: { get(name) { return headers[String(name).toLowerCase()] || null; } },
-    async text() { return payload === null ? '' : JSON.stringify(payload); }
+    async text() { return payload === null ? '' : JSON.stringify(payload); },
+    async json() { return payload; }
   };
 }
 
@@ -47,7 +48,9 @@ function loadHandler(fetchImpl) {
       env: {
         GREEN_API_INSTANCE_ID: '1234',
         GREEN_API_TOKEN: 'test-token',
-        GREEN_API_API_URL: 'https://provider.test'
+        GREEN_API_API_URL: 'https://provider.test',
+        SUPABASE_SERVICE_ROLE_KEY: 'service-test',
+        SUPABASE_URL: 'https://database.test'
       }
     }
   };
@@ -123,7 +126,9 @@ async function run() {
       escape,
       Date: FakeDate,
       console: { error() {} },
-      process: { env: { GREEN_API_INSTANCE_ID: '1234', GREEN_API_TOKEN: 'test-token', GREEN_API_API_URL: 'https://provider.test' } }
+      process: { env: { GREEN_API_INSTANCE_ID: '1234', GREEN_API_TOKEN: 'test-token', GREEN_API_API_URL: 'https://provider.test',
+        SUPABASE_SERVICE_ROLE_KEY: 'service-test',
+        SUPABASE_URL: 'https://database.test' } }
     };
     context.globalThis = context;
     vm.createContext(context);
@@ -198,6 +203,27 @@ async function run() {
     assert.equal(calls.length, 2, 'solo usa texto cuando el proveedor rechaza los botones antes de enviar');
     assert.match(calls[1].url, /sendMessage/);
     assert.match(calls[1].body.message, /3\. Quiero mirar otra cosa/);
+  }
+
+  {
+    const calls=[];
+    const secret='s'.repeat(64);
+    const handler=loadHandler(async(url,options={})=>{
+      calls.push({url:String(url),body:JSON.parse(String(options.body||'{}'))});
+      if(String(url).includes('/rpc/crm_check_runner_secret'))return response(200,true);
+      if(String(url).includes('/setSettings/'))return response(200,{saveSettings:true});
+      throw new Error(`URL inesperada: ${url}`);
+    });
+    const req={method:'POST',query:{action:'setwebhook'},headers:{'x-tpf-cron-secret':secret},body:{webhookUrl:'https://overfzbjtpjqxzbujezg.supabase.co/functions/v1/crm-green-webhook'}};
+    const res=mockResponse();await handler(req,res);
+    assert.equal(res.statusCode,200);
+    assert.equal(res.body.configured,true);
+    assert.equal(calls.filter(x=>x.url.includes('/rpc/crm_check_runner_secret')).length,2);
+    const saved=calls.find(x=>x.url.includes('/setSettings/')).body;
+    assert.equal(saved.webhookUrl,req.body.webhookUrl);
+    assert.equal(saved.webhookUrlToken,'Bearer '+secret);
+    assert.equal(saved.incomingWebhook,'yes');
+    assert.doesNotMatch(JSON.stringify(res.body),new RegExp(secret));
   }
 
   console.log('GREEN-API rate limit guard OK');
