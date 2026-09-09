@@ -31,3 +31,13 @@ Verification before provider cutover: 104/104 local tests passed. Edge Function 
 - `crm-green-webhook` v1: invalid authorization returned 401; valid non-message returned 200 ignored; authenticated synthetic interactive response returned 200, persisted `No me interesa` with type `interactiveButtonsResponse`, and the synthetic row was deleted after inspection.
 - `crm-automation-runner` v14 is active. Its first inspected cron response was HTTP 200 with no `responseSync` field and no claimed/sent work, confirming removal of continuous provider polling.
 - Existing real offer response and its day-2/day-5 jobs remain cancelled from the preceding verified correction.
+
+## Durable follow-up observability — 2026-09-09
+
+Added `crm_offer_followup_events`, a protected operational audit that records: incoming response cancellation, pre-send response block, verification deferral, delivery deferral, final failure, and successful reminder send. It stores the related offer, opportunity, contact and job, but the trigger deliberately never updates `sales_opportunities` or its stage. The user continues to move commercial columns manually.
+
+The latest result is displayed inside each opportunity on PC and mobile. Administrators also get a seven-day “Seguimientos de WhatsApp” registry under Sistema → Diagnóstico. Webhook persistence failures are copied into the existing central incident registry with credentials redacted. Audit writes are non-blocking so an unavailable diagnostic table cannot prevent the safety action itself.
+
+Verification before UI deployment: 105/105 regression tests passed and 147/147 JavaScript files parsed. The migration was first executed inside an explicit transaction and rolled back, then applied. A second transactional database rehearsal created a synthetic offer with day-2 and day-5 jobs; inserting `No me interesa` cancelled exactly both jobs, inserted one audit record, preserved the opportunity stage, and rolled all synthetic rows back. Supabase confirms RLS with one read policy. Foreign-key indexes were added after the database advisor identified them. Edge Functions active: `crm-green-webhook` v2 and `crm-automation-runner` v15.
+
+Remaining gate at this checkpoint: save the UI commit on GitHub, validate the development deployment in Chrome, and only then promote the same commit to the stable URL.

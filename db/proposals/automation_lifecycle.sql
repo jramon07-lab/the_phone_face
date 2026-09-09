@@ -132,7 +132,7 @@ revoke all on function crm_private.is_commercial_optout(text) from public, anon,
 
 create or replace function crm_private.lifecycle_incoming()
 returns trigger language plpgsql security definer set search_path='' as $$
-declare ph text; cid uuid; msg text; optout boolean;
+declare ph text; cid uuid; optout boolean;
 begin
  if new.direction is distinct from 'in' or new.chat_id like '%@g.us' then return new; end if;
  ph:=public.crm_server_normalize_phone(split_part(new.chat_id,'@',1));
@@ -143,10 +143,20 @@ begin
    insert into crm_private.commercial_optouts(phone,contact_id,received_at) values(ph,cid,new.created_at)
    on conflict(phone) do update set contact_id=coalesce(excluded.contact_id,crm_private.commercial_optouts.contact_id),received_at=excluded.received_at;
  end if;
- update public.crm_server_automation_jobs set status='cancelled',error_message=case when optout then 'Baja comercial solicitada' else 'Cliente respondió: seguimiento detenido' end,updated_at=now()
- where status in ('pending','running') and action_type not in ('record_offer_month','record_sale_month') and (context->>'contact_id'=cid::text or public.crm_server_normalize_phone(context->>'phone')=ph)
-   and (context#>>'{lifecycle,mode}'='offer' or (optout and context#>>'{lifecycle,mode}'='after_sale'))
-   and coalesce(nullif(context->>'event_at','')::timestamptz,created_at)<=new.created_at;
+ with cancelled as (
+   update public.crm_server_automation_jobs j set status='cancelled',error_message=case when optout then 'Baja comercial solicitada' else 'Cliente respondió: seguimiento detenido' end,updated_at=now()
+   where j.status in ('pending','running') and j.action_type not in ('record_offer_month','record_sale_month') and (j.context->>'contact_id'=cid::text or public.crm_server_normalize_phone(j.context->>'phone')=ph)
+     and (j.context#>>'{lifecycle,mode}'='offer' or (optout and j.context#>>'{lifecycle,mode}'='after_sale'))
+     and coalesce(nullif(j.context->>'event_at','')::timestamptz,j.created_at)<=new.created_at
+   returning j.id,j.user_id,j.context
+ ), affected as (
+   select i.id offer_id,i.opportunity_id,i.contact_id,c.user_id,count(*)::integer jobs_cancelled
+   from cancelled c join public.crm_offer_instances i on i.id::text=c.context->>'offer_instance_id'
+   group by i.id,i.opportunity_id,i.contact_id,c.user_id
+ )
+ insert into public.crm_offer_followup_events(event_key,offer_instance_id,opportunity_id,contact_id,user_id,message_id,event_type,result,response_text,detail,created_at)
+ select 'incoming:'||new.id::text||':'||a.offer_id::text,a.offer_id,a.opportunity_id,a.contact_id,a.user_id,new.id_message,'response_cancelled','success',left(coalesce(new.text_content,''),80),a.jobs_cancelled||' seguimiento(s) pendiente(s) cancelado(s)',new.created_at
+ from affected a on conflict(event_key) do nothing;
  return new;
 end $$;
 drop trigger if exists crm_lifecycle_incoming on public.wa_messages;
