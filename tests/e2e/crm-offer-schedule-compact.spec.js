@@ -10,7 +10,7 @@ async function login(page){
   await expect(page.locator('#app')).toBeVisible({timeout:30000});
 }
 
-test('ofertas: checks compactos y fecha-hora conjunta en saltos de 30 minutos',async({page})=>{
+test('ofertas: checks compactos y fecha-hora conjunta con minutos 00/30',async({page})=>{
   await page.setViewportSize({width:1440,height:900});
   await login(page);
   const contactId=await page.evaluate(async()=>{
@@ -29,16 +29,20 @@ test('ofertas: checks compactos y fecha-hora conjunta en saltos de 30 minutos',a
   await expect(fields).toBeHidden();
   await toggle.check();
   await expect(fields).toBeVisible();
-  const dateTime=page.locator('#opScheduledAt');
-  await expect(dateTime).toBeVisible();
-  await expect(dateTime).toHaveAttribute('step','1800');
-  expect(await dateTime.inputValue()).toMatch(/:(00|30)$/);
-  const stepMilliseconds=await dateTime.evaluate(input=>{const before=input.valueAsNumber;input.stepUp();return input.valueAsNumber-before});
-  expect(stepMilliseconds).toBe(30*60*1000);
+  await expect(page.locator('.opDateTimeCombined')).toBeVisible();
+  await expect(page.locator('input[type="datetime-local"]')).toHaveCount(0);
+  await expect(page.locator('#opScheduleDate')).toBeVisible();
+  await expect(page.locator('#opScheduleHour option')).toHaveCount(24);
+  const minutes=await page.locator('#opScheduleMinute option').evaluateAll(options=>options.map(option=>option.value));
+  expect(minutes).toEqual(['00','30']);
   const dir=path.join(process.cwd(),'browser-evidence','offer-schedule');
   fs.mkdirSync(dir,{recursive:true});
   await page.screenshot({path:path.join(dir,'combined-half-hour-picker.png'),fullPage:true});
-  await page.locator('input[name="opMode"][value="accepted"]').check();
+  const acceptedMode=page.locator('#opAcceptedMode');
+  await expect(acceptedMode).toBeVisible();
+  await expect(acceptedMode).not.toBeChecked();
+  await acceptedMode.check();
+  await expect(page.locator('#opSendOptions')).toBeHidden();
   const acceptedSend=page.locator('#opAcceptedSend');
   await expect(acceptedSend).toBeVisible();
   await expect(acceptedSend).toBeChecked();
