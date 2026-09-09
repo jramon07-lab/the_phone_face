@@ -117,7 +117,7 @@ do $$declare standard_id uuid;counter_id uuid;begin
   insert into public.crm_offer_line_options(offer_id,name,data_gb,price_delta,position,option_type,group_name,message_text) values
     (counter_id,'TV con más de 80 canales',null,0,10,'checkbox',null,'TV con más de 80 canales'),
     (counter_id,'Amazon',null,2,20,'radio','contenido','Amazon incluido'),
-    (counter_id,'Netflix',null,4,30,'radio','contenido','Netflix incluido'),
+    (counter_id,'Netflix',null,7,30,'radio','contenido','Netflix incluido'),
     (counter_id,'Línea adicional 30 GB',30,6,40,'quantity',null,'Línea adicional de 30 GB'),
     (counter_id,'Línea adicional 60 GB',60,8.5,50,'quantity',null,'Línea adicional de 60 GB'),
     (counter_id,'Línea adicional 160 GB',160,11,60,'quantity',null,'Línea adicional de 160 GB'),
