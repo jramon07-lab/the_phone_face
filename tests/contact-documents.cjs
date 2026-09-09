@@ -17,7 +17,7 @@ global.fetch=async(url,options={})=>{calls.push({url,options});
  if(url.includes('/drive/v3/files?'))return response({files:[{id:'file_test',name:'Factura.pdf'}]});
  throw Error('Unexpected network call: '+url);
 };
-async function invoke(action,body={},method){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry','trash'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app'},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456'},body:{contactId:rid,...body}},res);return result;}
+async function invoke(action,body={},method,extraHeaders={}){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry','trash'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app',...extraHeaders},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456'},body:{contactId:rid,...body}},res);return result;}
 (async()=>{
  assert.equal(T.folderId('https://drive.google.com/drive/u/0/folders/'+fid),fid);
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));
@@ -29,6 +29,14 @@ async function invoke(action,body={},method){let result;const res={setHeader(){r
  d=await invoke('link',{confirmed:true,expectedLink:null,folderId:fid});assert.equal(d.status,409);
  emptyPatch=true;d=await invoke('link',{confirmed:true,expectedLink:savedLink,folderId:fid});assert.equal(d.status,409);emptyPatch=false;
  d=await invoke('upload',{expectedLink:savedLink,name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,200);assert.ok(d.body.uploadUrl);assert.ok(!JSON.stringify(d).includes('test-google-access'));
+ const preview='https://the-phone-face-app-whatsapp-git-a7bebf-jramon-07-2402s-projects.vercel.app';
+ d=await invoke('upload',{expectedLink:savedLink,name:'Audit.pdf',size:618,mimeType:'application/pdf'},'POST',{origin:preview,host:new URL(preview).host});assert.equal(d.status,200);
+ assert.equal(calls.filter(c=>c.url.includes('/upload/drive')).at(-1).options.headers.Origin,preview,'Resumable response must allow the actual CRM browser origin');
+ const uploadCount=calls.filter(c=>c.url.includes('/upload/drive')).length;
+ for(const origin of ['https://outside.example','null','http://the-phone-face-app-whatsapp-git-a7bebf-jramon-07-2402s-projects.vercel.app']){
+  d=await invoke('upload',{expectedLink:savedLink,name:'Audit.pdf',size:618,mimeType:'application/pdf'},'POST',{origin,host:new URL(preview).host});assert.equal(d.status,403);
+ }
+ assert.equal(calls.filter(c=>c.url.includes('/upload/drive')).length,uploadCount);
  const reordered=Object.fromEntries(Object.entries(savedLink).reverse());
  d=await invoke('upload',{expectedLink:reordered,name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,200,'Equivalent link with reordered database keys must upload');
  d=await invoke('upload',{expectedLink:{...reordered,folder_id:'different_folder'},name:'DNI.pdf',size:1000,mimeType:'application/pdf'});assert.equal(d.status,409);

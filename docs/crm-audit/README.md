@@ -34,7 +34,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 | 14 | Recordatorios | Aviso en aplicación, navegador, Telegram y segundo recordatorio | Entrega real a destinatario de prueba, una sola vez y en horario correcto | agenda-items, api/telegram.js | PENDIENTE |
 | 15 | WhatsApp lectura | Listas, filtros, contador, historial, búsqueda y cambio rápido de chat | Dos sesiones coinciden; una respuesta atrasada no contamina otra conversación | crm-whatsapp-multidevice | PARCIAL |
 | 16 | WhatsApp escritura | Texto, respuesta citada, fotos, audio, archivo y errores de envío | Envío real autorizado, receptor y contenido correctos, sin duplicados | whatsapp-seven-regressions; green-reply/file-safe | PENDIENTE |
-| 17 | Archivo compartido | Archivar, recuperar, deshacer, nueva entrada y error de guardado | Guardar por API real con dos sesiones y limpiar solo identificador sintético | whatsapp-archive-reliability; RLS SQL; simulación Chrome | PARCIAL |
+| 17 | Archivo compartido | Archivar, recuperar, deshacer, nueva entrada y error de guardado | Guardar por API real con dos sesiones y limpiar solo identificador sintético | Supabase real y 2 sesiones: 34324454056 y 34325419583, ambos aprobados; proveedor simulado y limpieza de fila comprobada | COMPROBADO EN ENSAYO |
 | 18 | WhatsApp programado | Crear, editar, cancelar, enviar ahora, listado y ejecución horaria | Una entrega real, estado confirmado y cancelación efectiva | whatsapp-programs-pro; scheduled-runner | PARCIAL |
 | 19 | Plantillas | Crear, buscar, filtrar, favoritas, editar, variables y borrar | Mismo contenido guardado desde todos los selectores y destinatario correcto | crm-libraries-import; crm-whatsapp-schedule-templates | PARCIAL |
 | 20 | Ofertas por operador | Vodafone, MásMóvil, Yoigo, O2 y catálogos disponibles | Todas las combinaciones, descuentos, extras, precio editable y texto final | offer-configurator; operator-after-sales | PARCIAL |
@@ -48,10 +48,10 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 | 28 | Etiquetas | CRUD, categoría, color, búsqueda y asignación individual/masiva | Coherencia entre ficha, filtros, móvil y disparadores | CRUD Chrome 34324473084; RLS real: administrador/demo permitidos, rol limitado/anon denegados, ROLLBACK y limpieza | PARCIAL |
 | 29 | Campos personalizados | Contactos y oportunidades, tipos, valores, permisos y eliminación | Lectura/edición homogénea en todas las entradas y tipos | crm_custom_fields; sales_custom_fields | PENDIENTE |
 | 30 | Importación Excel | Previsualización, mapeo, decisiones, altas, actualizaciones y oportunidades | Identidad inequívoca, relaciones, errores y repetición sin duplicados | crm-libraries-import; import-* | PARCIAL |
-| 31 | Documentos y Drive | Enlazar, crear carpeta, buscar, subir, listar, descargar y papelera | Archivo real sintético recuperable e idéntico; permisos y limpieza | crm-documents unit; estado Drive conectado | PARCIAL |
+| 31 | Documentos y Drive | Enlazar, crear carpeta, buscar, subir, listar, descargar y papelera | Archivo real sintético recuperable e idéntico; permisos y limpieza | PDF real guardado e idéntico por hash; confirmación de subida falla en Preview (CORS), corrección local preparada | FALLO / CORRECCIÓN EN PRUEBA |
 | 32 | DNI y PDF | Cámara, galería, recorte, giro, multipágina, OCR y caducidad | PDF legible, fecha confirmada y subida real; cámara física pendiente | document-*; mobile-ocr-*; PDF Chrome | PARCIAL |
-| 33 | Usuarios y permisos | Alta, edición, roles, permisos por campo, activación y restricciones | No eleva permisos ni expone datos; administración con sesión autorizada | demo no administradora; revisión RLS en curso | PENDIENTE |
-| 34 | Estado del sistema | PC/móvil, incidencias, diagnóstico, exportación y borrado de avisos | Distingue error de aviso, no muestra secretos y no certifica lo omitido | system-monitoring; admin omitido | PARCIAL |
+| 33 | Usuarios y permisos | Alta, edición, roles, permisos por campo, activación y restricciones | No eleva permisos ni expone datos; administración con sesión autorizada | sesión admin abierta; revisión RLS en curso | PENDIENTE |
+| 34 | Estado del sistema | PC/móvil, incidencias, diagnóstico, exportación y borrado de avisos | Distingue error de aviso, no muestra secretos y no certifica lo omitido | diagnóstico admin visible; exportación pendiente; omisión CI conservada | PARCIAL |
 | 35 | Papelera | Contactos, tareas, oportunidades, restauración y purga | Verifica relaciones e historial además de identidad; no restaurar clientes reales | trash-identity; restauración de relaciones pendiente | PARCIAL |
 | 36 | Copias y horarios | Manual, diaria, cifrado, subida, descarga, integridad y antigüedad | Copia reciente completa y horario realmente activo | v3 incluye 42 tablas; producción antigua devuelve 404 en copia; última verified 2026-09-04 | FALLO DE PROGRAMACIÓN |
 | 37 | Recuperación completa | Base, usuarios, reglas, archivos, credenciales y aplicación | Restauración en destino aislado con cotejo de relaciones y recorridos | Rama de ensayo yebjacgqrycxcvpewmzq existe pero está atrasada (30 tablas, 3 cron activos); faltan volcado y acceso PostgreSQL privado | BLOQUEADO |
@@ -59,7 +59,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 | 39 | Móvil completo | Todas las rutas, accesos rápidos, formularios, búsquedas y retorno | Sin desbordamiento; mismas entidades y permisos que PC | crm-complete-flows; mobile-* | PARCIAL |
 | 40 | Dos puestos y resistencia | Usuarios distintos, sesiones largas, pestañas, desconexión y límites | Coherencia tras recuperar conexión; conflictos de edición visibles | dos contextos probados; ensayo prolongado pendiente | PARCIAL |
 | 41 | Seguridad y API | Sin sesión, rol limitado, entradas inválidas y acceso directo | RLS y autorización por función; sin secretos en cliente, logs o diagnóstico | API WhatsApp/Telegram protegidas y probadas; etiquetas RLS corregido; app_settings/asignación de etiquetas requieren revisión adicional | PARCIAL |
-| 42 | Despliegue y continuidad | Commit, alias, caché, versión PC/móvil y recuperación de código | Enlace estable conserva versión comprobada y evidencia de ese commit | Estable 734db09 READY; candidato 7ca4b1f, 49 Chrome aprobadas + 3 omitidas; promoción pendiente | PARCIAL |
+| 42 | Despliegue y continuidad | Commit, alias, caché, versión PC/móvil y recuperación de código | Enlace estable conserva versión comprobada y evidencia de ese commit | Estable 734db09 READY; candidato b888d3b, 49 Chrome aprobadas + 3 omitidas; promoción pendiente | PARCIAL |
 
 ## Hallazgos de recuperación
 
@@ -87,9 +87,15 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 ### Límites operativos que impiden cerrar la auditoría
 
 1. Microsoft 365 sigue pausado y sin buzones; falta conexión y consentimiento administrativo.
-2. El diagnóstico/gestión administrativa necesita una sesión de administrador; la cuenta automática es demo.
+2. Acceso administrativo resuelto mediante entrada segura del usuario. El navegador dejó de responder al abrir la confirmación de copia; exportación y copia manual siguen pendientes. La cuenta automática es demo.
 3. La recuperación completa necesita un volcado con acceso privado a PostgreSQL y la configuración externa; no basta con validar un archivo cifrado.
 4. Producción Vercel conserva el despliegue antiguo del 29 de agosto. Sus ejecutores de Supabase llaman a ese dominio sin sesión CRM. Antes de promoverlo hay que preparar autenticación de servicio y probar los ejecutores; cambiarlo ahora podría detener automatizaciones. No hay credenciales de administración de Vercel disponibles para cambiar sus variables privadas.
 5. Los recorridos que crean ventas/configuración y disparan automatizaciones necesitan un entorno de ensayo actualizado para probar todas sus combinaciones sin alcanzar clientes. Las pruebas físicas de cámara/notificaciones y los dos ordenadores del usuario no se sustituyen por emulación de navegador.
 
 La matriz permanece abierta. Las filas PARCIAL/PENDIENTE conservan los pasos concretos pendientes; este documento no certifica todo el CRM.
+
+### Acceso administrativo y Drive ampliados
+
+La sesión administrativa ya se abrió mediante entrada segura. Estado del sistema y procesos reales cargaron. La exportación del diagnóstico y la copia manual aún no terminaron: el navegador dejó de responder al abrir la confirmación. Se conserva el estado para recuperarlo.
+
+Drive: ensayo 34325419583 mostró error de confirmación aunque el PDF se guardó; descarga independiente e igualdad de bytes comprobadas (618 bytes, SHA256 76b734f8fbe3f8304fd29f77373ce6c2a73c4a3d87a3d128fdf33b9e39c3534d). Corrección del origen de subida preparada y probada localmente. Dos artefactos sintéticos de esa ejecución siguen conservados porque la revisión automática rechazó su borrado permanente; no se reintentará por otra vía.

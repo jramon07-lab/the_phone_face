@@ -5,6 +5,7 @@ on:
     branches: [desarrollo-crm]
     paths:
       - tests/e2e/audit-live-integrations.spec.js
+      - api/crm-documents.js
       - .github/workflows/live-integrations-audit.yml
 permissions:
   contents: read

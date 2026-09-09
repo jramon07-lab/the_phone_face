@@ -1,3 +1,15 @@
+## Checkpoint — Drive y acceso administrativo, 9 de septiembre
+
+- `b888d3b`: Chrome `34325439846`, job `102381506539`, concluido success: 49 aprobadas (2 + 47), 3 omitidas. Dos sesiones: 2266/2266 y firma igual; automatizaciones en reposo: 0 mutaciones.
+- Ensayo adicional `34325419583`, job `102383516362`: archivo compartido real APROBADO otra vez; Drive FALLÓ al confirmar la subida. La conexión independiente encontró el PDF de 618 bytes: SHA256 `76b734f8fbe3f8304fd29f77373ce6c2a73c4a3d87a3d128fdf33b9e39c3534d`, idéntico al generado. La subida sí llegó a Drive.
+- Causa: la sesión resumible enviaba el origen estable aunque el navegador usase Preview. Corrección candidata en api/crm-documents.js: validar Origin contra Host HTTPS del propio despliegue; usar ese origen para la respuesta de Google. Prueba local roja antes, verde después; pendiente repetición real. La regresión completa detectó un falso positivo de su filtro de mutaciones en crypto.createHash().update(bytes); se usa crypto.hash sin relajar ese filtro.
+- Limpieza de base confirmada: contacto f4eac477-886f-4e1e-a8fd-7c84bcf7c9d7 y papelera 0; fila sintética del chat retirada.
+- **Limpieza Drive bloqueada por revisión automática**: NO borrar sin autorización explícita del usuario. PDF `1-5DcqIrn-aqrijtxQdTuc9Ep_XJC6h_r` dentro de carpeta `1-yO2W59hc0J3YbJNKpLwoo1K8TlAGUEG` (Auditoria Integracion 34325419583 Prueba). Ambos se conservan. Motivo: borrado permanente no autorizado explícitamente. No eludir el rechazo con otra vía.
+- El usuario corrigió las credenciales mediante formulario seguro. Primero abrió su cuenta normal y después la cuenta administradora. No se han leído ni guardado contraseñas. Navegador de administrador abierto en alias desarrollo, Estado del sistema.
+- Diagnóstico administrativo visible: Vercel responde; GREEN autorizado; sesión operativa; 5 cron sin fallos/atascos; 23 incidencias históricas activas, ninguna crítica. GitHub CI figuraba pendiente para ese commit. El banner Todo operativo tiene alcance limitado; no valida Drive ni copias.
+- Crear copia ahora: clic produjo timeout de navegador al abrir confirmación; no se ha confirmado ni declarado creada. Consulta posterior de crm_backup_runs confirma que solo figuran las copias del 2 y 4 de septiembre. Recuperación mediante una pestaña nueva también falló; no insistir en bucle. Exportar diagnóstico aún pendiente.
+- Candidato de origen Drive: verificación completa 147/147 JavaScript válidos y 98/98 regresiones aprobadas. Mantener enlace estable hasta las pruebas del mismo commit.
+
 ## Checkpoint — 9 de septiembre, 07:45 UTC
 
 - Desarrollo guardado `7ca4b1f`; estable conserva `734db099`, sin promoción nueva.
@@ -12,8 +24,8 @@
 
 - Workflow `CRM Live Integrations Audit`: prueba separada de la validación diaria; usa el mismo bloqueo de cuenta y espera el commit desplegado.
 - Archivo WhatsApp: único identificador sintético `000009092026001@c.us`; dos sesiones, escritura/lectura reales de Supabase y proveedor simulado. Retirar exclusivamente esa fila al cerrar los contextos.
-- Drive: contacto sin teléfono/correo/bienvenida; crea carpeta y PDF propios, prueba papelera de una segunda copia y elimina el contacto de prueba. Después descargar el PDF retenido con el conector, cotejar SHA256 y eliminar exclusivamente los archivos y carpeta identificados en el log.
-- No ejecutar de nuevo el ensayo hasta terminar la limpieza registrada. No se ha completado todavía.
+- Drive: contacto sin teléfono/correo/bienvenida; crea carpeta y PDF propios, prueba papelera de una segunda copia y elimina el contacto de prueba. Después descargar el PDF retenido con el conector y cotejar SHA256. Conservar los artefactos de Drive hasta autorización explícita de limpieza, según el rechazo automático registrado arriba.
+- Antes de repetir, comprobar que los contactos y el chat sintéticos anteriores ya se retiraron. Los artefactos Drive conservados deben permanecer identificados y sin cambios. El ensayo de Drive aún no ha pasado completo.
 - El endpoint de configuración de confirmaciones WhatsApp también exige administrador y método POST.
 
 ## Checkpoint de autorización de servicios — candidato en desarrollo

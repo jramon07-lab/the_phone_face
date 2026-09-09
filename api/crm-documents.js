@@ -9,6 +9,13 @@ const PROVIDER='google_drive_documents',FOLDER='application/vnd.google-apps.fold
 const UPLOAD_MIMES=new Set(['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/rtf','text/plain','image/jpeg','image/png','image/webp','image/heic','image/heif']);
 const configured=()=>!!(KEY&&PUBLIC&&CID&&SECRET&&ENC);
 const fail=(status,message)=>Object.assign(new Error(message),{status});
+// Google binds resumable-upload CORS to the origin used to start the session.
+// Preview, branch and stable URLs must each receive their own response origin.
+function uploadOrigin(req){
+ const supplied=String(req.headers?.origin||'');if(!supplied)return ORIGIN;
+ try{const u=new URL(supplied);if(u.protocol==='https:'&&u.origin===supplied&&u.host===String(req.headers?.host||'').toLowerCase())return u.origin;}catch(_){}
+ throw fail(403,'El origen de la subida no corresponde a este CRM.');
+}
 const json=(res,status,value)=>res.status(status).json(value);
 // JSONB may reorder object keys. Compare all values, not serialization order.
 const stableLink=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
@@ -117,7 +124,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const f=await provider.folder(t,link.folder_id);if(!f.capabilities?.canAddChildren)throw fail(403,'Google no permite subir archivos a esta carpeta.');
   const name=String(body.name||'').trim(),size=Number(body.size),mime=String(body.mimeType||'');
   if(!name||name.length>200||/[\x00-\x1f/\\]/.test(name)||!Number.isSafeInteger(size)||size<=0||size>100*1024*1024||!UPLOAD_MIMES.has(mime))throw fail(400,'Elige un documento o una fotografía de hasta 100 MB.');
-  const r=await request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(size),Origin:ORIGIN},body:JSON.stringify({name,mimeType:mime,parents:[f.id]})});const url=r.headers.get('location');if(!r.ok||!url||new URL(url).origin!=='https://www.googleapis.com')throw fail(502,'Google no pudo preparar la subida.');return json(res,200,{ok:true,uploadUrl:url});
+  const r=await request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(size),Origin:uploadOrigin(req)},body:JSON.stringify({name,mimeType:mime,parents:[f.id]})});const url=r.headers.get('location');if(!r.ok||!url||new URL(url).origin!=='https://www.googleapis.com')throw fail(502,'Google no pudo preparar la subida.');return json(res,200,{ok:true,uploadUrl:url});
  }
  throw fail(400,'Acción no disponible.');
  }catch(e){const status=e.status||500;return json(res,status,{ok:false,error:status===500?'No se pudo completar la operación. Vuelve a intentarlo.':e.message});}

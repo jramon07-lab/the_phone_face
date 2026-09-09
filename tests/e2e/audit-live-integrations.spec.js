@@ -1,5 +1,5 @@
 const {test,expect}=require('@playwright/test');
-const {createHash}=require('node:crypto');
+const {hash}=require('node:crypto');
 test.use({trace:'off',video:'off',screenshot:'off'});
 const CHAT='000009092026001@c.us';
 async function login(page){await page.goto('/');await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();await expect(page.locator('#app')).toBeVisible({timeout:30000});}
@@ -69,7 +69,7 @@ test('Drive real: crear carpeta, subir PDF, listar y enviar otra copia a papeler
   await upload(marker+'.pdf');file=await page.locator('.tpfDocsFile').filter({hasText:marker+'.pdf'}).locator('[data-doc-trash]').getAttribute('data-doc-trash');
   await upload(marker+' retirar.pdf');const removed=page.locator('.tpfDocsFile').filter({hasText:marker+' retirar.pdf'}),removedId=await removed.locator('[data-doc-trash]').getAttribute('data-doc-trash');
   page.once('dialog',d=>d.accept());await removed.locator('[data-doc-trash]').click();await expect(removed).toHaveCount(0);
-  console.log('LIVE_DRIVE_VERIFIED',JSON.stringify({contact_id:id,folder_id:folder.folder_id,folder_name:folder.folder_name,file_id:file,trashed_file_id:removedId,file_name:marker+'.pdf',bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),cleanup:'Fetch the retained synthetic PDF independently, compare SHA256, then delete only these synthetic Drive artifacts'}));
+  console.log('LIVE_DRIVE_VERIFIED',JSON.stringify({contact_id:id,folder_id:folder.folder_id,folder_name:folder.folder_name,file_id:file,trashed_file_id:removedId,file_name:marker+'.pdf',bytes:bytes.length,sha256:hash('sha256',bytes),cleanup:'Fetch the retained synthetic PDF independently and compare SHA256; retain Drive artifacts pending explicit cleanup permission'}));
  }finally{
   console.log('LIVE_DRIVE_CLEANUP_IDS',JSON.stringify({marker,contact_id:id,folder_id:folder?.folder_id,file_id:file}));
   for(const row of await ownRows()){
