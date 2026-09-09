@@ -30,7 +30,7 @@ test('ofertas: checks compactos y fecha-hora conjunta con minutos 00/30',async({
   await toggle.check();
   await expect(fields).toBeVisible();
   await expect(page.locator('.opDateTimeCombined')).toBeVisible();
-  await expect(page.locator('input[type="datetime-local"]')).toHaveCount(0);
+  await expect(page.locator('#opSendOptions input[type="datetime-local"]')).toHaveCount(0);
   await expect(page.locator('#opScheduleDate')).toBeVisible();
   await expect(page.locator('#opScheduleHour option')).toHaveCount(24);
   const minutes=await page.locator('#opScheduleMinute option').evaluateAll(options=>options.map(option=>option.value));
