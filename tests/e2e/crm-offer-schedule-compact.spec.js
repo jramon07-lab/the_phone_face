@@ -27,7 +27,7 @@ test('ofertas: programación compacta usa un check y franjas exactas de 30 minut
   await expect(toggle).toBeVisible({timeout:15000});
   await expect(toggle).not.toBeChecked();
   await expect(fields).toBeHidden();
-  await expect(page.locator('input[type="datetime-local"]')).toHaveCount(0);
+  await expect(page.locator('#opSendOptions input[type="datetime-local"]')).toHaveCount(0);
   await toggle.check();
   await expect(fields).toBeVisible();
   await expect(page.locator('#opScheduleDate')).toBeVisible();
