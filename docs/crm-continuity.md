@@ -1,3 +1,16 @@
+## Punto de reanudación — 9 de septiembre, 08:20 UTC
+
+El usuario ha enviado otra captura de Work con respuestas vacías y «algo ha salido mal». El acceso seguro de administrador YA SE COMPLETÓ. No pedir otra vez las credenciales salvo que la sesión realmente haya caducado. El navegador de administración dejó de responder al abrir la confirmación nativa de la copia; el único intento de pestaña nueva también falló. Solicitar intervención manual, sin extraer cookies/tokens ni cerrar la sesión de la cuenta usada por CI.
+
+- Código candidato guardado: **29f6b31d297c00cc7b92926209e26d64443ce70e**. Verificación local 99/99; JavaScript 147/147. Chrome del mismo commit: ejecución **34328280876**, en curso al guardar este punto. Este commit de continuidad solo modifica documentación.
+- Candidato anterior Drive **8a768a7**: Chrome **34327435911**, job 102387839074: **49 aprobadas, 3 omitidas**. Dos sesiones con 2266 conversaciones, 71 recientes, igualdad de resumen e historial. Automatizaciones en reposo: 0 mutaciones.
+- Ensayo real **34327416743**, job 102389976359: **2 aprobadas**. Archivo compartido persistido en Supabase entre dos sesiones (proveedor simulado). Drive: creación/vinculación de carpeta, subida confirmada, listado y envío de una segunda copia sintética a papelera aprobados.
+- Descarga independiente del PDF retenido: 618 bytes, igualdad exacta y SHA256 **76b734f8fbe3f8304fd29f77373ce6c2a73c4a3d87a3d128fdf33b9e39c3534d**. PDF **1cBaZtyKzzAUw6FEkM4TI5PABZXd3askQ**; carpeta **1RAvcR6Tc56_WS07g4Edgmuzz1Xl06vMq**; segunda copia en papelera **1rdNBuvjeblenco_abD2zNyd4JMtxWtlU**. Conservar artefactos hasta permiso explícito de limpieza; respetar el rechazo automático anterior.
+- Contacto sintético d943e5fb-8350-45af-bed7-4480983e07c9 y su papelera: 0. Fila de chat 000009092026001@c.us retirada después de cerrar ambas sesiones.
+- Estable sigue **734db09915a7dbf0b6cbc876264274768120838e**, mismo enlace. Ninguna corrección de esta auditoría se ha promovido todavía. No promover con una prueba fallida o desconocida.
+- Cambios efectivos de base en esta auditoría: permisos de etiquetas 20260909073937 y de interruptores globales 20260909081241; ambos probados con ROLLBACK y después de aplicar. No se cambió ningún permiso de usuario, cliente ni valor de los interruptores.
+- Próximos pasos concretos: consultar Actions 34328280876; recuperar la ventana administrativa para copia v3 y exportación; verificar la copia en historial (la última sigue siendo 4 de septiembre); resolver programación de producción/autenticación del ejecutor; restauración aislada completa y áreas abiertas en la matriz. Microsoft 365 sigue pausado e incompleto.
+
 ## Checkpoint — permisos del motor y diagnóstico, 9 de septiembre, 08:13 UTC
 
 - Desarrollo guardado `8a768a7f975fca730daafba5f58ec57cb253d557`: corrección de origen Drive, 98/98 regresiones. Chrome `34327435911` y ensayo real `34327416743` en curso; esperar ambos antes de cambiar ese destino.
