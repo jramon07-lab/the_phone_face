@@ -14,3 +14,11 @@ Limits: this is minute polling plus provider history latency, not an instant web
 
 ## Live verification after deployment
 Runner v12 minute tick at 2026-09-09 13:42 UTC synchronized the user's actual decline and cancelled both reminders for the reported offer. The database contains the selected text, No me interesa. No outgoing job claimed or sent during that tick. Additional guard added for HTTP-200 degraded/rate-limited/malformed history; such responses must defer, never infer silence. Development browser gate: GitHub Actions 34358638046 (UI commit 21d655fc); result still pending while this checkpoint is written.
+
+## Direct webhook replacement — 2026-09-09
+
+The continuous pending-offer history scan is removed. GREEN-API Webhook Endpoint now targets the dedicated `crm-green-webhook` Supabase Edge Function using the provider-supported `webhookUrlToken` Authorization header. The endpoint validates the existing runner secret, accepts only incoming direct chats, persists the message in `wa_messages`, and relies on `crm_private.lifecycle_incoming` to cancel pending offer jobs immediately. Duplicate delivery is idempotent. Group messages are ignored.
+
+The existing `no_response` provider-history check remains immediately before day-2/day-5 sends. Degraded, rate-limited, malformed, or unavailable history defers the send. `api/green?action=ensure` no longer clears `webhookUrl`, and settings output redacts the webhook token. `setwebhook` is restricted to the authenticated server runner and an exact allowlisted endpoint.
+
+Verification before provider cutover: 104/104 local tests passed. Edge Function v1 returned HTTP 401 without a valid token and HTTP 200 for an authenticated non-message health payload. Provider cutover, direct test delivery, Chrome gate, and stable promotion remain pending at this checkpoint.

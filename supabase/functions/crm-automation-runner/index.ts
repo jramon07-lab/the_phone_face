@@ -118,29 +118,4 @@ async function processJob(job:any,secret=""){try{
     await complete(job,"done");return "done";
   }catch(err:any){const msg=String(err?.message||err||"Error desconocido");if(err?.responseCheck){await requeue(job,msg,5,true);return "requeued";}if(err?.beforeSend&&Number(job.attempts||0)<10){await requeue(job,msg,2);return "requeued";}await complete(job,"failed",msg);return "failed";}}
 
-// Check future offer reminders on every cron tick, not only on their send date.
-// Rotate bounded batches so one large queue cannot starve later offers.
-async function syncPendingOfferResponses(secret:string){
-  const {data:jobs,error}=await sb.from("crm_server_automation_jobs").select("id,context")
-    .eq("status","pending").eq("context->lifecycle->>mode","offer")
-    .eq("action_config->>__flow_guard","no_response").order("updated_at").limit(20);
-  if(error)throw error;
-  let checked=0,cancelled=0;
-  for(const job of jobs||[]){
-    try{
-      const answered=await hasResponseSince(job.context||{},secret);
-      const patch:any={updated_at:new Date().toISOString()};
-      if(answered){patch.status="cancelled";patch.error_message="Cliente respondió: seguimiento detenido";}
-      const {error:updateError}=await sb.from("crm_server_automation_jobs").update(patch).eq("id",job.id).eq("status","pending");
-      if(updateError)throw updateError;
-      checked++;if(answered)cancelled++;
-    }catch(error){
-      console.error("Offer response synchronization failed",job.id,String(error));
-      // Keep the pre-send guard and allow the next batch to progress.
-      await sb.from("crm_server_automation_jobs").update({updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","pending");
-    }
-  }
-  return {checked,cancelled};
-}
-
-Deno.serve(async(req:Request)=>{if(req.method!=="POST"&&req.method!=="GET")return json({ok:false},405);const secret=String(req.headers.get("x-tpf-cron-secret")||"");if(!(await cronAuthorized(req)))return json({ok:false,error:"Unauthorized"},401);const {data:enabledRow}=await sb.from("app_settings").select("value").eq("key","crm_server_automations_enabled").maybeSingle();if(enabledRow?.value!==true)return json({ok:true,enabled:false,claimed:0,done:0,failed:0});const responseSync=await syncPendingOfferResponses(secret);const {data:jobs,error}=await sb.rpc("crm_server_claim_jobs",{p_limit:20});if(error)return json({ok:false,error:error.message},500);let done=0,failed=0,requeued=0;for(const job of jobs||[]){const result=await processJob(job,secret);if(result==="done")done++;else if(result==="requeued")requeued++;else failed++;}return json({ok:true,enabled:true,claimed:(jobs||[]).length,done,failed,requeued,responseSync});});
+Deno.serve(async(req:Request)=>{if(req.method!=="POST"&&req.method!=="GET")return json({ok:false},405);const secret=String(req.headers.get("x-tpf-cron-secret")||"");if(!(await cronAuthorized(req)))return json({ok:false,error:"Unauthorized"},401);const {data:enabledRow}=await sb.from("app_settings").select("value").eq("key","crm_server_automations_enabled").maybeSingle();if(enabledRow?.value!==true)return json({ok:true,enabled:false,claimed:0,done:0,failed:0});const {data:jobs,error}=await sb.rpc("crm_server_claim_jobs",{p_limit:20});if(error)return json({ok:false,error:error.message},500);let done=0,failed=0,requeued=0;for(const job of jobs||[]){const result=await processJob(job,secret);if(result==="done")done++;else if(result==="requeued")requeued++;else failed++;}return json({ok:true,enabled:true,claimed:(jobs||[]).length,done,failed,requeued});});

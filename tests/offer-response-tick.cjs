@@ -1,8 +1,0 @@
-const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const {stripTypeScriptTypes}=require('node:module');
-const text=fs.readFileSync('supabase/functions/crm-automation-runner/index.ts','utf8');
-const source=stripTypeScriptTypes(text.slice(text.indexOf('async function syncPendingOfferResponses('),text.indexOf('Deno.serve(')));
-const jobs=[{id:'answered',context:{phone:'1'}},{id:'silent',context:{phone:'2'}},{id:'unavailable',context:{phone:'3'}}],updates=[],filters=[];
-const ctx={Date,console:{error(){}},hasResponseSince:async(c)=>{if(c.phone==='3')throw Error('offline');return c.phone==='1';},sb:{from(table){assert.equal(table,'crm_server_automation_jobs');return {select(){return this},eq(k,v){filters.push([k,v]);return this},order(){return this},async limit(){return {data:jobs}},update(patch){const row={patch};updates.push(row);return {eq(k,v){row[k]=v;return this}}}}}}};
-vm.createContext(ctx);vm.runInContext(source,ctx);
-(async()=>{const result=await ctx.syncPendingOfferResponses('secret');assert.equal(result.checked,2);assert.equal(result.cancelled,1);assert.equal(updates[0].patch.status,'cancelled');assert.equal(updates[1].patch.status,undefined);assert.equal(updates[2].patch.status,undefined);assert(updates.every(x=>x.status==='pending'));assert(filters.some(([k,v])=>k==='context->lifecycle->>mode'&&v==='offer'));assert(!/run_at/.test(source),'future reminders must be checked too');console.log('Future offer replies cancel; silence and provider failure do not; only pending offer followups selected.');})().catch(e=>{console.error(e);process.exitCode=1});

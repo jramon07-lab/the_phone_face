@@ -329,7 +329,7 @@ export default async function handler(req, res) {
 
     if (req.method === "GET" && action === "settings") {
       const data = await greenFetch("getSettings");
-      return res.status(200).json({ ok: true, settings: data || {} });
+      return res.status(200).json({ ok: true, settings: { ...(data || {}), webhookUrlToken: data?.webhookUrlToken ? "configured" : "" } });
     }
 
     if (req.method === "POST" && action === "ensure") {
@@ -354,7 +354,6 @@ export default async function handler(req, res) {
 
       if (needIncoming || needOutgoingPhone || needOutgoingApi) {
         const patch = {
-          webhookUrl: "",
           incomingWebhook: "yes",
           outgoingMessageWebhook: "yes",
           outgoingAPIMessageWebhook: "yes"
@@ -372,7 +371,7 @@ export default async function handler(req, res) {
         });
       }
 
-      return res.status(200).json({ ok: true, changed: false, settings: current || {} });
+      return res.status(200).json({ ok: true, changed: false, settings: { ...(current || {}), webhookUrlToken: current?.webhookUrlToken ? "configured" : "" } });
     }
 
     if (req.method === "GET" && action === "summary") {
@@ -656,6 +655,21 @@ export default async function handler(req, res) {
       let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
       if (!r.ok) return res.status(r.status).json({ ok: false, error: data?.message || data?.error || String(data || "No se pudo enviar el archivo") });
       return res.status(200).json({ ok: true, idMessage: data?.idMessage || null, urlFile: data?.urlFile || "", data });
+    }
+
+    if (req.method === "POST" && action === "setwebhook") {
+      if (!await serverRunnerAuthorized(req)) return res.status(403).json({ ok: false, error: "Forbidden" });
+      const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      const webhookUrl = String(body.webhookUrl || "").trim();
+      const expected = "https://overfzbjtpjqxzbujezg.supabase.co/functions/v1/crm-green-webhook";
+      if (webhookUrl !== expected) return res.status(400).json({ ok: false, error: "Webhook URL no permitida" });
+      const secret = String(req.headers?.["x-tpf-cron-secret"] || "").trim();
+      const saved = await greenFetch("setSettings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl, webhookUrlToken: `Bearer ${secret}`, incomingWebhook: "yes" })
+      });
+      return res.status(200).json({ ok: true, configured: true, saved: !!saved?.saveSettings });
     }
 
     if (req.method === "GET" && (action === "notification" || action === "notifications")) {
