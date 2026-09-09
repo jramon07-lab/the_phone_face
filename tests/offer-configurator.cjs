@@ -182,4 +182,6 @@ for(const label of ['No me interesa','Acepto','Quiero mirar otra cosa'])assert.o
 assert.match(replyButtonsSql,/\{steps,0,config,reply_buttons\}/);
 assert.match(source,/crm_create_offer_execution_v6/);
 assert.match(source,/reply_buttons_configured/);
+assert.match(source,/\$\('opSubmit'\)\.onclick=\(\)=>submitOffer\(false\)/);
+assert.doesNotMatch(source,/\$\('opSubmit'\)\.onclick=submitOffer/);
 console.log('PASS: dynamic offer pricing, message composition, safe catalog, lifecycle and operator routing.');
