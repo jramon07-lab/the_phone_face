@@ -1099,9 +1099,8 @@ async function waDownloadFile(url,name="archivo",idMessage=""){
         idMessage:String(idMessage),
         name:String(name||"archivo")
       });
-      // Navegación directa a una respuesta attachment: Safari aplica su
-      // ajuste "Consultar al iniciar la descarga".
-      window.location.href=`/api/green?${qs.toString()}`;
+      // Download through the authenticated request, keeping tokens out of URLs.
+      await window.TPFAPIAuth.download(`/api/green?${qs.toString()}`,name);
       return;
     }
     // Respaldo para archivos sin idMessage.

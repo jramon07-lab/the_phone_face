@@ -1,3 +1,12 @@
+## Checkpoint de autorización de servicios — candidato en desarrollo
+
+- `c5d6936`: Chrome `34322276395`, job `102371397768`, **46 aprobadas, 3 omitidas**. Dos sesiones: 2.266 conversaciones, 69 recientes, igualdad comprobada; reposo de automatizaciones: 0 mutaciones.
+- `62b2f40`: copias v3 guardadas; Chrome `34322723611` en curso en la última consulta.
+- Candidato siguiente: exigir sesión/permiso del CRM en WhatsApp y Telegram, adjuntar la sesión solo a llamadas del mismo origen y descargar archivos mediante petición autenticada sin credenciales en URL.
+- Pruebas nuevas de autorización y descarga; regresiones locales **98/98**, sintaxis válida. Pendiente Chrome antes de promover al estable.
+- Los ejecutores de Supabase usan el dominio antiguo de producción; revisar su autenticación al corregir o promover ese dominio. No cambiar su destino sin verificar entregas y autorización del servidor.
+- La auditoría integral continúa: mantener pendientes explícitos en `docs/crm-audit/README.md`; no declarar 100 % validado.
+
 ## Checkpoint de copias v3 — 9 de septiembre de 2026
 
 - El usuario ha mostrado de nuevo «Streaming interrumpido» en el chat. El trabajo anterior está guardado en `c5d69367c850194ff1a00980b720dee09b8023ad`; no reiniciar la auditoría.

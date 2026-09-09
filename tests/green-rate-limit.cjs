@@ -32,6 +32,7 @@ function mockResponse() {
 
 function loadHandler(fetchImpl) {
   const context = {
+    require:()=>({authorize:async()=>true}),
     fetch: fetchImpl,
     AbortController,
     setTimeout,
@@ -110,6 +111,7 @@ async function run() {
     };
 
     const context = {
+      require:()=>({authorize:async()=>true}),
       fetch: contextFetch,
       AbortController,
       setTimeout,

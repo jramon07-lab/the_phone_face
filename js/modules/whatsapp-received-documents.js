@@ -33,7 +33,7 @@ async function fetchFile(id,name,mime){const r=await fetch(downloadUrl(id,name),
 async function auth(){const s=await sb.auth.getSession(),token=s.data?.session?.access_token;if(!token)throw Error('Inicia sesión de nuevo.');return token;}
 async function docs(action,body,ctx){ctx.check();const token=await auth(),id=ctx.c?.id;ctx.check();if(!id)throw Error('Este chat todavía no tiene una ficha de cliente.');const q=new URLSearchParams({action,contactId:id}),r=await fetch('/api/crm-documents?'+q,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify({...body,contactId:id})}:{})}),d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'No se pudo guardar el documento.');return d;}
 async function upload(file,ctx){ctx.check();const link=ctx.link;if(!link)throw Error('Este cliente todavía no tiene una carpeta de documentos vinculada.');if(file.size>100*1024*1024)throw Error('El archivo supera el máximo de 100 MB.');const d=await docs('upload',{expectedLink:link,name:file.name,size:file.size,mimeType:file.type},ctx);ctx.check();const r=await fetch(d.uploadUrl,{method:'PUT',headers:{'Content-Type':file.type},body:file});if(!r.ok)throw Error('Google no confirmó la subida.');}
-function savePc(id,name,mime){const finalName=imageName(name,mime);const a=document.createElement('a');a.href=downloadUrl(id,finalName);a.download=finalName;a.style.display='none';document.body.appendChild(a);a.click();a.remove();show('Descarga iniciada. La carpeta depende de los ajustes de tu navegador.','ok');}
+async function savePc(id,name,mime){const finalName=imageName(name,mime);await window.TPFAPIAuth.download(downloadUrl(id,finalName),finalName);show('Descarga iniciada. La carpeta depende de los ajustes de tu navegador.','ok');}
 async function saveDrive(id,name,mime,ctx){
  requireLink(ctx);show('Descargando el archivo de WhatsApp…');
  const file=await fetchFile(id,name,mime);ctx.check();
@@ -69,7 +69,7 @@ async function act(target){
   let saveName=name;
   if(action==='drive'){saveName=askName(name,mime);if(saveName===null)return;ctx.check();}
   if(action==='drive'||action==='dni')ctx=await prepare(ctx);
-  if(action==='pc')savePc(id,name,mime);
+  if(action==='pc')await savePc(id,name,mime);
   if(action==='drive')await saveDrive(id,saveName,mime,ctx);
   if(action==='dni')await dni(id,name,mime,ctx);
  }catch(error){show(error.message||'No se pudo completar la acción.','error');}

@@ -177,10 +177,10 @@ test('Dos sesiones autenticadas: resumen e historial reales coinciden sin enviar
     await Promise.all([login(one.page),login(two.page)]);
     let sharedId='';
     await expect.poll(async()=>{
-      const results=await Promise.all([one.page.request.get('/api/green?action=summary'),two.page.request.get('/api/green?action=summary')]);
-      const data=await Promise.all(results.map(r=>r.json()));
+      const results=await Promise.all([one,two].map(device=>device.page.evaluate(async()=>{const r=await fetch('/api/green?action=summary');return {status:r.status,data:await r.json()}})));
+      const data=results.map(r=>r.data);
       if(data.some(r=>r.degraded||!r.chats?.length)){
-        console.log('MULTIDEVICE_SUMMARY_RETRY',data.map((r,i)=>({status:results[i].status(),ok:r.ok,degraded:!!r.degraded,cached:!!r.cached,count:r.chats?.length||0,providerStatus:r.providerStatus||null})));
+        console.log('MULTIDEVICE_SUMMARY_RETRY',data.map((r,i)=>({status:results[i].status,ok:r.ok,degraded:!!r.degraded,cached:!!r.cached,count:r.chats?.length||0,providerStatus:r.providerStatus||null})));
         return false;
       }
       const signature=r=>r.chats.map(c=>[c.id,c.unreadCount,c._lastMessage?.idMessage||'',c._lastIncomingAt,c._lastOutgoingAt]).sort((a,b)=>a[0].localeCompare(b[0]));

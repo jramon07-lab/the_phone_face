@@ -134,6 +134,7 @@ function sendCachedGreenRead(res, result) {
 }
 
 export default async function handler(req, res) {
+  if(!await require('../lib/crm-api-auth').authorize(req,res,'can_use_whatsapp'))return;
   res.setHeader("Cache-Control", "no-store");
 
   const id =

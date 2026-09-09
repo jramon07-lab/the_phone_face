@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  if(!await require('../lib/crm-api-auth').authorize(req,res,'can_manage_agenda'))return;
   res.setHeader("Cache-Control", "no-store");
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {

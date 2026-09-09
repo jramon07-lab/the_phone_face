@@ -26,6 +26,7 @@ const ctx=vm.createContext({document,console,File,URLSearchParams,Date,Response,
   sb:{auth:{async getSession(){if(authHook)await authHook();return {data:{session:{access_token:'test-only'}}};}}},
 });
 ctx.window=ctx;
+ctx.TPFAPIAuth={download:async(href,name)=>downloads.push({href,name})};
 ctx.prompt=(_,suggested)=>suggested;
 ctx.TPFModules={register(name,def){assert.equal(name,'whatsapp-received-documents');def.install();}};
 ctx.TPFDocumentScanner={open(options){scanner=options;}};
