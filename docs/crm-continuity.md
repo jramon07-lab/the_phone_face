@@ -1,3 +1,11 @@
+## Reanudación — prueba de sesiones y fallo de ventas, 9 de septiembre
+
+- Estable conservado en **29f6b31**, con sus pruebas anteriores y posteriores aprobadas. Candidato de sesiones **229b46b301fcfe86c234d667ebdab661185f1972**: 100/100 locales y 147/147 JavaScript.
+- Chrome **34330713702**, intento 1, job **102398391296**: aislamiento de tres sesiones APROBADO, renovación real del segundo PC conservada. Total 49 aprobadas, 1 fallida y 3 omitidas. Falló la consulta única de la venta sintética, sin causa demostrada; no promover basándose en ese resultado. Artefacto **10095871889**.
+- Intento 2 del mismo commit, job **102401026910**, en curso al guardar este punto. No se añadieron reintentos automáticos ni se eliminaron aserciones.
+- Este checkpoint refuerza la prueba de venta: exige respuesta correcta del RPC de creación, consulta por el ID devuelto y valida título, titular, gestor, importe y ausencia de duplicación. Es un cambio de verificación, no una corrección demostrada del fallo de ventas. Esperar el Chrome del nuevo commit antes de publicar.
+- A las 08:52 UTC siguen avisos de Windows 1560a8b5; guardar y recargar ambos equipos. Copia/exportación administrativas siguen necesitando el navegador propio del usuario por bloqueo CDP, no nuevas credenciales.
+
 ## Publicación y sesiones — punto de continuidad, 9 de septiembre
 
 - **Estable publicado ahora: 29f6b31d297c00cc7b92926209e26d64443ce70e**, mismo alias. Vercel dpl_3n8FtZBKinPNApkq2E3jGjvSukpJ READY, inmutable mxjcgqabb. No confundir las notas anteriores de estable 734db099 con el estado actual.

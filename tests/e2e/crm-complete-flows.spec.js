@@ -93,8 +93,19 @@ test('Titulares y ventas: vínculo, oportunidad gestionada, DNI, lista/tablero y
   await page.evaluate(id=>window.TPFContactsList.edit(id),manager);await page.locator('[data-rel-enabled]').check();await page.locator('[data-rel-add]').click();await page.locator('[data-rel-search]').fill(marker+' Titular');await page.locator('[data-rel-pick="'+holder+'"]').click();await page.locator('#tpfContactsCreateSave').click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
   await openContact(page,manager);await page.locator('[data-rel-holders] > summary').click();await expect(page.locator('[data-rel-cards]')).toContainText(marker+' Titular');await expect(page.locator('[data-rel-cards]')).toContainText(dni);
   await page.locator('#cpNewOpp').click();await expect(page.locator('#oppDetailModal')).toBeVisible();await page.locator('#oppModalTitle').fill(marker+' Venta');await page.locator('#oppModalAmount').fill('12.34');await page.locator('#oppModalDate').fill('2035-01-15');
-  await page.locator('[data-rel-other]').check();await page.locator('[data-rel-choice]').selectOption(holder);await page.locator('#oppModalSave').click();await expect(page.locator('#oppDetailModal')).toBeHidden({timeout:15000});await expect(page.locator('#oppModalSave')).toBeEnabled();await page.waitForFunction(()=>!window.__TPF_RESTORING);
-  const opp=await page.evaluate(async title=>{const r=await sb.from('sales_opportunities').select('id,record_id,contract_party,amount').eq('title',title).single();if(r.error)throw Error(r.error.message);return r.data;},marker+' Venta');expect(opp.record_id).toBe(holder);expect(opp.contract_party.contact_name).toBe(marker+' Gestor Demo');expect(opp.amount).toBe(12.34);
+  await page.locator('[data-rel-other]').check();await page.locator('[data-rel-choice]').selectOption(holder);
+  await expect(page.locator('#oppModalTitle')).toHaveValue(marker+' Venta');
+  // A hidden editor alone does not prove that the save reached the server.
+  const [savedResponse]=await Promise.all([
+   page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/rest/v1/rpc/crm_create_opportunity_guarded')&&response.request().postDataJSON()?.p_title===marker+' Venta',{timeout:15000}),
+   page.locator('#oppModalSave').click()
+  ]);
+  expect(savedResponse.ok(),'The opportunity creation RPC must succeed').toBe(true);
+  const savedId=await savedResponse.json();expect(savedId).toMatch(/^[0-9a-f-]{36}$/i);
+  await expect(page.locator('#oppDetailModal')).toBeHidden({timeout:15000});await expect(page.locator('#oppModalSave')).toBeEnabled();await page.waitForFunction(()=>!window.__TPF_RESTORING);
+  const opp=await page.evaluate(async id=>{const r=await sb.from('sales_opportunities').select('id,title,record_id,contract_party,amount').eq('id',id).single();if(r.error)throw Error(r.error.message);return r.data;},savedId);expect(opp.title).toBe(marker+' Venta');expect(opp.record_id).toBe(holder);expect(opp.contract_party.contact_name).toBe(marker+' Gestor Demo');expect(opp.amount).toBe(12.34);
+  const sameTitleCount=await page.evaluate(async title=>{const r=await sb.from('sales_opportunities').select('id',{count:'exact',head:true}).eq('title',title);if(r.error)throw Error(r.error.message);return r.count;},marker+' Venta');expect(sameTitleCount,'A single save must create exactly one opportunity').toBe(1);
+  console.log('SALES_SAVE_VERIFIED: one successful creation RPC, exact saved ID, title, holder, manager and amount.');
   await openContact(page,manager);await expect(page.locator('#cpOpportunities')).toContainText(marker+' Titular');await page.locator('#contactClose').click();await expect(page.locator('#contactModal')).toBeHidden();
   await page.locator('.nav[data-view="sales"]').click();await page.evaluate(()=>window.loadSales());
   await page.evaluate(id=>window.openOpportunityCard(id),opp.id);await expect(page.locator('#tpfOpportunityParty')).toContainText(marker+' Titular');await expect(page.locator('#tpfOpportunityParty')).toContainText(dni);await page.locator('#oppModalClose').click();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#view-sales')).toBeVisible();await page.waitForFunction(()=>!window.__TPF_RESTORING);
