@@ -11,7 +11,7 @@ function response(){return {code:200,setHeader(){},status(code){this.code=code;r
    assert.equal(await auth.authorize({headers:{authorization:'Bearer synthetic-session'}},res),expected===200);assert.equal(res.code,expected);
   }
   global.fetch=async()=>{throw Error('Network failed')};res=response();assert.equal(await auth.authorize({headers:{authorization:'Bearer synthetic-session'}},res),false);assert.equal(res.code,503);
-  for(const name of ['green','green-reply','green-file-safe','green-status','green-read-safe','telegram']){
+  for(const name of ['green','green-reply','green-file-safe','green-status','green-read-safe','green-enable-status','telegram']){
    let providerCalls=0;const source=fs.readFileSync('api/'+name+'.js','utf8').replace('export default async function handler','async function handler')+';this.handler=handler;';
    const ctx=vm.createContext({require:()=>auth,process:{env:{GREEN_API_INSTANCE_ID:'test',GREEN_API_TOKEN:'test',TELEGRAM_BOT_TOKEN:'test'}},fetch:async()=>{providerCalls++;throw Error('No provider access without session')},console:{error(){}},setTimeout,clearTimeout,AbortController,URLSearchParams,Buffer});
    vm.runInContext(source,ctx);res=response();

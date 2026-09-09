@@ -1,3 +1,11 @@
+## Ensayo de integraciones reales preparado
+
+- Workflow `CRM Live Integrations Audit`: prueba separada de la validación diaria; usa el mismo bloqueo de cuenta y espera el commit desplegado.
+- Archivo WhatsApp: único identificador sintético `000009092026001@c.us`; dos sesiones, escritura/lectura reales de Supabase y proveedor simulado. Retirar exclusivamente esa fila al cerrar los contextos.
+- Drive: contacto sin teléfono/correo/bienvenida; crea carpeta y PDF propios, prueba papelera de una segunda copia y elimina el contacto de prueba. Después descargar el PDF retenido con el conector, cotejar SHA256 y eliminar exclusivamente los archivos y carpeta identificados en el log.
+- No ejecutar de nuevo el ensayo hasta terminar la limpieza registrada. No se ha completado todavía.
+- El endpoint de configuración de confirmaciones WhatsApp también exige administrador y método POST.
+
 ## Checkpoint de autorización de servicios — candidato en desarrollo
 
 - `c5d6936`: Chrome `34322276395`, job `102371397768`, **46 aprobadas, 3 omitidas**. Dos sesiones: 2.266 conversaciones, 69 recientes, igualdad comprobada; reposo de automatizaciones: 0 mutaciones.

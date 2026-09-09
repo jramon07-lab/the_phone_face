@@ -3,7 +3,7 @@ test.use({trace:'off',video:'off',screenshot:'off'});
 async function login(page){await page.goto('/');await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();await expect(page.locator('#app')).toBeVisible({timeout:30000});}
 
 test('Accesos: WhatsApp y Telegram exigen sesión antes de leer o enviar',async({request})=>{
- for(const path of ['green','green-reply','green-file-safe','green-status','green-read-safe','telegram']){
+ for(const path of ['green','green-reply','green-file-safe','green-status','green-read-safe','green-enable-status','telegram']){
   const r=path==='green'?await request.get('/api/green?action=summary'):await request.post('/api/'+path,{data:{}});
   expect(r.status(),path+' sin sesión CRM').toBe(401);expect((await r.json()).ok).toBe(false);
  }
