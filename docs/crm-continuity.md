@@ -1,3 +1,12 @@
+## Checkpoint de copias v3 — 9 de septiembre de 2026
+
+- El usuario ha mostrado de nuevo «Streaming interrumpido» en el chat. El trabajo anterior está guardado en `c5d69367c850194ff1a00980b720dee09b8023ad`; no reiniciar la auditoría.
+- Copia ampliada de 38 a 42 tablas públicas; paginación de archivados por `chat_id`; lectura compatible con copias v2. Pruebas locales de cobertura de esquema, integridad y API aprobadas.
+- Esquema observado: 46 tablas públicas y 3 privadas. Todas con RLS. Inventario sin datos de clientes en `docs/crm-audit/database-inventory.json`.
+- La copia diaria y la restauración completa siguen pendientes; no confundir este cambio de código con una copia real reciente.
+- Revisión de acceso a servicios WhatsApp/Telegram abierta: comprobar sesión del CRM en servidor y compatibilidad de descargas, móvil y ejecutores antes de promover cambios.
+- Chrome de `c5d6936`: Actions `34322276395`, job `102371397768`, en curso en la última consulta. Estable sigue `734db099`.
+
 ## Avance de auditoría: correcciones candidatas, pendientes de Chrome
 
 - Reproducción roja y corrección de orden de captura del aviso de borrador; el retorno a WhatsApp espera al cierre aceptado.

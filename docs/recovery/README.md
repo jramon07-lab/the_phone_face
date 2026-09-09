@@ -4,7 +4,7 @@ El código está en Git; los datos cambian a diario. Un ZIP del código y una co
 
 ## Copia diaria de datos
 
-`api/crm-backup.js` exporta 38 tablas, cifra el archivo, lo sube a Drive, lo vuelve a descargar y comprueba su hash, descifrado y recuentos. Si falta una tabla o falla la descarga, el resultado es `failed`. `crm-backup-core.js` contiene el inventario y las exclusiones. La consulta de tablas mediante la API no ofrece una instantánea transaccional entre tablas.
+`api/crm-backup.js` exporta 42 tablas (formato v3), cifra el archivo, lo sube a Drive, lo vuelve a descargar y comprueba su hash, descifrado y recuentos. Si falta una tabla o falla la descarga, el resultado es `failed`. `crm-backup-core.js` contiene el inventario y las exclusiones. La consulta de tablas mediante la API no ofrece una instantánea transaccional entre tablas. El formato v3 añade el catálogo, las opciones y las ejecuciones de ofertas, y el estado compartido de archivado de WhatsApp. Las copias v2 siguen siendo legibles con su cobertura original de 38 tablas. El inventario observado el 9 de septiembre contiene 46 tablas públicas y 3 privadas; las 4 exclusiones públicas y los datos privados requieren el procedimiento de recuperación completa.
 
 Para validar una copia descargada:
 
@@ -47,3 +47,5 @@ No se ha ejecutado un ensayo completo desde este espacio: no hay conexión Postg
 `vercel.json` contiene el cron de copias. Vercel ejecuta cron en despliegues de producción; publicar una rama Preview no activa el horario de esa rama. Verificar el destino que realmente ejecuta el cron y su historial. No marcar la programación como operativa basándose solo en la presencia del archivo de configuración.
 
 Referencias: [PostgreSQL pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html), [pg_restore](https://www.postgresql.org/docs/current/app-pgrestore.html), [restauración Supabase](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore), [cron de Vercel](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
+
+Estado comprobado el 9 de septiembre: última copia verificada del 4 de septiembre; la ruta de copia en el despliegue de producción antiguo devuelve HTTP 404. El horario diario no está validado ni corregido todavía.

@@ -17,7 +17,8 @@ global.fetch=async(url,options={})=>{const u=new URL(url),table=u.pathname.split
 };
 async function request(method='POST'){seen=[];finished=null;let status,result;const res={setHeader(){return this},status(n){status=n;return this},json(v){result=v}};await handler({method,headers:{authorization:'Bearer x.eyJzdWIiOiJ0ZXN0In0.x'},query:{action:'run'}},res);return {status,result};}
 (async()=>{
- let r=await request();assert.equal(r.status,200);assert.equal(finished.status,'verified');assert.equal(r.result.verification,'download-decrypt-counts');assert.equal(Object.keys(r.result.counts).length,38);assert(seen.some(x=>x.url.includes('alt=media')));assert(seen.some(x=>x.url.includes('user_field_permissions')&&x.url.includes('order=user_id.asc,section.asc,field_key.asc')));
+ let r=await request();assert.equal(r.status,200);assert.equal(finished.status,'verified');assert.equal(r.result.verification,'download-decrypt-counts');assert.equal(Object.keys(r.result.counts).length,42);assert(seen.some(x=>x.url.includes('alt=media')));assert(seen.some(x=>x.url.includes('user_field_permissions')&&x.url.includes('order=user_id.asc,section.asc,field_key.asc')));
+ assert(seen.some(x=>x.url.includes('crm_whatsapp_chat_state')&&x.url.includes('order=chat_id.asc')));
  failure='corrupt';r=await request();assert.equal(r.status,500);assert.equal(finished.status,'failed');
  failure='sales_custom_values';r=await request();assert.equal(r.status,500);assert.equal(finished.status,'failed');assert(!seen.some(x=>x.url.includes('/upload/')));
  failure='';r=await request('GET');assert.equal(r.status,405);assert(!seen.some(x=>x.method==='PATCH'));

@@ -1,0 +1,404 @@
+{
+  "observedAt": "2026-09-09T07:10:00Z",
+  "project": "overfzbjtpjqxzbujezg",
+  "tables": [
+    {
+      "primary_key": [
+        "phone"
+      ],
+      "rls": true,
+      "schema": "crm_private",
+      "table": "commercial_optouts"
+    },
+    {
+      "primary_key": [
+        "record_id"
+      ],
+      "rls": true,
+      "schema": "crm_private",
+      "table": "contact_name_case_backup"
+    },
+    {
+      "primary_key": [
+        "opportunity_id"
+      ],
+      "rls": true,
+      "schema": "crm_private",
+      "table": "opportunity_month_labels"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "agenda_items"
+    },
+    {
+      "primary_key": [
+        "key"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "app_settings"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "automation_rules"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "automation_runs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "contact_activity"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_alert_dismissals"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_audit_log"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_automation_contact_exclusions"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_automation_jobs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_automation_runs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_automations"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_backup_runs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_backups"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_contact_custom_values"
+    },
+    {
+      "primary_key": [
+        "contact_id",
+        "label_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_contact_labels"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_custom_fields"
+    },
+    {
+      "primary_key": [
+        "entity_type",
+        "entity_id",
+        "user_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_edit_sessions"
+    },
+    {
+      "primary_key": [
+        "provider"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_external_credentials"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_labels"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_offer_catalog"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_offer_instances"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_offer_line_options"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_sales_goals"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_server_automation_jobs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_system_events"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_trash"
+    },
+    {
+      "primary_key": [
+        "contact_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_welcome_requests"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_welcome_settings"
+    },
+    {
+      "primary_key": [
+        "chat_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "crm_whatsapp_chat_state"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "email_activity_log"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "email_templates"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "import_jobs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "microsoft_mailboxes"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "records"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "sales_custom_fields"
+    },
+    {
+      "primary_key": [
+        "opportunity_id",
+        "field_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "sales_custom_values"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "sales_opportunities"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "sales_pipelines"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "sales_stages"
+    },
+    {
+      "primary_key": [
+        "user_id",
+        "section",
+        "field_key"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "user_field_permissions"
+    },
+    {
+      "primary_key": [
+        "user_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "user_google_settings"
+    },
+    {
+      "primary_key": [
+        "user_id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "user_permissions"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "wa_messages"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "wa_templates"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "whatsapp_jobs"
+    },
+    {
+      "primary_key": [
+        "id"
+      ],
+      "rls": true,
+      "schema": "public",
+      "table": "whatsapp_templates"
+    }
+  ]
+}

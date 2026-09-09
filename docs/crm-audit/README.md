@@ -58,7 +58,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 | 38 | Microsoft 365 | Conexión, permisos, plantillas, envío y automatizaciones | Cuenta autorizada conectada y prueba de entrega real | 0 buzones; integración pausada | BLOQUEADO |
 | 39 | Móvil completo | Todas las rutas, accesos rápidos, formularios, búsquedas y retorno | Sin desbordamiento; mismas entidades y permisos que PC | crm-complete-flows; mobile-* | PARCIAL |
 | 40 | Dos puestos y resistencia | Usuarios distintos, sesiones largas, pestañas, desconexión y límites | Coherencia tras recuperar conexión; conflictos de edición visibles | dos contextos probados; ensayo prolongado pendiente | PARCIAL |
-| 41 | Seguridad y API | Sin sesión, rol limitado, entradas inválidas y acceso directo | RLS y autorización por función; sin secretos en cliente, logs o diagnóstico | 47 tablas con RLS; políticas/funciones pendientes | PARCIAL |
+| 41 | Seguridad y API | Sin sesión, rol limitado, entradas inválidas y acceso directo | RLS y autorización por función; sin secretos en cliente, logs o diagnóstico | 46 tablas con RLS; políticas/funciones pendientes | PARCIAL |
 | 42 | Despliegue y continuidad | Commit, alias, caché, versión PC/móvil y recuperación de código | Enlace estable conserva versión comprobada y evidencia de ese commit | alias 734db09 READY; informe GitHub | PARCIAL |
 
 ## Hallazgos de recuperación
