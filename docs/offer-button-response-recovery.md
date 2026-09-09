@@ -22,3 +22,12 @@ The continuous pending-offer history scan is removed. GREEN-API Webhook Endpoint
 The existing `no_response` provider-history check remains immediately before day-2/day-5 sends. Degraded, rate-limited, malformed, or unavailable history defers the send. `api/green?action=ensure` no longer clears `webhookUrl`, and settings output redacts the webhook token. `setwebhook` is restricted to the authenticated server runner and an exact allowlisted endpoint.
 
 Verification before provider cutover: 104/104 local tests passed. Edge Function v1 returned HTTP 401 without a valid token and HTTP 200 for an authenticated non-message health payload. Provider cutover, direct test delivery, Chrome gate, and stable promotion remain pending at this checkpoint.
+
+## Provider cutover completed
+
+- Development runtime commit `9f280de3ee5be68077ee009d6686937b09be6e6c`; test-only follow-up commit `14e48169f5fb90265dce285acf94f2fc80839de1`.
+- GitHub Actions browser run `34362174898`: 50 passed, 3 skipped, 0 failed.
+- GREEN `setSettings` returned configured/saved; follow-up `getSettings` reported the exact allowlisted Edge URL, token state `configured`, and `incomingWebhook=yes`.
+- `crm-green-webhook` v1: invalid authorization returned 401; valid non-message returned 200 ignored; authenticated synthetic interactive response returned 200, persisted `No me interesa` with type `interactiveButtonsResponse`, and the synthetic row was deleted after inspection.
+- `crm-automation-runner` v14 is active. Its first inspected cron response was HTTP 200 with no `responseSync` field and no claimed/sent work, confirming removal of continuous provider polling.
+- Existing real offer response and its day-2/day-5 jobs remain cancelled from the preceding verified correction.
