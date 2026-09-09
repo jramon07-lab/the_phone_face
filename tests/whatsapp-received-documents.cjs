@@ -32,7 +32,7 @@ ctx.TPFModules={register(name,def){assert.equal(name,'whatsapp-received-document
 ctx.TPFDocumentScanner={open(options){scanner=options;}};
 // Match the real CRM: a global `let` is NOT a property of window.
 vm.runInContext('let waLiveState={selected:{id:"chat-a"},history:[],contact:null};',ctx);
-vm.runInContext(core.slice(core.indexOf('function waMessageText('),core.indexOf('function waMediaHtml(')),ctx);
+vm.runInContext(core.slice(core.indexOf('function crmInteractiveText('),core.indexOf('function waMediaHtml(')),ctx);
 vm.runInContext(source.replace("M.register('whatsapp-received-documents',", "window.testReceived={decorate,act};M.register('whatsapp-received-documents',"),ctx);
 const state=()=>vm.runInContext('waLiveState',ctx);
 const client=(id='client-a')=>({id,data:{NOMBRE:'Prueba',TPF_DOCUMENTS:{provider:'google_drive',folder_id:'folder-'+id,folder_name:'Carpeta '+id}}});

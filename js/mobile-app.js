@@ -1437,9 +1437,22 @@
     }
     return 0;
   }
+function crmInteractiveText(message){
+  const data=message?.messageData||message||{};
+  const reply=data.interactiveButtonsResponse||message?.interactiveButtonsResponse;
+  if(reply){
+    const selected=reply.interactiveButtonsResponse||reply;
+    return String(selected.selectedDisplayText||selected.selectedButtonText||selected.buttonText||'');
+  }
+  const legacy=data.buttonsResponseMessage||message?.buttonsResponseMessage||data.templateButtonReplyMessage||message?.templateButtonReplyMessage;
+  if(legacy)return String(legacy.selectedButtonText||legacy.selectedDisplayText||'');
+  const card=data.interactiveButtons||data.interactiveButtonsReply||message?.interactiveButtons||message?.interactiveButtonsReply;
+  if(!card)return '';
+  return [card.titleText,card.contentText,card.footerText,...(Array.isArray(card.buttons)?card.buttons.map(b=>b.buttonText):[])].filter(v=>typeof v==='string'&&v.trim()).join('\n');
+}
   function mobileWaMessageText(message){
     const data=message?.messageData||{};
-    const value=data?.textMessageData?.textMessage||data?.extendedTextMessageData?.text||data?.fileMessageData?.caption||message?.textMessage||message?.extendedTextMessage?.text||message?.caption||message?.message||'';
+    const value=crmInteractiveText(message)||data?.textMessageData?.textMessage||data?.extendedTextMessageData?.text||data?.fileMessageData?.caption||message?.textMessage||message?.extendedTextMessage?.text||message?.caption||message?.message||'';
     const text=clean(value);
     if(/^(GREEN_API_(TOKEN|INSTANCE_ID|ID_INSTANCE|IDINSTANCE|API_TOKEN|TOKEN_INSTANCE|API_URL|MEDIA_URL))$/i.test(text))return '';
     if(/^process\.env\./i.test(text)||/GREEN-API no está disponible en esta función de Vercel/i.test(text))return '';

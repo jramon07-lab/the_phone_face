@@ -164,9 +164,22 @@ function waTime(ts){
   if(d.toDateString()===today.toDateString())return d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
   return d.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"});
 }
+function crmInteractiveText(message){
+  const data=message?.messageData||message||{};
+  const reply=data.interactiveButtonsResponse||message?.interactiveButtonsResponse;
+  if(reply){
+    const selected=reply.interactiveButtonsResponse||reply;
+    return String(selected.selectedDisplayText||selected.selectedButtonText||selected.buttonText||'');
+  }
+  const legacy=data.buttonsResponseMessage||message?.buttonsResponseMessage||data.templateButtonReplyMessage||message?.templateButtonReplyMessage;
+  if(legacy)return String(legacy.selectedButtonText||legacy.selectedDisplayText||'');
+  const card=data.interactiveButtons||data.interactiveButtonsReply||message?.interactiveButtons||message?.interactiveButtonsReply;
+  if(!card)return '';
+  return [card.titleText,card.contentText,card.footerText,...(Array.isArray(card.buttons)?card.buttons.map(b=>b.buttonText):[])].filter(v=>typeof v==='string'&&v.trim()).join('\n');
+}
 function waMessageText(m){
   const md=m?.messageData||{};
-  const raw = md?.textMessageData?.textMessage
+  const raw = crmInteractiveText(m) || md?.textMessageData?.textMessage
     || md?.extendedTextMessageData?.text
     || md?.fileMessageData?.caption
     || m?.textMessage

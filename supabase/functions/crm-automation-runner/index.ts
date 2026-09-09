@@ -46,7 +46,20 @@ async function requeue(job:any,message:string,minutes=2,dependency=false){await 
 async function preflight(job:any){const {data,error}=await sb.rpc("crm_lifecycle_job_guard",{p_job:job.id});if(error)throw error;if(data?.context)job.context=data.context;if(data?.retry){await requeue(job,data.reason,0.1,true);return false;}return data?.allow===true;}
 function greenIncoming(message:any){return String(message?.type||"").toLowerCase().includes("incoming");}
 function greenTimestamp(message:any){const value=Number(message?.timestamp||0);return value>0?new Date(value*1000):null;}
-function greenText(message:any){return String(message?.textMessage||message?.caption||message?.extendedTextMessage?.text||message?.buttonsResponseMessage?.selectedButtonText||message?.templateButtonReplyMessage?.selectedDisplayText||"");}
+function crmInteractiveText(message){
+  const data=message?.messageData||message||{};
+  const reply=data.interactiveButtonsResponse||message?.interactiveButtonsResponse;
+  if(reply){
+    const selected=reply.interactiveButtonsResponse||reply;
+    return String(selected.selectedDisplayText||selected.selectedButtonText||selected.buttonText||'');
+  }
+  const legacy=data.buttonsResponseMessage||message?.buttonsResponseMessage||data.templateButtonReplyMessage||message?.templateButtonReplyMessage;
+  if(legacy)return String(legacy.selectedButtonText||legacy.selectedDisplayText||'');
+  const card=data.interactiveButtons||data.interactiveButtonsReply||message?.interactiveButtons||message?.interactiveButtonsReply;
+  if(!card)return '';
+  return [card.titleText,card.contentText,card.footerText,...(Array.isArray(card.buttons)?card.buttons.map(b=>b.buttonText):[])].filter(v=>typeof v==='string'&&v.trim()).join('\n');
+}
+function greenText(message:any){return String(crmInteractiveText(message)||message?.textMessage||message?.caption||message?.extendedTextMessage?.text||message?.buttonsResponseMessage?.selectedButtonText||message?.templateButtonReplyMessage?.selectedDisplayText||"");}
 async function providerResponsesSince(ctx:any,since:string,secret:string){const chat=phoneToChat(ctx);let r:Response;try{r=await fetch(`${GREEN_PROXY}?action=history`,{method:"POST",headers:serviceHeaders(secret,{"content-type":"application/json"}),body:JSON.stringify({chatId:chat,count:200})});}catch(err){const e:any=new Error(`No se pudo comprobar la respuesta en WhatsApp: ${err instanceof Error?err.message:String(err)}`);e.responseCheck=true;throw e;}const body=await r.json().catch(()=>({}));if(!r.ok||body?.ok===false){const e:any=new Error(String(body?.error||body?.message||`WhatsApp HTTP ${r.status}`));e.responseCheck=true;throw e;}const messages=Array.isArray(body?.messages)?body.messages:[],sinceDate=new Date(since),incoming=messages.filter((message:any)=>{const timestamp=greenTimestamp(message);return greenIncoming(message)&&timestamp&&timestamp>sinceDate;});for(const message of incoming){const idMessage=String(message?.idMessage||message?.id||"").trim(),timestamp=greenTimestamp(message);if(!idMessage||!timestamp)continue;const {error}=await sb.from("wa_messages").insert({chat_id:chat,id_message:idMessage,direction:"in",ts:Math.floor(timestamp.getTime()/1000),text_content:greenText(message),type_message:String(message?.typeMessage||message?.type||"incoming"),raw:message,created_at:timestamp.toISOString()});if(error&&String(error.code||"")!=="23505")throw error;}if(incoming.length)return true;const oldest=messages.map(greenTimestamp).filter(Boolean).sort((a:any,b:any)=>a.getTime()-b.getTime())[0];if(messages.length>=200&&oldest&&oldest>sinceDate){const e:any=new Error("El historial de WhatsApp no alcanza todavía el inicio del seguimiento");e.responseCheck=true;throw e;}return false;}
 async function hasResponseSince(ctx:any,secret:string){const chat=phoneToChat(ctx);const since=String(ctx?.flow_started_at||ctx?.event_at||"");if(!chat||!since)return false;const {data,error}=await sb.from("wa_messages").select("id").eq("chat_id",chat).eq("direction","in").gt("created_at",since).limit(1);if(error)throw error;if(data?.length)return true;return providerResponsesSince(ctx,since,secret);}
 async function shouldSkip(job:any,secret:string){const a=job.action_config||{},ctx=job.context||{},business=businessContext(ctx);if(a.__flow_guard==="no_response"&&await hasResponseSince(ctx,secret))return "El cliente respondió: condición no cumplida";if(a.__stop_if_response&&await hasResponseSince(ctx,secret))return "El cliente respondió: repetición detenida";return "";}
@@ -105,4 +118,29 @@ async function processJob(job:any,secret=""){try{
     await complete(job,"done");return "done";
   }catch(err:any){const msg=String(err?.message||err||"Error desconocido");if(err?.responseCheck){await requeue(job,msg,5,true);return "requeued";}if(err?.beforeSend&&Number(job.attempts||0)<10){await requeue(job,msg,2);return "requeued";}await complete(job,"failed",msg);return "failed";}}
 
-Deno.serve(async(req:Request)=>{if(req.method!=="POST"&&req.method!=="GET")return json({ok:false},405);const secret=String(req.headers.get("x-tpf-cron-secret")||"");if(!(await cronAuthorized(req)))return json({ok:false,error:"Unauthorized"},401);const {data:enabledRow}=await sb.from("app_settings").select("value").eq("key","crm_server_automations_enabled").maybeSingle();if(enabledRow?.value!==true)return json({ok:true,enabled:false,claimed:0,done:0,failed:0});const {data:jobs,error}=await sb.rpc("crm_server_claim_jobs",{p_limit:20});if(error)return json({ok:false,error:error.message},500);let done=0,failed=0,requeued=0;for(const job of jobs||[]){const result=await processJob(job,secret);if(result==="done")done++;else if(result==="requeued")requeued++;else failed++;}return json({ok:true,enabled:true,claimed:(jobs||[]).length,done,failed,requeued});});
+// Check future offer reminders on every cron tick, not only on their send date.
+// Rotate bounded batches so one large queue cannot starve later offers.
+async function syncPendingOfferResponses(secret:string){
+  const {data:jobs,error}=await sb.from("crm_server_automation_jobs").select("id,context")
+    .eq("status","pending").eq("context->lifecycle->>mode","offer")
+    .eq("action_config->>__flow_guard","no_response").order("updated_at").limit(20);
+  if(error)throw error;
+  let checked=0,cancelled=0;
+  for(const job of jobs||[]){
+    try{
+      const answered=await hasResponseSince(job.context||{},secret);
+      const patch:any={updated_at:new Date().toISOString()};
+      if(answered){patch.status="cancelled";patch.error_message="Cliente respondió: seguimiento detenido";}
+      const {error:updateError}=await sb.from("crm_server_automation_jobs").update(patch).eq("id",job.id).eq("status","pending");
+      if(updateError)throw updateError;
+      checked++;if(answered)cancelled++;
+    }catch(error){
+      console.error("Offer response synchronization failed",job.id,String(error));
+      // Keep the pre-send guard and allow the next batch to progress.
+      await sb.from("crm_server_automation_jobs").update({updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","pending");
+    }
+  }
+  return {checked,cancelled};
+}
+
+Deno.serve(async(req:Request)=>{if(req.method!=="POST"&&req.method!=="GET")return json({ok:false},405);const secret=String(req.headers.get("x-tpf-cron-secret")||"");if(!(await cronAuthorized(req)))return json({ok:false,error:"Unauthorized"},401);const {data:enabledRow}=await sb.from("app_settings").select("value").eq("key","crm_server_automations_enabled").maybeSingle();if(enabledRow?.value!==true)return json({ok:true,enabled:false,claimed:0,done:0,failed:0});const responseSync=await syncPendingOfferResponses(secret);const {data:jobs,error}=await sb.rpc("crm_server_claim_jobs",{p_limit:20});if(error)return json({ok:false,error:error.message},500);let done=0,failed=0,requeued=0;for(const job of jobs||[]){const result=await processJob(job,secret);if(result==="done")done++;else if(result==="requeued")requeued++;else failed++;}return json({ok:true,enabled:true,claimed:(jobs||[]).length,done,failed,requeued,responseSync});});
