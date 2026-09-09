@@ -41,3 +41,11 @@ The latest result is displayed inside each opportunity on PC and mobile. Adminis
 Verification before UI deployment: 105/105 regression tests passed and 147/147 JavaScript files parsed. The migration was first executed inside an explicit transaction and rolled back, then applied. A second transactional database rehearsal created a synthetic offer with day-2 and day-5 jobs; inserting `No me interesa` cancelled exactly both jobs, inserted one audit record, preserved the opportunity stage, and rolled all synthetic rows back. Supabase confirms RLS with one read policy. Foreign-key indexes were added after the database advisor identified them. Edge Functions active: `crm-green-webhook` v2 and `crm-automation-runner` v15.
 
 Remaining gate at this checkpoint: save the UI commit on GitHub, validate the development deployment in Chrome, and only then promote the same commit to the stable URL.
+
+## Programación del primer WhatsApp — solo CRM de prueba
+
+La rama de pruebas permite elegir entre enviar el primer WhatsApp al crear la oferta o programar una fecha y hora. En una oferta programada, el trabajo raíz queda pendiente hasta esa hora y el origen temporal del flujo se mueve a la misma fecha; por tanto, los recordatorios de 2 y 5 días se calculan desde el envío real. La opción solo se ofrece en el modo de seguimiento y admite entre 1 minuto y 90 días de antelación.
+
+La operación es atómica: si no se puede comprobar el trabajo programado, no se guarda ni la oferta ni su automatización. La fecha también queda registrada en el `snapshot` de la oferta. La función nueva es `crm_create_offer_execution_v7`; el estable continúa usando `v6`, por lo que su comportamiento no cambia.
+
+Verificación previa al despliegue: 105/105 pruebas locales y 147/147 archivos JavaScript válidos. Ensayo transaccional autenticado sobre el número de pruebas terminado en 409: comprobó una sola raíz pendiente, `run_at` y `context.event_at` iguales a la fecha programada, y `snapshot.scheduled_send_at` idéntico. El ensayo terminó con `ROLLBACK`; no persistió datos ni envió WhatsApp.

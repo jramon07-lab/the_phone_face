@@ -12,6 +12,9 @@ const api=context.window.TPFOffersPro;
 assert(api,'the offer configurator exposes its deterministic helpers');
 assert.deepEqual([...api.OPERATORS],['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange']);
 assert.equal(api.directSaleMessage('Vodafone',52,'Ana García'),'Hola Ana, te envío lo que hemos comentado:\n• Operador: Vodafone\nPrecio final: 52,00 €/mes');
+assert.equal(api.scheduledSendIso('now',''),null,'send now never creates a schedule');
+assert.equal(api.scheduledSendIso('scheduled','2026-09-12T10:30',Date.parse('2026-09-10T10:30:00Z')),new Date('2026-09-12T10:30').toISOString(),'scheduled local time is converted to an ISO instant');
+assert.throws(()=>api.scheduledSendIso('scheduled','2026-09-10T10:30',Date.parse('2026-09-10T10:30:00Z')),/minuto de margen/);
 const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','2 líneas de 160 GB'],line_options:[
   {id:'gb',name:'Fibra 1 Gb',price_delta:10,option_type:'radio',message_text:'Fibra 1 Gb',replaces_text:'Fibra 600 Mb'},
   {id:'unlimited',name:'Datos ilimitados',price_delta:4,option_type:'radio',message_text:'2 líneas con datos ilimitados',replaces_text:'2 líneas de 160 GB'},
@@ -76,7 +79,7 @@ assert.match(sqlV2,/VDF · ESTÁNDAR 600 \+ 2×160/);
 assert.match(sqlV2,/VDF · CONTRAOFERTA 1 GB \+ 2 ILIMITADAS/);
 assert.match(sqlV2,/\(counter_id,'Netflix',null,7,30,'radio','contenido','Netflix incluido'\)/);
 for(const price of ["'Fibra 1 Gb',10","'Líneas principales ilimitadas',4","'Línea adicional 160 GB',6","'Línea adicional 30 GB',30,6","'Línea adicional 60 GB',60,8.5","'Línea adicional 160 GB',160,11","'Línea adicional ilimitada',null,16"])assert.ok(sqlV2.includes(price),`expected configurable Vodafone price: ${price}`);
-assert.match(source,/crm_create_offer_execution_v6/);
+assert.match(source,/crm_create_offer_execution_v7/);
 assert.match(source,/p_test_mode:CRM_TEST_MODE/);
 assert.match(source,/CRM_TEST_PHONE='695661409'/);
 assert.match(source,/p_request_key:offerRequestKey/);
@@ -134,6 +137,9 @@ assert.match(source,/completeExtraText\(\)/);
 assert.match(source,/offerMode='followup'/);
 assert.match(source,/setOfferMode\(offerMode\)/);
 assert.match(source,/Crear y enviar oferta/);
+assert.match(source,/Programar envío/);
+assert.match(source,/Los seguimientos de 2 y 5 días empezarán a contar desde el envío real/);
+assert.match(source,/p_send_at:sendAt/);
 assert.match(source,/event\.target\?\.closest\?\.\('#opSubmit'\)/);
 
 const sqlV5=fs.readFileSync(path.join(root,'db/proposals/offer-configurator-v5-safety.sql'),'utf8');
@@ -181,8 +187,15 @@ const replyButtonsSql=fs.readFileSync(path.join(root,'supabase/migrations/202609
 assert.match(replyButtonsSql,/crm_create_offer_execution_v6/);
 for(const label of ['No me interesa','Acepto','Quiero mirar otra cosa'])assert.ok(replyButtonsSql.includes(label),`missing reply button: ${label}`);
 assert.match(replyButtonsSql,/\{steps,0,config,reply_buttons\}/);
-assert.match(source,/crm_create_offer_execution_v6/);
+assert.match(source,/crm_create_offer_execution_v7/);
 assert.match(source,/reply_buttons_configured/);
+const scheduledOfferSql=fs.readFileSync(path.join(root,'supabase/migrations/20260909180000_schedule_first_offer_whatsapp.sql'),'utf8');
+assert.match(scheduledOfferSql,/crm_create_offer_execution_v7/);
+assert.match(scheduledOfferSql,/p_send_at timestamptz/);
+assert.match(scheduledOfferSql,/set run_at=requested_at/);
+assert.match(scheduledOfferSql,/jsonb_set\(j\.context,'\{event_at\}',to_jsonb\(requested_at\),true\)/);
+assert.match(scheduledOfferSql,/scheduled_send_at/);
+assert.match(scheduledOfferSql,/interval '90 days'/);
 const counterNetflixSql=fs.readFileSync(path.join(root,'supabase/migrations/20260909123000_vodafone_counteroffer_netflix_7.sql'),'utf8');
 assert.match(counterNetflixSql,/offer\.name='VDF · CONTRAOFERTA 1 GB \+ 2 ILIMITADAS'/);
 assert.match(counterNetflixSql,/offer\.is_counteroffer=true/);
