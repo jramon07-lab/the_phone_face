@@ -1,3 +1,12 @@
+## Publicado y comprobado dec705c — 9 de septiembre, 09:13 UTC
+
+- **Estable real actual: dec705cf3f13061f1759599f92422877ec08a90c**, mismo alias de siempre. No volver a 29f6b31 siguiendo notas históricas. Despliegue **dpl_AFAAzyVRaXs9eTm6ePsaetT4FtZV**, READY; inmutable qoya40w0e.
+- Cierre local de PC/móvil/carga fallida de permisos móvil publicado. 100/100 locales, 147/147 JS, Chrome **34331867238** job **102403096927**: 50 aprobadas/3 omitidas. Ambas sesiones 2266 conversaciones/71 recientes, firma e historial iguales, `SESSION_ISOLATION_VERIFIED`, `SALES_SAVE_VERIFIED`.
+- Verificación posterior: CI **34332948637** job **102405570452** success; Chrome **34332969490** job **102405636374** **SUCCESS, 50 aprobadas/3 omitidas**. CI confirma 100/100 regresiones y 147/147 JavaScript. Log de Chrome confirma qoya40w0e, ambas sesiones 2266/71, aislamiento de sesión y guardado único por ID. Publicación comprobada antes y después.
+- Salud y SHA comprobados; scripts de PC y móvil servidos coinciden exactamente con el repositorio. No se cambiaron los datos de clientes ni se promovió el dominio antiguo de los ejecutores.
+- Primer intento 34330713702 falló en consulta de venta; segundo intento, ensayo reforzado y comprobación posterior a publicar pasan. Causa pendiente: no ocultar ni declarar una corrección de ese fallo no reproducido.
+- Para cerrar copia/diagnóstico, el navegador propio del administrador debe crear copia y exportar JSON. Remoto bloqueado; no pedir contraseñas ni extraer tokens. Última copia verificada sigue 4 de septiembre. Informe completo y pendientes en docs/crm-audit/release-20260909.md.
+
 ## Reanudación — prueba de sesiones y fallo de ventas, 9 de septiembre
 
 - Estable conservado en **29f6b31**, con sus pruebas anteriores y posteriores aprobadas. Candidato de sesiones **229b46b301fcfe86c234d667ebdab661185f1972**: 100/100 locales y 147/147 JavaScript.
