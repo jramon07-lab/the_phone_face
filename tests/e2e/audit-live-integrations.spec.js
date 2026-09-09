@@ -59,7 +59,11 @@ test('Drive real: crear carpeta, subir PDF, listar y enviar otra copia a papeler
   await page.locator('#tpfContactsCreateSave').click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden({timeout:15000});
   const rows=await ownRows();expect(rows).toHaveLength(1);id=rows[0].id;
   await page.evaluate(id=>window.openContact(id),id);await page.locator('[data-cp-ref-tab="documentos"]').click();await page.locator('[data-doc-ensure]').click();
-  await expect(page.locator('[data-doc-message]')).toContainText('Carpeta preparada',{timeout:60000});folder=(await ownRows())[0].data.TPF_DOCUMENTS;
+  // The success message is transient: loadFiles immediately replaces it.
+  // Verify the persisted relation and the final visible folder/upload state.
+  await expect.poll(async()=> (await ownRows())[0]?.data?.TPF_DOCUMENTS?.folder_id,{timeout:60000}).toBeTruthy();folder=(await ownRows())[0].data.TPF_DOCUMENTS;
+  await expect(page.locator('#cpDocumentsPending a[href="https://drive.google.com/drive/folders/'+folder.folder_id+'"]')).toBeVisible();
+  await expect(page.locator('[data-doc-upload]')).toBeEnabled({timeout:20000});
   const bytes=pdfBytes('CRM integration audit - synthetic data only');
   const upload=async name=>{await page.locator('[data-doc-file]').setInputFiles({name,mimeType:'application/pdf',buffer:bytes});await expect(page.locator('[data-doc-message]')).toContainText('1 archivo(s) subido(s)',{timeout:30000});await page.locator('[data-doc-refresh]').click();await expect(page.locator('.tpfDocsFile').filter({hasText:name})).toBeVisible({timeout:15000});};
   await upload(marker+'.pdf');file=await page.locator('.tpfDocsFile').filter({hasText:marker+'.pdf'}).locator('[data-doc-trash]').getAttribute('data-doc-trash');

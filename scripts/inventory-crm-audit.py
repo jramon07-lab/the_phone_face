@@ -43,5 +43,5 @@ result['summary'] = {'files': len(result['files']), 'control_candidates': sum(le
 for key in patterns:
     result['summary'][key] = len({v for x in result['files'] for v in x.get(key, [])})
 OUT.parent.mkdir(parents=True, exist_ok=True)
-OUT.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+OUT.write_text(json.dumps(result, ensure_ascii=False, separators=(',', ':')) + '\n')
 print(json.dumps(result['summary'], ensure_ascii=False))

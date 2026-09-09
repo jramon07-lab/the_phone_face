@@ -1,3 +1,13 @@
+## Checkpoint — 9 de septiembre, 07:45 UTC
+
+- Desarrollo guardado `7ca4b1f`; estable conserva `734db099`, sin promoción nueva.
+- Chrome del candidato: `34324473084`, job `102378444534`: **49 aprobadas, 3 omitidas**. Contadores iguales; firma completa de resúmenes convergió en unos 37 segundos.
+- Ensayo real `34324454056`, job `102380134957`: **archivado con Supabase real y dos sesiones aprobado**; proveedor WhatsApp simulado. La prueba Drive creó/vinculó la carpeta pero falló esperando un mensaje transitorio que la UI sustituye al listar. No llegó a subir el PDF. Se corrige el criterio para comprobar vínculo persistido, enlace visible y subida habilitada.
+- Limpieza de ese ensayo: contacto af47fb47-d832-4e25-9800-8bec64428e0d y papelera: 0; fila sintética de chat retirada; carpeta vacía 1UiFNpABZq_wNN6dfdvs4FUSy5kip-QWp retirada. No repetir sin nueva revisión del resultado.
+- **Cambio de base aplicado**: migración `20260909073937 crm_label_management_permissions`. SQL y prueba en db/proposals/crm-label-management-permissions.sql y supabase/tests/label-management-permissions.sql. Bloquea CRUD de etiquetas sin permiso; mantiene demo/admin. Pruebas propuestas con ROLLBACK y repetidas después de aplicar; cero filas sintéticas. CRUD Chrome pasó después.
+- Se descubrió rama Supabase antigua yebjacgqrycxcvpewmzq: 30 tablas, sin usuarios Auth, 3 cron activos. No se modificó ni se considera una recuperación actual.
+- Matriz completa y bloqueos actuales en docs/crm-audit/README.md. La auditoría sigue abierta.
+
 ## Ensayo de integraciones reales preparado
 
 - Workflow `CRM Live Integrations Audit`: prueba separada de la validación diaria; usa el mismo bloqueo de cuenta y espera el commit desplegado.

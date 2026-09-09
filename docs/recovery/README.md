@@ -40,7 +40,7 @@ Debe utilizar un proyecto nuevo y aislado. No restaurar sobre el CRM utilizado p
 - Arrancar el código, iniciar sesión de prueba, buscar contactos, abrir oportunidades y guardar/editar una tarea de prueba en PC y móvil.
 - Solo después registrar fecha, commit, archivo, destino y resultados. Hasta entonces `restoreTested` debe permanecer `false`.
 
-No se ha ejecutado un ensayo completo desde este espacio: no hay conexión PostgreSQL privada ni un destino aislado configurados.
+No se ha ejecutado un ensayo completo desde este espacio: falta conexión PostgreSQL privada. Existe una rama antigua de auditoría (30 tablas frente a las 46 públicas actuales, con 3 cron activos); no es todavía un destino actualizado con envíos aislados para restauración.
 
 ## Programación
 
