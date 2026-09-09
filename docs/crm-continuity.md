@@ -201,3 +201,11 @@ Verificación local con ambas correcciones: **92/92**. El resultado Chrome váli
 - Resumen/historial de escritorio consultan cada 15 segundos; archivo cada 20 segundos y al recuperar foco o conexión. La sincronización no es instantánea.
 - Copia y restauración completa, envío final y automatizaciones reales mantienen las limitaciones descritas en la documentación funcional y `docs/recovery/README.md`.
 - Si una interrupción corta el chat, continuar desde este archivo y verificar Actions del último commit. No usar un resultado verde de un commit anterior.
+# Seguimiento de ofertas y respuestas rápidas — 2026-09-09
+
+- Incidencia reproducida con el número de prueba autorizado: hubo una respuesta entrante el 2026-09-08 17:09:40 UTC y el recordatorio se envió el 2026-09-09 09:10:03 UTC. `wa_messages` no recibía mensajes nuevos desde el 29 de agosto, por lo que el guardado anterior no podía detectar esa respuesta.
+- Se canceló únicamente el siguiente recordatorio pendiente de esa ejecución (`3f121f61-50e0-46e7-bc13-457355c223c6`); no se modificaron otros contactos ni conversaciones.
+- El runner consulta ahora el historial real de GREEN antes de cada paso protegido por “sin respuesta”, copia las entradas nuevas a `wa_messages` y detiene el seguimiento. Si no puede comprobar el historial, aplaza el trabajo cinco minutos sin consumir el intento, en vez de enviar a ciegas.
+- Las ofertas nuevas de seguimiento incorporan tres respuestas: `No me interesa`, `Acepto` y `Quiero mirar otra cosa`. GREEN usa `sendInteractiveButtonsReply`; si el proveedor rechaza esa función beta antes del envío, se utiliza un único mensaje con las tres opciones numeradas.
+- Nueva función `crm_create_offer_execution_v6`: `security invoker`, `search_path=''`, sin ejecución para `anon` y con ejecución para `authenticated`. Migración `offer_reply_buttons` aplicada y verificada en `overfzbjtpjqxzbujezg`.
+- Validación local del candidato: `npm run verify`, 147/147 archivos JavaScript válidos y 101/101 regresiones superadas.

@@ -174,7 +174,7 @@ async function submitOffer(allowDuplicate=false){
   busy=true;$('opSubmit').disabled=true;$('opMsg').textContent='Guardando y verificando…';
   try{
     const selections=Object.entries(quantities).filter(([,quantity])=>Number(quantity)>0).map(([option_id,quantity])=>({option_id,quantity,show_in_message:visibility[option_id]!==false}));
-    const {data,error}=await sb.rpc('crm_create_offer_execution_v5',{p_contact_id:current().id,p_catalog_offer_id:selected.id,p_request_key:offerRequestKey||crypto.randomUUID(),p_selections:selections,p_extra_text:completeExtraText()||null,p_mode:mode,p_final_price:finalPrice,p_send_message:sendMessage,p_processing_date:processingDate,p_test_mode:CRM_TEST_MODE,p_allow_duplicate:allowDuplicate});
+    const {data,error}=await sb.rpc('crm_create_offer_execution_v6',{p_contact_id:current().id,p_catalog_offer_id:selected.id,p_request_key:offerRequestKey||crypto.randomUUID(),p_selections:selections,p_extra_text:completeExtraText()||null,p_mode:mode,p_final_price:finalPrice,p_send_message:sendMessage,p_processing_date:processingDate,p_test_mode:CRM_TEST_MODE,p_allow_duplicate:allowDuplicate});
     if(error){
       if(String(error.message||'').includes('DUPLICATE_OFFER:')){
         busy=false;$('opSubmit').disabled=false;$('opMsg').textContent='Ya existe una oferta igual reciente para este cliente.';
@@ -183,7 +183,7 @@ async function submitOffer(allowDuplicate=false){
       }
       throw error;
     }
-    if(!data?.safety_verified||sendMessage&&!data?.delivery_job_verified)throw new Error('No se pudo verificar toda la operación. No continúes con esta oferta.');
+    if(!data?.safety_verified||sendMessage&&!data?.delivery_job_verified||mode==='followup'&&!data?.reply_buttons_configured)throw new Error('No se pudo verificar toda la operación. No continúes con esta oferta.');
     $('opOfferModal').classList.add('hidden');await loadInstances(current().id);if(typeof renderContactProfile==='function')renderContactProfile();
     const replay=data.idempotent_replay?' La petición repetida se detectó y no se duplicó.':'';
     alert(mode==='followup'?`Oferta y oportunidad verificadas. WhatsApp en cola segura.${replay}`:`Oferta verificada en ${destination}.${sendMessage?' WhatsApp en cola segura.':' No se ha solicitado ningún mensaje.'}${replay}`);

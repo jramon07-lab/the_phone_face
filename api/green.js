@@ -133,8 +133,31 @@ function sendCachedGreenRead(res, result) {
   });
 }
 
+async function serverRunnerAuthorized(req) {
+  const secret = String(req.headers?.["x-tpf-cron-secret"] || "").trim();
+  const serviceKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  const supabaseUrl = String(process.env.SUPABASE_URL || "https://overfzbjtpjqxzbujezg.supabase.co").replace(/\/$/, "");
+  if (!secret || !serviceKey) return false;
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/crm_check_runner_secret`, {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ p_secret: secret })
+    });
+    if (!response.ok) return false;
+    const valid = await response.json().catch(() => false);
+    return valid === true;
+  } catch {
+    return false;
+  }
+}
+
 export default async function handler(req, res) {
-  if(!await require('../lib/crm-api-auth').authorize(req,res,'can_use_whatsapp'))return;
+  if (!await serverRunnerAuthorized(req) && !await require('../lib/crm-api-auth').authorize(req,res,'can_use_whatsapp')) return;
   res.setHeader("Cache-Control", "no-store");
 
   const id =
@@ -558,6 +581,43 @@ export default async function handler(req, res) {
         idMessage: data?.idMessage || null,
         data
       });
+    }
+
+    if (req.method === "POST" && action === "sendbuttons") {
+      const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      const chatId = normalizeChatId(body.chatId);
+      const message = String(body.message || "").trim();
+      const buttons = Array.isArray(body.buttons) ? body.buttons.map((button) => ({
+        buttonId: String(button?.buttonId || "").trim(),
+        buttonText: String(button?.buttonText || "").trim()
+      })) : [];
+      const validButtons = buttons.length > 0 && buttons.length <= 3 && buttons.every((button) =>
+        button.buttonId && button.buttonText && button.buttonText.length <= 25
+      ) && new Set(buttons.map((button) => button.buttonId)).size === buttons.length;
+      if (!chatId || !message || !validButtons) {
+        return res.status(400).json({ ok: false, error: "Faltan chatId, message o botones válidos (máximo 3 y 25 caracteres)." });
+      }
+      if (GREEN_PROTECTED_TEST_BRANCH && !isAllowedTestRecipient(chatId)) {
+        return res.status(403).json({ ok: false, error: "CRM DE PRUEBAS: solo se permiten envíos al 695 661 409." });
+      }
+
+      try {
+        const data = await greenFetch("sendInteractiveButtonsReply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ chatId, body: message, buttons })
+        });
+        return res.status(200).json({ ok: true, chatId, idMessage: data?.idMessage || null, interactive: true, data });
+      } catch (error) {
+        if (![400, 403, 404].includes(Number(error?.status || 0))) throw error;
+        const fallback = `${message}\n\nResponde con una opción:\n1. ${buttons[0]?.buttonText || ""}\n2. ${buttons[1]?.buttonText || ""}\n3. ${buttons[2]?.buttonText || ""}`;
+        const data = await greenFetch("sendMessage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+          body: JSON.stringify({ chatId, message: fallback })
+        });
+        return res.status(200).json({ ok: true, chatId, idMessage: data?.idMessage || null, interactive: false, fallback: true, data });
+      }
     }
 
     if (req.method === "POST" && action === "read") {

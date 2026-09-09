@@ -159,6 +159,47 @@ async function run() {
     assert.equal(Array.from(limited.body.messages).length, 0);
   }
 
+  {
+    const calls = [];
+    const handler = loadHandler(async (url, options = {}) => {
+      calls.push({ url: String(url), body: JSON.parse(String(options.body || '{}')) });
+      return response(200, { idMessage: 'interactive-1' });
+    });
+    const sent = await call(handler, 'POST', 'sendbuttons', {
+      chatId: '34600000000@c.us',
+      message: 'Oferta',
+      buttons: [
+        { buttonId: 'offer_decline', buttonText: 'No me interesa' },
+        { buttonId: 'offer_accept', buttonText: 'Acepto' },
+        { buttonId: 'offer_other', buttonText: 'Quiero mirar otra cosa' }
+      ]
+    });
+    assert.equal(sent.statusCode, 200);
+    assert.equal(sent.body.interactive, true);
+    assert.match(calls[0].url, /sendInteractiveButtonsReply/);
+    assert.equal(calls[0].body.buttons.length, 3);
+  }
+
+  {
+    const calls = [];
+    const handler = loadHandler(async (url, options = {}) => {
+      calls.push({ url: String(url), body: JSON.parse(String(options.body || '{}')) });
+      if (String(url).includes('/sendInteractiveButtonsReply/')) return response(403, { message: 'Interactive method unavailable' });
+      return response(200, { idMessage: 'fallback-1' });
+    });
+    const sent = await call(handler, 'POST', 'sendbuttons', {
+      chatId: '34600000000@c.us', message: 'Oferta', buttons: [
+        { buttonId: 'a', buttonText: 'No me interesa' },
+        { buttonId: 'b', buttonText: 'Acepto' },
+        { buttonId: 'c', buttonText: 'Quiero mirar otra cosa' }
+      ]
+    });
+    assert.equal(sent.body.fallback, true);
+    assert.equal(calls.length, 2, 'solo usa texto cuando el proveedor rechaza los botones antes de enviar');
+    assert.match(calls[1].url, /sendMessage/);
+    assert.match(calls[1].body.message, /3\. Quiero mirar otra cosa/);
+  }
+
   console.log('GREEN-API rate limit guard OK');
 }
 
