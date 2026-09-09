@@ -108,6 +108,20 @@ function currentChatId(){
   try{chatId=String(waLiveState?.selected?.id||'')}catch(_){}
   return chatId
 }
+function contactContext(){
+  const c=contact();
+  let selectionVersion=null;
+  try{selectionVersion=waLiveState?.selectionVersion}catch(_){}
+  return {chatId:currentChatId(),contactId:String(c?.id||''),selectionVersion,contact:c};
+}
+function contactContextIsCurrent(expected){
+  if(!expected)return false;
+  let selectionVersion=null;
+  try{selectionVersion=waLiveState?.selectionVersion}catch(_){}
+  return currentChatId()===expected.chatId
+    && String(contact()?.id||'')===expected.contactId
+    && selectionVersion===expected.selectionVersion;
+}
 function rememberTaskOrigin(returnTo='chat'){
   state.taskOrigin={chatId:state.taskOrigin?.chatId||currentChatId(),returnTo};
 }
@@ -191,8 +205,8 @@ function taskRows(){
   );
 }
 
-async function relatedTasks(){
-  const c=contact();
+async function relatedTasks(expected=contactContext()){
+  const c=expected.contact;
   if(!c||typeof sb==='undefined')return [];
   const d=c.data||{};
   const phone=digits(d['TELÉFONO']||d.TELEFONO||d.PHONE||d.MOVIL||'');
@@ -200,6 +214,7 @@ async function relatedTasks(){
   try{
     const {data,error}=await sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(200);
     if(error)throw error;
+    if(!contactContextIsCurrent(expected))return null;
     return (data||[]).filter(item=>{
       if(item.whatsapp_enabled||norm(item.title)==='whatsapp programado')return false;
       const itemPhone=digits(item.customer_phone||item.phone||'');
@@ -256,9 +271,11 @@ async function syncTaskRowsNow(){
   if(state.taskSyncBusy){state.taskSyncAgain=true;return}
   state.taskSyncBusy=true;
   try{
+    const expected=contactContext();
     const rows=taskRows();
     if(!rows.length)return;
-    const tasks=await relatedTasks();
+    const tasks=await relatedTasks(expected);
+    if(!tasks||!contactContextIsCurrent(expected))return;
     const used=new Set();
     rows.forEach(row=>{
       const task=findTaskForRow(row,tasks,used);
@@ -278,7 +295,9 @@ function scheduleTaskSync(delay=80){
 async function resolveTaskId(row){
   const direct=String(row?.dataset?.taskId||row?.dataset?.agendaId||row?.dataset?.id||'');
   if(direct)return direct;
-  const tasks=await relatedTasks();
+  const expected=contactContext();
+  const tasks=await relatedTasks(expected);
+  if(!tasks||!contactContextIsCurrent(expected))return '';
   const found=findTaskForRow(row,tasks,new Set());
   if(found){wireTaskRow(row,found.id);return String(found.id)}
   return '';
@@ -430,7 +449,9 @@ async function deleteFocusedTask(task,e){
 }
 async function renderFocusedTasks(){
   const list=$('tpfWaTasksList');if(!list)return;
-  const tasks=await relatedTasks();
+  const expected=contactContext();
+  const tasks=await relatedTasks(expected);
+  if(!tasks||!contactContextIsCurrent(expected))return;
   list.innerHTML=tasks.length?tasks.map(task=>{
     const completed=task.status==='completed',cancelled=task.status==='cancelled';
     const status=completed?'Completada':cancelled?'Cancelada':'Pendiente';

@@ -1585,20 +1585,44 @@ renderSales=function(){
         <button class="danger" onclick="event.stopPropagation();waTaskDelete('${id}')">Eliminar</button>
       </div></div>`;
   }
-  async function fetchWaTasks(){
-    if(typeof waLiveState==="undefined"||!waLiveState?.contact)return [];
-    const contactId=waLiveState.contact.id,people=await window.TPFRecordLinks.load(sb),rows=[];
+  function waTaskContext(contactId){
+    if(typeof waLiveState==="undefined")return {selectionVersion:null,chatId:"",contactId:""};
+    return {
+      selectionVersion:waLiveState?.selectionVersion,
+      chatId:String(waLiveState?.selected?.id||""),
+      contactId:String(contactId||waLiveState?.contact?.id||"")
+    };
+  }
+  function waTaskContextIsCurrent(expected){
+    if(!expected||typeof waLiveState==="undefined")return false;
+    return waLiveState?.selectionVersion===expected.selectionVersion
+      && String(waLiveState?.selected?.id||"")===expected.chatId
+      && String(waLiveState?.contact?.id||"")===expected.contactId;
+  }
+  async function fetchWaTasks(contactId){
+    if(!contactId)return [];
+    const people=await window.TPFRecordLinks.load(sb),rows=[];
     for(let from=0;;from+=500){const result=await sb.from("agenda_items").select("*").eq("status","pending").or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order("starts_at").order("id").range(from,from+499);if(result.error)throw result.error;rows.push(...(result.data||[]));if((result.data||[]).length<500)break;}
     return window.TPFRecordLinks.related(rows,people,contactId,'task');
   }
-  async function renderWaTasks(){
+  async function renderWaTasks(expected=waTaskContext()){
     const box=byId("waSideTasks");if(!box)return;
+    if(!expected.contactId){
+      if(waTaskContextIsCurrent(expected)){
+        if(byId("waSideTaskCount"))byId("waSideTaskCount").textContent="0";
+        box.innerHTML="";
+        byId("waSideViewTasks")?.classList.add("hidden");
+      }
+      return;
+    }
     try{
-      const rows=await fetchWaTasks(), expired=rows.filter(taskExpired).length;
+      const rows=await fetchWaTasks(expected.contactId);
+      if(!waTaskContextIsCurrent(expected))return;
+      const expired=rows.filter(taskExpired).length;
       if(byId("waSideTaskCount"))byId("waSideTaskCount").textContent=String(rows.length);
       box.innerHTML=rows.length?`<div class="waTaskSummary"><div class="waTaskStat"><span>Pendientes</span><b>${rows.length}</b></div><div class="waTaskStat expired"><span>Vencidas</span><b>${expired}</b></div></div>${rows.map(taskCard).join("")}`:'<div class="small">Sin tareas pendientes</div>';
       byId("waSideViewTasks")?.classList.toggle("hidden",!(typeof waLiveState!=="undefined"&&waLiveState?.contact));
-    }catch(err){console.warn("Tareas WhatsApp",err)}
+    }catch(err){if(waTaskContextIsCurrent(expected))console.warn("Tareas WhatsApp",err)}
   }
   async function refreshTasks(){
     try{await renderWaTasks()}catch(_){}
@@ -1608,7 +1632,12 @@ renderSales=function(){
 
   const oldWaSide=window.loadWaContactSideData;
   if(typeof oldWaSide==="function"){
-    window.loadWaContactSideData=async function(){const r=await oldWaSide.apply(this,arguments);await renderWaTasks();return r}
+    window.loadWaContactSideData=async function(){
+      const expected=waTaskContext(arguments[0]?.id);
+      const r=await oldWaSide.apply(this,arguments);
+      if(waTaskContextIsCurrent(expected))await renderWaTasks(expected);
+      return r;
+    }
   }
 
   window.waTaskEdit=async id=>{waTaskOrigin=captureWaOrigin();if(typeof waPrepareCurrentContactForCrm==="function")waPrepareCurrentContactForCrm();await openContactTaskDetail(id);if(byId("agendaCreateCard")?.classList.contains("open"))waTaskOrigin=null};
