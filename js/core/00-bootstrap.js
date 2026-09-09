@@ -79,7 +79,7 @@ $("signup").onclick=async()=>{
  const {data,error}=await sb.auth.signUp({email:$("email").value,password:$("password").value});
  $("loginMsg").textContent=error?error.message:"Cuenta creada. Si se solicita confirmación por email, confírmala antes de entrar.";
 };
-$("logout").onclick=async()=>{await sb.auth.signOut();location.reload()};
+$("logout").onclick=async()=>{await sb.auth.signOut({scope:'local'});location.reload()};
 
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{
  if(n.dataset.view==="system" && !perms?.is_admin){alert("Solo el administrador puede ver Estado del sistema.");return}

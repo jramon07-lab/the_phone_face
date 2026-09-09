@@ -2,7 +2,7 @@
 
 **EN CURSO. Este inventario no declara el CRM completamente validado.**
 
-Base recuperada: estable `734db09915a7dbf0b6cbc876264274768120838e`; desarrollo `576bcf0870fe921bdbfffe5a6e18546fa4c94091`. El enlace estable se conserva.
+Base recuperada: estable `734db09915a7dbf0b6cbc876264274768120838e`; desarrollo `576bcf0870fe921bdbfffe5a6e18546fa4c94091`. El enlace estable se conserva. Publicación actual: **29f6b31**, comprobada antes y después; véase [informe de publicación](release-20260909.md).
 
 Historia del usuario: una operación desde cualquier entrada del CRM debe llegar al servicio y a los datos correctos, persistir y aparecer de forma coherente en el segundo puesto y móvil.
 
@@ -18,7 +18,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 
 | ID | Área | Operaciones incluidas | Criterio | Evidencia inicial / fuente | Estado |
 |---|---|---|---|---|---|
-| 01 | Sesión | Entrar, persistir sesión, salir, caducidad y recuperación | Sesión correcta; datos inaccesibles tras salir; errores visibles | crm-smoke, crm-complete-flows | PARCIAL |
+| 01 | Sesión | Entrar, persistir sesión, salir, caducidad y recuperación | Sesión correcta; datos inaccesibles tras salir; errores visibles | Cierre global detectado; corrección scope local pasa 100 regresiones, nueva prueba de renovación entre dispositivos pendiente de Chrome | CORRECCIÓN EN PRUEBA |
 | 02 | Navegación | Todos los menús, Volver/Adelante, modales y borradores | Vuelve al origen y protege cambios reales independientemente del orden de carga | Corregido en c5d6936; pruebas de captura/retorno y Chrome 34324473084 | CORREGIDO / PARCIAL |
 | 03 | Inicio y avisos | Tarjetas, contadores, filtros, ocultar avisos y accesos | Conteos iguales a datos y navegación al elemento correcto | mobile-home-alerts, crm-functional | PARCIAL |
 | 04 | Buscador y hojas | Buscador general, Liquidación, Data, Clawback, Ajustes | Filtros, columnas, permisos, paginación y exportación en cada hoja | search-fallback; crm-contact-actions | PENDIENTE |
@@ -59,7 +59,7 @@ Historia del usuario: una operación desde cualquier entrada del CRM debe llegar
 | 39 | Móvil completo | Todas las rutas, accesos rápidos, formularios, búsquedas y retorno | Sin desbordamiento; mismas entidades y permisos que PC | crm-complete-flows; mobile-* | PARCIAL |
 | 40 | Dos puestos y resistencia | Usuarios distintos, sesiones largas, pestañas, desconexión y límites | Coherencia tras recuperar conexión; conflictos de edición visibles | dos contextos probados; ensayo prolongado pendiente | PARCIAL |
 | 41 | Seguridad y API | Sin sesión, rol limitado, entradas inválidas y acceso directo | RLS y autorización por función; sin secretos en cliente, logs o diagnóstico | API WhatsApp/Telegram protegidas y probadas; etiquetas e interruptores globales RLS corregidos; otros ajustes/asignación de etiquetas requieren revisión adicional | PARCIAL |
-| 42 | Despliegue y continuidad | Commit, alias, caché, versión PC/móvil y recuperación de código | Enlace estable conserva versión comprobada y evidencia de ese commit | Estable 734db09 READY; candidato 29f6b31: 99 locales, Chrome 34328280876 en curso; 8a768a7 pasó 49 Chrome + 2 integraciones reales; promoción pendiente | PARCIAL |
+| 42 | Despliegue y continuidad | Commit, alias, caché, versión PC/móvil y recuperación de código | Enlace estable conserva versión comprobada y evidencia de ese commit | Estable 29f6b31 READY; 99 internas y 49 Chrome antes/después, 3 omitidas; siguiente corrección de sesiones aún en desarrollo | PARCIAL |
 
 ## Hallazgos de recuperación
 

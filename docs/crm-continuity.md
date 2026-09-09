@@ -1,3 +1,13 @@
+## Publicación y sesiones — punto de continuidad, 9 de septiembre
+
+- **Estable publicado ahora: 29f6b31d297c00cc7b92926209e26d64443ce70e**, mismo alias. Vercel dpl_3n8FtZBKinPNApkq2E3jGjvSukpJ READY, inmutable mxjcgqabb. No confundir las notas anteriores de estable 734db099 con el estado actual.
+- Antes de publicar: 99 locales y Chrome 34328280876, 49 aprobadas/3 omitidas. Después: CI 34329198218 99/99 y 147/147 JavaScript; Chrome **34329217452**, job **102394555384**, **49 aprobadas/3 omitidas**. Ambas sesiones 2266 conversaciones y 71 recientes, resumen e historial iguales.
+- Alias /api/health confirma 29f6b31; GREEN authorized/sano; API de resumen sin sesión CRM devuelve 401. HTML actual incluye api-auth.js y el commit correcto; autorización y diagnóstico coinciden byte a byte con el repositorio.
+- Cuatro avisos nuevos desde Windows versión 1560a8b5: peticiones sin la nueva autorización. Se indicó al usuario guardar y recargar ambos ordenadores. No borrar estos avisos ni afirmar recuperación sin comprobarla.
+- **Candidato siguiente**: cerrar sesión solo en el dispositivo actual. Los tres caminos usaban signOut global por defecto (PC, móvil y fallo de permisos móvil). Corregidos a scope local; test rojo antes/verde después, **100/100 regresiones**. Nuevo Chrome comprueba renovación real del segundo PC tras dos cierres; prohíbe peticiones globales durante la prueba. No se han revocado sesiones para reproducir el fallo.
+- La copia manual y la exportación siguen bloqueadas por el navegador remoto: nuevo intento de diálogo y captura vuelve a timeout. No reintentar en bucle ni extraer credenciales; el administrador ya inició sesión correctamente. Paso alternativo necesario: Estado del sistema → Crear copia ahora y confirmar; Exportar diagnóstico y aportar JSON. Última copia sigue 4 de septiembre.
+- Informe de publicación y límites: docs/crm-audit/release-20260909.md. Producción y los dos ejecutores continúan con su dependencia anterior; restauración aislada, Microsoft 365 y áreas de la matriz siguen abiertas.
+
 ## Punto de reanudación — 9 de septiembre, 08:20 UTC
 
 El usuario ha enviado otra captura de Work con respuestas vacías y «algo ha salido mal». El acceso seguro de administrador YA SE COMPLETÓ. No pedir otra vez las credenciales salvo que la sesión realmente haya caducado. El navegador de administración dejó de responder al abrir la confirmación nativa de la copia; el único intento de pestaña nueva también falló. Solicitar intervención manual, sin extraer cookies/tokens ni cerrar la sesión de la cuenta usada por CI.
