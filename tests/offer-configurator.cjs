@@ -13,6 +13,8 @@ assert(api,'the offer configurator exposes its deterministic helpers');
 assert.deepEqual([...api.OPERATORS],['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange']);
 assert.equal(api.directSaleMessage('Vodafone',52,'Ana García'),'Hola Ana, te envío lo que hemos comentado:\n• Operador: Vodafone\nPrecio final: 52,00 €/mes');
 assert.equal(api.scheduledSendIso('now',''),null,'send now never creates a schedule');
+assert.match(api.nextHalfHourLocal(Date.parse('2026-09-10T10:10:00Z')),/:30$/,'the default slot advances to a half-hour boundary');
+assert.match(api.nextHalfHourLocal(Date.parse('2026-09-10T10:31:00Z')),/:00$/,'the default slot never keeps arbitrary minutes');
 assert.equal(api.scheduledSendIso('scheduled','2026-09-12T10:30',Date.parse('2026-09-10T10:30:00Z')),new Date('2026-09-12T10:30').toISOString(),'scheduled local time is converted to an ISO instant');
 assert.throws(()=>api.scheduledSendIso('scheduled','2026-09-10T10:30',Date.parse('2026-09-10T10:30:00Z')),/minuto de margen/);
 const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','2 líneas de 160 GB'],line_options:[
@@ -138,7 +140,11 @@ assert.match(source,/offerMode='followup'/);
 assert.match(source,/setOfferMode\(offerMode\)/);
 assert.match(source,/Crear y enviar oferta/);
 assert.match(source,/Programar envío/);
-assert.match(source,/Los seguimientos de 2 y 5 días empezarán a contar desde el envío real/);
+assert.match(source,/id="opScheduleToggle" type="checkbox"/);
+assert.match(source,/Array\.from\(\{length:48\}/,'the UI offers one time slot every 30 minutes');
+assert.match(source,/index%2\?'30':'00'/);
+assert.doesNotMatch(source,/type="datetime-local"|name="opSendTiming"/,'the oversized native date-time picker and large timing cards are removed');
+assert.match(source,/Los seguimientos de 2 y 5 días contarán desde el envío real/);
 assert.match(source,/p_send_at:sendAt/);
 assert.match(source,/event\.target\?\.closest\?\.\('#opSubmit'\)/);
 
