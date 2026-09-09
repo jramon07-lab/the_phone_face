@@ -6,11 +6,29 @@ on:
     paths:
       - tests/e2e/audit-live-integrations.spec.js
       - .github/workflows/live-integrations-audit.yml
-concurrency:
-  group: crm-browser-shared-test-account
-  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
 jobs:
+  browser_gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Wait for the same commit to pass the official browser gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/wait-browser-gate.cjs
   audit:
+    needs: browser_gate
+    # Queue only after the official gate finishes. A workflow-wide concurrency
+    # slot would replace a pending browser gate and could cancel this audit.
+    concurrency:
+      group: crm-browser-shared-test-account
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
