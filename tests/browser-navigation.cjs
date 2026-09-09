@@ -3,16 +3,18 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync(require('node:path').join(__dirname,'../js/modules/browser-navigation.js'),'utf8');
 const tick=()=>new Promise(r=>setTimeout(r,140));
-function fixture(){
+function fixture(earlyClose=false){
  const listeners={},nodes={},stack=[null];let cursor=0,screen={type:'main',mainView:'dashboard'},confirm=true;
- const listen=(n,f)=>(listeners[n]??=[]).push(f);
- const emit=async(n,e={})=>{for(const fn of listeners[n]||[])await fn(e);};
+ const listen=phase=>(n,f)=>(listeners[n]??=[]).push({phase,fn:f});
+ const emit=async(n,e={})=>{let stopped=false;const old=e.stopImmediatePropagation;e.stopImmediatePropagation=()=>{stopped=true;old?.()};for(const {fn} of [...listeners[n]||[]].sort((a,b)=>a.phase-b.phase)){await fn(e);if(stopped)break;}};
  const history={get state(){return stack[cursor];},replaceState(s){stack[cursor]=s;},pushState(s){stack.splice(cursor+1);stack.push(s);cursor++;},go(n){const next=cursor+n;if(next<0||next>=stack.length)return;cursor=next;const state=stack[cursor];setTimeout(()=>emit('popstate',{state}),0);}};
- const document={body:{},getElementById:id=>nodes[id]||null,querySelector:()=>null,querySelectorAll:()=>[],addEventListener:listen};
- const window={__TPF_HISTORY:[],tpfCaptureCurrentScreen:()=>({...screen}),tpfRestoreCapturedScreen:async s=>{screen={...s};},addEventListener:listen,confirm:()=>confirm,alert:msg=>{throw Error(msg);}};
+ const document={body:{},getElementById:id=>nodes[id]||null,querySelector:()=>null,querySelectorAll:()=>[],addEventListener:listen(1)};
+ const window={__TPF_HISTORY:[],tpfCaptureCurrentScreen:()=>({...screen}),tpfRestoreCapturedScreen:async s=>{screen={...s};},addEventListener:listen(0),confirm:()=>confirm,alert:msg=>{throw Error(msg);}};
+ let closed=false;
+ if(earlyClose)document.addEventListener('click',e=>{if(e.target.id==='tpfContactsCreateCancel'){closed=true;e.stopImmediatePropagation();}});
  vm.runInNewContext(source,{window,document,location:{pathname:'/'},history,getComputedStyle:()=>({display:'block'}),MutationObserver:class{observe(){}},setTimeout,clearTimeout,Event,Map,Set,Date,Math});
  function node(id){const el={id,isConnected:true,value:'',type:'text',textContent:'',scrollTop:0,disabled:false,readOnly:false,closest:selector=>selector.startsWith('.hidden')?(el.hidden?el:null):selector.startsWith('#contactModal')?el:el,matches:selector=>selector==='input,textarea,select',contains:x=>x===el};nodes[id]=el;return el;}
- return {window,history,emit,node,get screen(){return screen;},get cursor(){return cursor;},get length(){return stack.length;},set confirm(v){confirm=v;},async navigate(s){screen=s;await emit('tpf:contact-open');await tick();}};
+ return {window,history,emit,node,get closed(){return closed;},get screen(){return screen;},get cursor(){return cursor;},get length(){return stack.length;},set confirm(v){confirm=v;},async navigate(s){screen=s;await emit('tpf:contact-open');await tick();}};
 }
 (async()=>{
  const f=fixture();assert.equal(f.cursor,0);
@@ -37,5 +39,10 @@ function fixture(){
  const rapid=fixture();await rapid.navigate({type:'main',mainView:'contacts'});await rapid.navigate({type:'contact',id:'b',mainView:'contacts'});
  rapid.window.tpfRestoreCapturedScreen=async s=>{await new Promise(r=>setTimeout(r,25));await rapid.navigate(s);};
  rapid.history.go(-1);rapid.history.go(-1);await new Promise(r=>setTimeout(r,450));assert.equal(rapid.cursor,0);assert.equal(rapid.screen.mainView,'dashboard');
+ const order=fixture(true),draft=order.node('editorInput'),cancel=order.node('tpfContactsCreateCancel');cancel.textContent='Cancelar';
+ await order.emit('focusin',{target:draft});draft.value='Unwritten draft';order.confirm=false;
+ let blocked=false;await order.emit('click',{target:cancel,preventDefault(){blocked=true;}});
+ assert.equal(blocked,true,'The unsaved guard must run before earlier document-level editor handlers');
+ assert.equal(order.closed,false,'Rejecting discard must keep the editor open regardless of module load order');
  console.log('PASS browser navigation: Back/Forward, branching, unsaved guard, unload, native Back');
 })().catch(e=>{console.error(e);process.exitCode=1;});

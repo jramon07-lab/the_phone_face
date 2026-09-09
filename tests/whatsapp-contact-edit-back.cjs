@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const source=fs.readFileSync('js/modules/whatsapp-contact-edit-back.js','utf8');
+const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
+(async()=>{
+ let capture;
+ const nodes={};
+ const node=(id,hidden=false)=>nodes[id]={classList:{contains:()=>hidden,add:()=>{hidden=true},remove:()=>{hidden=false}},querySelector:()=>({textContent:'Editar contacto'})};
+ const modal=node('tpfContactsCreateBack'),profile=node('contactModal'),wa=node('view-whatsapplive');
+ const window={TPFModules:{register:(_,module)=>module.install()},addEventListener:(_,fn)=>{capture=fn}};
+ vm.runInNewContext(source,{window,document:{getElementById:id=>nodes[id]},waLiveState:{selected:{id:'synthetic-chat'}},setTimeout});
+ const click=id=>capture({target:{closest:selector=>selector.split(',').includes('#'+id)?{}:null}});
+ click('tpfContactEditToggle');
+ click('tpfContactsCreateCancel');
+ await tick();
+ assert.equal(modal.classList.contains('hidden'),false,'A rejected discard must keep the draft open');
+ assert.equal(profile.classList.contains('hidden'),false,'A rejected discard must keep the profile open');
+ assert.equal(window.__tpfWaContactEditBackState.origin.chatId,'synthetic-chat','Origin must survive a rejected discard');
+ click('tpfContactsCreateCancel');
+ modal.classList.add('hidden');
+ await tick();
+ assert.equal(profile.classList.contains('hidden'),true,'An accepted close must return to WhatsApp');
+ assert.equal(wa.classList.contains('hidden'),false);
+ assert.equal(window.__tpfWaContactEditBackState.origin,null);
+ console.log('PASS WhatsApp editor return: rejected discard preserves draft; accepted close restores chat');
+})().catch(error=>{console.error(error);process.exitCode=1});

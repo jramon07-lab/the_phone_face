@@ -89,11 +89,16 @@ function auto2RenderList(){
  const f=$("auto2Filter")?.value||"all";
  const rows=crmAutomations.filter(x=>f==="all"||(f==="enabled"&&x.enabled)||(f==="disabled"&&!x.enabled));
  $("auto2Empty").style.display=rows.length?"none":"block";
- $("auto2List").innerHTML=rows.map(r=>`<div class="auto2Rule">
+ const list=$("auto2List"),signature=JSON.stringify(rows);
+ // Startup and navigation can both reload the same rules. Preserve existing
+ // controls and decorators when the server data has not changed.
+ if(list.__tpfRenderedRows===signature&&list.childElementCount===rows.length)return;
+ list.innerHTML=rows.map(r=>`<div class="auto2Rule">
    <div class="auto2RuleTop">
     <div class="auto2RuleTitle"><div class="auto2RuleIcon">⚡</div><div><b>${esc(r.name)}</b><div class="auto2RuleText">${esc(auto2TriggerLabel(r.trigger_type))} → ${esc(auto2ActionLabel(r.action_type))}</div><span class="auto2State${r.enabled?"":" off"}">${r.enabled?"Activa":"Desactivada"}</span></div></div>
     <div class="auto2RuleActions"><button onclick="auto2Toggle('${r.id}',${!r.enabled})">${r.enabled?"Desactivar":"Activar"}</button><button onclick="auto2Edit('${r.id}')">Editar</button><button class="danger" onclick="auto2Delete('${r.id}')">Eliminar</button></div>
    </div></div>`).join("");
+ list.__tpfRenderedRows=signature;
 }
 $("auto2Trigger").onchange=auto2RenderTriggerConfig;$("auto2Action").onchange=auto2RenderActionConfig;$("auto2Reload").onclick=loadAutomations;$("auto2Filter").onchange=auto2RenderList;
 $("auto2Cancel").onclick=()=>auto2ResetForm();

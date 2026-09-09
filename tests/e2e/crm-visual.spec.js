@@ -66,7 +66,8 @@ test('Automatizaciones muestra constructor libre y pasos configurables', async (
   await page.waitForFunction(()=>Array.isArray(window.crmAutomations));
   await page.waitForFunction(()=>{const rows=[...document.querySelectorAll('#auto2List .auto2Rule')];return rows.length>0&&rows.every(row=>row.dataset.afId&&row.querySelector('.afOperator')&&row.querySelector('[data-ac-cancel-all]'))},null,{timeout:15000});
   await page.waitForTimeout(200);
-  const stability=await page.evaluate(async()=>{const root=document.getElementById('auto2List');let mutations=0;const badMeta=()=>[...root.querySelectorAll('.afOperator')].some(node=>node.parentElement?.classList.contains('auto2RuleText'));const observer=new MutationObserver(rows=>{mutations+=rows.filter(x=>x.type==='childList').length});observer.observe(root,{childList:true,subtree:true});await new Promise(resolve=>setTimeout(resolve,1700));observer.disconnect();return {mutations,badMeta:badMeta()}});
+  const stability=await page.evaluate(async()=>{const root=document.getElementById('auto2List');let mutations=0;const targets={};const badMeta=()=>[...root.querySelectorAll('.afOperator')].some(node=>node.parentElement?.classList.contains('auto2RuleText'));const observer=new MutationObserver(rows=>{for(const row of rows.filter(x=>x.type==='childList')){mutations++;const key=row.target.id||String(row.target.className||row.target.nodeName);targets[key]=(targets[key]||0)+1}});observer.observe(root,{childList:true,subtree:true});await new Promise(resolve=>setTimeout(resolve,1700));observer.disconnect();return {mutations,targets,badMeta:badMeta()}});
+  console.log('AUTOMATION_IDLE',JSON.stringify(stability));
   expect(stability.badMeta,'La categoría no debe insertarse en el texto que actualiza el constructor').toBe(false);
   expect(stability.mutations,'La lista de automatizaciones no debe reconstruirse o parpadear estando inactiva').toBe(0);
   await page.locator('#tpfAutoNew').click();

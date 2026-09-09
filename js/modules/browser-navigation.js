@@ -88,7 +88,8 @@ function click(e){
  if(!busy&&(back||button.matches('.nav'))&&!approve()){e.preventDefault();e.stopImmediatePropagation();return;}
  if(!busy){update();nativeReturn=back;}schedule();
 }
-document.addEventListener('click',click,true);
+// Run before document-level editors, even when their modules loaded first.
+window.addEventListener('click',click,true);
 for(const event of ['focusin','beforeinput','pointerdown','keydown'])document.addEventListener(event,remember,true);
 document.addEventListener('input',schedule,true);document.addEventListener('change',schedule,true);
 window.addEventListener('popstate',e=>{popQueue=popQueue.then(()=>pop(e));});

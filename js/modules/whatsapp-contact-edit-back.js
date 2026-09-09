@@ -43,8 +43,14 @@ function capture(e){
   if(!state.origin)return;
   if(target.closest('#tpfContactsCreateClose,#tpfContactsCreateCancel')){
     if(!isEditContactModal())return;
-    const origin=state.origin;state.origin=null;
-    setTimeout(()=>restoreWhatsapp(origin),0);
+    const origin=state.origin;
+    // A later capture handler can keep an unsaved editor open. Only restore
+    // WhatsApp after the editor has actually accepted and completed closing.
+    setTimeout(()=>{
+      if(isEditContactModal()||state.origin!==origin)return;
+      state.origin=null;
+      restoreWhatsapp(origin);
+    },0);
   }
   if(target.closest('.nav[data-view]')&&!target.closest('.nav[data-view="whatsapplive"]'))state.origin=null;
 }

@@ -1,4 +1,23 @@
+## Avance de auditoría: correcciones candidatas, pendientes de Chrome
+
+- Reproducción roja y corrección de orden de captura del aviso de borrador; el retorno a WhatsApp espera al cierre aceptado.
+- Reproducción roja y corrección de reconstrucción de automatizaciones al recargar datos idénticos.
+- Pruebas nuevas: `whatsapp-contact-edit-back.cjs`, `automations-list-refresh.cjs`; ampliación de `browser-navigation.cjs`.
+- Ninguna de estas correcciones se ha promovido al enlace estable todavía. La auditoría de 42 áreas sigue EN CURSO.
+- Supabase: 120 respuestas HTTP 200, sin timeout, de los dos ejecutores durante la última hora consultada; no equivalen a entrega de todas las acciones.
+- Producción Vercel es un despliegue antiguo (29 de agosto, `dpl_CwYWyd558uX9LtN11KGwFvN3VNjV`), separado del enlace estable de rama. Se investiga la falta de copias diarias.
+
 # The Phone Face CRM — punto de continuidad
+
+## Auditoría completa iniciada — 2026-09-09
+
+El usuario ha pedido revisar todo el CRM y no dejar funciones sin revisar. Continuar desde `docs/crm-audit/README.md` y el inventario de código `docs/crm-audit/source-inventory.json`. No confundir las pruebas anteriores con cobertura completa.
+
+- Base remota recuperada: estable `734db09`, desarrollo `576bcf0`; alias estable READY y sin cambios.
+- Ejecución posterior `34287934209`: 44 Chrome superadas, 2 fallidas, 3 omitidas. Dos sesiones WhatsApp pasaron; revisar protección de borradores de contacto y parpadeo de automatizaciones.
+- Copias: última verified registrada 2026-09-04 18:04 UTC. Microsoft 365: 0 buzones. Revisar programación y recuperación real; no afirmar cobertura completa.
+- Inventario inicial: 42 grupos de recorridos con operaciones, criterios, fuentes y estado. El rastreo estático detecta 1.143 candidatos de controles en 165 archivos; no son pruebas aprobadas ni un denominador de cobertura definitivo.
+- En curso: reproducción de los dos fallos, ampliación de pruebas reales y contraste de permisos, integraciones y recuperación. Mantener el mismo enlace estable; publicar solo correcciones verificadas.
 
 ## Verificación completada — 2026-09-08, 22:48 UTC
 
