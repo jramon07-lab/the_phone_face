@@ -10,7 +10,7 @@ async function login(page){
   await expect(page.locator('#app')).toBeVisible({timeout:30000});
 }
 
-test('ofertas: programación compacta usa un check y franjas exactas de 30 minutos',async({page})=>{
+test('ofertas: checks compactos y fecha-hora conjunta en saltos de 30 minutos',async({page})=>{
   await page.setViewportSize({width:1440,height:900});
   await login(page);
   const contactId=await page.evaluate(async()=>{
@@ -27,17 +27,24 @@ test('ofertas: programación compacta usa un check y franjas exactas de 30 minut
   await expect(toggle).toBeVisible({timeout:15000});
   await expect(toggle).not.toBeChecked();
   await expect(fields).toBeHidden();
-  await expect(page.locator('#opSendOptions input[type="datetime-local"]')).toHaveCount(0);
   await toggle.check();
   await expect(fields).toBeVisible();
-  await expect(page.locator('#opScheduleDate')).toBeVisible();
-  const slots=await page.locator('#opScheduleTime option').evaluateAll(options=>options.map(option=>option.value));
-  expect(slots).toHaveLength(48);
-  expect(slots[0]).toBe('00:00');
-  expect(slots[1]).toBe('00:30');
-  expect(slots.at(-1)).toBe('23:30');
-  expect(slots.every(value=>/:00$|:30$/.test(value))).toBeTruthy();
+  const dateTime=page.locator('#opScheduledAt');
+  await expect(dateTime).toBeVisible();
+  await expect(dateTime).toHaveAttribute('step','1800');
+  expect(await dateTime.inputValue()).toMatch(/:(00|30)$/);
+  const stepMilliseconds=await dateTime.evaluate(input=>{const before=input.valueAsNumber;input.stepUp();return input.valueAsNumber-before});
+  expect(stepMilliseconds).toBe(30*60*1000);
   const dir=path.join(process.cwd(),'browser-evidence','offer-schedule');
   fs.mkdirSync(dir,{recursive:true});
-  await page.screenshot({path:path.join(dir,'compact-half-hour-picker.png'),fullPage:true});
+  await page.screenshot({path:path.join(dir,'combined-half-hour-picker.png'),fullPage:true});
+  await page.locator('input[name="opMode"][value="accepted"]').check();
+  const acceptedSend=page.locator('#opAcceptedSend');
+  await expect(acceptedSend).toBeVisible();
+  await expect(acceptedSend).toBeChecked();
+  const acceptedMetrics=await acceptedSend.evaluate(input=>{const box=input.getBoundingClientRect(),label=input.closest('label'),style=getComputedStyle(label);return{width:box.width,height:box.height,justify:style.justifyContent}});
+  expect(acceptedMetrics.width).toBeLessThanOrEqual(18);
+  expect(acceptedMetrics.height).toBeLessThanOrEqual(18);
+  expect(acceptedMetrics.justify).toBe('flex-start');
+  await page.screenshot({path:path.join(dir,'accepted-message-small-check.png'),fullPage:true});
 });
