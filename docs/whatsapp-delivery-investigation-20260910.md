@@ -13,12 +13,13 @@ Diagnóstico de las dos comprobaciones Vodafone “día siguiente” enviadas al
 - Una consulta posterior de solo lectura al historial protegido de GREEN-API encontró:
   - Con Netflix: `3EB08E924A825FB156C086`, 06:07:03 UTC, estado `read`.
   - Sin Netflix: `3EB022FD11D07B8CC017B3`, 06:08:02 UTC, estado `read`.
+- La instancia emisora de GREEN-API termina en 8554 y el chat destinatario termina en 1409; no es un envío a la misma cuenta.
 - Los textos recuperados corresponden respectivamente a las plantillas Vodafone con y sin Netflix.
 - El usuario informó que no vio ninguno de los dos mensajes en el WhatsApp esperado.
 
 ## Conclusión
 
-La selección de plantillas funcionó y GREEN-API registró ambos mensajes como salientes y leídos. Existe una discrepancia entre el chat/cuenta registrado por el proveedor y el WhatsApp en el que el usuario esperaba recibirlos. El estado `done` anterior era insuficiente como prueba de entrega visible porque el motor no persistía `idMessage` ni verificaba posteriormente el historial.
+La selección de plantillas funcionó y GREEN-API registró ambos mensajes como salientes y leídos desde la cuenta terminada en 8554 hacia la terminada en 1409. Existe una discrepancia entre el estado registrado por el proveedor y el WhatsApp en el que el usuario esperaba recibirlos. El estado `done` anterior era insuficiente como prueba de entrega visible porque el motor no persistía `idMessage` ni verificaba posteriormente el historial.
 
 ## Corrección preparada
 
