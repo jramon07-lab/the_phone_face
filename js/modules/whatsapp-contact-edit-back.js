@@ -71,5 +71,6 @@ window.TPFWhatsappContactEditBack={begin,hasOrigin,restore:finish};
 M.register('whatsapp-contact-edit-back',{install(){
   if(state.bound)return;state.bound=true;
   window.addEventListener('click',capture,true);
+  window.addEventListener('tpf:contact-updated',()=>{if(hasOrigin())finish()});
 }});
 })();

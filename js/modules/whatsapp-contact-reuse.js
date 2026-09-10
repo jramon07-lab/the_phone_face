@@ -323,6 +323,12 @@ async function openEdit(e){
   if(window.TPFWhatsappContactEditBack?.begin)window.TPFWhatsappContactEditBack.begin(origin);
   else window.__tpfWaContactEditBackState={...(window.__tpfWaContactEditBackState||{}),origin};
   hideFocusedTasks();
+  hideContactModal();
+  if(typeof window.TPFContactsList?.edit==='function'){
+    await window.TPFContactsList.edit(c.id);
+    hideContactModal();
+    return;
+  }
   if(typeof window.openWaMatchedContact==='function')await window.openWaMatchedContact();
   else{
     if(typeof window.openContact!=='function')return;
