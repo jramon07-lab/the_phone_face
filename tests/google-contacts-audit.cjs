@@ -6,7 +6,7 @@ const contacts=fs.readFileSync('js/modules/contacts-list-ui.js','utf8');
 const mobile=fs.readFileSync('js/mobile-app.js','utf8');
 
 assert.match(html,/id="googleContactsAuditBtn"/,'debe existir el acceso a la comparación');
-assert.match(html,/google-contacts-audit\.js\?v=20260911-review-dialog-value-1/,'debe cargar el comparador con versión nueva');
+assert.match(html,/google-contacts-audit\.js\?v=20260911-manual-field-choice-1/,'debe cargar el comparador con versión nueva');
 assert.match(source,/padding:14px 0 42px/,'el botón debe quedar separado de la insignia flotante de pruebas');
 assert.match(html,/runtime\.js\?v=20260910-google-audit-1/,'debe renovar los módulos de búsqueda');
 assert.match(fs.readFileSync('js/modules/runtime.js','utf8'),/contacts-list-ui\.js'\?'20260910-nickname-search-1'/,'debe renovar el buscador de PC');
@@ -18,7 +18,8 @@ for(const kind of ['match','conflict','crm_only','google_only','duplicate'])asse
 assert.match(source,/Poner “\$\{google\.name\}” como apodo/,'debe proponer conservar el nombre antiguo como apodo');
 assert.doesNotMatch(source,/\.insert\(|\.update\(|\.delete\(|method:\s*['"](?:POST|PATCH|DELETE)/,'la comprobación debe ser estrictamente de solo lectura');
 assert.match(source,/sessionStorage\.setItem\(REVIEW_KEY/,'las decisiones deben guardarse solo en la sesión local');
-assert.match(source,/Marcar para aprobar/,'los datos diferentes deben poder prepararse para aprobación');
+assert.match(source,/Elegir datos/,'los datos diferentes deben permitir elegir manualmente');
+assert.doesNotMatch(source,/Marcar para aprobar/,'los datos diferentes no deben aprobar una propuesta sin elegir los campos');
 assert.match(source,/Marcar para crear/,'los contactos solo CRM deben poder prepararse para crear');
 assert.match(source,/Ver comparación/,'debe mostrar el detalle antes de decidir');
 assert.match(source,/Ignorar/,'debe permitir ignorar una propuesta');
@@ -29,6 +30,9 @@ assert.match(source,/\.gcaModal #gcaContent\{flex:1 1 auto;min-height:0;overflow
 assert.match(source,/\.gcaTableWrap\{flex:1 1 auto;min-height:0;overflow:auto/,'la tabla debe permitir desplazamiento vertical y horizontal');
 assert.match(source,/Array\.isArray\(raw\)/,'el detalle debe distinguir listas de valores simples como el nombre');
 assert.doesNotMatch(source,/contact\?\.\[key\]\?\.length\?contact\[key\]\.join/,'el detalle no debe intentar unir un nombre como si fuera una lista');
+assert.match(source,/Guardar elección sin aplicar/,'debe guardar una elección local explícita');
+assert.match(source,/data-gca-choice/,'debe permitir editar manualmente cada valor final');
+assert.match(source,/data-gca-pick/,'debe permitir escoger rápidamente el valor del CRM o Google');
 assert.match(contacts,/r\.fullName,r\.nickname,r\.dni/,'el buscador de PC debe incluir el apodo');
 assert.match(mobile,/contact\?\.fullName,contact\?\.nickname,contact\?\.dni/,'el buscador móvil debe incluir el apodo');
 
