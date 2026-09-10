@@ -125,10 +125,12 @@
       const ids=[...byId('tpfCreateLabels')?.querySelectorAll('input:checked')||[]].map(x=>x.value);
       const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:String(s.id),p_label_ids:ids});if(lr.error)throw lr.error;
       const id=s.id;
+      const returnToWhatsapp=!!window.TPFWhatsappContactEditBack?.hasOrigin?.();
       if(msg)msg.textContent='Contacto guardado correctamente';
       restoreCreateModal(true);
       try{await window.tpfReloadContacts?.();}catch(_){}
-      if(typeof window.openContact==='function')await window.openContact(id);
+      if(returnToWhatsapp)await window.TPFWhatsappContactEditBack.restore();
+      else if(typeof window.openContact==='function')await window.openContact(id);
     }catch(err){if(msg)msg.textContent=err?.message||'No se pudo guardar el contacto.';if(btn)btn.disabled=false;}
   }
   async function openCreateModalEdit(){
