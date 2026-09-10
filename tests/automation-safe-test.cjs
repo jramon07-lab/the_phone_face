@@ -1,0 +1,29 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
+const moduleText=read('js/modules/automation-safe-test.js');
+const index=read('index.html');
+const green=read('api/green.js');
+
+assert.match(index,/automation-safe-test\.js\?v=20260910-safe-test-1/);
+assert.match(moduleText,/meta\[name="tpf-crm-mode"\]/);
+assert.match(moduleText,/content!==['"]stable['"]/);
+assert.match(moduleText,/Simular recorrido/);
+assert.match(moduleText,/No modifica clientes/);
+assert.match(moduleText,/No crea ventas ni tareas/);
+assert.match(moduleText,/No asigna etiquetas/);
+assert.match(moduleText,/Ver incidencias/);
+assert.match(moduleText,/tpfIncidentRegistry/);
+assert.match(moduleText,/695661409/);
+assert.match(moduleText,/34695661409@c\.us/);
+assert.match(moduleText,/if\(!confirm\(/);
+assert.match(moduleText,/\/api\/green\?action=send/);
+assert.match(moduleText,/!response\.ok\|\|data\?\.ok===false\|\|!data\?\.idMessage/);
+assert.match(moduleText,/\[PRUEBA AUTOMATIZACIÓN:/);
+assert.doesNotMatch(moduleText,/\.from\(['"](?:records|sales_opportunities|agenda_items|crm_server_automation_jobs)['"]\)\.insert/);
+assert.doesNotMatch(moduleText,/\.from\(['"](?:records|sales_opportunities|agenda_items|crm_server_automation_jobs)['"]\)\.update/);
+assert.match(green,/GREEN_PROTECTED_TEST_BRANCH/);
+assert.match(green,/GREEN_TEST_PHONE/);
+
+console.log('safe automation test mode and protected delivery: ok');
