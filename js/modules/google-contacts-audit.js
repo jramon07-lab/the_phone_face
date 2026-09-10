@@ -76,7 +76,7 @@ function render(){
 }
 function showComparison(row){
  const detail=$('gcaDetail');if(!detail)return;$('gcaDetailTitle').textContent=label(row.kind);$('gcaDetailProposal').textContent=row.action;
- const value=(contact,key)=>contact?.[key]?.length?contact[key].join(', '):contact?.[key]||'—';
+ const value=(contact,key)=>{const raw=contact?.[key];if(Array.isArray(raw))return raw.join(', ')||'—';return safe(raw)||'—'};
  $('gcaDetailRows').innerHTML=[['Nombre','name'],['Apodo','nickname'],['Teléfono','phones'],['Correo','emails']].map(([title,key])=>`<tr><th>${title}</th><td>${esc(value(row.crm,key))}</td><td>${esc(value(row.google,key))}</td></tr>`).join('');detail.classList.remove('hidden');
 }
 function modal(){

@@ -6,7 +6,7 @@ const contacts=fs.readFileSync('js/modules/contacts-list-ui.js','utf8');
 const mobile=fs.readFileSync('js/mobile-app.js','utf8');
 
 assert.match(html,/id="googleContactsAuditBtn"/,'debe existir el acceso a la comparación');
-assert.match(html,/google-contacts-audit\.js\?v=20260911-review-dialog-scroll-1/,'debe cargar el comparador con versión nueva');
+assert.match(html,/google-contacts-audit\.js\?v=20260911-review-dialog-value-1/,'debe cargar el comparador con versión nueva');
 assert.match(source,/padding:14px 0 42px/,'el botón debe quedar separado de la insignia flotante de pruebas');
 assert.match(html,/runtime\.js\?v=20260910-google-audit-1/,'debe renovar los módulos de búsqueda');
 assert.match(fs.readFileSync('js/modules/runtime.js','utf8'),/contacts-list-ui\.js'\?'20260910-nickname-search-1'/,'debe renovar el buscador de PC');
@@ -27,6 +27,8 @@ assert.doesNotMatch(source,/Aplicar cambios/,'esta fase no debe ofrecer aplicar 
 assert.match(source,/body\.querySelectorAll\('\[data-gca-action\]'\)/,'cada acción visible debe enlazarse directamente después de dibujar la tabla');
 assert.match(source,/\.gcaModal #gcaContent\{flex:1 1 auto;min-height:0;overflow:hidden;display:flex/,'el contenido debe caber dentro del modal');
 assert.match(source,/\.gcaTableWrap\{flex:1 1 auto;min-height:0;overflow:auto/,'la tabla debe permitir desplazamiento vertical y horizontal');
+assert.match(source,/Array\.isArray\(raw\)/,'el detalle debe distinguir listas de valores simples como el nombre');
+assert.doesNotMatch(source,/contact\?\.\[key\]\?\.length\?contact\[key\]\.join/,'el detalle no debe intentar unir un nombre como si fuera una lista');
 assert.match(contacts,/r\.fullName,r\.nickname,r\.dni/,'el buscador de PC debe incluir el apodo');
 assert.match(mobile,/contact\?\.fullName,contact\?\.nickname,contact\?\.dni/,'el buscador móvil debe incluir el apodo');
 
