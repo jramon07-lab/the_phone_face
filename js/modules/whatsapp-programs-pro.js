@@ -3,7 +3,7 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const PAGE_SIZE=20;
-const state={page:1,all:[],summaryAt:0,loading:false,bound:false};
+const state={page:1,all:[],summaryAt:0,loading:false,bound:false,menu:null};
 
 function stamp(value){const n=new Date(value||0).getTime();return Number.isFinite(n)?n:0}
 function delivery(row){return String(row?.whatsapp_delivery_status||'').toLowerCase()}
@@ -62,13 +62,12 @@ function addStyles(){
 #view-whatsapp .waMessageCell{min-width:0!important;max-width:none!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
 #view-whatsapp .wapRow{cursor:pointer}.wapRow:hover{background:#f8fbff}
 #view-whatsapp .wapActionsCell{position:relative;text-align:right}
-#view-whatsapp .wapMenu{position:relative;display:inline-block}
-#view-whatsapp .wapMenu summary{display:grid;place-items:center;width:34px;height:34px;border:1px solid #d7dee8;border-radius:9px;background:#fff;cursor:pointer;font-size:16px;list-style:none}
-#view-whatsapp .wapMenu summary::-webkit-details-marker{display:none}
-#view-whatsapp .wapMenuBody{position:absolute;right:0;top:39px;z-index:100;width:190px;padding:6px;border:1px solid #d7dee8;border-radius:11px;background:#fff;box-shadow:0 12px 35px #102a4c26}
-#view-whatsapp .wapMenuBody button{display:block!important;width:100%;margin:0!important;padding:9px 10px!important;border:0!important;background:#fff!important;color:#344054!important;text-align:left!important;border-radius:7px!important;font-size:10px!important}
-#view-whatsapp .wapMenuBody button:hover{background:#f1f5f9!important}
-#view-whatsapp .wapMenuBody .agendaWaSend{color:#14753a!important}
+#view-whatsapp .wapMenuTrigger{display:grid;place-items:center;width:34px;height:34px;margin-left:auto;border:1px solid #d7dee8;border-radius:9px;background:#fff;color:#344054;cursor:pointer;font-size:16px;line-height:1}
+#view-whatsapp .wapMenuTrigger:hover,#view-whatsapp .wapMenuTrigger[aria-expanded="true"]{border-color:#84adf5;background:#f4f8ff;color:#175cd3}
+.wapMenuPortal{position:fixed;z-index:250000;width:200px;padding:6px;border:1px solid #d7dee8;border-radius:11px;background:#fff;box-shadow:0 12px 35px #102a4c33}
+.wapMenuPortal button{display:block!important;width:100%;margin:0!important;padding:10px!important;border:0!important;background:#fff!important;color:#344054!important;text-align:left!important;border-radius:7px!important;font-size:11px!important;cursor:pointer!important}
+.wapMenuPortal button:hover{background:#f1f5f9!important}
+.wapMenuPortal .agendaWaSend{color:#14753a!important}
 #view-whatsapp .wapPagination{display:flex;align-items:center;justify-content:center;gap:14px;padding:12px;border-top:1px solid #edf1f5}
 #view-whatsapp .wapPagination.hidden{display:none!important}
 #view-whatsapp .wapPagination button:disabled{opacity:.4}
@@ -98,7 +97,10 @@ async function loadSummary(force=false){
 }
 
 function visibleIndexes(rows){const filter=currentFilter();return rows.map((row,index)=>matches(row,filter)?index:-1).filter(index=>index>=0)}
-function closeMenus(except){document.querySelectorAll('#view-whatsapp .wapMenu[open]').forEach(menu=>{if(menu!==except)menu.removeAttribute('open')})}
+function closeActionMenu(){
+ if(!state.menu)return;
+ state.menu.trigger?.setAttribute('aria-expanded','false');state.menu.element?.remove();state.menu=null;
+}
 function openDetail(row){
  if(!row)return;$('wapDetail')?.remove();
  const dialog=document.createElement('dialog');dialog.id='wapDetail';dialog.className='wapDetail';
@@ -106,7 +108,20 @@ function openDetail(row){
  dialog.innerHTML=`<div class="wapDetailHead"><div><span class="small">${esc(status)}</span><h3>${esc(row.customer_name||'Contacto')}</h3></div><button type="button" data-close>×</button></div><div class="wapDetailBody"><div><span>Fecha y hora</span><b>${esc(formatDate(row.whatsapp_scheduled_at||row.starts_at))}</b></div><div><span>Teléfono</span><b>${esc(row.whatsapp_phone||row.customer_phone||'—')}</b></div><div class="wide"><span>Mensaje completo</span><pre>${esc(row.whatsapp_message||'Sin mensaje')}</pre></div>${row.whatsapp_delivery_error?`<div class="wide"><span>Incidencia</span><b>${esc(row.whatsapp_delivery_error)}</b></div>`:''}</div>`;
  document.body.appendChild(dialog);dialog.querySelector('[data-close]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>dialog.remove());dialog.showModal();
 }
+function openActionMenu(trigger,buttons,row){
+ closeActionMenu();
+ const menu=document.createElement('div');menu.className='wapMenuPortal';menu.setAttribute('role','menu');
+ const detail=document.createElement('button');detail.type='button';detail.textContent='Ver mensaje completo';detail.onclick=()=>{closeActionMenu();openDetail(row)};menu.appendChild(detail);
+ buttons.forEach(button=>{const copy=button.cloneNode(true);copy.addEventListener('click',()=>setTimeout(closeActionMenu,0));menu.appendChild(copy)});
+ document.body.appendChild(menu);
+ const rect=trigger.getBoundingClientRect(),gap=6,pad=8,width=menu.offsetWidth||200,height=menu.offsetHeight;
+ const left=Math.max(pad,Math.min(window.innerWidth-width-pad,rect.right-width));
+ const below=rect.bottom+gap+height<=window.innerHeight-pad;
+ menu.style.left=`${left}px`;menu.style.top=`${below?rect.bottom+gap:Math.max(pad,rect.top-height-gap)}px`;
+ trigger.setAttribute('aria-expanded','true');state.menu={element:menu,trigger};
+}
 function decorate(){
+ closeActionMenu();
  const rows=Array.isArray(window.__waRows)?window.__waRows:[];
  const indexes=visibleIndexes(rows),pages=Math.max(1,Math.ceil(indexes.length/PAGE_SIZE));
  state.page=Math.min(Math.max(1,state.page),pages);
@@ -114,10 +129,10 @@ function decorate(){
  [...document.querySelectorAll('#waRows tr')].forEach((tr,index)=>{
   tr.classList.add('wapRow');tr.dataset.wapId=String(rows[index]?.id||'');tr.style.display=shown.has(index)?'':'none';
   const message=tr.children[3];if(message)message.title=String(rows[index]?.whatsapp_message||'');
-  const cell=tr.children[5];if(cell&&!cell.querySelector('.wapMenu')){
-   cell.classList.add('wapActionsCell');const buttons=[...cell.querySelectorAll('button')],menu=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('div');
-   menu.className='wapMenu';summary.textContent='•••';summary.title='Acciones';body.className='wapMenuBody';buttons.forEach(button=>body.appendChild(button));menu.append(summary,body);cell.replaceChildren(menu);
-   menu.addEventListener('toggle',()=>{if(menu.open)closeMenus(menu)});
+  const cell=tr.children[5];if(cell&&!cell.querySelector('.wapMenuTrigger')){
+   cell.classList.add('wapActionsCell');const buttons=[...cell.querySelectorAll('button')],trigger=document.createElement('button');
+   trigger.type='button';trigger.className='wapMenuTrigger';trigger.textContent='•••';trigger.title='Acciones';trigger.setAttribute('aria-label','Abrir acciones');trigger.setAttribute('aria-expanded','false');
+   trigger.onclick=event=>{event.stopPropagation();if(state.menu?.trigger===trigger){closeActionMenu();return}openActionMenu(trigger,buttons,rows[index])};cell.replaceChildren(trigger);
   }
  });
  if($('wapResultCount'))$('wapResultCount').textContent=`${indexes.length} resultado${indexes.length===1?'':'s'}`;
@@ -148,10 +163,12 @@ function bind(){
  if($('waReload'))$('waReload').onclick=()=>{state.summaryAt=0;window.loadWhatsappPrograms()};
  if($('waFilter'))$('waFilter').onchange=()=>{state.page=1;window.loadWhatsappPrograms()};
  if($('waSearch'))$('waSearch').oninput=()=>{state.page=1;window.loadWhatsappPrograms()};
- $('waRows')?.addEventListener('click',event=>{if(event.target.closest('button,summary,.wapMenu'))return;const tr=event.target.closest('tr');if(!tr)return;openDetail((window.__waRows||[]).find(row=>String(row.id)===tr.dataset.wapId))});
+ $('waRows')?.addEventListener('click',event=>{if(event.target.closest('button,.wapMenuTrigger'))return;const tr=event.target.closest('tr');if(!tr)return;openDetail((window.__waRows||[]).find(row=>String(row.id)===tr.dataset.wapId))});
  const observer=new MutationObserver(()=>{const msg=String($('waMsg')?.textContent||'');if(/programado|actualizado/i.test(msg))setTimeout(()=>toggleComposer(false),450)});
  if($('waMsg'))observer.observe($('waMsg'),{childList:true,characterData:true,subtree:true});
- document.addEventListener('click',event=>{if(!event.target.closest('#view-whatsapp .wapMenu'))closeMenus()});
+ document.addEventListener('click',event=>{if(!event.target.closest('.wapMenuPortal,.wapMenuTrigger'))closeActionMenu()});
+ document.addEventListener('keydown',event=>{if(event.key==='Escape')closeActionMenu()});
+ window.addEventListener('resize',closeActionMenu);document.addEventListener('scroll',closeActionMenu,true);
  loadSummary(true);setTimeout(()=>window.loadWhatsappPrograms?.(),100);
 }
 M.register('whatsapp-programs-pro',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
