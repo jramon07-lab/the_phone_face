@@ -6,7 +6,7 @@ const contacts=fs.readFileSync('js/modules/contacts-list-ui.js','utf8');
 const mobile=fs.readFileSync('js/mobile-app.js','utf8');
 
 assert.match(html,/id="googleContactsAuditBtn"/,'debe existir el acceso a la comparación');
-assert.match(html,/google-contacts-audit\.js\?v=20260910-readonly-audit-2/,'debe cargar el comparador con versión nueva');
+assert.match(html,/google-contacts-audit\.js\?v=20260910-review-decisions-1/,'debe cargar el comparador con versión nueva');
 assert.match(source,/padding:14px 0 42px/,'el botón debe quedar separado de la insignia flotante de pruebas');
 assert.match(html,/runtime\.js\?v=20260910-google-audit-1/,'debe renovar los módulos de búsqueda');
 assert.match(fs.readFileSync('js/modules/runtime.js','utf8'),/contacts-list-ui\.js'\?'20260910-nickname-search-1'/,'debe renovar el buscador de PC');
@@ -17,6 +17,13 @@ assert.match(source,/\.range\(from,from\+size-1\)/,'debe recorrer todos los cont
 for(const kind of ['match','conflict','crm_only','google_only','duplicate'])assert.match(source,new RegExp(kind));
 assert.match(source,/Poner “\$\{google\.name\}” como apodo/,'debe proponer conservar el nombre antiguo como apodo');
 assert.doesNotMatch(source,/\.insert\(|\.update\(|\.delete\(|method:\s*['"](?:POST|PATCH|DELETE)/,'la comprobación debe ser estrictamente de solo lectura');
+assert.match(source,/sessionStorage\.setItem\(REVIEW_KEY/,'las decisiones deben guardarse solo en la sesión local');
+assert.match(source,/Marcar para aprobar/,'los datos diferentes deben poder prepararse para aprobación');
+assert.match(source,/Marcar para crear/,'los contactos solo CRM deben poder prepararse para crear');
+assert.match(source,/Ver comparación/,'debe mostrar el detalle antes de decidir');
+assert.match(source,/Ignorar/,'debe permitir ignorar una propuesta');
+assert.match(source,/row\.kind==='duplicate'.*Marcar revisado/,'los duplicados solo se deben marcar como revisados');
+assert.doesNotMatch(source,/Aplicar cambios/,'esta fase no debe ofrecer aplicar cambios reales');
 assert.match(contacts,/r\.fullName,r\.nickname,r\.dni/,'el buscador de PC debe incluir el apodo');
 assert.match(mobile,/contact\?\.fullName,contact\?\.nickname,contact\?\.dni/,'el buscador móvil debe incluir el apodo');
 
