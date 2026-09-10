@@ -22,6 +22,7 @@ assert.deepEqual(JSON.parse(JSON.stringify({active:summary.active,scheduled:summ
 assert.equal(summary.next.id,'next-a');
 assert.match(source,/contains\('context',\{contact_id:id\}\)/,'filtra por identificador del contacto');
 assert.match(source,/#contactModal \.cpRight/,'inserta el contador en la ficha');
+assert.match(source,/offers\.before\(section\)/,'mantiene el contador encima de ofertas aunque esa sección cargue después');
 assert.match(source,/waAutomationStatus/,'inserta el contador en WhatsApp');
 assert.match(source,/crm_cancel_automation_execution/,'cancela la ejecución sin borrar el historial');
 assert(!/from\(['"]sales_opportunities['"]\)\.update/.test(source),'el contador no mueve oportunidades');
