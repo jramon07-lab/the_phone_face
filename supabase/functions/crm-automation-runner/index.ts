@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { lifecycleEnabled, orderedConfig } from "./lifecycle.ts";
 import { businessContext } from "./contact-party.ts";
 import { madridDateAfter, nextBusinessSendAt } from "./business-time.ts";
+import { classifyGreenDelivery, extractGreenMessageId } from "./delivery-receipt.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")||"";
 const SERVICE_KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
@@ -36,13 +37,16 @@ function madridAtOffset(value:any,unit:any,time?:string,baseIso?:string){const b
 
 const serviceHeaders=(secret:string,extra:Record<string,string>={})=>({"x-tpf-cron-secret":secret,...extra});
 async function greenStateAuthorized(secret:string){try{const r=await fetch(`${GREEN_PROXY}?action=state`,{headers:serviceHeaders(secret,{"cache-control":"no-cache"})});if(!r.ok)return false;const d=await r.json().catch(()=>({}));return String(d?.state||d?.data?.stateInstance||"").toLowerCase()==="authorized";}catch{return false;}}
-async function sendGreen(chatId:string,message:string,secret:string,buttons:any[]=[]){if(!chatId||!message.trim())throw new Error("WhatsApp inválido: falta chat o mensaje");if(!(await greenStateAuthorized(secret))){const e:any=new Error("GREEN-API no está autorizada todavía");e.beforeSend=true;throw e;}const interactive=Array.isArray(buttons)&&buttons.length>0;let r:Response;try{r=await fetch(`${GREEN_PROXY}?action=${interactive?"sendbuttons":"send"}`,{method:"POST",headers:serviceHeaders(secret,{"content-type":"application/json"}),body:JSON.stringify({chatId,message,...(interactive?{buttons}: {})})});}catch(err){const e:any=new Error(`Resultado de envío desconocido: ${err instanceof Error?err.message:String(err)}`);e.ambiguousSend=true;throw e;}const data=await r.json().catch(()=>({}));if(!r.ok||data?.ok===false){const e:any=new Error(String(data?.error||data?.message||`GREEN-API HTTP ${r.status}`));e.status=r.status;e.afterSend=true;throw e;}return data;}
+async function sendGreen(chatId:string,message:string,secret:string,buttons:any[]=[]){if(!chatId||!message.trim())throw new Error("WhatsApp inválido: falta chat o mensaje");if(!(await greenStateAuthorized(secret))){const e:any=new Error("GREEN-API no está autorizada todavía");e.beforeSend=true;throw e;}const interactive=Array.isArray(buttons)&&buttons.length>0;let r:Response;try{r=await fetch(`${GREEN_PROXY}?action=${interactive?"sendbuttons":"send"}`,{method:"POST",headers:serviceHeaders(secret,{"content-type":"application/json"}),body:JSON.stringify({chatId,message,...(interactive?{buttons}: {})})});}catch(err){const e:any=new Error(`Resultado de envío desconocido: ${err instanceof Error?err.message:String(err)}`);e.ambiguousSend=true;throw e;}const data=await r.json().catch(()=>({}));if(!r.ok||data?.ok===false){const e:any=new Error(String(data?.error||data?.message||`GREEN-API HTTP ${r.status}`));e.status=r.status;e.afterSend=true;throw e;}const idMessage=extractGreenMessageId(data);if(!idMessage){const e:any=new Error("GREEN-API aceptó la petición sin devolver el identificador del mensaje");e.ambiguousSend=true;e.afterSend=true;throw e;}return {...data,idMessage};}
 async function resolveTemplate(userId:string,index:number){const {data,error}=await sb.from("wa_templates").select("id,name,body").eq("user_id",userId).order("name",{ascending:true}).order("id",{ascending:true});if(error)throw error;const tpl=(data||[])[Math.max(0,Number(index||0))];if(!tpl)throw new Error("Plantilla no encontrada");return tpl;}
 async function resolveTemplateId(userId:string,id:any){const {data,error}=await sb.from("wa_templates").select("id,name,body").eq("user_id",userId).eq("id",id).maybeSingle();if(error)throw error;if(!data)throw new Error("Plantilla no encontrada");return data;}
 async function resolveStage(stageId?:string){if(stageId){const {data}=await sb.from("sales_stages").select("id,pipeline_id,name").eq("id",stageId).maybeSingle();if(data)return data;}const {data,error}=await sb.from("sales_stages").select("id,pipeline_id,name").eq("active",true).order("position").limit(1).maybeSingle();if(error)throw error;if(!data)throw new Error("No hay columnas de ventas");return data;}
 
 async function complete(job:any,status:"done"|"failed",errorMessage?:string,extra:any={}){const {data,error}=await sb.from("crm_server_automation_jobs").update({status,error_message:errorMessage||null,completed_at:status==="done"?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","running").select("id");if(error)throw error;if(!data?.length)return;await sb.from("crm_automation_runs").insert({automation_id:job.automation_id,user_id:job.user_id,event_key:job.event_key,context:errorMessage?{...(job.context||{}),...extra,error:errorMessage,server:true}:{...(job.context||{}),...extra,server:true},status:status==="done"?"ok":"error"});}
 async function requeue(job:any,message:string,minutes=2,dependency=false){await sb.from("crm_server_automation_jobs").update({status:"pending",error_message:message,run_at:new Date(Date.now()+minutes*60000).toISOString(),updated_at:new Date().toISOString(),...(dependency?{attempts:Math.max(0,Number(job.attempts||0)-1)}:{})}).eq("id",job.id).eq("status","running");}
+async function stageDeliveryVerification(job:any,chatId:string,idMessage:string){const receipt={idMessage,chatId,checks:0,acceptedAt:new Date().toISOString()};const {error}=await sb.from("crm_server_automation_jobs").update({status:"pending",action_config:{...(job.action_config||{}),__delivery_receipt:receipt},error_message:"WhatsApp aceptó el mensaje; pendiente confirmar el envío",run_at:new Date(Date.now()+120000).toISOString(),updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","running");if(error)throw error;}
+async function requeueDeliveryVerification(job:any,receipt:any,detail:string){const checks=Math.max(0,Number(receipt?.checks||0))+1;const next={...receipt,checks,lastCheckAt:new Date().toISOString(),lastDetail:detail};const {error}=await sb.from("crm_server_automation_jobs").update({status:"pending",action_config:{...(job.action_config||{}),__delivery_receipt:next},error_message:detail,run_at:new Date(Date.now()+120000).toISOString(),updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","running");if(error)throw error;return checks;}
+async function verifyGreenDelivery(job:any,secret:string){const receipt=job.action_config?.__delivery_receipt;if(!receipt?.idMessage||!receipt?.chatId)return null;let r:Response;try{r=await fetch(`${GREEN_PROXY}?action=history`,{method:"POST",headers:serviceHeaders(secret,{"content-type":"application/json","cache-control":"no-cache"}),body:JSON.stringify({chatId:receipt.chatId,count:200})});}catch(err){const e:any=new Error(`No se pudo confirmar el envío en WhatsApp: ${err instanceof Error?err.message:String(err)}`);e.responseCheck=true;throw e;}const body=await r.json().catch(()=>({}));if(!r.ok||body?.ok===false||body?.degraded===true||!Array.isArray(body?.messages)){const e:any=new Error(String(body?.error||body?.message||`WhatsApp HTTP ${r.status}`));e.responseCheck=true;throw e;}return {receipt,result:classifyGreenDelivery(body.messages,receipt.idMessage)};}
 async function preflight(job:any){const {data,error}=await sb.rpc("crm_lifecycle_job_guard",{p_job:job.id});if(error)throw error;if(data?.context)job.context=data.context;if(data?.retry){await requeue(job,data.reason,0.1,true);return false;}return data?.allow===true;}
 function greenIncoming(message:any){return String(message?.type||"").toLowerCase().includes("incoming");}
 function greenTimestamp(message:any){const value=Number(message?.timestamp||0);return value>0?new Date(value*1000):null;}
@@ -93,6 +97,33 @@ async function updateSiblingOpportunity(job:any,oppId:string){const root=String(
 async function processJob(job:any,secret=""){try{
     if(!(await preflight(job)))return "requeued";
     const a=job.action_config||{},ctx=job.context||{},business=businessContext(ctx);
+    const delivery=await verifyGreenDelivery(job,secret);
+    if(delivery){
+      const {receipt,result}=delivery;
+      const deliveryInfo={provider_message_id:receipt.idMessage,delivery_status:result.status||result.state,delivery_checked_at:new Date().toISOString()};
+      if(result.state==="confirmed"){
+        await auditFollowup(job,"followup_sent","success",`WhatsApp confirmado (${result.status})`);
+        await complete(job,"done",undefined,deliveryInfo);
+        return "done";
+      }
+      if(result.state==="failed"){
+        const message=`WhatsApp no entregó el mensaje: ${result.description||"estado failed"}`;
+        await auditFollowup(job,"followup_failed","error",message);
+        await complete(job,"failed",message,deliveryInfo);
+        return "failed";
+      }
+      const detail=result.state==="missing"
+        ? "El mensaje aún no aparece en el historial de WhatsApp"
+        : `WhatsApp mantiene el mensaje en estado ${result.status}`;
+      if(Number(receipt.checks||0)>=4){
+        const message=`Confirmación de WhatsApp agotada: ${detail}`;
+        await auditFollowup(job,"followup_failed","error",message);
+        await complete(job,"failed",message,deliveryInfo);
+        return "failed";
+      }
+      await requeueDeliveryVerification(job,receipt,detail);
+      return "requeued";
+    }
     if(job.action_type==="flow_v1"){const info=await expandFlow(job);await complete(job,"done",undefined,{flow_children:info.children,flow_root:info.flow_root});return "done";}
     const skipped=await shouldSkip(job,secret);if(skipped){await auditFollowup(job,"pre_send_blocked","success",skipped);await complete(job,"done",undefined,{skipped:true,skip_reason:skipped});return "done";}
     if(job.action_type==="create_task"){
@@ -116,9 +147,9 @@ async function processJob(job:any,secret=""){try{
     }else if(job.action_type==="prepare_operator_review"){
       const oid=ctx.opportunity_id;if(!oid)throw new Error("No hay oportunidad relacionada para revisar");if(!a.stage_id)throw new Error("Falta la columna Próximo");const {error}=await sb.from("sales_opportunities").update({stage_id:a.stage_id,title:vars(a.title||"REVISIÓN VODAFONE",business),updated_at:new Date().toISOString()}).eq("id",oid);if(error)throw error;
     }else if(job.action_type==="schedule_whatsapp"||job.action_type==="__send_whatsapp"){
-      if(!(await preflight(job)))return "requeued";await sendGreen(phoneToChat(job.context),vars(String(a.text||""),job.context),secret,Array.isArray(a.reply_buttons)?a.reply_buttons:[]);await auditFollowup(job,"followup_sent","info",`Recordatorio ${String(a.offer_phase||"").replace("reminder_","")} enviado`);
+      if(!(await preflight(job)))return "requeued";const chatId=phoneToChat(job.context);const sent=await sendGreen(chatId,vars(String(a.text||""),job.context),secret,Array.isArray(a.reply_buttons)?a.reply_buttons:[]);await stageDeliveryVerification(job,chatId,sent.idMessage);return "requeued";
     }else if(job.action_type==="send_template"){
-      const tpl=a.template_id?await resolveTemplateId(job.user_id,a.template_id):await resolveTemplate(job.user_id,Number(a.template_index||0));if(!(await preflight(job)))return "requeued";await sendGreen(phoneToChat(job.context),vars(String(tpl.body||""),job.context),secret,Array.isArray(a.reply_buttons)?a.reply_buttons:[]);
+      const tpl=a.template_id?await resolveTemplateId(job.user_id,a.template_id):await resolveTemplate(job.user_id,Number(a.template_index||0));if(!(await preflight(job)))return "requeued";const chatId=phoneToChat(job.context);const sent=await sendGreen(chatId,vars(String(tpl.body||""),job.context),secret,Array.isArray(a.reply_buttons)?a.reply_buttons:[]);await stageDeliveryVerification(job,chatId,sent.idMessage);return "requeued";
     }else if(job.action_type==="sequence_label_opportunity_whatsapp"){
       const stage=await resolveStage(a.stage_id);const {data:opp,error:oppErr}=await sb.from("sales_opportunities").insert({...(ctx.contract_party?{contract_party:ctx.contract_party}:{}),pipeline_id:stage.pipeline_id,stage_id:stage.id,record_id:ctx.contact_id||null,title:a.opp_title||"Oportunidad desde etiqueta",client_name:business.name||null,phone:business.phone||null,owner_user_id:job.user_id,expected_date:madridDate(eventBase(ctx).toISOString())}).select("id").single();if(oppErr)throw oppErr;let text=String(a.text||"");if((a.message_type||"template")==="template"){const tpl=await resolveTemplate(job.user_id,Number(a.template_index||0));text=String(tpl.body||"");}text=vars(text,ctx);if(!text.trim())throw new Error("El WhatsApp está vacío");const waitMs=Number(a.wait_days||0)*86400000;await enqueueChild(job,`${job.event_key}:sequence-send`,"__send_whatsapp",{text},{...ctx,opportunity_id:opp?.id||null},new Date(eventBase(ctx).getTime()+waitMs).toISOString());
     }else throw new Error(`Acción no soportada en servidor: ${job.action_type}`);
