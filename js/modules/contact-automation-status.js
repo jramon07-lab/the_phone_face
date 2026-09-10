@@ -58,7 +58,13 @@ function errorHtml(message){return`<div class="casHead"><b>Automatizaciones</b><
 
 function ensureContainers(){
  const right=document.querySelector('#contactModal .cpRight');
- if(right&&!$('cpAutomationStatus')){const section=document.createElement('section');section.id='cpAutomationStatus';section.className='cpSideSection casCard';section.innerHTML=loadingHtml();right.prepend(section)}
+ if(right){
+  let section=$('cpAutomationStatus');
+  if(!section){section=document.createElement('section');section.id='cpAutomationStatus';section.className='cpSideSection casCard';section.innerHTML=loadingHtml()}
+  const offers=$('cpOffersSection');
+  if(offers&&section.nextElementSibling!==offers)offers.before(section);
+  else if(!offers&&section.parentElement!==right)right.prepend(section);
+ }
  const waCard=$('waContactCard'),waOpp=$('waSideOpps')?.closest('.waSideSection');
  if(waCard&&waOpp&&!$('waAutomationStatus')){const section=document.createElement('section');section.id='waAutomationStatus';section.className='waSideSection casCard compact';section.innerHTML=loadingHtml();waOpp.before(section)}
 }
