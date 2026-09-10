@@ -6,7 +6,7 @@ const contacts=fs.readFileSync('js/modules/contacts-list-ui.js','utf8');
 const mobile=fs.readFileSync('js/mobile-app.js','utf8');
 
 assert.match(html,/id="googleContactsAuditBtn"/,'debe existir el acceso a la comparación');
-assert.match(html,/google-contacts-audit\.js\?v=20260911-manual-field-choice-1/,'debe cargar el comparador con versión nueva');
+assert.match(html,/google-contacts-audit\.js\?v=20260911-dni-audit-1/,'debe cargar el comparador con versión nueva');
 assert.match(source,/padding:14px 0 42px/,'el botón debe quedar separado de la insignia flotante de pruebas');
 assert.match(html,/runtime\.js\?v=20260910-google-audit-1/,'debe renovar los módulos de búsqueda');
 assert.match(fs.readFileSync('js/modules/runtime.js','utf8'),/contacts-list-ui\.js'\?'20260910-nickname-search-1'/,'debe renovar el buscador de PC');
@@ -33,6 +33,11 @@ assert.doesNotMatch(source,/contact\?\.\[key\]\?\.length\?contact\[key\]\.join/,
 assert.match(source,/Guardar elección sin aplicar/,'debe guardar una elección local explícita');
 assert.match(source,/data-gca-choice/,'debe permitir editar manualmente cada valor final');
 assert.match(source,/data-gca-pick/,'debe permitir escoger rápidamente el valor del CRM o Google');
+assert.match(source,/first\(data,'DNI \/ NIF','DNI','NIF'\)/,'debe cargar el DNI o NIF del CRM');
+assert.match(source,/personFields:'names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata'/,'debe leer campos personalizados de Google');
+assert.match(source,/documento de identidad/,'debe reconocer el DNI guardado como campo personalizado de Google');
+assert.match(source,/\['DNI \/ NIF final','dni'\]/,'debe permitir revisar manualmente el DNI');
+assert.match(source,/Buscar nombre, apodo, DNI o teléfono/,'debe permitir buscar por DNI');
 assert.match(contacts,/r\.fullName,r\.nickname,r\.dni/,'el buscador de PC debe incluir el apodo');
 assert.match(mobile,/contact\?\.fullName,contact\?\.nickname,contact\?\.dni/,'el buscador móvil debe incluir el apodo');
 
