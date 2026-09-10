@@ -69,6 +69,7 @@
     return {
       id:String(row?.id||''),source:row?.source_sheet||CONTACT_SOURCE,data,
       first,last,fullName:[first,last].filter(Boolean).join(' ')||legacy||'Contacto',
+      nickname:clean(field(data,'APODO','Apodo','ALIAS')),
       phone:clean(field(data,'TELÉFONO','TELEFONO','PHONE','MOVIL')),
       dni:clean(field(data,'DNI / NIF','DNI','NIF')),
       email:clean(field(data,'EMAIL','Email','email')),
@@ -434,7 +435,7 @@
   }
   function contactMatchesSearch(contact,query=''){
     const term=foldText(query);if(!term)return true;
-    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.dni,contact?.phone,contact?.email,window.TPFContactParty?.search?.(contact),...mobileHolders(contact).map(c=>[c.fullName,c.dni,c.phone].join(' ')),...mobileManagers(contact?.id).map(c=>c.fullName)].filter(Boolean).join(' '));
+    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.nickname,contact?.dni,contact?.phone,contact?.email,window.TPFContactParty?.search?.(contact),...mobileHolders(contact).map(c=>[c.fullName,c.dni,c.phone].join(' ')),...mobileManagers(contact?.id).map(c=>c.fullName)].filter(Boolean).join(' '));
     const numericMatch=termDigits.length>=3&&[contact?.dni,contact?.data?.TPF_TITULAR?.holder_dni,contact?.data?.TPF_TITULAR?.holder_phone,...contactPhones(contact).map(p=>p.number)].some(value=>digits(value).includes(termDigits));
     return text.includes(term)||numericMatch;
   }

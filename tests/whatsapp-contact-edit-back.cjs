@@ -15,7 +15,7 @@ assert.match(profileSource,/TPFWhatsappContactEditBack\.restore\(\)/);
 assert.match(runtimeSource,/whatsapp-contact-edit-back\.js'\?'20260910-wa-edit-back-2'/);
 assert.match(runtimeSource,/whatsapp-contact-reuse\.js'\?'20260910-wa-edit-back-2'/);
 assert.match(runtimeSource,/contact-profile\.js'\?'20260910-wa-edit-back-1'/);
-assert.match(indexSource,/runtime\.js\?v=20260910-schedule-today-1/);
+assert.match(indexSource,/runtime\.js\?v=20260910-google-audit-1/);
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
 (async()=>{
  const listeners={};

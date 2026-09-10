@@ -1217,6 +1217,10 @@
       <p class="small">La estructura ya está preparada. Para crear contactos de verdad en Google necesitaremos activar permisos de escritura de Google Contacts.</p>
       <button id="saveGoogleSettings" class="primary">Guardar ajustes</button>
       <span id="googleSettingsMsg" class="small"></span>
+      <div class="gcaSettingsBox">
+        <div><b>Comprobar antes de sincronizar</b><p class="small">Compara el CRM y Google Contacts sin crear, editar ni borrar contactos.</p></div>
+        <button id="googleContactsAuditBtn" class="secondary" type="button">Comprobar CRM y Google</button>
+      </div>
     </div>
    </section>
 
@@ -1557,7 +1561,8 @@
 <script src="/js/core/30-enhancements.js"></script>
 <script src="/js/modules/system-status-core.js?v=20260907-stability-1"></script>
 <!-- TPF-MODULAR-RUNTIME-v1 -->
-<script src="/js/modules/runtime.js?v=20260910-schedule-today-1"></script>
+<script src="/js/modules/runtime.js?v=20260910-google-audit-1"></script>
+<script src="/js/modules/google-contacts-audit.js?v=20260910-readonly-audit-1"></script>
 <script src="/js/modules/automation-control-center.js?v=20260908-control-center-back-1"></script>
 <script src="/js/modules/automation-safe-test.js?v=20260910-safe-test-4"></script>
 <script src="/js/modules/automations-operator-folders.js?v=20260906-folders-1"></script>
