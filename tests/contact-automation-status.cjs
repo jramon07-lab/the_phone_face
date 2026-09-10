@@ -24,6 +24,10 @@ assert.match(source,/contains\('context',\{contact_id:id\}\)/,'filtra por identi
 assert.match(source,/#contactModal \.cpRight/,'inserta el contador en la ficha');
 assert.match(source,/offers\.before\(section\)/,'mantiene el contador encima de ofertas aunque esa sección cargue después');
 assert.match(source,/waAutomationStatus/,'inserta el contador en WhatsApp');
+assert.match(source,/data-cas-toggle/,'permite plegar el resumen de automatizaciones');
+assert.match(source,/casExecution[^`]*<summary|<details class="casExecution/,'agrupa cada ejecución en un desplegable');
+assert.match(source,/from\('wa_templates'\)/,'carga la biblioteca para mostrar el contenido de la plantilla');
+assert.match(source,/casTemplate/,'muestra cada plantilla en un segundo desplegable');
 assert.match(source,/crm_cancel_automation_execution/,'cancela la ejecución sin borrar el historial');
 assert(!/from\(['"]sales_opportunities['"]\)\.update/.test(source),'el contador no mueve oportunidades');
 console.log('PASS: contador de automatizaciones por cliente');
