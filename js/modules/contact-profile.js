@@ -131,6 +131,7 @@
       try{await window.tpfReloadContacts?.();}catch(_){}
       if(returnToWhatsapp)await window.TPFWhatsappContactEditBack.restore();
       else if(typeof window.openContact==='function')await window.openContact(id);
+      try{window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id,phone,previous:q.data?.data||{},data:d}}));}catch(_){}
     }catch(err){if(msg)msg.textContent=err?.message||'No se pudo guardar el contacto.';if(btn)btn.disabled=false;}
   }
   async function openCreateModalEdit(){
