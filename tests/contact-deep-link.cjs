@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const source=fs.readFileSync('js/modules/contact-deep-link.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+assert.match(source,/params\.get\('contact'\)/);
+assert.match(source,/window\.sb\.auth\.getSession\(\)/);
+assert.match(source,/await window\.openContact\(contactId\)/);
+assert.match(source,/searchParams\.delete\('contact'\)/);
+assert.match(html,/contact-deep-link\.js\?v=20260911-1/);
+console.log('PASS: el enlace de Telegram abre la ficha autenticada y limpia el parámetro.');
