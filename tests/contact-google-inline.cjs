@@ -8,7 +8,7 @@ assert.match(inline,/Nombre actual de WhatsApp/,'WhatsApp name must be shown');
 assert.match(inline,/Guardar en los tres/,'single contact correction must update both sources');
 assert.match(inline,/available\.length>1/,'multiple Google matches must require a choice');
 assert.match(inline,/tpfInlineUseWhatsapp.*tpfInlineNickname/,'existing WhatsApp names must be offered as the nickname');
-assert.match(inline,/preferred=unifiedVisible/,'linked chats must use the same combined visible name');
+assert.match(inline,/preferred=confirmed\?unifiedVisible/,'confirmed linked chats must use the same combined visible name');
 assert.match(inline,/waChatRow\.active/,'the active conversation row must stop showing No Name');
 assert.match(inline,/\['waChatName','waSideName'\]/,'both WhatsApp headers must use the unified visible name');
 assert.match(inline,/MutationObserver\(scheduleWhatsappNameRepair\)/,'automatic WhatsApp repaints must not restore the old name');
@@ -36,6 +36,8 @@ assert.match(inline,/La ficha de \$\{c\.name\} no se modificará/,'the original 
 assert.match(inline,/searchRecords/,'the associated holder must be searchable before saving');
 assert.match(inline,/preserveExtra:separate/,'splitting a person must not discard unrelated Google contact fields');
 assert.match(inline,/window\.confirm\(`Se creará una ficha nueva/,'creating a second CRM record must require final confirmation');
+assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when the user actually confirms the final WhatsApp display name');
+assert.match(inline,/confirmed\?unifiedVisible[\s\S]*original\|\|unifiedVisible/,'WhatsApp must keep its original valid name until the user confirms the correction');
 assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
 assert.match(wa,/tpfCreateFirst:''/,'WhatsApp display name must not be assumed to be the legal name');
 console.log('contact Google/WhatsApp inline workflow assertions passed');

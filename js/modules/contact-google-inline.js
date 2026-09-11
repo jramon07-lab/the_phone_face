@@ -84,12 +84,12 @@ async function writeGoogle(person,c,first,last,nickname){
  const full=await detailedPerson(person);body.resourceName=full.resourceName;body.etag=full.etag;body.phoneNumbers=full.phoneNumbers?.length?full.phoneNumbers.map(x=>({value:x.value,type:x.type||'mobile'})):body.phoneNumbers;body.emailAddresses=full.emailAddresses?.length?full.emailAddresses.map(x=>({value:x.value,type:x.type||'work'})):body.emailAddresses;body.userDefined=(c.preserveExtra?full.userDefined||[]:replaceDni(full.userDefined,c.dni)).map(x=>({key:x.key,value:x.value}));
  return googleApi(full.resourceName+':updateContact?updatePersonFields=names,nicknames,emailAddresses,phoneNumbers,userDefined&personFields=names,nicknames,emailAddresses,phoneNumbers,userDefined',{method:'PATCH',body:JSON.stringify(body)});
 }
-async function writeCrm(row,first,last,nickname){const d={...(row.data||{})},name=[first,last].filter(Boolean).join(' ').trim();d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=name;d.APODO=nickname;const r=await sb.from('records').update({data:d}).eq('id',row.id);if(r.error)throw r.error;row.data=d;return d}
+async function writeCrm(row,first,last,nickname,chat){const d={...(row.data||{})},name=[first,last].filter(Boolean).join(' ').trim(),chatId=safe(chat?.id);d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=name;d.APODO=nickname;if(chatId)d.TPF_WHATSAPP_NAME_CONFIRMED={chat_id:chatId,confirmed_at:new Date().toISOString()};const r=await sb.from('records').update({data:d}).eq('id',row.id);if(r.error)throw r.error;row.data=d;return d}
 async function createSeparateCrm(first,last,nickname,holder,chat){
  if(typeof perms!=='undefined'&&!(perms?.is_admin||perms?.can_create_database))throw Error('No tienes permiso para crear contactos.');
- const existing=await boundContact(chat);if(existing&&safe(existing.id)!==safe(holder.record_id)){await writeCrm(existing,first,last,nickname);return existing}
+ const existing=await boundContact(chat);if(existing&&safe(existing.id)!==safe(holder.record_id)){await writeCrm(existing,first,last,nickname,chat);return existing}
  const chatId=safe(chat?.id),chatPhone=phone(chatId),full=[first,last].filter(Boolean).join(' ').trim();
- const data={NOMBRE:first,APELLIDOS:last,'NOMBRE Y APELLIDOS':full,APODO:nickname,'TELÉFONO':chatPhone,TPF_WHATSAPP_CHAT_ID:chatId,TPF_RELACIONES:{version:1,managed_contacts:[{...holder}]}};
+ const data={NOMBRE:first,APELLIDOS:last,'NOMBRE Y APELLIDOS':full,APODO:nickname,'TELÉFONO':chatPhone,TPF_WHATSAPP_CHAT_ID:chatId,TPF_WHATSAPP_NAME_CONFIRMED:{chat_id:chatId,confirmed_at:new Date().toISOString()},TPF_RELACIONES:{version:1,managed_contacts:[{...holder}]}};
  const saved=await sb.rpc('crm_create_contact_with_welcome_variant',{p_data:data,p_labels:[],p_welcome:false,p_variant:'general'});
  if(saved.error)throw saved.error;if(!saved.data)throw Error('No se ha podido confirmar la creación. Comprueba en Contactos antes de intentarlo otra vez.');
  const id=safe(typeof saved.data==='object'?saved.data.id:saved.data);if(!id)throw Error('La ficha se creó, pero no se pudo recuperar su identificador. Comprueba en Contactos.');
@@ -105,7 +105,7 @@ async function saveCorrection(){
  busy=true;btn.disabled=true;msg.textContent=separate?'Creando la segunda ficha y vinculándola…':'Guardando…';
  try{
   const savedRow=separate?await createSeparateCrm(first,last,nickname,correctionHolder,correctionChat):row;
-  if(!separate)await writeCrm(row,first,last,nickname);else rememberBinding(correctionChat,savedRow);
+  if(!separate)await writeCrm(row,first,last,nickname,correctionChat);else rememberBinding(correctionChat,savedRow);
   await writeGoogle(person,{phone:c.phone,email:separate?'':c.email,dni:separate?'':c.dni,preserveExtra:separate,name:full},first,last,visible);
   let removed=0,failed=0;if(deleteOthers){for(const duplicate of available){if(duplicate===person)continue;try{await googleApi(duplicate.resourceName+':deleteContact',{method:'DELETE'});removed++}catch(_){failed++}}}
   msg.textContent=failed?`La ficha se guardó, pero ${failed} duplicados no pudieron eliminarse.`:separate?`Creada la segunda ficha para “${visible}” y vinculada con ${correctionHolder.name}.`:(deleteOthers?`Guardado correctamente y eliminados ${removed} duplicados de Google.`:`Guardado como “${visible}” en los tres sitios.`);
@@ -130,7 +130,7 @@ async function applyBoundWhatsappContact(){
 }
 function applyUnifiedWhatsappName(){
  const chat=selectedWa(),row=matchedWa();if(!chat||!row||String(chat.id||'').includes('@g.us'))return'';
- const c=contactData(row),preferred=unifiedVisible(c.first,c.last,c.nickname);if(!preferred)return'';
+ const c=contactData(row),confirmation=row.data?.TPF_WHATSAPP_NAME_CONFIRMED,confirmed=safe(confirmation?.chat_id)===safe(chat.id),original=validWaName(chat.name)?safe(chat.name):'',preferred=confirmed?unifiedVisible(c.first,c.last,c.nickname):(original||unifiedVisible(c.first,c.last,c.nickname));if(!preferred)return'';
  for(const id of ['waChatName','waSideName']){const el=$(id);if(el&&el.textContent!==preferred)el.textContent=preferred}
  const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active&&active.textContent!==preferred)active.textContent=preferred;
  return preferred;
