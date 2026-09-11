@@ -508,7 +508,9 @@ async function checkAllNotifications(){
 
   try{
     // WHATSAPP PROGRAMADOS
-    if(browserPrefs.whatsapp_browser || teamNotifyPrefs.whatsapp_telegram){
+    // Telegram se entrega desde el servidor, incluso con el CRM cerrado.
+    // Aquí solo conservamos el aviso local del navegador.
+    if(browserPrefs.whatsapp_browser){
       const {data}=await sb.from("agenda_items").select("*")
         .eq("status","pending")
         .limit(100);
@@ -533,9 +535,6 @@ async function checkAllNotifications(){
           };
         }
 
-        if(teamNotifyPrefs.whatsapp_telegram){
-          await sendTelegramNotification("whatsapp",row);
-        }
       }
     }
 
