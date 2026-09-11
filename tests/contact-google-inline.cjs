@@ -16,9 +16,10 @@ assert.match(inline,/Revisar y unificar/,'all linked WhatsApp names must use one
 for(const action of ['Usar datos del CRM','Usar datos de Google','Usar WhatsApp como apodo','Nombre','Apellidos','Apodo visible','Guardar en los tres','Ignorar este nombre'])assert.ok(inline.includes(action),`missing unified decision: ${action}`);
 for(const field of ['tpfInlineFirst','tpfInlineLast','tpfInlineNickname'])assert.ok(inline.includes(field),`missing separate contact field: ${field}`);
 assert.match(inline,/Así quedará en los tres sitios/,'the preview must state that all three displays are identical');
-assert.match(inline,/writeGoogle\(person,\{phone:c\.phone[\s\S]*name:full\},first,last,visible\)/,'Google alias must receive the unified visible name used by calls');
+assert.match(inline,/writeGoogle\(person,\{phone:targetPhone[\s\S]*name:full\},first,last,visible\)/,'Google alias must receive the unified visible name used by calls');
 assert.match(inline,/names:\[\{givenName:googleVisible,familyName:''\}\]/,'Google Contacts primary name must show the same unified visible name');
 assert.match(inline,/people\/me\/connections/,'Google matching must scan all contacts, not trust a partial search');
+assert.match(inline,/!wantedPhone&&wantedEmail/,'duplicate cleanup must never include a different phone merely because it shares an email');
 assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must block accidental duplicates');
 assert.match(inline,/Google Contacts no está conectado/,'a missing Google session must not be reported as zero contacts');
 assert.match(inline,/Conectar Google y buscar/,'the correction dialog must offer reconnection and retry');
@@ -26,7 +27,10 @@ assert.match(inline,/Elige cuál de los contactos duplicados/,'multiple Google c
 assert.match(inline,/Eliminar de Google los otros contactos duplicados/,'duplicate cleanup must be an explicit opt-in');
 assert.match(inline,/window\.confirm/,'duplicate deletion must require a final confirmation');
 assert.match(inline,/:deleteContact/,'confirmed Google duplicates must be deleted through People API');
-assert.doesNotMatch(inline,/writeGoogle\(null/,'inline correction must never create a Google contact implicitly');
+assert.match(inline,/Se creará un contacto nuevo en Google/,'a confirmed empty Google search must clearly announce contact creation');
+assert.match(inline,/if\(!person&&!window\.confirm/,'creating a missing Google contact must require confirmation');
+assert.match(inline,/verifyGoogleSaved\(savedGoogle,targetPhone\)/,'Google creation or update must be verified before CRM changes and duplicate cleanup');
+assert.match(inline,/No se eliminará ningún duplicado/,'a failed Google verification must preserve all duplicate contacts');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
 assert.match(inline,/Es otra persona: crear una segunda ficha/,'a shared phone must offer an explicit second-person decision');
 assert.match(inline,/crm_create_contact_with_welcome_variant/,'the second person must be created through the guarded CRM RPC');
@@ -38,6 +42,9 @@ assert.match(inline,/preserveExtra:separate/,'splitting a person must not discar
 assert.match(inline,/window\.confirm\(`Se creará una ficha nueva/,'creating a second CRM record must require final confirmation');
 assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when the user actually confirms the final WhatsApp display name');
 assert.match(inline,/original=safe\(chat\.name\)[\s\S]*confirmed\?unifiedVisible[\s\S]*original\|\|unifiedVisible/,'WhatsApp must keep every original name, including No Name, until the user confirms the correction');
+assert.match(inline,/CRM, Google y WhatsApp/,'the same three-source summary must appear in the customer profile and WhatsApp panel');
+assert.match(inline,/WhatsApp dentro del CRM/,'the summary must distinguish the CRM display from the public WhatsApp name');
+assert.match(inline,/state\.ok\?'':/,'a fully confirmed contact must hide the stale review action');
 assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
 assert.match(wa,/tpfCreateFirst:''/,'WhatsApp display name must not be assumed to be the legal name');
 console.log('contact Google/WhatsApp inline workflow assertions passed');
