@@ -9,7 +9,9 @@ const waPerformancePage={key:'',limit:CHAT_PAGE_SIZE,total:0,loadingMore:false,s
 const waAvatarQueue=[];
 const waAvatarQueued=new Set();
 const waAvatarRetry=new Map();
+const waSearchIndex=new Map();
 let waAvatarDraining=false;
+let waSearchTimer=0;
 
 function waPerformanceText(value){
   return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
@@ -25,15 +27,23 @@ function waPerformanceUnanswered(chat){
   const chatId=chat&&typeof chat==='object'?chat.id:chat;
   return typeof waIsUnanswered==='function'&&waIsUnanswered(chatId);
 }
+function waPerformanceSearchEntry(chat){
+  const id=String(chat?.id||''),meta=waPerformanceMeta(id),tags=Array.isArray(meta.tags)?meta.tags:[];
+  const signature=[chat?.name,chat?.chatName,chat?.contactName,id,...tags].map(String).join('\u0000');
+  const cached=waSearchIndex.get(id);if(cached?.signature===signature)return cached;
+  const entry={signature,text:[chat?.name,chat?.chatName,chat?.contactName,id,...tags].map(waPerformanceText).join(' '),phone:null};
+  waSearchIndex.set(id,entry);return entry;
+}
 function waPerformanceMatches(chat,query){
   const textQuery=waPerformanceText(query);
   if(!textQuery)return true;
-  const meta=waPerformanceMeta(chat?.id);
-  const text=[chat?.name,chat?.chatName,chat?.contactName,chat?.id,...(Array.isArray(meta.tags)?meta.tags:[])].map(waPerformanceText).join(' ');
-  if(text.includes(textQuery))return true;
+  const entry=waPerformanceSearchEntry(chat);
+  if(entry.text.includes(textQuery))return true;
   const phoneQuery=waPerformanceDigits(query);
   // Un término alfabético produce ""; nunca debe convertir includes("") en una coincidencia universal.
-  return !!phoneQuery&&String(typeof waNormalizePhone==='function'?waNormalizePhone(chat?.id):chat?.id||'').includes(phoneQuery);
+  if(!phoneQuery)return false;
+  if(entry.phone===null)entry.phone=String(typeof waNormalizePhone==='function'?waNormalizePhone(chat?.id||''):chat?.id||'');
+  return entry.phone.includes(phoneQuery);
 }
 function waPerformanceFilterRows(chats,filter,query){
   let rows=[...(Array.isArray(chats)?chats:[])];
@@ -299,7 +309,7 @@ function install(){
       search.__tpfWaPerformanceSearch=true;
       // El listener original conserva una referencia al render antiguo; sustitúyelo sin bloquear extensiones futuras.
       if(typeof _waRenderChatsBase==='function')search.removeEventListener('input',_waRenderChatsBase);
-      search.addEventListener('input',()=>window.renderWhatsAppChats?.());
+      search.addEventListener('input',()=>{clearTimeout(waSearchTimer);waSearchTimer=setTimeout(()=>window.renderWhatsAppChats?.(),220)});
     }
 
     if(!window.fetch.__tpfWaAvatarSerialized){

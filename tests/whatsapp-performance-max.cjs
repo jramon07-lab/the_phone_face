@@ -129,10 +129,15 @@ async function run(){
 
   search.value='cliente 125';
   let futureSearchCalls=0;search.addEventListener('input',()=>{futureSearchCalls+=1});
-  const inputEvent=search.dispatch('input');flushFrames();
+  const inputEvent=search.dispatch('input');
+  search.dispatch('input');
   assert.equal(inputEvent.stopped,false,'no debe bloquear listeners añadidos por otros módulos');
   assert.equal(oldSearchCalls,0);
-  assert.equal(futureSearchCalls,1);
+  assert.equal(futureSearchCalls,2);
+  assert.equal(rowCount(),80,'no debe repintar mientras el usuario sigue escribiendo');
+  const pendingSearchTimers=timers.filter(x=>x.delay===220&&!x.cancelled);
+  assert.equal(pendingSearchTimers.length,1,'varias pulsaciones rápidas deben agruparse en una sola búsqueda');
+  pendingSearchTimers[0].fn();flushFrames();
   assert.equal(rowCount(),1);
   assert.match(list.innerHTML,/Cliente 125/);
 
