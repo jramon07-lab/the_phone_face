@@ -598,7 +598,7 @@ $("dbSave").onclick=async()=>{
    try{
      const {data:gs}=await sb.from("app_settings").select("value").eq("key","google_contacts_sync").maybeSingle();
      if(gs?.value===true){
-       if(!googleContactsToken){
+       if(typeof googleContactsConnected!=="function"||!googleContactsConnected()){
          $("dbMsg").textContent="Guardado en The Phone Face. Conecta Google Contacts para sincronizarlo.";
        }else{
          const gr=await createGoogleContact(savedName,savedPhone,savedEmail);

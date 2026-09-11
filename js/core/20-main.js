@@ -784,80 +784,39 @@ function selectedAgendaReminderMinutes(){
 }
 
 
-const GOOGLE_CLIENT_ID='494265592765-53v3qg685qp06fh47vl1n2cbbbu5h4nk.apps.googleusercontent.com';
-const GOOGLE_CONTACTS_SCOPE="https://www.googleapis.com/auth/contacts openid email";
-let googleContactsToken=sessionStorage.getItem("tpf_google_contacts_token")||"";
-let googleTokenClient=null;
-
-async function cacheGoogleContactsAccount(token=googleContactsToken){
-  if(!token)return "";
-  try{
-    const res=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{"Authorization":"Bearer "+token}});
-    if(!res.ok)return "";
-    const info=await res.json(),email=String(info?.email||"").trim();
-    if(email)sessionStorage.setItem("tpf_google_contacts_email",email);
-    return email;
-  }catch(_){return ""}
-}
+let googleContactsState={connected:false,email:"",canManage:false,loading:true};
+function googleContactsConnected(){return !!googleContactsState.connected}
+function googleContactsEmail(){return String(googleContactsState.email||"").trim()}
+async function googleContactsHeaders(){const {data}=await sb.auth.getSession(),token=data?.session?.access_token;if(!token)throw new Error("Inicia sesión en el CRM.");return {"Authorization":"Bearer "+token,"Content-Type":"application/json"}}
+async function googleContactsServer(action,options={}){const res=await fetch("/api/google-contacts?action="+encodeURIComponent(action),{...options,headers:{...(await googleContactsHeaders()),...(options.headers||{})}}),body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"No se pudo conectar con Google Contacts.");return body}
+async function loadGoogleContactsStatus(){try{const status=await googleContactsServer("status");googleContactsState={connected:!!status.connected,email:status.email||"",canManage:!!status.canManage,loading:false}}catch(_){googleContactsState={connected:false,email:"",canManage:false,loading:false}}updateGoogleContactsUI();window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));return googleContactsState}
 
 function updateGoogleContactsUI(){
-  const connected=!!googleContactsToken;
-  if($("googleContactsStatus"))$("googleContactsStatus").textContent=connected?"Conectado":"No conectado";
+  const connected=googleContactsConnected();
+  if($("googleContactsStatus"))$("googleContactsStatus").textContent=googleContactsState.loading?"Comprobando…":connected?("Conectado en los dos PCs"+(googleContactsEmail()?" · "+googleContactsEmail():"")):"No conectado";
   if($("connectGoogleContacts"))$("connectGoogleContacts").classList.toggle("hidden",connected);
-  if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").classList.toggle("hidden",!connected);
-}
-function initGoogleContacts(){
-  if(!window.google?.accounts?.oauth2)return false;
-  if(!googleTokenClient){
-    googleTokenClient=google.accounts.oauth2.initTokenClient({
-      client_id:GOOGLE_CLIENT_ID,
-      scope:GOOGLE_CONTACTS_SCOPE,
-      callback:async(resp)=>{
-        if(resp.error){alert("Google: "+resp.error);return}
-        googleContactsToken=resp.access_token||"";
-        sessionStorage.setItem("tpf_google_contacts_token",googleContactsToken);
-        sessionStorage.removeItem("tpf_google_contacts_email");
-        await cacheGoogleContactsAccount(googleContactsToken);
-        updateGoogleContactsUI();
-        window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));
-      }
-    });
-  }
-  return true;
+  if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").classList.toggle("hidden",!connected||!googleContactsState.canManage);
 }
 async function connectGoogleContacts(selectAccount=false){
-  if(!initGoogleContacts()){
-    setTimeout(connectGoogleContacts,700);return;
-  }
-  googleTokenClient.requestAccessToken({prompt:selectAccount?"select_account":googleContactsToken?"":"consent"});
+  const result=await googleContactsServer("authorize",{method:"POST",body:JSON.stringify({selectAccount:!!selectAccount})});
+  if(!result.url)throw new Error("Google no devolvió la autorización.");window.location.assign(result.url);
 }
-function disconnectGoogleContacts(){
-  const token=googleContactsToken;
-  googleContactsToken="";
-  sessionStorage.removeItem("tpf_google_contacts_token");
-  sessionStorage.removeItem("tpf_google_contacts_email");
-  updateGoogleContactsUI();
-  window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));
-  if(token&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(token,()=>{});
+async function disconnectGoogleContacts(){
+  if(!confirm("¿Desconectar Google Contacts para los dos PCs? No se borrará ningún contacto."))return;
+  await googleContactsServer("disconnect",{method:"POST",body:"{}"});await loadGoogleContactsStatus();
 }
-if($("connectGoogleContacts"))$("connectGoogleContacts").onclick=connectGoogleContacts;
-if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").onclick=disconnectGoogleContacts;
-window.addEventListener("load",()=>{initGoogleContacts();updateGoogleContactsUI();if(googleContactsToken&&!sessionStorage.getItem("tpf_google_contacts_email"))cacheGoogleContactsAccount();});
+if($("connectGoogleContacts"))$("connectGoogleContacts").onclick=()=>connectGoogleContacts(true).catch(e=>alert(e.message));
+if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").onclick=()=>disconnectGoogleContacts().catch(e=>alert(e.message));
+window.addEventListener("load",loadGoogleContactsStatus);
 
 function normGooglePhone(v){return String(v||"").replace(/\D/g,"").replace(/^34(?=\d{9}$)/,"");}
 async function googleApi(path,options={}){
-  if(!googleContactsToken)throw new Error("Google Contacts no está conectado.");
-  const res=await fetch("https://people.googleapis.com/v1/"+path,{
-    ...options,
-    headers:{"Authorization":"Bearer "+googleContactsToken,"Content-Type":"application/json",...(options.headers||{})}
-  });
-  if(res.status===401){disconnectGoogleContacts();throw new Error("La sesión de Google ha caducado. Vuelve a conectar Google Contacts.");}
-  const body=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error(body?.error?.message||"Error de Google Contacts");
-  return body;
+  if(!googleContactsConnected())throw new Error("Google Contacts no está conectado.");
+  let payload=options.body;try{payload=typeof payload==="string"?JSON.parse(payload):payload}catch(_){payload={}}
+  return googleContactsServer("proxy",{method:"POST",body:JSON.stringify({path,method:options.method||"GET",body:payload||{}})});
 }
 async function findGoogleDuplicate(phone,email){
-  if(!googleContactsToken)return null;
+  if(!googleContactsConnected())return null;
   const query=(email||phone||"").trim();
   if(!query)return null;
   const p=new URLSearchParams({query,readMask:"names,emailAddresses,phoneNumbers",pageSize:"10"});
