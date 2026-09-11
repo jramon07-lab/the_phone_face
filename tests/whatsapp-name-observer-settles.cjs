@@ -45,7 +45,7 @@ function fixture({confirmed=true,nickname='Alias de prueba',wrongPhone=false}={}
   assert.ok(source.includes(marker),'test must execute the actual module');
   vm.runInContext(source.replace(marker,"window.nameTest={applyUnifiedWhatsappName,scheduleWhatsappNameRepair,watchWhatsappNames};"),sandbox,{timeout:1000});
   const api=sandbox.window.nameTest;api.watchWhatsappNames();
-  return{api,nodes,label,row,jobs,stats:()=>({writes,storageWrites,callbacks}),flush(){let count=0;while(jobs.length&&count<100){jobs.shift()();count++}assert.equal(jobs.length,0,'Name observer must settle; self-generated mutations are starving the browser event loop');return count},repaint(){label.textContent='NOMBRE ORIGINAL'}};
+  return{api,nodes,label,row,jobs,state:sandbox.waLiveState,stats:()=>({writes,storageWrites,callbacks}),flush(){let count=0;while(jobs.length&&count<100){jobs.shift()();count++}assert.equal(jobs.length,0,'Name observer must settle; self-generated mutations are starving the browser event loop');return count},repaint(){label.textContent='NOMBRE ORIGINAL'}};
 }
 
 const f=fixture();
@@ -67,3 +67,11 @@ assert.equal(f.nodes.get('waSideNickname').textContent,'');
 assert.equal(f.nodes.get('waSideNickname').classList.contains('hidden'),true);
 for(const options of [{confirmed:false},{wrongPhone:true},{nickname:''}]){const other=fixture(options);other.repaint();other.flush();if(options.confirmed===false||options.wrongPhone)assert.equal(other.label.textContent,'NOMBRE ORIGINAL')}
 console.log('Name observer settles after search/repaint, preserves all three names, ignores unconfirmed/mismatched contacts, and avoids duplicate DOM/storage writes');
+for(const target of [null,{id:'other',data:{NOMBRE:'Otro','TELÉFONO':'900000002'}},{id:'wrong',data:{'TELÉFONO':'900000001'}}]){
+ const next=fixture();next.repaint();next.flush();
+ next.state.selected={id:'34900000002@c.us',name:'Otro'};next.state.contact=target;next.state.selectionVersion++;
+ next.repaint();next.flush();
+ for(const id of ['waChatNickname','waSideNickname']){assert.equal(next.nodes.get(id).textContent,'','Changing to an unconfirmed/missing/mismatched contact must remove the previous nickname');assert.equal(next.nodes.get(id).classList.contains('hidden'),true)}
+ next.state.contact=next.row;next.state.selected={id:'34900000001@c.us',name:'Original'};next.repaint();next.flush();
+ assert.equal(next.nodes.get('waSideNickname').textContent,'Alias de prueba','Returning to the confirmed contact restores only its own nickname');
+}

@@ -11,5 +11,5 @@ assert.doesNotMatch(source,/setInterval\(\(\)=>\{[^}]*refreshWhatsapp\(\)\},5000
 assert.match(source,/scheduleWhatsappRefresh\(900,false\)/,'a chat change must not download the full Google address book');
 assert.match(source,/if\(connected&&checkGoogle\)/,'Google comparison must run only when explicitly requested');
 assert.match(source,/\},60000\)/,'background reconciliation must be spaced to one minute');
-assert.match(html,/contact-google-inline\.js\?v=20260911-name-observer-1/,'the browser must load the on-demand contact synchronizer');
+assert.match(html,/contact-google-inline\.js\?v=20260912-contact-verification-1/,'the browser must load the on-demand contact synchronizer');
 console.log('WhatsApp and Google contact reconciliation stays deferred and single-flight');
