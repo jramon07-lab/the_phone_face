@@ -57,7 +57,7 @@ async function taskForCallback(callback,chatId){
     await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Este botón no pertenece a este CRM.',show_alert:true});
     return {parsed:null,task:null,rejected:true};
   }
-  const rows=await sbRequest(`agenda_items?id=eq.${encodeURIComponent(parsed.taskId)}&select=id,status,title,starts_at,reminder_at&limit=1`);
+  const rows=await sbRequest(`agenda_items?id=eq.${encodeURIComponent(parsed.taskId)}&select=id,status,title,starts_at,reminder_at,customer_phone&limit=1`);
   const task=rows?.[0];
   if(!task){
     await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'La tarea ya no existe.',show_alert:true});
@@ -90,7 +90,7 @@ async function rescheduleFromCallback(callback,task,newAt){
   return {rescheduled:true,taskId:task.id,startsAt:newAt};
 }
 
-async function handleCallback(callback,chatId){
+async function handleCallback(callback,chatId,baseUrl=''){
   const found=await taskForCallback(callback,chatId);
   if(!found.parsed||!found.task)return {completed:false,...found};
   const {parsed,task}=found;
@@ -100,7 +100,7 @@ async function handleCallback(callback,chatId){
     return {completed:true,taskId:task.id};
   }
   if(parsed.action==='menu'){
-    await updateCallbackMessage(callback,{reply_markup:T.initialKeyboard(task.id)});
+    await updateCallbackMessage(callback,{reply_markup:T.initialKeyboard(task.id,{phone:task.customer_phone,baseUrl})});
     await telegram('answerCallbackQuery',{callback_query_id:callback.id});
     return {menu:true,taskId:task.id};
   }
@@ -176,7 +176,7 @@ async function runCron(req){
     seen.set(signature,item.key);
     const claim=await claimDelivery(item);if(!claim)continue;
     try{
-      const result=await telegram('sendMessage',{chat_id:String(config.telegram_chat_id),message_thread_id:config.agenda_telegram_thread_id||undefined,text:T.taskMessage(item.task,{kind:item.kind,dni:dnis.get(String(item.task.related_record_id||''))||''}),disable_web_page_preview:true,reply_markup:T.initialKeyboard(item.task.id)});
+      const result=await telegram('sendMessage',{chat_id:String(config.telegram_chat_id),message_thread_id:config.agenda_telegram_thread_id||undefined,text:T.taskMessage(item.task,{kind:item.kind,dni:dnis.get(String(item.task.related_record_id||''))||''}),disable_web_page_preview:true,reply_markup:T.initialKeyboard(item.task.id,{phone:item.task.customer_phone,baseUrl:`https://${req.headers.host}`})});
       await saveSetting(item.key,{status:'sent',owner_id:claim.owner_id,attempt:claim.attempt+1,sent_at:Date.now(),message_id:result?.message_id||null});sent++;
     }catch(error){
       await saveSetting(item.key,{status:'pending',owner_id:claim.owner_id,attempt:claim.attempt+1,next_at:Date.now()+60000,last_error:String(error.message||error).slice(0,500)});failed++;
@@ -196,7 +196,7 @@ module.exports=async function handler(req,res){
       if(!safeEqual(req.headers['x-telegram-bot-api-secret-token'],T.webhookSecret(CRON_SECRET)))return json(res,401,{ok:false,error:'Webhook no autorizado'});
       const config=(await setting(SETTINGS_KEY))?.value||{};
       if(!config.agenda_telegram||!config.telegram_chat_id)return json(res,200,{ok:true,ignored:true});
-      if(req.body?.callback_query)return json(res,200,{ok:true,...await handleCallback(req.body.callback_query,config.telegram_chat_id)});
+      if(req.body?.callback_query)return json(res,200,{ok:true,...await handleCallback(req.body.callback_query,config.telegram_chat_id,`https://${req.headers.host}`)});
       return json(res,200,{ok:true,ignored:true});
     }
     return json(res,405,{ok:false,error:'Método no permitido'});

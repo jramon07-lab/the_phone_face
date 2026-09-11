@@ -42,7 +42,8 @@ function run(req){return new Promise(resolve=>{const res={statusCode:0,headers:{
   assert.equal(result.status,200);assert.equal(result.body.sent,1);assert.equal(result.body.failed,0);
   const sent=telegramCalls.find(call=>call.name==='sendMessage');assert(sent);
   assert.equal(sent.body.chat_id,'8854110482');
-  assert.deepEqual(sent.body.reply_markup.inline_keyboard.flat().map(button=>button.text),['✅ Completar','⏰ Posponer','📅 Cambiar fecha']);
+  assert.deepEqual(sent.body.reply_markup.inline_keyboard.flat().map(button=>button.text),['✅ Completar','📞 Llamar','⏰ Posponer','📅 Cambiar fecha']);
+  assert.equal(sent.body.reply_markup.inline_keyboard.flat().find(button=>button.text==='📞 Llamar').url,'https://crm.example/api/telegram-call?phone=%2B34600333248');
   for(const value of ['Antonio López','600333248','24053874Z'])assert(sent.body.text.includes(value));
   const delivery=[...settings.entries()].find(([key])=>key.startsWith('telegram_delivery_agenda_main_a1_'));
   assert.equal(delivery[1].value.status,'sent');
@@ -50,7 +51,7 @@ function run(req){return new Promise(resolve=>{const res={statusCode:0,headers:{
   const secret=require('../lib/telegram-agenda-core').webhookSecret('cron-test-secret');
   result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-menu',data:'tpf:task:postpone:a1',message:{message_id:77,chat:{id:8854110482},text:sent.body.text}}}});
   assert.equal(result.body.postponeMenu,true);
-  assert(telegramCalls.some(call=>call.name==='editMessageReplyMarkup'&&call.body.reply_markup.inline_keyboard.flat().some(button=>button.text==='Mañana, misma hora')));
+  assert(telegramCalls.some(call=>call.name==='editMessageReplyMarkup'&&call.body.reply_markup.inline_keyboard.flat().some(button=>button.text==='En 15 minutos')));
 
   const beforeSnooze=Date.now();
   result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-snooze',data:'tpf:task:snooze:1h:a1',message:{message_id:77,chat:{id:8854110482},text:sent.body.text}}}});
