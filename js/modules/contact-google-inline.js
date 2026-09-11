@@ -89,7 +89,7 @@ function refreshWhatsapp(){
  rememberWhatsapp();
  const chat=selectedWa(),row=matchedWa(),host=$('waContactCard');
  if(!chat||!host||String(chat.id||'').includes('@g.us'))return $('tpfWaAliasCard')?.remove();
- const c=contactData(row),preferred=row?c.name:'';
+ const c=contactData(row),preferred=row?(c.nickname||c.name):'';
  if(preferred){
   if($('waChatName'))$('waChatName').textContent=preferred;
   const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active)active.textContent=preferred;

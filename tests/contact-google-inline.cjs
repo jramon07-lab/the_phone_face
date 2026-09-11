@@ -8,7 +8,7 @@ assert.match(inline,/Nombre actual de WhatsApp/,'WhatsApp name must be shown');
 assert.match(inline,/Guardar en los tres/,'single contact correction must update both sources');
 assert.match(inline,/available\.length>1/,'multiple Google matches must require a choice');
 assert.match(inline,/tpfInlineUseWhatsapp.*tpfInlineNickname/,'existing WhatsApp names must be offered as the nickname');
-assert.match(inline,/preferred=row\?c\.name/,'linked chats must use the unified CRM name');
+assert.match(inline,/preferred=row\?\(c\.nickname\|\|c\.name\)/,'linked chats must prefer the CRM nickname when one exists');
 assert.match(inline,/waChatRow\.active/,'the active conversation row must stop showing No Name');
 assert.match(inline,/Revisar y unificar/,'all linked WhatsApp names must use one unified review');
 for(const action of ['Usar datos del CRM','Usar datos de Google','Usar WhatsApp como apodo','Nombre','Apellidos','Apodo visible','Guardar en los tres','Ignorar este nombre'])assert.ok(inline.includes(action),`missing unified decision: ${action}`);
