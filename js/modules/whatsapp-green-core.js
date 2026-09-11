@@ -387,9 +387,10 @@ async function waRefreshHybridSummary(){
   try{
     const r=await waApi("summary");
     if(r?.degraded){waSharedSyncStatus(false);return false}
+    const before=waStableSig(waLiveState.chats||[]);
     waApplySummaryChats(r.chats);
     waUpdateStats();
-    if(!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
+    if(before!==waStableSig(waLiveState.chats||[])&&!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
     waSharedSyncStatus(true);return true;
   }catch(e){waSharedSyncStatus(false);console.warn("WhatsApp hybrid summary",e);return false}
 }
@@ -415,8 +416,8 @@ async function waSyncSharedView(){
   if(document.hidden||!view||view.classList.contains('hidden')||app?.classList.contains('hidden')||waLiveState.loading){waScheduleSharedSync();return}
   waSharedSyncBusy=true;
   try{
-    const results=await Promise.all([waRefreshHybridSummary(),waLiveState.selected?window.loadWaHistory(false):Promise.resolve()]);
-    if(results.some(ok=>ok===false))waSharedSyncStatus(false);
+    const ok=await waRefreshHybridSummary();
+    if(ok===false)waSharedSyncStatus(false);
   }catch(e){waSharedSyncStatus(false)}
   finally{waSharedSyncBusy=false;waScheduleSharedSync()}
 }
@@ -1278,6 +1279,7 @@ window.selectWhatsAppChat=async(chatId)=>{
 /* ===== WhatsApp CRM Total ===== */
 const WA_META_KEY="tpf_wa_chat_meta_v3";
 const WA_HISTORY_KEY="tpf_wa_history_cache_v2";
+const WA_HISTORY_LIMIT=250,WA_HISTORY_LOCAL_CHATS=20,WA_CHAT_RENDER_LIMIT=250;
 let waMetaCache=null,waMetaDirty=false,waMetaUiFrame=0,waMetaUiChatId="";
 function waMetaDefaults(){return {pinned:false,archived:false,tags:[],note:"",lastIncomingAt:0,lastOutgoingAt:0}}
 function waMetaAll(){if(waMetaCache)return waMetaCache;try{waMetaCache=JSON.parse(localStorage.getItem(WA_META_KEY)||"{}")||{}}catch(e){waMetaCache={}}return waMetaCache}
@@ -1294,7 +1296,8 @@ function waScheduleMetaUi(chatId=""){
 }
 function waMetaSave(chatId,patch,{persist=true,render=true}={}){const a=waMetaAll(),current=a[chatId]||waMetaDefaults();a[chatId]={...current,...patch};waMetaDirty=true;if(persist)waFlushMeta();if(render)waScheduleMetaUi(chatId)}
 window.addEventListener("storage",e=>{if(e.key!==WA_META_KEY)return;waMetaCache=null;waScheduleMetaUi(waLiveState.selected?.id||"")});
-function waCacheHistory(chatId,rows){try{const all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-500);localStorage.setItem(WA_HISTORY_KEY,JSON.stringify(all))}catch(e){}}
+function waPruneHistoryStore(all,limit=WA_HISTORY_LOCAL_CHATS){const entries=Object.entries(all||{});if(entries.length<=limit)return all||{};entries.sort((a,b)=>{const last=rows=>Number(waMessageTimestamp(rows?.[rows.length-1])||0);return last(b[1]?.messages||b[1])-last(a[1]?.messages||a[1])});return Object.fromEntries(entries.slice(0,limit))}
+function waCacheHistory(chatId,rows){try{let all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-WA_HISTORY_LIMIT);all=waPruneHistoryStore(all);localStorage.setItem(WA_HISTORY_KEY,JSON.stringify(all))}catch(e){}}
 function waCachedHistory(chatId){try{return JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}")[chatId]||[]}catch(e){return []}}
 function waIsUnanswered(chatId){
   const chat=(waLiveState.chats||[]).find(c=>String(c.id)===String(chatId));
@@ -1343,6 +1346,7 @@ renderWhatsAppChats=function(){
   });
 
   rows.sort((a,b)=>Number(waMeta(b.id).pinned)-Number(waMeta(a.id).pinned));
+  const totalRows=rows.length;rows=rows.slice(0,WA_CHAT_RENDER_LIMIT);
 
   $("waLiveChats").innerHTML=rows.map(c=>{
     const active=waLiveState.selected?.id===c.id?" active":"";
@@ -1376,7 +1380,7 @@ renderWhatsAppChats=function(){
         ${extras.length?`<div class="waChatMeta">${extras.join(" ")}</div>`:""}
       </div>
     </div>`;
-  }).join("")||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
+  }).join("")+(totalRows>rows.length?`<div class="waLiveEmpty">Mostrando ${rows.length} de ${totalRows}. Usa el buscador para localizar conversaciones antiguas.</div>`:'')||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
 
   setTimeout(()=>hydrateWaAvatars(rows.map(c=>c.id)),20);
 };
@@ -1529,10 +1533,10 @@ setTimeout(waUpdateStats,500);
 const WA_PERSIST_KEY="tpf_wa_persist_fallback_v1";
 function waLocalPersistAll(){try{return JSON.parse(localStorage.getItem(WA_PERSIST_KEY)||"{}")}catch(e){return {}}}
 function waLocalPersist(chatId, rows){
-  const all=waLocalPersistAll(); const prev=all[chatId]||{}; const msgMap=new Map();
+  let all=waLocalPersistAll(); const prev=all[chatId]||{}; const msgMap=new Map();
   [...(prev.messages||[]),...(rows||[])].forEach(m=>msgMap.set(String(m?.idMessage||("t"+waMessageTimestamp(m)+waMessageText(m))),m));
-  all[chatId]={messages:[...msgMap.values()].slice(-1500),updatedAt:Date.now()};
-  localStorage.setItem(WA_PERSIST_KEY,JSON.stringify(all));
+  all[chatId]={messages:[...msgMap.values()].slice(-WA_HISTORY_LIMIT),updatedAt:Date.now()};
+  all=waPruneHistoryStore(all);try{localStorage.setItem(WA_PERSIST_KEY,JSON.stringify(all))}catch(e){}
 }
 function waLocalPersistGet(chatId){return waLocalPersistAll()[chatId]?.messages||[]}
 
@@ -1559,7 +1563,7 @@ async function waPersistRemote(chatId, rows){
 }
 async function waLoadRemoteHistory(chatId){
   try{
-    const {data,error}=await sb.rpc("wa_get_messages",{p_chat_id:chatId,p_limit:1500});
+    const {data,error}=await sb.rpc("wa_get_messages",{p_chat_id:chatId,p_limit:WA_HISTORY_LIMIT});
     if(error)throw error;
     return (data||[]).map(x=>x.raw||x);
   }catch(e){return waLocalPersistGet(chatId)}
@@ -1575,12 +1579,13 @@ loadWaHistory=async function(scrollBottom=true){
     if(waLiveState.selectionVersion!==selection)return;
     const remote=Array.isArray(r.messages)?r.messages:[],cached=waCachedHistory(chatId),map=new Map();
     [...persisted,...cached,...remote].forEach(x=>map.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
-    waLiveState.history=[...map.values()];
+    const merged=[...map.values()].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0)).slice(-WA_HISTORY_LIMIT);
+    const changed=waStableSig(merged)!==waStableSig(waLiveState.history||[]);
+    waLiveState.history=merged;
     waLiveState.history.forEach(m=>waTrackDirection(chatId,m,{persist:false,render:false}));
     waFlushMeta();
-    waCacheHistory(chatId,waLiveState.history); waLocalPersist(chatId,waLiveState.history);
-    renderWaMessages(scrollBottom);
-    waPersistRemote(chatId,waLiveState.history);
+    if(changed){waCacheHistory(chatId,waLiveState.history);waLocalPersist(chatId,waLiveState.history);renderWaMessages(scrollBottom);void waPersistRemote(chatId,waLiveState.history)}
+    else if(scrollBottom){const box=$("waMessages");if(box)box.scrollTop=box.scrollHeight}
     waUpdateAdvancedMetrics();waScheduleMetaUi(chatId);
   }catch(e){
     const persisted=await waLoadRemoteHistory(chatId);
