@@ -7,6 +7,7 @@ const SB_URL=String(process.env.SUPABASE_URL||'https://overfzbjtpjqxzbujezg.supa
 const SERVICE_KEY=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'');
 const BOT_TOKEN=String(process.env.TELEGRAM_BOT_TOKEN||'');
 const CRON_SECRET=String(process.env.CRON_SECRET||'');
+const CRM_STABLE_ORIGIN=String(process.env.CRM_STABLE_ORIGIN||'https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app').replace(/\/$/,'');
 const SETTINGS_KEY='team_notification_settings';
 const ENABLED_KEY='telegram_operations_server_enabled_at';
 const SEND_ACTIONS='(send_template,send_whatsapp_now,__send_whatsapp)';
@@ -54,7 +55,7 @@ async function entityMaps(events){
   const offerIds=[...new Set((events||[]).map(row=>String(row.offer_instance_id||'')).filter(Boolean))],offers=new Map(),opportunities=new Map();
   if(offerIds.length){const rows=await sbRequest(`crm_offer_instances?id=in.(${offerIds.map(encodeURIComponent).join(',')})&select=id,opportunity_id,operator,offer_name`);for(const row of rows||[])offers.set(String(row.id),row)}
   const opportunityIds=[...new Set((events||[]).flatMap(row=>[row.opportunity_id,offers.get(String(row.offer_instance_id||''))?.opportunity_id]).map(value=>String(value||'')).filter(Boolean))];
-  if(opportunityIds.length){const rows=await sbRequest(`sales_opportunities?id=in.(${opportunityIds.map(encodeURIComponent).join(',')})&select=id,client_name,phone`);for(const row of rows||[])opportunities.set(String(row.id),row)}
+  if(opportunityIds.length){const rows=await sbRequest(`sales_opportunities?id=in.(${opportunityIds.map(encodeURIComponent).join(',')})&select=id,record_id,client_name,phone`);for(const row of rows||[])opportunities.set(String(row.id),row)}
   return {offers,opportunities};
 }
 function addTotals(total,result){for(const key of ['sent','skipped','failed'])total[key]+=Number(result[key]||0)}
@@ -76,12 +77,12 @@ async function runCron(){
   }
   const business=await businessRows(floor,until);
   if(Number(config.offers_telegram_thread_id)>0){
-    for(const event of business.filter(row=>row.topic==='offers')){const result=await deliver({key:O.deliveryKey('business_event',event.id),chatId,threadId:config.offers_telegram_thread_id,text:O.businessMessage(event)});addTotals(totals,result);totals.offers+=result.sent}
+    for(const event of business.filter(row=>row.topic==='offers')){const result=await deliver({key:O.deliveryKey('business_event',event.id),chatId,threadId:config.offers_telegram_thread_id,text:O.businessMessage(event,{baseUrl:CRM_STABLE_ORIGIN})});addTotals(totals,result);totals.offers+=result.sent}
   }
   if(Number(config.followups_telegram_thread_id)>0){
-    for(const event of business.filter(row=>row.topic==='followups')){const result=await deliver({key:O.deliveryKey('business_event',event.id),chatId,threadId:config.followups_telegram_thread_id,text:O.followupMessage(event)});addTotals(totals,result);totals.followups+=result.sent}
+    for(const event of business.filter(row=>row.topic==='followups')){const result=await deliver({key:O.deliveryKey('business_event',event.id),chatId,threadId:config.followups_telegram_thread_id,text:O.followupMessage(event,{},{},{baseUrl:CRM_STABLE_ORIGIN})});addTotals(totals,result);totals.followups+=result.sent}
     const events=await followupRows(floor,until),maps=await entityMaps(events);
-    for(const event of events){const offer=maps.offers.get(String(event.offer_instance_id||''))||{},opportunity=maps.opportunities.get(String(event.opportunity_id||offer.opportunity_id||''))||{},result=await deliver({key:O.deliveryKey('followup_event',event.id),chatId,threadId:config.followups_telegram_thread_id,text:O.followupMessage(event,offer,opportunity)});addTotals(totals,result);totals.followups+=result.sent}
+    for(const event of events){const offer=maps.offers.get(String(event.offer_instance_id||''))||{},opportunity=maps.opportunities.get(String(event.opportunity_id||offer.opportunity_id||''))||{},result=await deliver({key:O.deliveryKey('followup_event',event.id),chatId,threadId:config.followups_telegram_thread_id,text:O.followupMessage(event,offer,opportunity,{baseUrl:CRM_STABLE_ORIGIN})});addTotals(totals,result);totals.followups+=result.sent}
   }
   const day=O.shouldSendDaily(now);
   if(day.due&&Number(config.daily_summary_telegram_thread_id)>0){

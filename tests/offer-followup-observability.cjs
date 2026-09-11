@@ -26,7 +26,8 @@ assert.doesNotMatch(incoming,/stage_id\s*=/i);
 for(const column of ['contact_id','user_id','job_id'])assert.match(indexes,new RegExp(`crm_offer_followup_events\\(${column}\\)`));
 
 for(const event of ['pre_send_blocked','verification_deferred','delivery_deferred','followup_failed','followup_sent'])assert.match(runner,new RegExp(`auditFollowup\\(job,"${event}"`));
-assert.match(runner,/if\(a\.__flow_guard==="no_response"&&await hasResponseSince/);
+assert.match(runner,/check=\(\)=>offer\?hasOfferDecision\(ctx,secret\):hasResponseSince\(ctx,secret\)/);
+assert.match(runner,/if\(a\.__flow_guard==="no_response"&&await check\(\)\)/);
 assert.match(runner,/await requeue\(job,msg,5,true\)/);
 assert.match(runner,/await requeue\(job,msg,2\)/);
 

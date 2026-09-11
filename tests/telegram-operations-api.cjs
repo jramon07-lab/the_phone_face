@@ -39,7 +39,7 @@ function run(req){return new Promise(resolve=>{const res={setHeader(){},status(c
   assert.equal(result.status,200);assert.equal(result.body.ok,true);assert.equal(result.body.manual,1);assert.equal(result.body.offers,1);assert.equal(result.body.followups,2);assert.equal(result.body.incidents,1);assert.equal(result.body.daily,1);
   assert.deepEqual(telegramCalls.map(call=>call.message_thread_id),[5,8,6,7,7,9]);
   assert(telegramCalls[0].text.includes('WhatsApp programado'));assert(telegramCalls[1].text.includes('Proveedor no disponible'));
-  assert(telegramCalls[2].text.includes('Oferta aceptada'));assert(telegramCalls[3].text.includes('Seguimiento reactivado'));assert(telegramCalls[4].text.includes('Seguimiento enviado'));
+  assert(telegramCalls[2].text.includes('Me interesa'));assert(telegramCalls[3].text.includes('Seguimiento reactivado'));assert(telegramCalls[4].text.includes('Seguimiento enviado'));
   assert(telegramCalls[5].text.includes('WhatsApp automáticos enviados: 1'));assert(telegramCalls[5].text.includes('WhatsApp manuales pendientes: 1'));
   const again=await run({method:'GET',headers:{authorization:'Bearer cron-test-secret'}});assert.equal(again.body.sent,0,'No debe duplicar entregas');
   console.log('PASS Telegram operaciones API: rutas por tema, resumen y deduplicación.');
