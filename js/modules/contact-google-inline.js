@@ -130,7 +130,7 @@ async function applyBoundWhatsappContact(){
 }
 function applyUnifiedWhatsappName(){
  const chat=selectedWa(),row=matchedWa();if(!chat||!row||String(chat.id||'').includes('@g.us'))return'';
- const c=contactData(row),confirmation=row.data?.TPF_WHATSAPP_NAME_CONFIRMED,confirmed=safe(confirmation?.chat_id)===safe(chat.id),original=validWaName(chat.name)?safe(chat.name):'',preferred=confirmed?unifiedVisible(c.first,c.last,c.nickname):(original||unifiedVisible(c.first,c.last,c.nickname));if(!preferred)return'';
+ const c=contactData(row),confirmation=row.data?.TPF_WHATSAPP_NAME_CONFIRMED,confirmed=safe(confirmation?.chat_id)===safe(chat.id),original=safe(chat.name),preferred=confirmed?unifiedVisible(c.first,c.last,c.nickname):(original||unifiedVisible(c.first,c.last,c.nickname));if(!preferred)return'';
  for(const id of ['waChatName','waSideName']){const el=$(id);if(el&&el.textContent!==preferred)el.textContent=preferred}
  const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active&&active.textContent!==preferred)active.textContent=preferred;
  return preferred;

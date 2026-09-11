@@ -37,7 +37,7 @@ assert.match(inline,/searchRecords/,'the associated holder must be searchable be
 assert.match(inline,/preserveExtra:separate/,'splitting a person must not discard unrelated Google contact fields');
 assert.match(inline,/window\.confirm\(`Se creará una ficha nueva/,'creating a second CRM record must require final confirmation');
 assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when the user actually confirms the final WhatsApp display name');
-assert.match(inline,/confirmed\?unifiedVisible[\s\S]*original\|\|unifiedVisible/,'WhatsApp must keep its original valid name until the user confirms the correction');
+assert.match(inline,/original=safe\(chat\.name\)[\s\S]*confirmed\?unifiedVisible[\s\S]*original\|\|unifiedVisible/,'WhatsApp must keep every original name, including No Name, until the user confirms the correction');
 assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
 assert.match(wa,/tpfCreateFirst:''/,'WhatsApp display name must not be assumed to be the legal name');
 console.log('contact Google/WhatsApp inline workflow assertions passed');
