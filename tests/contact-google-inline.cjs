@@ -16,7 +16,7 @@ assert.match(inline,/Revisar y unificar/,'all linked WhatsApp names must use one
 for(const action of ['Usar datos del CRM','Usar datos de Google','Usar WhatsApp como apodo','Nombre','Apellidos','Apodo visible','Guardar en los tres','Ignorar este nombre'])assert.ok(inline.includes(action),`missing unified decision: ${action}`);
 for(const field of ['tpfInlineFirst','tpfInlineLast','tpfInlineNickname'])assert.ok(inline.includes(field),`missing separate contact field: ${field}`);
 assert.match(inline,/Así quedará en los tres sitios/,'the preview must state that all three displays are identical');
-assert.match(inline,/writeGoogle\(person,\{\.\.\.c,name:full\},first,last,visible\)/,'Google alias must receive the unified visible name used by calls');
+assert.match(inline,/writeGoogle\(person,\{phone:c\.phone[\s\S]*name:full\},first,last,visible\)/,'Google alias must receive the unified visible name used by calls');
 assert.match(inline,/names:\[\{givenName:googleVisible,familyName:''\}\]/,'Google Contacts primary name must show the same unified visible name');
 assert.match(inline,/people\/me\/connections/,'Google matching must scan all contacts, not trust a partial search');
 assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must block accidental duplicates');
@@ -28,6 +28,14 @@ assert.match(inline,/window\.confirm/,'duplicate deletion must require a final c
 assert.match(inline,/:deleteContact/,'confirmed Google duplicates must be deleted through People API');
 assert.doesNotMatch(inline,/writeGoogle\(null/,'inline correction must never create a Google contact implicitly');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
+assert.match(inline,/Es otra persona: crear una segunda ficha/,'a shared phone must offer an explicit second-person decision');
+assert.match(inline,/crm_create_contact_with_welcome_variant/,'the second person must be created through the guarded CRM RPC');
+assert.match(inline,/TPF_RELACIONES:\{version:1,managed_contacts:/,'the new contact must retain the selected associated holder');
+assert.match(inline,/TPF_WHATSAPP_CHAT_ID/,'a second person sharing a phone must remain bound to the correct conversation');
+assert.match(inline,/La ficha de \$\{c\.name\} no se modificará/,'the original CRM record must be preserved explicitly');
+assert.match(inline,/searchRecords/,'the associated holder must be searchable before saving');
+assert.match(inline,/preserveExtra:separate/,'splitting a person must not discard unrelated Google contact fields');
+assert.match(inline,/window\.confirm\(`Se creará una ficha nueva/,'creating a second CRM record must require final confirmation');
 assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
 assert.match(wa,/tpfCreateFirst:''/,'WhatsApp display name must not be assumed to be the legal name');
 console.log('contact Google/WhatsApp inline workflow assertions passed');
