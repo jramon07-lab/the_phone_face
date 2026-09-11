@@ -48,6 +48,15 @@ async function templateMap(jobs){
   const ids=[...new Set((jobs||[]).map(row=>String(row?.action_config?.template_id||'')).filter(Boolean))];if(!ids.length)return new Map();
   const rows=await sbRequest(`whatsapp_templates?id=in.(${ids.map(encodeURIComponent).join(',')})&select=id,name,body`);return new Map((rows||[]).map(row=>[String(row.id),row]));
 }
+async function businessRows(start,end){return sbRequest(`crm_telegram_business_events?${rangeQuery('id,topic,event_type,entity_type,entity_id,payload,created_at','created_at',start,end)}`)}
+async function followupRows(start,end){return sbRequest(`crm_offer_followup_events?${rangeQuery('id,event_key,offer_instance_id,opportunity_id,event_type,result,detail,created_at','created_at',start,end,{event_type:'in.(followup_sent,verification_deferred,delivery_deferred,pre_send_blocked)'})}`)}
+async function entityMaps(events){
+  const offerIds=[...new Set((events||[]).map(row=>String(row.offer_instance_id||'')).filter(Boolean))],offers=new Map(),opportunities=new Map();
+  if(offerIds.length){const rows=await sbRequest(`crm_offer_instances?id=in.(${offerIds.map(encodeURIComponent).join(',')})&select=id,opportunity_id,operator,offer_name`);for(const row of rows||[])offers.set(String(row.id),row)}
+  const opportunityIds=[...new Set((events||[]).flatMap(row=>[row.opportunity_id,offers.get(String(row.offer_instance_id||''))?.opportunity_id]).map(value=>String(value||'')).filter(Boolean))];
+  if(opportunityIds.length){const rows=await sbRequest(`sales_opportunities?id=in.(${opportunityIds.map(encodeURIComponent).join(',')})&select=id,client_name,phone`);for(const row of rows||[])opportunities.set(String(row.id),row)}
+  return {offers,opportunities};
+}
 function addTotals(total,result){for(const key of ['sent','skipped','failed'])total[key]+=Number(result[key]||0)}
 async function runCron(){
   if(!SERVICE_KEY||!BOT_TOKEN||!CRON_SECRET)throw new Error('Faltan credenciales privadas de Telegram, Supabase o Cron en Vercel.');
@@ -56,7 +65,7 @@ async function runCron(){
   let enabled=(await setting(ENABLED_KEY))?.value?.at;
   if(!enabled){enabled=new Date().toISOString();await saveSetting(ENABLED_KEY,{at:enabled});return {ok:true,enabled:true,initialized:true,sent:0,failed:0,skipped:0}}
   const now=Date.now(),floor=new Date(Math.max(new Date(enabled).getTime(),now-O.DELIVERY_WINDOW_MS)).toISOString(),until=new Date(now+1000).toISOString();
-  const totals={sent:0,failed:0,skipped:0,manual:0,incidents:0,daily:0};
+  const totals={sent:0,failed:0,skipped:0,manual:0,offers:0,followups:0,incidents:0,daily:0};
   if(config.whatsapp_telegram&&Number(config.whatsapp_telegram_thread_id)>0){
     const rows=O.dueManual(await manualRows(floor,until),{enabledAt:enabled,now});
     for(const row of rows){const result=await deliver({key:O.deliveryKey('whatsapp_manual',row.id,O.manualAt(row)),chatId,threadId:config.whatsapp_telegram_thread_id,text:O.manualMessage(row)});addTotals(totals,result);totals.manual+=result.sent}
@@ -64,6 +73,15 @@ async function runCron(){
   if(Number(config.incidents_telegram_thread_id)>0){
     const failures=await jobRows(floor,until,{status:'failed'}),templates=await templateMap(failures);
     for(const job of failures){const result=await deliver({key:O.deliveryKey('whatsapp_failure',job.id),chatId,threadId:config.incidents_telegram_thread_id,text:O.failureMessage(job,templates)});addTotals(totals,result);totals.incidents+=result.sent}
+  }
+  const business=await businessRows(floor,until);
+  if(Number(config.offers_telegram_thread_id)>0){
+    for(const event of business.filter(row=>row.topic==='offers')){const result=await deliver({key:O.deliveryKey('business_event',event.id),chatId,threadId:config.offers_telegram_thread_id,text:O.businessMessage(event)});addTotals(totals,result);totals.offers+=result.sent}
+  }
+  if(Number(config.followups_telegram_thread_id)>0){
+    for(const event of business.filter(row=>row.topic==='followups')){const result=await deliver({key:O.deliveryKey('business_event',event.id),chatId,threadId:config.followups_telegram_thread_id,text:O.followupMessage(event)});addTotals(totals,result);totals.followups+=result.sent}
+    const events=await followupRows(floor,until),maps=await entityMaps(events);
+    for(const event of events){const offer=maps.offers.get(String(event.offer_instance_id||''))||{},opportunity=maps.opportunities.get(String(event.opportunity_id||offer.opportunity_id||''))||{},result=await deliver({key:O.deliveryKey('followup_event',event.id),chatId,threadId:config.followups_telegram_thread_id,text:O.followupMessage(event,offer,opportunity)});addTotals(totals,result);totals.followups+=result.sent}
   }
   const day=O.shouldSendDaily(now);
   if(day.due&&Number(config.daily_summary_telegram_thread_id)>0){
@@ -76,4 +94,4 @@ async function runCron(){
   return {ok:totals.failed===0,enabled:true,...totals};
 }
 module.exports=async function handler(req,res){try{if(req.method!=='GET')return json(res,405,{ok:false,error:'Método no permitido'});if(!CRON_SECRET||req.headers.authorization!==`Bearer ${CRON_SECRET}`)return json(res,401,{ok:false,error:'No autorizado'});return json(res,200,await runCron())}catch(error){console.error('telegram-operations',error);return json(res,500,{ok:false,error:String(error.message||error)})}};
-module.exports._test={runCron,setting,saveSetting,manualRows,jobRows};
+module.exports._test={runCron,setting,saveSetting,manualRows,jobRows,businessRows,followupRows,entityMaps};
