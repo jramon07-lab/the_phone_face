@@ -308,6 +308,7 @@ function install(){
     if(search&&!search.__tpfWaPerformanceSearch){
       search.__tpfWaPerformanceSearch=true;
       // El listener original conserva una referencia al render antiguo; sustitúyelo sin bloquear extensiones futuras.
+      if(typeof waHandleLiveSearch==='function')search.removeEventListener('input',waHandleLiveSearch);
       if(typeof _waRenderChatsBase==='function')search.removeEventListener('input',_waRenderChatsBase);
       search.addEventListener('input',()=>{clearTimeout(waSearchTimer);waSearchTimer=setTimeout(()=>window.renderWhatsAppChats?.(),220)});
     }
