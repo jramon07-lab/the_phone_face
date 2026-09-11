@@ -911,6 +911,7 @@ let waPreviewCursor=0;
 let waLastPreviewSweep=0;
 let waPreviewPrimed=false;
 let waPollBackoffUntil=0;
+let waLastBackgroundPollAt=0;
 function waIsRateLimitError(e){
   const status=Number(e?.status||e?.greenStatus||0);
   const text=String(e?.message||e?.error||e||"").toLowerCase();
@@ -1016,6 +1017,12 @@ async function waRefreshRecentPreviews(){
 
 async function waPollOnce(){
   if(waLiveState.pollBusy||Date.now()<waPollBackoffUntil)return;
+  const waView=$("view-whatsapplive"),app=$("app"),visible=!document.hidden&&waView&&!waView.classList.contains("hidden")&&!app?.classList.contains("hidden");
+  if(!visible){
+    const now=Date.now(),backgroundDelay=document.hidden?60000:30000;
+    if(now-waLastBackgroundPollAt<backgroundDelay)return;
+    waLastBackgroundPollAt=now;
+  }
   if(!waOwnRuntimeLease("tpf_wa_poll_lease_v2",12000))return;
   waLiveState.pollBusy=true;
   try{
