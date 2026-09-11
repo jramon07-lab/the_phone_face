@@ -4,7 +4,7 @@ const source=fs.readFileSync('api/green.js','utf8').replace('export default asyn
 function server(provider,clock){
   class TestDate extends Date{static now(){return clock.now;}}
   const waits=[];
-  const context={require:()=>({authorize:async()=>true}),Date:TestDate,Math,URLSearchParams,AbortController,Buffer,Blob,FormData,escape,console:{error(){}},process:{env:{GREEN_API_INSTANCE_ID:'test-instance',GREEN_API_TOKEN:'test-token',GREEN_API_API_URL:'https://provider.test'}},fetch:async(url,opts)=>{const r=await provider(String(url),opts);return {ok:r.status===200,status:r.status,statusText:'limit',headers:{get:()=>r.retryAfter||null},text:async()=>JSON.stringify(r.body)}},setTimeout(fn,ms){if(ms===12000)return 1;waits.push(ms);clock.now+=ms;queueMicrotask(fn);return 1;},clearTimeout(){}};
+  const context={require:()=>({authorize:async()=>true}),Date:TestDate,Math,URLSearchParams,AbortController,Buffer,Blob,FormData,escape,console:{error(){}},process:{env:{VERCEL_ENV:'production',GREEN_API_INSTANCE_ID:'test-instance',GREEN_API_TOKEN:'test-token',GREEN_API_API_URL:'https://provider.test'}},fetch:async(url,opts)=>{const r=await provider(String(url),opts);return {ok:r.status===200,status:r.status,statusText:'limit',headers:{get:()=>r.retryAfter||null},text:async()=>JSON.stringify(r.body)}},setTimeout(fn,ms){if(ms===12000)return 1;waits.push(ms);clock.now+=ms;queueMicrotask(fn);return 1;},clearTimeout(){}};
   vm.createContext(context);vm.runInContext(source,context);return {handle:context.handle,waits};
 }
 async function call(s,action,body={}){const res={setHeader(){},status(){return this},json(value){this.body=value;return this}};await s.handle({method:['summary','chats'].includes(action)?'GET':'POST',query:{action},body},res);return res.body;}

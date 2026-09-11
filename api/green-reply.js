@@ -13,7 +13,7 @@ export default async function handler(req,res){
     const message=String(body.message||"").trim();
     const quotedMessageId=String(body.quotedMessageId||"").trim();
     if(!chatId||!message||!quotedMessageId)return res.status(400).json({ok:false,error:"Faltan chatId, message o quotedMessageId."});
-    if(String(process.env.VERCEL_GIT_COMMIT_REF||"")==="desarrollo-crm"&&String(chatId).replace(/\D/g,"").slice(-9)!=="695661409")return res.status(403).json({ok:false,error:"CRM DE PRUEBAS: solo se permiten envíos al 695 661 409."});
+    if(String(process.env.VERCEL_ENV||"development")!=="production"&&String(chatId).replace(/\D/g,"").slice(-9)!=="695661409")return res.status(403).json({ok:false,error:"CRM DE PRUEBAS: solo se permiten envíos al 695 661 409."});
     const r=await fetch(`${base}/waInstance${id}/sendMessage/${token}`,{
       method:"POST",
       headers:{"Content-Type":"application/json; charset=utf-8"},

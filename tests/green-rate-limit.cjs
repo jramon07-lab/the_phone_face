@@ -46,6 +46,7 @@ function loadHandler(fetchImpl) {
     console: { error() {} },
     process: {
       env: {
+        VERCEL_ENV: 'production',
         GREEN_API_INSTANCE_ID: '1234',
         GREEN_API_TOKEN: 'test-token',
         GREEN_API_API_URL: 'https://provider.test',

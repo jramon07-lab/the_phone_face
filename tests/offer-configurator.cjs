@@ -160,11 +160,11 @@ assert.match(sqlV5,/'safety_verified',true/);
 assert.match(sqlV5,/revoke all on function public\.crm_create_offer_execution_v4/);
 const greenApi=fs.readFileSync(path.join(root,'api/green.js'),'utf8');
 const greenReply=fs.readFileSync(path.join(root,'api/green-reply.js'),'utf8');
-assert.match(greenApi,/VERCEL_GIT_COMMIT_REF/);
+assert.match(greenApi,/VERCEL_ENV/);
 assert.match(greenApi,/GREEN_TEST_PHONE = "695661409"/);
 assert.match(greenApi,/action === "send"[\s\S]*GREEN_PROTECTED_TEST_BRANCH/);
 assert.match(greenApi,/action === "sendfile"[\s\S]*GREEN_PROTECTED_TEST_BRANCH/);
-assert.match(greenReply,/VERCEL_GIT_COMMIT_REF/);
+assert.match(greenReply,/VERCEL_ENV/);
 assert.match(greenReply,/695661409/);
 
 const directSaleSql=fs.readFileSync(path.join(root,'db/proposals/direct-sale.sql'),'utf8');

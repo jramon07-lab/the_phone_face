@@ -25,7 +25,7 @@ module.exports = async function(req,res){
     const rendered=await renderCurrentDeployment(req);
     const html=rendered.body;
     const rootRoute=(vercel.routes||[]).find(route=>route.src==='^/$');
-    const expectedMode=process.env.VERCEL_GIT_COMMIT_REF==='tmp/contact-profile-recover-20260901'?'stable':'test';
+    const expectedMode=process.env.VERCEL_ENV==='production'?'stable':'test';
 
     const checks={
       rendered_ok:rendered.statusCode===200&&html.includes('<!doctype html>'),

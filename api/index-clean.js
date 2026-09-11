@@ -35,8 +35,9 @@ module.exports=async function(req,res){
 
     const commit=String(process.env.VERCEL_GIT_COMMIT_SHA||'local');
     const branch=String(process.env.VERCEL_GIT_COMMIT_REF||'unknown');
+    const environment=String(process.env.VERCEL_ENV||'development');
     const shortCommit=commit.slice(0,8);
-    const stable=branch==='tmp/contact-profile-recover-20260901';
+    const stable=environment==='production';
     html=html.replace('</head>',`<meta name="tpf-crm-mode" content="${stable?'stable':'test'}">\n</head>`);
 
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');

@@ -1,5 +1,5 @@
 let greenStateCache = { at: 0, data: null };
-const GREEN_PROTECTED_TEST_BRANCH = String(process.env.VERCEL_GIT_COMMIT_REF || "") === "desarrollo-crm";
+const GREEN_PROTECTED_TEST_BRANCH = String(process.env.VERCEL_ENV || "development") !== "production";
 const GREEN_TEST_PHONE = "695661409";
 const isAllowedTestRecipient = (chatId) => String(chatId || "").replace(/\D/g, "").slice(-9) === GREEN_TEST_PHONE;
 let greenStateBackoffUntil = 0;
