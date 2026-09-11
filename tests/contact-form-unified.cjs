@@ -12,6 +12,6 @@ assert(contacts.includes("p_label_ids:ids"),'Las etiquetas no se guardan');
 assert(contacts.includes("startsWith('0034')")&&contacts.includes("startsWith('34')"),'No se normaliza el prefijo español');
 assert(contacts.includes('/^[6789]\\d{8}$/'),'La retirada del prefijo no valida un número español de nueve cifras');
 assert(whatsapp.includes("$('tpfContactsAdd')"),'WhatsApp no reutiliza el formulario compartido');
-assert(whatsapp.includes("tpfCreateNickname:''")&&whatsapp.includes("tpfCreateLabels")===false,'WhatsApp debe rellenar el formulario común sin crear otro campo de etiquetas');
+assert(whatsapp.includes("tpfCreateNickname:waName")&&whatsapp.includes("tpfCreateLabels")===false,'WhatsApp debe guardar el nombre mostrado como apodo sin crear otro campo de etiquetas');
 assert(whatsapp.includes("$('tpfWaCreateBack')?.remove()"),'El formulario exclusivo anterior de WhatsApp no queda desactivado');
 console.log('Formulario de contacto unificado: OK');

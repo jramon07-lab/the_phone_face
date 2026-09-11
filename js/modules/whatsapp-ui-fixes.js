@@ -24,13 +24,13 @@ async function restoreCreateOrigin(){
 }
 function fillSharedCreate(chat){
  const back=$('tpfContactsCreateBack');if(!back||back.classList.contains('hidden'))return false;
- const[first,last]=splitName(chat.name||'');
- const values={tpfCreateFirst:first,tpfCreateLast:last,tpfCreateNickname:'',tpfCreatePhone:localPhone(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):chat.id),tpfCreateDni:'',tpfCreateEmail:'',tpfCreateBank:'',tpfCreateNotes:'',tpfCreateObs:''};
+ const waName=String(chat.name||'').trim();
+ const values={tpfCreateFirst:'',tpfCreateLast:'',tpfCreateNickname:waName,tpfCreatePhone:localPhone(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):chat.id),tpfCreateDni:'',tpfCreateEmail:'',tpfCreateBank:'',tpfCreateNotes:'',tpfCreateObs:''};
  Object.entries(values).forEach(([id,value])=>{const el=$(id);if(el)el.value=value;});
  window.dispatchEvent(new CustomEvent('tpf:editor-baseline',{detail:{root:back}}));
  back.dataset.origin='whatsapp';
  const title=back.querySelector('.tpfContactsModalHead h3');if(title)title.textContent='Agregar contacto';
- const sub=back.querySelector('.tpfContactsModalHead .small');if(sub)sub.textContent='Crea el contacto con todos sus datos principales.';
+ const sub=back.querySelector('.tpfContactsModalHead .small');if(sub)sub.textContent='El nombre de WhatsApp está en Apodo. Escribe aquí el nombre real.';
  return true;
 }
 function openCreateContact(){

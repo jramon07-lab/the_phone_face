@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert');
+const inline=fs.readFileSync('js/modules/contact-google-inline.js','utf8');
+const wa=fs.readFileSync('js/modules/whatsapp-ui-fixes.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+assert.match(html,/contact-google-inline\.js/,'inline module must be loaded');
+assert.match(inline,/Nombre actual de WhatsApp/,'WhatsApp name must be shown');
+assert.match(inline,/Guardar en CRM y Google/,'single contact correction must update both sources');
+assert.match(inline,/matches\.length>1/,'multiple Google matches must require a choice');
+assert.match(inline,/APODO:name/,'existing WhatsApp names must be saved as nickname');
+assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
+assert.match(wa,/tpfCreateFirst:''/,'WhatsApp display name must not be assumed to be the legal name');
+console.log('contact Google/WhatsApp inline workflow assertions passed');
