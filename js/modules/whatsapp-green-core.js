@@ -466,7 +466,7 @@ function renderWhatsAppChats(){
 
   $("waLiveChats").innerHTML=rows.map(c=>{
     const active=waLiveState.selected?.id===c.id?" active":"";
-    const name=c.name||waNormalizePhone(c.id)||"WhatsApp";
+    const savedIdentity=window.tpfWhatsappDisplayIdentity?.(c);const name=savedIdentity?.name||c.name||waNormalizePhone(c.id)||"WhatsApp";
     const initials=waInitials(name);
     const avatar=waLiveState.avatars[String(c.id||"")]||"";
     const avStyle=avatar?` style="background-image:url('${esc(avatar)}')"`:"";
@@ -480,7 +480,7 @@ function renderWhatsAppChats(){
     return `<div class="waChatRow${active}${unread?" waHasUnread":""}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
       <div class="waChatRowMain">
-        <div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(waTime(previewTime))}</span></div>
+        <div class="waChatRowTop"><div><b>${esc(name)}</b>${savedIdentity?.nickname?`<small class="tpfWaListNickname">${esc(savedIdentity.nickname)}</small>`:''}</div><span>${esc(waTime(previewTime))}</span></div>
         <div class="waChatPreviewLine"><div class="waChatPreview">${esc(preview)}</div>${unread?`<span class="waUnreadBadge">${unread>99?"99+":unread}</span>`:""}</div>
       </div>
     </div>`;
@@ -490,6 +490,7 @@ function renderWhatsAppChats(){
 
 window.selectWhatsAppChat=async(chatId)=>{
   const chat=(waLiveState.chats||[]).find(c=>c.id===chatId)||{id:chatId};
+  waLiveState.contact=null;
   waLiveState.drafts=waLiveState.drafts||{};
   if(waLiveState.selected)waLiveState.drafts[waLiveState.selected.id]=$("waComposerText").value;
   $("waComposerText").value=waLiveState.drafts[chatId]||"";
@@ -561,6 +562,7 @@ async function matchWaContact(){
   const chat=waLiveState.selected;
   const selection=waLiveState.selectionVersion;
   waLiveState.contact=null;
+  waLiveState.contactCandidates=[];
   $("waOpenContactTop").classList.add("hidden");
   $("waCreateContactTop").classList.add("hidden");
   $("waSideOpenContact").classList.add("hidden");
@@ -582,26 +584,30 @@ async function matchWaContact(){
   }
 
   const phone=waNormalizePhone(chat.id);
-  let found=null;
+  let found=null;const exact=new Map();
   for(const q of waPhoneVariants(phone)){
     try{
       const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:10});
       if(waLiveState.selected?.id!==chat.id||waLiveState.selectionVersion!==selection)return;
-      if(Array.isArray(data)&&data.length){found=data[0];break}
+      if(Array.isArray(data))data.forEach(row=>{const d=row?.data||{},p=waNormalizePhone(contactField(d,"TELÉFONO","TELEFONO","TEL","MÓVIL","MOVIL","PHONE"));if(p.slice(-9)===phone.slice(-9))exact.set(String(row.id),row)})
     }catch(e){}
   }
 
   if(waLiveState.selected?.id!==chat.id||waLiveState.selectionVersion!==selection)return;
+  waLiveState.contactCandidates=[...exact.values()];
+  if(exact.size===1)found=[...exact.values()][0];
+  else if(exact.size>1){const bound=[...exact.values()].filter(row=>String(row?.data?.TPF_WHATSAPP_CHAT_ID||'')===String(chat.id));if(bound.length===1)found=bound[0]}
   if(!found){
-    $("waContactState").innerHTML='<span class="pill amber">No está en Contactos</span>';
+    $("waContactState").innerHTML=exact.size>1?`<span class="pill amber">${exact.size} fichas comparten este teléfono. Revisa el contacto antes de unificar.</span>`:'<span class="pill amber">No está en Contactos</span>';
     
-    $("waSideCreateContact").classList.remove("hidden");
+    $("waSideCreateContact").classList.toggle("hidden",exact.size>1);
     return;
   }
 
   waLiveState.contact=found;
   const d=found.data||{};
-  const nm=contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||chat.name||"Contacto";
+  const confirmedChatId=String(d?.TPF_WHATSAPP_NAME_CONFIRMED?.chat_id||"");
+  const nm=confirmedChatId===String(chat.id)?contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||chat.name||"Contacto":chat.name||waNormalizePhone(chat.id)||"WhatsApp";
   $("waSideName").textContent=nm;
   const dni=contactField(d,"DNI / NIF","DNI","NIF","CIF","DOCUMENTO","DOCUMENTO IDENTIDAD")||"—";
   const phoneShown=contactField(d,"TELÉFONO","TELEFONO","TEL","MÓVIL","MOVIL","PHONE")||phone||"—";
@@ -1341,7 +1347,7 @@ renderWhatsAppChats=function(){
   $("waLiveChats").innerHTML=rows.map(c=>{
     const active=waLiveState.selected?.id===c.id?" active":"";
     const meta=waMeta(c.id);
-    const name=c.name||waNormalizePhone(c.id)||"WhatsApp";
+    const savedIdentity=window.tpfWhatsappDisplayIdentity?.(c);const name=savedIdentity?.name||c.name||waNormalizePhone(c.id)||"WhatsApp";
     const initials=waInitials(name);
     const avatar=waLiveState.avatars[String(c.id||"")]||"";
     const avStyle=avatar?` style="background-image:url('${esc(avatar)}')"`:"";
@@ -1362,7 +1368,7 @@ renderWhatsAppChats=function(){
     return `<div class="waChatRow${active}${unread?" waHasUnread":""}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
       <div class="waChatRowMain">
-        <div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(waTime(previewTime))}</span></div>
+        <div class="waChatRowTop"><div><b>${esc(name)}</b>${savedIdentity?.nickname?`<small class="tpfWaListNickname">${esc(savedIdentity.nickname)}</small>`:''}</div><span>${esc(waTime(previewTime))}</span></div>
         <div class="waChatPreviewLine">
           <div class="waChatPreview">${esc(preview)}</div>
           ${unread?`<span class="waUnreadBadge">${unread>99?"99+":unread}</span>`:""}

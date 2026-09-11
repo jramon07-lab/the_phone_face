@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert');
+const core=fs.readFileSync('js/modules/whatsapp-green-core.js','utf8');
+const inline=fs.readFileSync('js/modules/contact-google-inline.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+
+assert.match(core,/selectWhatsAppChat=async\(chatId\)=>\{[\s\S]*?waLiveState\.contact=null;[\s\S]*?waLiveState\.selected=chat;/,'changing conversations must clear the previous linked contact before async work starts');
+assert.match(core,/p\.slice\(-9\)===phone\.slice\(-9\)/,'CRM search results must match the selected WhatsApp phone exactly');
+assert.match(core,/if\(exact\.size===1\)[\s\S]*else if\(exact\.size>1\)/,'ambiguous CRM contacts must never select the first fuzzy result');
+assert.match(core,/waLiveState\.contactCandidates=\[\.\.\.exact\.values\(\)\]/,'all exact CRM candidates must remain available for an explicit choice');
+assert.match(core,/waSideCreateContact"\)\.classList\.toggle\("hidden",exact\.size>1\)/,'an ambiguous phone must not offer to create another duplicate contact');
+assert.match(inline,/function rowMatchesChat\(row,chat\)/,'every delayed sidebar result must validate its contact against the current chat');
+assert.match(inline,/token!==waRefreshToken\|\|!waContextCurrent\(expected\)/,'an older sidebar refresh must not repaint a newer conversation');
+assert.match(inline,/token!==waRefreshToken\|\|!waContextCurrent\(\{\.\.\.expected,recordId:safe\(row\.id\)\},\{requireRecord:true\}\)/,'a delayed Google lookup must retain both chat and CRM-record identity');
+assert.match(inline,/No se guardará: la conversación cambió o esta ficha no corresponde a su teléfono/,'unification must fail closed when the open conversation and CRM row differ');
+assert.match(inline,/El contacto de Google tiene otro nombre\. Elige expresamente el contacto exacto/,'a differently named Google contact must require an explicit choice');
+assert.match(inline,/Confirma únicamente si es la misma persona/,'renaming a differently named Google contact must require a final warning');
+assert.match(inline,/No se modificará ni creará nada hasta que elijas la persona exacta/,'ambiguous CRM contacts must fail closed and offer an explicit choice');
+assert.match(inline,/d\.TPF_WHATSAPP_CHAT_ID=chatId/,'the confirmed chat-to-contact binding must persist for every PC');
+assert.match(inline,/safe\(saved\.recordId\)===bound/,'persisted WhatsApp display names must belong to the exact saved binding');
+assert.match(inline,/!rowConfirmedForChat\(row,chat\)\)return''/,'CRM names must not replace the public WhatsApp name before confirmation');
+assert.match(core,/confirmedChatId===String\(chat\.id\)/,'the right WhatsApp header must use the CRM identity only after confirmation');
+assert.equal((core.match(/savedIdentity\?\.nickname\?`<small class="tpfWaListNickname">/g)||[]).length,2,'both WhatsApp list renderers must preserve the unified nickname');
+assert.match(html,/whatsapp-green-core\.js\?v=20260911-contact-isolation-1/,'the browser must load the isolated WhatsApp core');
+assert.match(html,/contact-google-inline\.js\?v=20260911-contact-isolation-1/,'the browser must load the isolated Google contact helper');
+console.log('WhatsApp/Google identity remains isolated to the exact chat and phone');
