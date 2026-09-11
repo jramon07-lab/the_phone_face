@@ -16,6 +16,8 @@ for(const field of ['tpfInlineFirst','tpfInlineLast','tpfInlineNickname'])assert
 assert.match(inline,/Así quedará al guardar/,'the dialog must preview the final result in all three places');
 assert.match(inline,/people\/me\/connections/,'Google matching must scan all contacts, not trust a partial search');
 assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must block accidental duplicates');
+assert.match(inline,/Google Contacts no está conectado/,'a missing Google session must not be reported as zero contacts');
+assert.match(inline,/Conectar Google y buscar/,'the correction dialog must offer reconnection and retry');
 assert.match(inline,/Elige cuál de los contactos duplicados/,'multiple Google contacts must require an explicit selection');
 assert.doesNotMatch(inline,/writeGoogle\(null/,'inline correction must never create a Google contact implicitly');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
