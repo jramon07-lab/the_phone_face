@@ -13,6 +13,10 @@ const offerEvent={id:1,event_type:'sale_processed',payload:{client_name:'Ana',ph
 for(const value of ['📄 Venta tramitada','Cliente: Ana','Teléfono: 600000001','Operador: O2','Oferta: Fibra 500','42,50 €/mes'])assert(O.businessMessage(offerEvent).includes(value));
 const followup=O.followupMessage({event_type:'followup_resumed',payload:{client_name:'Luis',phone:'611111111',operator:'Vodafone',offer_name:'Oferta hogar'}});
 for(const value of ['▶️ Seguimiento reactivado','Cliente: Luis','Teléfono: 611111111','Operador: Vodafone','Oferta: Oferta hogar'])assert(followup.includes(value));
+const declined=O.businessMessage({event_type:'offer_decline_reason',payload:{contact_id:'11111111-1111-1111-1111-111111111111',client_name:'Ana',phone:'600000001',reason:'Es por el precio'}},{baseUrl:'https://crm.example'});
+for(const value of ['📝 Motivo de rechazo','Motivo: Es por el precio','https://crm.example/?contact=11111111-1111-1111-1111-111111111111'])assert(declined.includes(value));
+const alternative=O.businessMessage({event_type:'offer_alternative_requested',payload:{client_name:'Luis',phone:'611111111',task_date:'2026-09-12'}});
+for(const value of ['🔄 Quiere otra oferta','Nueva oferta: tarea para 2026-09-12'])assert(alternative.includes(value));
 assert(O.followupMessage({event_type:'followup_sent',detail:'Recordatorio 2 enviado'},{operator:'Orange',offer_name:'Tarifa'},{client_name:'Eva',phone:'622222222'}).includes('Detalle: Recordatorio 2 enviado'));
 const summary=O.dailySummary({dayKey:'2026-09-11',sent:12,manualPending:2,errors:0});
 for(const value of ['12','2','0'])assert(summary.includes(value));
