@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const M=window.TPFModules;if(!M)return;
-const $=id=>document.getElementById(id),ALIAS_KEY='tpf_whatsapp_names_by_phone_v1';
+const $=id=>document.getElementById(id),ALIAS_KEY='tpf_whatsapp_names_by_phone_v1',IGNORE_KEY='tpf_whatsapp_name_ignored_v1';
 const safe=v=>String(v??'').trim(),esc=v=>safe(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fold=v=>safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 const phone=v=>{let x=safe(v).replace(/\D/g,'');if(x.startsWith('00'))x=x.slice(2);if(x.startsWith('34')&&x.length===11)x=x.slice(2);return x.slice(-9)};
@@ -9,7 +9,7 @@ const field=(d,...keys)=>{for(const key of keys)if(safe(d?.[key]))return safe(d[
 const current=()=>{try{return typeof currentContact!=='undefined'?currentContact:null}catch(_){return null}};
 const selectedWa=()=>{try{return typeof waLiveState!=='undefined'?waLiveState?.selected:null}catch(_){return null}};
 const matchedWa=()=>{try{return typeof waLiveState!=='undefined'?waLiveState?.contact:null}catch(_){return null}};
-let activeId='',matches=[],busy=false,waSignature='';
+let activeId='',matches=[],busy=false,waSignature='',correctionRow=null,correctionMatches=[],correctionWhatsapp='',correctionReturn='profile';
 
 function contactData(row=current()){
  const d=row?.data||{},given=field(d,'NOMBRE'),family=field(d,'APELLIDOS','APELLIDO'),legacy=field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL');
@@ -17,6 +17,8 @@ function contactData(row=current()){
 }
 function validWaName(v){const x=fold(v);return !!x&&!['no name','noname','desconocido','unknown','contacto','sin nombre'].includes(x)&&!/^[+\d\s().-]+$/.test(safe(v))}
 function readAliases(){try{return JSON.parse(localStorage.getItem(ALIAS_KEY)||'{}')||{}}catch(_){return{}}}
+function ignoredNames(){try{return JSON.parse(localStorage.getItem(IGNORE_KEY)||'{}')||{}}catch(_){return{}}}
+function ignoreName(chat,name,on=true){const map=ignoredNames(),key=phone(chat?.id);if(!key)return;if(on)map[key]=safe(name);else delete map[key];try{localStorage.setItem(IGNORE_KEY,JSON.stringify(map))}catch(_){}waSignature=''}
 function rememberWhatsapp(){
  let chats=[];try{chats=[...(waLiveState?.chats||[])];if(selectedWa())chats.push(selectedWa())}catch(_){}
  const map=readAliases(),now=new Date().toISOString();let changed=false;
@@ -51,13 +53,15 @@ function ensureStyles(){if($('tpfGoogleInlineStyles'))return;const s=document.cr
  `;document.head.appendChild(s)}
 function ensureModal(){let back=$('tpfInlineBack');if(back)return back;back=document.createElement('div');back.id='tpfInlineBack';back.className='tpfInlineBack hidden';back.innerHTML=`<section class="tpfInlineModal" role="dialog" aria-modal="true"><header><div><small>CORREGIR CONTACTO</small><h3>Nombre y apodo</h3></div><button id="tpfInlineClose" type="button">×</button></header><div class="tpfInlineBody"><div id="tpfInlineSource" class="tpfInlineSource"></div><div class="tpfInlineGrid"><label class="full">Contacto de Google<select id="tpfInlineGoogle"></select></label><label>Nombre<input id="tpfInlineFirst" autocomplete="given-name"></label><label>Apellidos<input id="tpfInlineLast" autocomplete="family-name"></label><label class="full">Apodo<input id="tpfInlineNickname" placeholder="Nombre que quieres ver en llamadas"></label></div><div id="tpfInlineMsg" class="tpfInlineMsg"></div></div><footer><button id="tpfInlineCancel" class="secondary" type="button">Cancelar</button><button id="tpfInlineSave" class="primary" type="button">Guardar en CRM y Google</button></footer></section>`;document.body.appendChild(back);const close=()=>back.classList.add('hidden');$('tpfInlineClose').onclick=close;$('tpfInlineCancel').onclick=close;back.onclick=e=>{if(e.target===back)close()};$('tpfInlineSave').onclick=saveCorrection;return back}
 function splitName(name){const parts=safe(name).split(/\s+/).filter(Boolean);return{first:parts.shift()||'',last:parts.join(' ')}}
-function openCorrection(){
- const c=contactData(),wa=whatsappName(c),parts=splitName(c.name),back=ensureModal(),select=$('tpfInlineGoogle');
- $('tpfInlineFirst').value=field(current()?.data||{},'NOMBRE')||parts.first;$('tpfInlineLast').value=field(current()?.data||{},'APELLIDOS','APELLIDO')||parts.last;$('tpfInlineNickname').value=c.nickname||wa;
+function openCorrection(options={}){
+ const row=options.row||current(),c=contactData(row),wa=options.whatsapp??whatsappName(c),available=options.matches||matches,parts=splitName(c.name),back=ensureModal(),select=$('tpfInlineGoogle');
+ correctionRow=row;correctionMatches=available;correctionWhatsapp=wa;correctionReturn=options.returnTo||'profile';
+ $('tpfInlineFirst').value=field(row?.data||{},'NOMBRE')||parts.first;$('tpfInlineLast').value=field(row?.data||{},'APELLIDOS','APELLIDO')||parts.last;$('tpfInlineNickname').value=c.nickname||wa;
  $('tpfInlineSource').innerHTML=`<b>Nombre detectado en WhatsApp</b>${esc(wa||'Todavía no hay un nombre válido detectado')}<br><b style="margin-top:7px">CRM actual</b>${esc(c.name)}${c.nickname?` · Apodo: ${esc(c.nickname)}`:''}`;
- select.innerHTML=matches.length?matches.map((p,i)=>{const g=googleView(p);return`<option value="${i}">${esc(g.name||'Contacto Google')}${g.nickname?` · Apodo: ${esc(g.nickname)}`:''}</option>`}).join(''):'<option value="">Crear un contacto nuevo en Google</option>';
- $('tpfInlineMsg').textContent=matches.length>1?'Hay varios contactos de Google: elige cuál es el correcto.':'';back.classList.remove('hidden');
+ select.innerHTML=available.length?available.map((p,i)=>{const g=googleView(p);return`<option value="${i}">${esc(g.name||'Contacto Google')}${g.nickname?` · Apodo: ${esc(g.nickname)}`:''}</option>`}).join(''):'<option value="">Crear un contacto nuevo en Google</option>';
+ $('tpfInlineMsg').textContent=available.length>1?'Hay varios contactos de Google: elige cuál es el correcto.':'';back.classList.remove('hidden');
 }
+async function openWhatsappCorrection(row,name){let found=[];try{found=await searchGoogle(contactData(row))}catch(_){}openCorrection({row,whatsapp:name,matches:found,returnTo:'whatsapp'})}
 async function detailedPerson(person){if(!person?.resourceName)return null;const qs=new URLSearchParams({personFields:'names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata'});return googleApi(person.resourceName+'?'+qs.toString())}
 function replaceDni(items,dni){const keys=['dni','nif','dni / nif','dni/nif','documento','documento de identidad'],kept=(items||[]).filter(x=>!keys.includes(fold(x.key)));if(dni)kept.push({key:'DNI / NIF',value:dni});return kept}
 async function writeGoogle(person,c,first,last,nickname){
@@ -69,8 +73,8 @@ async function writeGoogle(person,c,first,last,nickname){
 }
 async function writeCrm(row,first,last,nickname){const d={...(row.data||{})},name=[first,last].filter(Boolean).join(' ').trim();d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=name;d.APODO=nickname;const r=await sb.from('records').update({data:d}).eq('id',row.id);if(r.error)throw r.error;row.data=d;return d}
 async function saveCorrection(){
- if(busy)return;const row=current(),c=contactData(row),first=safe($('tpfInlineFirst').value),last=safe($('tpfInlineLast').value),nickname=safe($('tpfInlineNickname').value),msg=$('tpfInlineMsg'),btn=$('tpfInlineSave');if(!row||(!first&&!last)){msg.textContent='Escribe el nombre correcto.';return}
- busy=true;btn.disabled=true;msg.textContent='Guardando…';try{await writeCrm(row,first,last,nickname);const person=matches[Number($('tpfInlineGoogle').value)]||null;await writeGoogle(person,{...c,name:[first,last].filter(Boolean).join(' ')},first,last,nickname);msg.textContent=safe(sessionStorage.getItem('tpf_google_contacts_token'))?'Guardado en CRM y Google.':'Guardado en CRM. Conecta Google para sincronizarlo.';window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id:row.id}}));setTimeout(()=>{$('tpfInlineBack').classList.add('hidden');window.openContact?.(row.id)},550)}catch(e){msg.textContent=e?.message||'No se pudo guardar.'}finally{busy=false;btn.disabled=false}
+ if(busy)return;const row=correctionRow||current(),available=correctionMatches,c=contactData(row),first=safe($('tpfInlineFirst').value),last=safe($('tpfInlineLast').value),nickname=safe($('tpfInlineNickname').value),msg=$('tpfInlineMsg'),btn=$('tpfInlineSave');if(!row||(!first&&!last)){msg.textContent='Escribe el nombre correcto.';return}
+ busy=true;btn.disabled=true;msg.textContent='Guardando…';try{await writeCrm(row,first,last,nickname);const person=available[Number($('tpfInlineGoogle').value)]||null;await writeGoogle(person,{...c,name:[first,last].filter(Boolean).join(' ')},first,last,nickname);msg.textContent=safe(sessionStorage.getItem('tpf_google_contacts_token'))?'Guardado en CRM y Google.':'Guardado en CRM. Conecta Google para sincronizarlo.';window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id:row.id}}));setTimeout(()=>{$('tpfInlineBack').classList.add('hidden');if(correctionReturn==='whatsapp'){waSignature='';refreshWhatsapp()}else window.openContact?.(row.id)},550)}catch(e){msg.textContent=e?.message||'No se pudo guardar.'}finally{busy=false;btn.disabled=false}
 }
 async function refreshProfile(){
  const row=current(),root=document.querySelector('#contactModal .cpRight');if(!row||!root||$('contactModal')?.classList.contains('hidden'))return;activeId=String(row.id);let card=$('tpfGoogleInlineCard');if(!card){card=document.createElement('section');card.id='tpfGoogleInlineCard';root.prepend(card)}const c=contactData(row),wa=whatsappName(c),connected=!!safe(sessionStorage.getItem('tpf_google_contacts_token'));card.innerHTML=`<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Comprobando…</span><p>${wa?`WhatsApp muestra: <b>${esc(wa)}</b>`:'Abre su conversación para detectar el nombre actual de WhatsApp.'}</p>`;
@@ -88,6 +92,8 @@ function refreshWhatsapp(){
  }
  const name=safe(chat.name);
  let card=$('tpfWaAliasCard');if(!card){card=document.createElement('section');card.id='tpfWaAliasCard';const state=$('waContactState');state?.insertAdjacentElement('afterend',card)}if(!card)return;
+ const ignored=ignoredNames()[phone(chat.id)]===name;
+ if(ignored){const signature=['ignored',safe(chat.id),name].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;card.innerHTML=`<h4>Nombre de WhatsApp ignorado</h4><p><b>${esc(name)}</b> no se aplicará.</p><div class="tpfGoogleInlineActions"><button id="tpfWaReviewAgain" class="secondary" type="button">Revisar de nuevo</button></div>`;$('tpfWaReviewAgain').onclick=()=>{ignoreName(chat,name,false);refreshWhatsapp()};return}
  if(!validWaName(name)){
   if(!row)return card.remove();
   const signature=['invalid',safe(chat.id),safe(row.id),c.name,c.nickname].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;
@@ -96,9 +102,12 @@ function refreshWhatsapp(){
   return;
  }
  const same=fold(name)===fold(c.nickname),signature=[safe(chat.id),safe(row?.id),name,c.nickname].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;
- card.innerHTML=`<h4>Nombre actual de WhatsApp</h4><p><b>${esc(name)}</b>${row?(same?' · Ya está guardado como apodo.':' · Puedes guardarlo como apodo.'):' · Se guardará como apodo al crear la ficha.'}</p>${row&&!same?'<div class="tpfGoogleInlineActions"><button id="tpfWaUseAlias" class="primary" type="button">Guardar como apodo</button></div>':''}`;
+ card.innerHTML=`<h4>Nombre actual de WhatsApp</h4><p><b>${esc(name)}</b>${row?(same?' · Ya está guardado como apodo.':' · Decide cómo quieres guardarlo.'):' · Todavía no existe una ficha vinculada.'}</p><div class="tpfGoogleInlineActions">${row&&!same?'<button id="tpfWaUseAlias" class="primary" type="button">Aceptar como apodo</button>':''}${row?'<button id="tpfWaCorrectName" class="secondary" type="button">Corregir y ver resultado</button>':'<button id="tpfWaCreateReview" class="primary" type="button">Aceptar y crear ficha</button>'}<button id="tpfWaIgnoreName" class="secondary" type="button">Ignorar</button></div>`;
  const btn=$('tpfWaUseAlias');if(btn)btn.onclick=async()=>{btn.disabled=true;try{const d={...(row.data||{}),APODO:name},r=await sb.from('records').update({data:d}).eq('id',row.id);if(r.error)throw r.error;row.data=d;let gm=[];try{gm=await searchGoogle(contactData(row));if(gm.length===1)await writeGoogle(gm[0],contactData(row),field(d,'NOMBRE')||splitName(contactData(row).name).first,field(d,'APELLIDOS')||splitName(contactData(row).name).last,name)}catch(_){}waSignature='';refreshWhatsapp()}catch(e){alert(e?.message||'No se pudo guardar el apodo.')}finally{btn.disabled=false}}
+ const correct=$('tpfWaCorrectName');if(correct)correct.onclick=()=>openWhatsappCorrection(row,name);
+ const create=$('tpfWaCreateReview');if(create)create.onclick=()=>window.createWaContact?.();
+ const ignore=$('tpfWaIgnoreName');if(ignore)ignore.onclick=()=>{ignoreName(chat,name,true);refreshWhatsapp()};
 }
-function install(){ensureStyles();ensureModal();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-updated',()=>setTimeout(refreshProfile,80));const obs=new MutationObserver(()=>{const view=$('view-whatsapplive');if(view&&!view.classList.contains('hidden'))refreshWhatsapp()});obs.observe(document.body,{subtree:true,childList:true,characterData:true});setInterval(()=>{const view=$('view-whatsapplive');if(view&&!view.classList.contains('hidden'))refreshWhatsapp()},1200);window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp}}
+function install(){ensureStyles();ensureModal();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-updated',()=>setTimeout(refreshProfile,80));window.addEventListener('tpf:wa-chat-changing',()=>{waSignature='';setTimeout(refreshWhatsapp,350)});setInterval(()=>{const view=$('view-whatsapplive');if(view&&!view.classList.contains('hidden'))refreshWhatsapp()},2000);window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp}}
 M.register('contact-google-inline',{install});
 })();
