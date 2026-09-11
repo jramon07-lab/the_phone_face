@@ -70,6 +70,14 @@ function run(req){return new Promise(resolve=>{const res={statusCode:0,headers:{
   result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb1',data:'tpf:task:complete:a1',message:{message_id:77,chat:{id:8854110482},text:sent.body.text}}}});
   assert.equal(result.status,200);assert.equal(result.body.completed,true);assert.equal(task.status,'completed');
   assert(telegramCalls.some(call=>call.name==='answerCallbackQuery'));
-  assert(telegramCalls.some(call=>call.name==='editMessageText'&&call.body.text.endsWith('✅ COMPLETADA')));
+  const completedEdit=telegramCalls.findLast(call=>call.name==='editMessageText');
+  assert(completedEdit.body.text.endsWith('✅ COMPLETADA'));
+  assert.deepEqual(completedEdit.body.reply_markup.inline_keyboard.flat().map(button=>button.text),['↩️ Reactivar tarea']);
+
+  result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-reopen',data:'tpf:task:reopen:a1',message:{message_id:77,chat:{id:8854110482},text:completedEdit.body.text}}}});
+  assert.equal(result.status,200);assert.equal(result.body.reopened,true);assert.equal(task.status,'pending');
+  const reopenedEdit=telegramCalls.findLast(call=>call.name==='editMessageText');
+  assert(!reopenedEdit.body.text.includes('✅ COMPLETADA'));
+  assert.deepEqual(reopenedEdit.body.reply_markup.inline_keyboard.flat().map(button=>button.text),['✅ Completar','📞 Llamar','⏰ Posponer','📅 Cambiar fecha']);
   console.log('PASS Telegram Agenda API: cron autenticado, envío único con datos, botón y actualización de la tarea.');
 })().catch(error=>{console.error(error);process.exitCode=1});
