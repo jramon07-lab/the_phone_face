@@ -318,14 +318,28 @@ async function openEdit(e){
   leaveTaskMode();
   const c=contact();
   if(!c)return alert('Primero vincula este chat con un contacto.');
+  const origin={chatId:currentChatId()};
+  state.profileOrigin=origin;
+  if(window.TPFWhatsappContactEditBack?.begin)window.TPFWhatsappContactEditBack.begin(origin);
+  else window.__tpfWaContactEditBackState={...(window.__tpfWaContactEditBackState||{}),origin};
   hideFocusedTasks();
+  hideContactModal();
+  if(typeof window.TPFContactsList?.edit==='function'){
+    await window.TPFContactsList.edit(c.id);
+    hideContactModal();
+    return;
+  }
   if(typeof window.openWaMatchedContact==='function')await window.openWaMatchedContact();
   else{
     if(typeof window.openContact!=='function')return;
-    state.profileOrigin={chatId:currentChatId()};
     await window.openContact(c.id);
   }
   $('tpfContactEditToggle')?.click();
+  for(let i=0;i<80;i++){
+    const editor=$('tpfContactsCreateBack');
+    if(editor&&!editor.classList.contains('hidden')){hideContactModal();break}
+    await new Promise(resolve=>setTimeout(resolve,25));
+  }
 }
 async function createOpportunity(e){
   stop(e);

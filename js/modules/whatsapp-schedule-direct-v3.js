@@ -52,8 +52,33 @@ function atTen(date){
   return result;
 }
 
+function nextHalfHour(date=new Date()){
+  const result=new Date(date);
+  result.setSeconds(0,0);
+  result.setMinutes((Math.floor(result.getMinutes()/30)+1)*30);
+  return result;
+}
+
+function timeValue(date){
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function fillTimeChoices(dateValue,preferred='10:00'){
+  const select=$('tpfS3time');if(!select)return;
+  const now=new Date(),today=localValue(now).slice(0,10),options=[];
+  for(let minutes=0;minutes<24*60;minutes+=30){
+    const value=`${pad(Math.floor(minutes/60))}:${pad(minutes%60)}`;
+    if(dateValue===today&&new Date(`${dateValue}T${value}`).getTime()<=now.getTime())continue;
+    options.push(value);
+  }
+  select.innerHTML=options.length?options.map(value=>`<option value="${value}">${value}</option>`).join(''):'<option value="">Sin horas disponibles</option>';
+  select.disabled=!options.length;
+  select.value=options.includes(preferred)?preferred:(options[0]||'');
+}
+
 function quickChoices(){
   const now=new Date();
+  const today=nextHalfHour(now);
   const tomorrow=new Date(now);
   const monday=new Date(now);
   const week=new Date(now);
@@ -64,12 +89,15 @@ function quickChoices(){
   monday.setDate(monday.getDate()+add);
   week.setDate(week.getDate()+7);
   month.setMonth(month.getMonth()+1);
-  return[
+  const choices=[];
+  if(localValue(today).slice(0,10)===localValue(now).slice(0,10))choices.push(['Hoy',today]);
+  choices.push(
     ['Mañana',atTen(tomorrow)],
     ['Próximo lunes',atTen(monday)],
     ['En una semana',atTen(week)],
     ['En un mes',atTen(month)]
-  ];
+  );
+  return choices;
 }
 
 function selectedChat(){
@@ -193,10 +221,10 @@ function ensureStyles(){
     .tpfS3h,.tpfS3f{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid #eaecf0}
     .tpfS3h h2{margin:0;font-size:23px}.tpfS3h p{margin:3px 0 0;color:#667085;font-size:13px}
     .tpfS3b{padding:20px 22px}.tpfS3 label{display:block;font-size:13px;font-weight:700;color:#475467;margin:0 0 7px}
-    .tpfS3 input,.tpfS3 textarea{width:100%;box-sizing:border-box;border:1px solid #d0d5dd;border-radius:11px;padding:12px 14px;font:inherit;background:#fff}
+    .tpfS3 input,.tpfS3 textarea,.tpfS3 select{width:100%;box-sizing:border-box;border:1px solid #d0d5dd;border-radius:11px;padding:12px 14px;font:inherit;background:#fff}
     .tpfS3 textarea{min-height:110px;resize:vertical}.tpfS3messageHead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;margin-bottom:7px}
     .tpfS3messageHead label{margin:0}.tpfS3template{border:1px solid #b9c8e4;border-radius:9px;background:#f5f8ff;color:#244f91;padding:8px 11px;font-size:12px;font-weight:750;cursor:pointer}
-    .tpfS3selected{min-height:18px;margin:6px 0 0;color:#315ea8;font-size:12px}.tpfS3grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 18px}
+    .tpfS3selected{min-height:18px;margin:6px 0 0;color:#315ea8;font-size:12px}.tpfS3grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:8px 0 18px}
     .tpfS3q{border:1px solid #d0d5dd;border-radius:12px;background:#fff;padding:14px 8px;cursor:pointer;text-align:center}.tpfS3q.on{border-color:#2563eb;background:#f5f8ff}
     .tpfS3q b,.tpfS3q small{display:block}.tpfS3q small{margin-top:5px;color:#667085}.tpfS3custom{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .tpfS3hint{margin-top:14px;padding:10px 12px;border-radius:10px;background:#f5f8ff;color:#315ea8;font-size:13px}.tpfS3error{min-height:18px;margin-top:10px;color:#b42318;font-size:13px}
@@ -389,9 +417,9 @@ function open(prefill={}){
       <div class="tpfS3messageHead"><label for="tpfS3msg">Mensaje</label><button id="tpfS3template" type="button" class="tpfS3template">▤ Usar plantilla</button></div>
       <textarea id="tpfS3msg"></textarea><div id="tpfS3templateName" class="tpfS3selected"></div>
       <label style="margin-top:14px">Enviar</label>
-      <div class="tpfS3grid">${choices.map((choice,index)=>`<button type="button" class="tpfS3q ${index?'':'on'}" data-when="${localValue(choice[1])}"><b>${choice[0]}</b><small>${choice[1].toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short'})} · 10:00</small></button>`).join('')}</div>
-      <div class="tpfS3custom"><div><label for="tpfS3date">Fecha</label><input id="tpfS3date" type="date"></div><div><label for="tpfS3time">Hora</label><input id="tpfS3time" type="time" value="10:00"></div></div>
-      <div class="tpfS3hint">Los cuatro accesos rápidos se programan por defecto a las 10:00.</div><div id="tpfS3error" class="tpfS3error" role="alert"></div>
+      <div class="tpfS3grid">${choices.map((choice,index)=>`<button type="button" class="tpfS3q ${index?'':'on'}" data-when="${localValue(choice[1])}"><b>${choice[0]}</b><small>${choice[1].toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'short'})} · ${timeValue(choice[1])}</small></button>`).join('')}</div>
+      <div class="tpfS3custom"><div><label for="tpfS3date">Fecha</label><input id="tpfS3date" type="date"></div><div><label for="tpfS3time">Hora</label><select id="tpfS3time" aria-label="Hora de envío"></select></div></div>
+      <div class="tpfS3hint">Elige la hora en intervalos de 30 minutos. Para hoy solo aparecen horas futuras.</div><div id="tpfS3error" class="tpfS3error" role="alert"></div>
     </div>
     <div class="tpfS3f"><button type="button" class="tpfS3btn" data-close>← Volver</button><button id="tpfS3save" type="button" class="tpfS3btn tpfS3primary">Programar envío</button></div>
   </div>`;
@@ -400,6 +428,7 @@ function open(prefill={}){
   $('tpfS3phone').value=activeContext.phone;
   $('tpfS3msg').value=activeContext.message;
   $('tpfS3date').value=localValue(choices[0][1]).slice(0,10);
+  fillTimeChoices($('tpfS3date').value,timeValue(choices[0][1]));
   $('tpfS3contact').textContent=activeContext.name?`Para ${activeContext.name}`:'';
 
   overlay.querySelectorAll('.tpfS3q').forEach(button=>{
@@ -407,9 +436,14 @@ function open(prefill={}){
       overlay.querySelectorAll('.tpfS3q').forEach(item=>item.classList.remove('on'));
       button.classList.add('on');
       $('tpfS3date').value=button.dataset.when.slice(0,10);
-      $('tpfS3time').value='10:00';
+      fillTimeChoices($('tpfS3date').value,button.dataset.when.slice(11,16));
     };
   });
+  $('tpfS3date').onchange=()=>{
+    overlay.querySelectorAll('.tpfS3q').forEach(item=>item.classList.remove('on'));
+    fillTimeChoices($('tpfS3date').value,$('tpfS3time').value);
+  };
+  $('tpfS3time').onchange=()=>overlay.querySelectorAll('.tpfS3q').forEach(item=>item.classList.remove('on'));
   overlay.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>close());
   overlay.onclick=event=>{
     if(event.target===overlay)close();

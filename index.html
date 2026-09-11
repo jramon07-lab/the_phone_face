@@ -997,3 +997,601 @@
     </div>
   </div>
 
+  <div class="wapKpis" aria-label="Resumen de WhatsApp programados">
+    <button type="button" data-wap-filter="due"><span>Listos para enviar</span><b id="wapKpiDue">0</b><small>Ahora</small></button>
+    <button type="button" data-wap-filter="future"><span>Próximos</span><b id="wapKpiFuture">0</b><small>Programados</small></button>
+    <button type="button" data-wap-filter="completed"><span>Enviados</span><b id="wapKpiSent">0</b><small>Completados</small></button>
+    <button type="button" data-wap-filter="error" class="warning"><span>Necesitan revisión</span><b id="wapKpiIssues">0</b><small>Fallidos o inciertos</small></button>
+  </div>
+
+  <div class="card waToolbar">
+    <div class="wapFilterTabs" id="wapFilterTabs">
+      <button type="button" data-wap-filter="pending" class="active">Pendientes</button>
+      <button type="button" data-wap-filter="due">Listos ahora</button>
+      <button type="button" data-wap-filter="future">Próximos</button>
+      <button type="button" data-wap-filter="completed">Enviados</button>
+      <button type="button" data-wap-filter="error">Incidencias</button>
+      <button type="button" data-wap-filter="paused">Pausados</button>
+      <button type="button" data-wap-filter="cancelled">Cancelados</button>
+      <button type="button" data-wap-filter="all">Todos</button>
+    </div>
+    <div class="row wapSearchRow">
+      <select id="waFilter">
+        <option value="all">Todos</option>
+        <option value="pending" selected>Pendientes</option>
+        <option value="due">Listos para enviar</option>
+        <option value="future">Programados</option>
+        <option value="completed">Completados</option>
+        <option value="error">Incidencias</option>
+        <option value="paused">Pausados</option>
+        <option value="cancelled">Cancelados</option>
+      </select>
+      <input id="waSearch" placeholder="Buscar contacto, teléfono o mensaje">
+      <span id="wapResultCount" class="small"></span>
+    </div>
+  </div>
+
+  <div class="card wapComposer hidden" id="wapComposer">
+    <div class="wapSectionHead">
+      <div><h3>Nuevo mensaje programado</h3><span class="small">Elige el contacto, el mensaje y cuándo debe enviarse.</span></div>
+      <button id="waCloseComposer" class="secondary" type="button">× Cerrar</button>
+    </div>
+    <input type="hidden" id="waEditId">
+    <div class="row">
+      <input id="waCustomer" placeholder="Contacto / cliente">
+      <input id="waPhone" placeholder="Teléfono">
+      <input id="waWhen" type="datetime-local">
+    </div>
+    <textarea id="waMessage" rows="5" placeholder="Mensaje de WhatsApp"></textarea>
+    <div class="row">
+      <button id="waSave" class="primary">Programar WhatsApp</button>
+      <span id="waMsg" class="small"></span>
+    </div>
+  </div>
+
+  <div class="card scroll wapListCard">
+    <table>
+      <thead>
+        <tr><th>Fecha / hora</th><th>Contacto</th><th>Teléfono</th><th>Mensaje</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody id="waRows"></tbody>
+    </table>
+    <div id="waEmpty" class="small">No hay WhatsApp programados.</div>
+    <div class="wapPagination" id="wapPagination">
+      <button id="wapPrev" class="secondary" type="button">← Anterior</button>
+      <span id="wapPageInfo" class="small">Página 1</span>
+      <button id="wapNext" class="secondary" type="button">Siguiente →</button>
+    </div>
+  </div>
+</section>
+
+
+<section id="view-labels" class="hidden">
+  <div class="pageHeader">
+    <div>
+      <h2>Etiquetas</h2>
+      <div class="small">Crea, renombra o elimina etiquetas globales del CRM. Se pueden asignar a cualquier contacto y aparecen también en WhatsApp.</div>
+    </div>
+    <button id="labelsReload" class="secondary">↻ Actualizar</button>
+  </div>
+
+  <div class="labelsManagerGrid">
+    <div class="card">
+      <h3>Nueva etiqueta</h3>
+      <div class="row">
+        <input id="labelNewName" placeholder="Ej.: Renovación, Vodafone, Pendiente, VIP">
+        <button id="labelCreate" class="primary">Crear etiqueta</button>
+      </div>
+      <div id="labelCreateMsg" class="small"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h3 style="margin:0">Etiquetas disponibles</h3>
+        <input id="labelSearch" placeholder="Buscar etiqueta">
+      </div>
+      <div id="labelsGlobalList" class="labelsGlobalList"></div>
+      <div id="labelsEmpty" class="small">No hay etiquetas.</div>
+    </div>
+  </div>
+</section>
+
+<section id="view-settings" class="hidden">
+    <div class="card">
+      <h2>Ajustes</h2>
+      <div class="small">Configuración de sincronización con Google.</div>
+    </div>
+    <div class="card searchConfigCard">
+      <h3>Columnas del buscador</h3>
+      <div class="small">Configura por separado qué columnas verá este usuario al buscar en cada archivo. La selección queda guardada en su cuenta para futuras búsquedas.</div>
+
+      <div id="settingsSearchUserWrap" class="searchConfigTop hidden">
+        <label>Usuario
+          <select id="settingsSearchUserSelect"></select>
+        </label>
+      </div>
+
+      <div class="searchConfigTop">
+        <label>Archivo / origen
+          <select id="settingsSearchSource">
+            <option value="LIQUIDACION">Liquidación</option>
+            <option value="DATA">Data</option>
+            <option value="CLAWBACK">Clawback</option>
+            <option value="AJUSTES">Ajustes</option>
+            <option value="CONTACTOS">Contactos</option>
+          </select>
+        </label>
+        <button id="settingsLoadColumns" class="secondary">Cargar campos</button>
+      </div>
+
+      <div id="settingsSearchUser" class="searchConfigUser"></div>
+      <div id="settingsSearchAdminHelp" class="small">Como administrador puedes elegir un usuario y definir exactamente qué columnas verá en cada archivo.</div>
+      <div id="settingsSearchColumnsInfo" class="searchConfigInfo"></div>
+      <div id="settingsSearchColumnsOptions" class="searchColumnsOptions"></div>
+
+      <div class="searchColumnsActions">
+        <button id="settingsSearchSelectAll" class="secondary">Seleccionar todas</button>
+        <button id="settingsSearchClear" class="secondary">Quitar todas</button>
+        <button id="settingsSearchDefault" class="secondary">Restablecer</button>
+          <button id="settingsSearchUseGlobal" class="secondary">Usar configuración general</button>
+        <button id="settingsSearchSave" class="primary">Guardar configuración</button>
+      </div>
+      <div id="settingsSearchColumnsMsg" class="small"></div>
+    </div>
+
+    <div class="card">
+      <h3>Notificaciones</h3>
+      <div class="small">Elige por separado qué avisos quieres recibir. Telegram será común para los dos usuarios; las notificaciones del navegador se activan en cada PC.</div>
+      <div class="teamTelegramBadge">Telegram: destino único para todo el equipo</div>
+
+      <div class="notifyTypeTable">
+        <div class="notifyTypeHead"><span>Tipo de aviso</span><span>Navegador / PC</span><span>Telegram</span></div>
+        <div class="notifyTypeRow">
+          <div><b>WhatsApp programados</b><small>Avisa cuando un WhatsApp llegue a su hora.</small></div>
+          <label><input id="notifyWhatsappBrowser" type="checkbox"> Navegador</label>
+          <label><input id="notifyWhatsappTelegram" type="checkbox"> Telegram</label>
+        </div>
+        <div class="notifyTypeRow">
+          <div><b>Agenda</b><small>Avisa de tareas, llamadas y citas de la Agenda.</small></div>
+          <label><input id="notifyAgendaBrowser" type="checkbox"> Navegador</label>
+          <label><input id="notifyAgendaTelegram" type="checkbox"> Telegram</label>
+        </div>
+      </div>
+
+      <div id="telegramNotifyFields" class="notifyTelegramFields">
+        <label>Chat ID común de Telegram
+          <input id="notifyTelegramChatId" placeholder="Pulsa Detectar mi Telegram">
+        </label>
+        <div class="small">Este Chat ID es el mismo para los dos usuarios.</div>
+      </div>
+
+      <div class="row notifyActions">
+        <button id="notifyRequestPermission" class="secondary">Permitir notificaciones en este PC</button>
+        <button id="notifyDetectTelegram" class="secondary">Detectar mi Telegram</button>
+        <button id="notifyTelegramTest" class="secondary">Enviar prueba</button>
+        <button id="notifySave" class="primary">Guardar notificaciones</button>
+        <span id="notifyMsg" class="small"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>WhatsApp</h3>
+      <div class="small">Modo actual de envío para los WhatsApp programados.</div>
+
+      <div class="waModeBox">
+        <label class="waModeOption">
+          <input type="radio" name="waMode" id="waModeManual" value="manual" checked>
+          <div>
+            <b>WhatsApp normal (manual)</b>
+            <span>Cuando llegue la hora, se abre WhatsApp con el número y mensaje preparados. Tú pulsas Enviar.</span>
+          </div>
+        </label>
+
+        <label class="waModeOption waModeDisabled">
+          <input type="radio" name="waMode" id="waModeApi" value="api" disabled>
+          <div>
+            <b>Envío automático por API</b>
+            <span>Disponible cuando conectemos WhatsApp Business API.</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="small waApiReady">La agenda ya queda preparada para reutilizar las mismas programaciones cuando se conecte la API.</div>
+    </div>
+
+    <div class="card">
+      <h3>Google Calendar</h3>
+      <label><input id="settingGoogleCalendar" type="checkbox" style="width:auto"> Sincronizar citas con Google Calendar</label>
+      <p class="small">Cada cita podrá usar sus propios avisos y, cuando esté activado, se guardará también el identificador del evento de Google.</p>
+    </div>
+    <div class="card">
+      <h3>Google Contacts</h3>
+      <div class="row" style="align-items:center;margin-bottom:10px">
+        <button id="connectGoogleContacts" class="secondary">Conectar Google Contacts</button>
+        <button id="disconnectGoogleContacts" class="secondary hidden">Desconectar</button>
+        <span id="googleContactsStatus" class="small">No conectado</span>
+      </div>
+      <label><input id="settingGoogleContacts" type="checkbox" style="width:auto"> Crear contactos también en Google Contacts</label><br>
+      <label><input id="settingGoogleDedup" type="checkbox" checked style="width:auto"> Evitar duplicados por teléfono/email</label><br>
+      <label><input id="settingGoogleUpdate" type="checkbox" checked style="width:auto"> Actualizar Google cuando cambie un contacto</label>
+      <p class="small">La estructura ya está preparada. Para crear contactos de verdad en Google necesitaremos activar permisos de escritura de Google Contacts.</p>
+      <button id="saveGoogleSettings" class="primary">Guardar ajustes</button>
+      <span id="googleSettingsMsg" class="small"></span>
+      <div class="gcaSettingsBox">
+        <div><b>Comprobar antes de sincronizar</b><p class="small">Compara el CRM y Google Contacts sin crear, editar ni borrar contactos.</p></div>
+        <button id="googleContactsAuditBtn" class="secondary" type="button">Comprobar CRM y Google</button>
+      </div>
+    </div>
+   </section>
+
+
+   <section id="view-automations" class="hidden">
+    <div class="pageHeader">
+      <div>
+        <h2>Automatizaciones</h2>
+        <div class="small">Crea reglas del tipo <b>CUANDO ocurra esto → HACER esto</b>. Puedes activarlas, editarlas o borrarlas cuando quieras.</div>
+      </div>
+      <button id="auto2Reload" class="secondary">↻ Actualizar</button>
+    </div>
+
+    <div class="automation2Grid">
+      <div class="card">
+        <div class="automation2Head">
+          <h3 id="auto2FormTitle">Nueva automatización</h3>
+          <span class="auto2NoLimit">Sin límite automático de envíos</span>
+        </div>
+        <input type="hidden" id="auto2Id">
+        <label>Nombre
+          <input id="auto2Name" placeholder="Ej.: Seguimiento de renovación">
+        </label>
+
+        <div class="auto2Builder">
+          <div class="auto2Step">
+            <span class="auto2Badge">CUANDO</span>
+            <select id="auto2Trigger">
+              <option value="message_received">Llega un WhatsApp</option>
+              <option value="message_contains">Llega un WhatsApp que contiene una palabra</option>
+              <option value="opportunity_stage">Una oportunidad cambia de columna</option>
+              <option value="label_assigned">Se asigna una etiqueta a un contacto</option>
+              <option value="unanswered">Un cliente lleva tiempo sin respuesta</option>
+            </select>
+          </div>
+          <div id="auto2TriggerConfig" class="auto2Config"></div>
+
+          <div class="auto2Arrow">↓</div>
+
+          <div class="auto2Step">
+            <span class="auto2Badge action">HACER</span>
+            <select id="auto2Action">
+              <option value="create_task">Crear una tarea</option>
+              <option value="create_opportunity">Crear una oportunidad</option>
+              <option value="assign_label">Asignar una etiqueta</option>
+              <option value="schedule_whatsapp">Programar un WhatsApp</option>
+              <option value="send_template">Enviar una plantilla de WhatsApp</option>
+              <option value="sequence_label_opportunity_whatsapp">Crear oportunidad + esperar + enviar WhatsApp</option>
+            </select>
+          </div>
+          <div id="auto2ActionConfig" class="auto2Config"></div>
+        </div>
+
+        <label class="auto2Enabled"><input id="auto2Enabled" type="checkbox" checked> Activada</label>
+
+        <div class="row">
+          <button id="auto2Save" class="primary">Guardar automatización</button>
+          <button id="auto2Cancel" class="secondary hidden">Cancelar edición</button>
+        </div>
+        <div id="auto2Msg" class="small"></div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:center">
+          <div>
+            <h3 style="margin:0">Mis automatizaciones</h3>
+            <div class="small">Las reglas se guardan en Supabase y estarán disponibles en todos tus dispositivos.</div>
+          </div>
+          <select id="auto2Filter" style="max-width:170px">
+            <option value="all">Todas</option>
+            <option value="enabled">Activas</option>
+            <option value="disabled">Desactivadas</option>
+          </select>
+        </div>
+        <div id="auto2List" class="automation2List"></div>
+        <div id="auto2Empty" class="small" style="padding:18px 0">Todavía no hay automatizaciones.</div>
+      </div>
+    </div>
+
+    <div class="card automation2Help">
+      <b>Ejemplos</b>
+      <div>• Si llega “renovación” → asignar etiqueta Renovación.</div>
+      <div>• Si una oportunidad entra en “Cerrada” → crear tarea de seguimiento.</div>
+      <div>• Si un cliente lleva 2 horas sin respuesta → crear una tarea.</div>
+      <div>• Si llega un WhatsApp → programar una respuesta para dentro de 30 minutos.</div>
+      <div>• Si asignas una etiqueta → enviar una plantilla concreta.</div>
+    </div>
+
+    <!-- Compatibilidad con el sistema anterior. No se muestran. -->
+    <div class="hidden">
+      <select id="autoStage"></select><select id="autoDelay"><option value="0"></option></select>
+      <input id="autoName"><input id="autoReminderTitle"><button id="autoCreate"></button>
+      <button id="autoReload"></button><div id="autoMsg"></div><div id="automationList"></div><div id="automationEmpty"></div>
+    </div>
+   </section>
+
+   <section id="view-system" class="hidden">
+    <div class="card systemStatusCard">
+      <div class="systemStatusHead">
+        <div>
+          <h2>Estado del sistema</h2>
+          <p class="small">Diagnóstico rápido del CRM. Visible solo para administradores.</p>
+        </div>
+        <button id="systemRefresh" class="primary">Actualizar estado</button>
+      </div>
+      <div class="systemStatusGrid">
+        <div class="systemStatusBox"><span id="systemAppDot" class="systemDot systemDotPending"></span><div><strong>Aplicación / Vercel</strong><small id="systemAppText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemGreenDot" class="systemDot systemDotPending"></span><div><strong>GREEN-API / WhatsApp</strong><small id="systemGreenText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemSupabaseDot" class="systemDot systemDotPending"></span><div><strong>Supabase</strong><small id="systemSupabaseText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemFrontDot" class="systemDot systemDotPending"></span><div><strong>Frontend</strong><small id="systemFrontText">Sin comprobar</small></div></div>
+      </div>
+      <div id="systemBanner" class="systemBanner systemBannerPending">Comprobando estado general…</div>
+      <div class="systemStatusMeta">Última comprobación: <b id="systemCheckedAt">—</b></div>
+    </div>
+    <div class="card">
+      <div class="systemStatusHead">
+        <div><h3>Últimos fallos detectados</h3><p class="small">Errores JavaScript y respuestas HTTP 4xx/5xx detectadas en este navegador.</p></div>
+        <button id="systemClearErrors" class="secondary">Limpiar historial</button>
+      </div>
+      <div id="systemErrorList" class="systemErrorList"><div class="small">No hay fallos registrados.</div></div>
+    </div>
+   </section>
+
+   <section id="view-users" class="hidden">
+    <div class="card">
+      <h2>Usuarios y permisos</h2>
+      <p class="small">El Administrador tiene acceso total. Para cada usuario puedes decidir exactamente qué puede ver y qué puede hacer.</p>
+      <div class="row"><select id="userSelect"></select><button id="permEnableAll" class="secondary">Marcar todo</button><button id="permDisableAll" class="secondary">Quitar todo</button></div>
+      <div id="permGrid" class="permGridNew"></div>
+      <div id="userMsg" class="small"></div>
+    </div>
+    <div class="card">
+      <h3>Campos visibles en DATA</h3>
+      <p class="small">Además de los permisos generales, puedes limitar columnas concretas de DATA.</p>
+      <button id="loadDataFields" class="secondary">Cargar columnas de DATA</button>
+      <div id="fieldPerms" style="margin-top:12px"></div>
+    </div>
+   </section>
+  </main>
+  </div>
+ </div>
+</div>
+
+<div id="oppDetailModal" class="modalBack hidden">
+  <div class="modalCard opportunityModalCard" onclick="event.stopPropagation()">
+    <div class="opportunityModalHeader">
+      <div>
+        <div class="opportunityEyebrow">OPORTUNIDAD</div>
+        <h2 id="oppModalHeading">Ficha de oportunidad</h2>
+      </div>
+      <button id="oppModalCloseX" class="modalCloseX" type="button">← Volver</button>
+    </div>
+
+    <input type="hidden" id="oppModalId">
+
+    <div class="opportunitySection">
+      <div class="opportunitySectionTitle">Datos principales</div>
+      <div class="modalGrid opportunityGrid">
+        <label class="full">Título
+          <input id="oppModalTitle" placeholder="Título de la oportunidad">
+        </label>
+        <label>Cliente
+          <input id="oppModalClient" placeholder="Nombre del cliente">
+          <button type="button" id="oppModalOpenContact" class="oppContactOpenBtn">Ver ficha completa</button>
+        </label>
+        <label>Teléfono
+          <input id="oppModalPhone" placeholder="Teléfono">
+        </label>
+        <label class="full opportunityContactSearchLabel">Buscar contacto existente
+          <input id="oppModalDni" placeholder="Escribe nombre, teléfono o DNI" autocomplete="off">
+          <span class="small">Selecciona una coincidencia para vincular la oportunidad con su ficha.</span>
+          <div id="oppContactMatches" class="oppContactMatches hidden"></div>
+        </label>
+        <label>Importe
+          <input id="oppModalAmount" type="number" step="0.01" placeholder="0,00">
+        </label>
+        <label>Fecha prevista
+          <input id="oppModalDate" type="date">
+        </label>
+        <label class="full">Columna / Estado
+          <select id="oppModalStage"></select>
+        </label>
+        <label class="full">Notas
+          <textarea id="oppModalNotes" rows="4" placeholder="Notas de la oportunidad"></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="opportunitySection">
+      <div class="opportunitySectionTitle">Campos personalizados</div>
+      <div id="oppCustomFieldsView" class="oppCustomFieldsView"></div>
+    </div>
+
+    <div class="opportunityMeta" id="oppMetaInfo"></div>
+
+    <div class="modalActions opportunityActions">
+      <button id="oppModalSave" class="primary">Guardar cambios</button>
+      <button id="oppModalDelete" class="danger">Eliminar oportunidad</button>
+      <button id="oppModalClose" class="secondary">← Volver</button>
+    </div>
+  </div>
+</div>
+
+<div id="stageContextMenu" class="stageContextMenu hidden" onclick="event.stopPropagation()">
+  <button id="stageMenuNewOpp">＋ Nueva oportunidad</button>
+  <button id="stageMenuNewStage">＋ Nueva columna</button>
+  <button id="stageMenuRename">✎ Editar nombre</button>
+</div>
+
+
+
+
+<div id="contactLabelsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
+    <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
+    <div class="waTemplateActions"><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
+  </div>
+</div>
+
+<div id="goalModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Objetivo comercial del mes</h3><button id="goalModalClose" class="secondary">← Volver</button></div>
+    <label>Objetivo de facturación (€)<input id="goalAmountInput" type="number" min="0" step="0.01"></label>
+    <label>Objetivo de oportunidades ganadas<input id="goalOppInput" type="number" min="0" step="1"></label>
+    <div class="waTemplateActions"><button id="goalSave" class="primary">Guardar objetivo</button></div>
+    <div id="goalMsg" class="small"></div>
+  </div>
+</div>
+
+<div id="customFieldsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Campos personalizados de Contactos</h3><button id="customFieldsClose" class="secondary">← Volver</button></div>
+    <div class="customFieldsManagerGrid">
+      <div class="card">
+        <h4>Nuevo campo</h4>
+        <label>Nombre<input id="customFieldName" placeholder="Ej.: Compañía, Fecha renovación, Nº contrato"></label>
+        <label>Tipo<select id="customFieldType">
+          <option value="text">Texto</option>
+          <option value="number">Número</option>
+          <option value="date">Fecha</option>
+          <option value="phone">Teléfono</option>
+          <option value="email">Email</option>
+          <option value="select">Desplegable</option>
+          <option value="boolean">Sí / No</option>
+          <option value="textarea">Texto largo</option>
+        </select></label>
+        <label id="customFieldOptionsWrap" class="hidden">Opciones (una por línea)<textarea id="customFieldOptions" rows="5"></textarea></label>
+        <button id="customFieldCreate" class="primary">Crear campo</button>
+        <div id="customFieldMsg" class="small"></div>
+      </div>
+      <div class="card">
+        <h4>Campos creados</h4>
+        <div id="customFieldsList" class="customFieldsList"></div>
+        <div id="customFieldsEmpty" class="small">No hay campos personalizados.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="multiSearchModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Búsqueda múltiple</h3><button id="multiSearchClose" class="secondary">← Volver</button></div>
+    <p class="small">Pega DNI, transacciones u otros identificadores. Puedes poner uno por línea, separados por comas, punto y coma o tabulaciones. También puedes pegar directamente una columna de Excel.</p>
+    <textarea id="multiSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
+    <div class="multiSearchSheets">
+      <label><input type="checkbox" value="LIQUIDACION" checked> Liquidación</label>
+      <label><input type="checkbox" value="DATA" checked> Data</label>
+      <label><input type="checkbox" value="CLAWBACK" checked> Clawback</label>
+      <label><input type="checkbox" value="AJUSTES" checked> Ajustes</label>
+      <label><input type="checkbox" value="VENTAS" checked> Ventas</label>
+      <label><input type="checkbox" value="BASE DE DATOS"> Contactos</label>
+    </div>
+    <div class="row">
+      <button id="multiSearchRun" class="primary">Buscar todos</button>
+      <button id="multiSearchClear" class="secondary">Limpiar</button>
+    </div>
+    <div id="multiSearchMsg" class="small"></div>
+  </div>
+</div>
+
+<div id="crossSearchModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Cruzar DNI / transacciones</h3><button id="crossSearchClose" class="secondary">← Volver</button></div>
+    <p class="small">Pega una lista de DNI, NIF o números de transacción. El CRM comprobará cada valor en todas las secciones y te mostrará una matriz de coincidencias.</p>
+    <textarea id="crossSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
+    <div class="row">
+      <button id="crossSearchRun" class="primary">Cruzar datos</button>
+      <button id="crossSearchClear" class="secondary">Limpiar</button>
+    </div>
+    <div id="crossSearchMsg" class="small"></div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- TPF-PHYSICAL-SPLIT-v1 -->
+<script src="/js/modules/record-links.js?v=20260906-consolidation-1"></script>
+<script src="/js/modules/task-model.js?v=20260906-consolidation-1"></script>
+<script src="/js/modules/contact-party.js?v=20260906-sales-identity-1"></script>
+<script src="/js/core/00-bootstrap.js?v=20260909-session-local-1"></script>
+<script src="/js/core/api-auth.js?v=20260909-session-1"></script>
+<script src="/js/modules/contacts-sales-core.js?v=20260908-activity-2"></script>
+<script src="/js/modules/whatsapp-scheduling-core.js"></script>
+<script src="/js/modules/agenda-core.js?v=20260906-agenda-compact-2"></script>
+<script src="/js/core/20-main.js?v=20260907-integrity-v6"></script>
+<script src="/js/modules/whatsapp-green-core.js?v=20260909-auth-download-1"></script>
+<script src="/js/modules/automations-core.js?v=20260909-stable-reload-1-20260908-activity-2"></script>
+<script src="/js/core/30-enhancements.js"></script>
+<script src="/js/modules/system-status-core.js?v=20260907-stability-1"></script>
+<!-- TPF-MODULAR-RUNTIME-v1 -->
+<script src="/js/modules/runtime.js?v=20260910-google-audit-1"></script>
+<script src="/js/modules/google-contacts-audit.js?v=20260911-duplicate-detail-1"></script>
+<script src="/js/modules/automation-control-center.js?v=20260908-control-center-back-1"></script>
+<script src="/js/modules/automation-safe-test.js?v=20260910-safe-test-4"></script>
+<script src="/js/modules/automations-operator-folders.js?v=20260906-folders-1"></script>
+<script src="/js/modules/alerts-pro-v2.js?v=20260902-01"></script>
+<script src="/js/modules/contact-profile-clean-v2.js?v=20260908-notes-1"></script>
+<script src="/js/modules/whatsapp.js"></script>
+<script src="/js/modules/whatsapp-programs-pro.js?v=20260910-actions-menu-1"></script>
+<script src="/js/modules/agenda.js"></script>
+<script src="/js/modules/contacts-sales.js?v=20260906-sales-identity-1"></script>
+<script src="/js/modules/automations-settings.js"></script>
+<script src="/js/modules/system-status.js"></script>
+<script src="/js/modules/system-monitoring.js?v=20260905-errors-1"></script>
+<script src="/js/modules/edit-presence.js?v=20260902-01"></script>
+<script src="/js/modules/google-drive-backups.js?v=20260902-01"></script>
+<script src="/js/modules/agenda-detail-pro.js?v=20260906-tasks-unified-2"></script>
+<script src="/js/modules/import-mapping.js?v=20260906-import-10"></script>
+
+<script src="/js/modules/contact-desktop-layout.js?v=20260908-notes-1"></script>
+<script src="/js/modules/contact-notes.js?v=20260908-notes-1"></script>
+<script src="/js/modules/contacts-list-avatars.js?v=20260907-list-avatar-2"></script>
+<script src="/js/modules/contact-authorship.js?v=20260905-11"></script>
+<script src="/js/modules/document-scan-core.js?v=20260906-6"></script>
+<script src="/js/modules/contact-document-scanner.js?v=20260906-validation-4"></script>
+<script src="/js/modules/document-folder-auto.js?v=20260906-1"></script>
+<script src="/js/modules/contact-documents.js?v=20260906-4"></script>
+<script src="/js/modules/whatsapp-received-documents.js?v=20260909-auth-download-1"></script>
+<script src="/js/modules/document-folder-matching.js?v=20260906-1"></script>
+<script src="/js/modules/contact-document-bulk.js?v=20260906-2"></script>
+<script src="/js/modules/browser-navigation.js?v=20260909-draft-order-1"></script>
+<script src="/js/modules/contact-relations.js?v=20260906-sales-identity-1"></script>
+<script src="/js/modules/agenda-settings-labels.js?v=20260906-consolidation-1"></script>
+</body></html>
