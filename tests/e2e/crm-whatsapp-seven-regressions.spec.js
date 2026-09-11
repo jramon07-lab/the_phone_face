@@ -100,10 +100,12 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
 
     const query = normalise(name);
     await page.locator('#waLiveSearch').fill(query);
-    await expect.poll(async () => rows.count(), { timeout: 10000 }).toBeGreaterThan(0);
-    const filteredNames = await rows.locator('.waChatRowTop b').allTextContents();
-    expect(filteredNames.every(value => normalise(value).includes(query)),
-      'Una consulta alfabética no puede dejar pasar todos los teléfonos por includes("")').toBe(true);
+    // La lista anterior sigue visible durante los 220 ms de debounce: contar
+    // filas no demuestra que la búsqueda haya terminado. Esperar el contenido.
+    await expect.poll(async () => {
+      const filteredNames = await rows.locator('.waChatRowTop b').allTextContents();
+      return filteredNames.length > 0 && filteredNames.every(value => normalise(value).includes(query));
+    }, { timeout: 10000, message: 'La búsqueda debe terminar y no admitir teléfonos por includes("")' }).toBe(true);
 
     await page.locator('#waLiveSearch').fill('');
     await expect.poll(async () => rows.count(), { timeout: 10000 }).toBeGreaterThan(10);
