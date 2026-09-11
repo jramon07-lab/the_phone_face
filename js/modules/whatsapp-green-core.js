@@ -459,11 +459,12 @@ async function loadWhatsAppLive(){
 
 function renderWhatsAppChats(){
   const q=String($("waLiveSearch")?.value||"").toLowerCase().trim();
+  const phoneQuery=q.replace(/\D/g,"");
   let rows=waLiveState.chats||[];
   if(waLiveState.filter==="groups")rows=rows.filter(c=>String(c.id||"").includes("@g.us"));
   if(waLiveState.filter==="contacts")rows=rows.filter(c=>String(c.id||"").includes("@c.us"));
   if(waLiveState.filter==="unread")rows=rows.filter(c=>waUnreadCount(c.id)>0);
-  if(q)rows=rows.filter(c=>String(c.name||c.id||"").toLowerCase().includes(q)||waNormalizePhone(c.id).includes(q.replace(/\D/g,"")));
+  if(q)rows=rows.filter(c=>String(c.name||c.id||"").toLowerCase().includes(q)||(phoneQuery&&waNormalizePhone(c.id).includes(phoneQuery)));
 
   $("waLiveChats").innerHTML=rows.map(c=>{
     const active=waLiveState.selected?.id===c.id?" active":"";
@@ -1232,7 +1233,9 @@ async function waAutoSendDueSchedules(){
 setInterval(waAutoSendDueSchedules,30000); setTimeout(waAutoSendDueSchedules,5000);
 
 $("waLiveRefresh").onclick=loadWhatsAppLive;
-$("waLiveSearch").addEventListener("input",renderWhatsAppChats);
+let waLiveSearchTimer=0;
+function waHandleLiveSearch(){clearTimeout(waLiveSearchTimer);waLiveSearchTimer=setTimeout(()=>renderWhatsAppChats(),220)}
+$("waLiveSearch").addEventListener("input",waHandleLiveSearch);
 document.querySelectorAll("[data-wa-tab]").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("[data-wa-tab]").forEach(x=>x.classList.remove("active"));
   b.classList.add("active");
@@ -1336,6 +1339,7 @@ function waTrackDirection(chatId,msg,options={}){
 const _waRenderChatsBase=renderWhatsAppChats;
 renderWhatsAppChats=function(){
   const q=String($("waLiveSearch")?.value||"").toLowerCase().trim();
+  const phoneQuery=q.replace(/\D/g,"");
   let rows=[...(waLiveState.chats||[])];
   const f=waLiveState.filter||"all";
 
@@ -1350,7 +1354,7 @@ renderWhatsAppChats=function(){
   if(q)rows=rows.filter(c=>{
     const meta=waMeta(c.id);
     return String(c.name||c.id||"").toLowerCase().includes(q)
-      ||waNormalizePhone(c.id).includes(q.replace(/\D/g,""))
+      ||(phoneQuery&&waNormalizePhone(c.id).includes(phoneQuery))
       ||(meta.tags||[]).join(" ").toLowerCase().includes(q);
   });
 

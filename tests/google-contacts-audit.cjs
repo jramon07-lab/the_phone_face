@@ -9,7 +9,7 @@ const mobile=fs.readFileSync('js/mobile-app.js','utf8');
 assert.match(html,/id="googleContactsAuditBtn"/,'debe existir el acceso a la comparación');
 assert.match(html,/google-contacts-audit\.js\?v=20260911-duplicate-detail-1/,'debe cargar el comparador con versión nueva');
 assert.match(source,/padding:14px 0 42px/,'el botón debe quedar separado de la insignia flotante de pruebas');
-assert.match(html,/runtime\.js\?v=20260911-search-debounce-1/,'debe renovar los módulos de búsqueda');
+assert.match(html,/runtime\.js\?v=20260911-search-root-1/,'debe renovar los módulos de búsqueda');
 assert.match(fs.readFileSync('js/modules/runtime.js','utf8'),/contacts-list-ui\.js'\?'20260910-nickname-search-1'/,'debe renovar el buscador de PC');
 assert.match(fs.readFileSync('movil/index.html','utf8'),/mobile-app\.js\?v=20260910-nickname-search-1/,'debe renovar el buscador móvil');
 assert.match(source,/people\/me\/connections/,'debe leer todos los contactos de Google');
