@@ -1,6 +1,9 @@
 {
   "version": 2,
-  "crons": [{"path":"/api/crm-backup?action=cron","schedule":"30 1,2 * * *"}],
+  "crons": [
+    {"path":"/api/crm-backup?action=cron","schedule":"30 1,2 * * *"},
+    {"path":"/api/telegram-agenda","schedule":"* * * * *"}
+  ],
   "routes": [
     {
       "src": "^/ocr-assets/tesseract-5\\.1\\.1/tesseract\\.min\\.js$",

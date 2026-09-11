@@ -527,7 +527,9 @@ async function checkAllNotifications(){
     }
 
     // AGENDA
-    if(browserPrefs.agenda_browser || teamNotifyPrefs.agenda_telegram){
+    // Telegram de Agenda se entrega desde el servidor aunque el CRM esté cerrado.
+    // El navegador conserva exclusivamente sus avisos locales para evitar duplicados.
+    if(browserPrefs.agenda_browser){
       const {data}=await sb.from("agenda_items").select("*")
         .eq("status","pending")
         .limit(100);
@@ -551,9 +553,6 @@ async function checkAllNotifications(){
           };
         }
 
-        if(teamNotifyPrefs.agenda_telegram){
-          await sendTelegramNotification("agenda",row);
-        }
       }
     }
   }catch(e){
