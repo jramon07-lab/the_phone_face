@@ -2,6 +2,7 @@
 const fs=require('node:fs'),assert=require('node:assert');
 const inline=fs.readFileSync('js/modules/contact-google-inline.js','utf8');
 const wa=fs.readFileSync('js/modules/whatsapp-ui-fixes.js','utf8');
+const main=fs.readFileSync('js/core/20-main.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 assert.match(html,/contact-google-inline\.js/,'inline module must be loaded');
 assert.match(inline,/Nombre actual de WhatsApp/,'WhatsApp name must be shown');
@@ -44,7 +45,14 @@ assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when th
 assert.match(inline,/original=safe\(chat\.name\)[\s\S]*confirmed\?unifiedVisible[\s\S]*original\|\|unifiedVisible/,'WhatsApp must keep every original name, including No Name, until the user confirms the correction');
 assert.match(inline,/CRM, Google y WhatsApp/,'the same three-source summary must appear in the customer profile and WhatsApp panel');
 assert.match(inline,/WhatsApp dentro del CRM/,'the summary must distinguish the CRM display from the public WhatsApp name');
-assert.match(inline,/state\.ok\?'':/,'a fully confirmed contact must hide the stale review action');
+assert.match(inline,/state\.ok\?'Revisar o modificar':'Revisar y unificar'/,'an up-to-date contact must remain reviewable');
+assert.match(inline,/Cuenta de Google/,'both contact surfaces must identify the connected Google account');
+assert.match(inline,/Cambiar cuenta de Google/,'the user must be able to switch to the Google Contacts account they are checking');
+assert.match(inline,/if\(!googleAccountEmail\(\)\)/,'saving must be blocked until the Google account is identified');
+assert.match(main,/auth\/contacts openid email/,'Google authorization must include identity scopes');
+assert.match(main,/oauth2\/v3\/userinfo/,'the connected Google account email must be resolved');
+assert.match(main,/selectAccount\?"select_account"/,'switching Google account must force an account choice');
+assert.match(main,/tpf:google-contacts-changed/,'contact panels must refresh after selecting a Google account');
 assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
 assert.match(wa,/tpfCreateFirst:''/,'WhatsApp display name must not be assumed to be the legal name');
 console.log('contact Google/WhatsApp inline workflow assertions passed');

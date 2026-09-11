@@ -785,9 +785,20 @@ function selectedAgendaReminderMinutes(){
 
 
 const GOOGLE_CLIENT_ID='494265592765-53v3qg685qp06fh47vl1n2cbbbu5h4nk.apps.googleusercontent.com';
-const GOOGLE_CONTACTS_SCOPE="https://www.googleapis.com/auth/contacts";
+const GOOGLE_CONTACTS_SCOPE="https://www.googleapis.com/auth/contacts openid email";
 let googleContactsToken=sessionStorage.getItem("tpf_google_contacts_token")||"";
 let googleTokenClient=null;
+
+async function cacheGoogleContactsAccount(token=googleContactsToken){
+  if(!token)return "";
+  try{
+    const res=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{"Authorization":"Bearer "+token}});
+    if(!res.ok)return "";
+    const info=await res.json(),email=String(info?.email||"").trim();
+    if(email)sessionStorage.setItem("tpf_google_contacts_email",email);
+    return email;
+  }catch(_){return ""}
+}
 
 function updateGoogleContactsUI(){
   const connected=!!googleContactsToken;
@@ -801,32 +812,37 @@ function initGoogleContacts(){
     googleTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:GOOGLE_CLIENT_ID,
       scope:GOOGLE_CONTACTS_SCOPE,
-      callback:(resp)=>{
+      callback:async(resp)=>{
         if(resp.error){alert("Google: "+resp.error);return}
         googleContactsToken=resp.access_token||"";
         sessionStorage.setItem("tpf_google_contacts_token",googleContactsToken);
+        sessionStorage.removeItem("tpf_google_contacts_email");
+        await cacheGoogleContactsAccount(googleContactsToken);
         updateGoogleContactsUI();
+        window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));
       }
     });
   }
   return true;
 }
-async function connectGoogleContacts(){
+async function connectGoogleContacts(selectAccount=false){
   if(!initGoogleContacts()){
     setTimeout(connectGoogleContacts,700);return;
   }
-  googleTokenClient.requestAccessToken({prompt:googleContactsToken?"":"consent"});
+  googleTokenClient.requestAccessToken({prompt:selectAccount?"select_account":googleContactsToken?"":"consent"});
 }
 function disconnectGoogleContacts(){
   const token=googleContactsToken;
   googleContactsToken="";
   sessionStorage.removeItem("tpf_google_contacts_token");
+  sessionStorage.removeItem("tpf_google_contacts_email");
   updateGoogleContactsUI();
+  window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));
   if(token&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(token,()=>{});
 }
 if($("connectGoogleContacts"))$("connectGoogleContacts").onclick=connectGoogleContacts;
 if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").onclick=disconnectGoogleContacts;
-window.addEventListener("load",()=>{initGoogleContacts();updateGoogleContactsUI();});
+window.addEventListener("load",()=>{initGoogleContacts();updateGoogleContactsUI();if(googleContactsToken&&!sessionStorage.getItem("tpf_google_contacts_email"))cacheGoogleContactsAccount();});
 
 function normGooglePhone(v){return String(v||"").replace(/\D/g,"").replace(/^34(?=\d{9}$)/,"");}
 async function googleApi(path,options={}){
