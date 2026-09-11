@@ -13,5 +13,5 @@ assert.doesNotMatch(core,/Promise\.all\(\[waRefreshHybridSummary\(\),waLiveState
 assert.match(core,/before!==waStableSig\(waLiveState\.chats\|\|\[\]\)/,'an unchanged summary must not rebuild the conversation list');
 assert.doesNotMatch(fixes,/setInterval\(\(\)=>\{if\(!waViewVisible\(\)\)return;[^}]*patchMessages/,'the maintenance timer must not traverse every visible message repeatedly');
 assert.match(html,/whatsapp-green-core\.js\?v=20260911-freeze-guard-2/,'the browser must load the lightweight WhatsApp core');
-assert.match(html,/runtime\.js\?v=20260910-google-audit-1/,'the stable runtime loader must remain unchanged');
+assert.match(html,/runtime\.js\?v=20260911-search-debounce-1/,'the browser must load the debounced search runtime');
 console.log('WhatsApp history and background refresh remain bounded');
