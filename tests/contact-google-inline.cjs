@@ -31,7 +31,7 @@ assert.match(inline,/!wantedPhone&&wantedEmail/,'duplicate cleanup must never in
 assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must block accidental duplicates');
 assert.match(inline,/Google Contacts no está conectado/,'a missing Google session must not be reported as zero contacts');
 assert.match(inline,/Conectar Google y buscar/,'the correction dialog must offer reconnection and retry');
-assert.match(inline,/Elige cuál de los contactos duplicados/,'multiple Google contacts must require an explicit selection');
+assert.match(inline,/Elige el contacto exacto|Elige expresamente el contacto exacto/,'multiple or differently named Google contacts must require an explicit selection');
 assert.match(inline,/Eliminar de Google los otros contactos duplicados/,'duplicate cleanup must be an explicit opt-in');
 assert.match(inline,/window\.confirm/,'duplicate deletion must require a final confirmation');
 assert.match(inline,/:deleteContact/,'confirmed Google duplicates must be deleted through People API');
