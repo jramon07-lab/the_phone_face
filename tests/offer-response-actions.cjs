@@ -4,6 +4,7 @@ const fs=require('node:fs');
 
 const migration=fs.readFileSync('supabase/migrations/20260911195620_offer_response_actions.sql','utf8');
 const phoneKeys=fs.readFileSync('supabase/migrations/20260911201500_contact_phone_key_normalization.sql','utf8');
+const instanceStatus=fs.readFileSync('supabase/migrations/20260911203000_offer_response_instance_status.sql','utf8');
 const runner=fs.readFileSync('supabase/functions/crm-automation-runner/index.ts','utf8');
 
 for(const label of ['Me interesa','No me interesa','Quiero otra oferta']){
@@ -25,6 +26,8 @@ assert(migration.includes('Perfecto, revisamos otras opciones'),'falta el acuse 
 assert(migration.includes('crm_offer_outgoing_messages'),'las respuestas deben enlazarse con el mensaje exacto');
 assert.match(phoneKeys,/translate\(lower\(e\.key\),'áéíóúüñ','aeiouun'\) like '%telef%'/);
 assert.match(phoneKeys,/tpf_whatsapp_chat_id/);
+assert.match(instanceStatus,/when new\.action='accept' then 'accepted' else 'lost'/);
+assert.match(instanceStatus,/crm_offer_response_instance_status/);
 assert(migration.includes('button_ignored'),'una pulsación tardía no debe sobrescribir estados finales');
 assert(migration.includes('crm_telegram_business_events'),'las decisiones deben llegar a Telegram desde servidor');
 assert(runner.includes('hasOfferDecision'),'el runner debe distinguir decisiones de textos normales');
