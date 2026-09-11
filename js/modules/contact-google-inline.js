@@ -9,7 +9,7 @@ const field=(d,...keys)=>{for(const key of keys)if(safe(d?.[key]))return safe(d[
 const current=()=>{try{return typeof currentContact!=='undefined'?currentContact:null}catch(_){return null}};
 const selectedWa=()=>{try{return typeof waLiveState!=='undefined'?waLiveState?.selected:null}catch(_){return null}};
 const matchedWa=()=>{try{return typeof waLiveState!=='undefined'?waLiveState?.contact:null}catch(_){return null}};
-let activeId='',matches=[],busy=false,waSignature='',correctionRow=null,correctionMatches=[],correctionWhatsapp='',correctionChat=null,correctionGoogleError='',correctionReturn='profile';
+let activeId='',matches=[],busy=false,waSignature='',correctionRow=null,correctionMatches=[],correctionWhatsapp='',correctionChat=null,correctionGoogleError='',correctionReturn='profile',waNameObserver=null,waNameRepairQueued=false;
 
 function contactData(row=current()){
  const d=row?.data||{},given=field(d,'NOMBRE'),family=field(d,'APELLIDOS','APELLIDO'),legacy=field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL');
@@ -87,15 +87,23 @@ async function refreshProfile(){
  if(!connected){matches=[];card.innerHTML=`<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">Google no conectado</span><p>${wa?`WhatsApp muestra: <b>${esc(wa)}</b>`:'Todavía no se ha detectado su nombre de WhatsApp.'}</p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Corregir nombre y apodo</button><button id="tpfInlineConnect" class="secondary" type="button">Conectar Google</button></div>`;$('tpfInlineEdit').onclick=openCorrection;$('tpfInlineConnect').onclick=()=>connectGoogleContacts();return}
  try{matches=await searchGoogle(c);if(activeId!==String(current()?.id||''))return;const status=matches.length===0?'No está en Google':matches.length===1?'Contacto localizado':'Posibles duplicados';const cls=matches.length===1?'ok':'warn';const google=matches.length===1?googleView(matches[0]):null;card.innerHTML=`<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus ${cls}">${esc(status)}</span><p>CRM: <b>${esc(c.name)}</b>${c.nickname?` · Apodo: ${esc(c.nickname)}`:''}</p>${google?`<p>Google: <b>${esc(google.name)}</b>${google.nickname?` · Apodo: ${esc(google.nickname)}`:''}</p>`:''}<p>${wa?`WhatsApp: <b>${esc(wa)}</b>`:'WhatsApp: nombre aún no detectado'}</p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Corregir aquí</button></div>`;$('tpfInlineEdit').onclick=openCorrection}catch(e){card.innerHTML=`<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">No se pudo comprobar</span><p>${esc(e?.message||'Vuelve a conectar Google Contacts.')}</p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Corregir en CRM</button></div>`;$('tpfInlineEdit').onclick=openCorrection}
 }
+function applyUnifiedWhatsappName(){
+ const chat=selectedWa(),row=matchedWa();if(!chat||!row||String(chat.id||'').includes('@g.us'))return'';
+ const c=contactData(row),preferred=unifiedVisible(c.first,c.last,c.nickname);if(!preferred)return'';
+ for(const id of ['waChatName','waSideName']){const el=$(id);if(el&&el.textContent!==preferred)el.textContent=preferred}
+ const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active&&active.textContent!==preferred)active.textContent=preferred;
+ return preferred;
+}
+function scheduleWhatsappNameRepair(){if(waNameRepairQueued)return;waNameRepairQueued=true;queueMicrotask(()=>{waNameRepairQueued=false;applyUnifiedWhatsappName()})}
+function watchWhatsappNames(){
+ if(waNameObserver)return;const targets=[$('waChatName'),$('waSideName'),$('waLiveChats')].filter(Boolean);if(!targets.length)return;
+ waNameObserver=new MutationObserver(scheduleWhatsappNameRepair);targets.forEach(target=>waNameObserver.observe(target,{childList:true,subtree:true,characterData:true}));
+}
 function refreshWhatsapp(){
  rememberWhatsapp();
  const chat=selectedWa(),row=matchedWa(),host=$('waContactCard');
  if(!chat||!host||String(chat.id||'').includes('@g.us'))return $('tpfWaAliasCard')?.remove();
- const c=contactData(row),preferred=row?unifiedVisible(c.first,c.last,c.nickname):'';
- if(preferred){
-  if($('waChatName'))$('waChatName').textContent=preferred;
-  const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active)active.textContent=preferred;
- }
+ const c=contactData(row),preferred=applyUnifiedWhatsappName();
  const name=safe(chat.name);
  let card=$('tpfWaAliasCard');if(!card){card=document.createElement('section');card.id='tpfWaAliasCard';const state=$('waContactState');state?.insertAdjacentElement('afterend',card)}if(!card)return;
  const ignored=ignoredNames()[phone(chat.id)]===name;
@@ -112,6 +120,6 @@ function refreshWhatsapp(){
  const correct=$('tpfWaUnifiedReview');if(correct)correct.onclick=()=>openWhatsappCorrection(row,name,chat);
  const create=$('tpfWaCreateReview');if(create)create.onclick=()=>window.createWaContact?.();
 }
-function install(){ensureStyles();ensureModal();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-updated',()=>setTimeout(refreshProfile,80));window.addEventListener('tpf:wa-chat-changing',()=>{waSignature='';setTimeout(refreshWhatsapp,350)});setInterval(()=>{const view=$('view-whatsapplive');if(view&&!view.classList.contains('hidden'))refreshWhatsapp()},2000);window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp}}
+function install(){ensureStyles();ensureModal();watchWhatsappNames();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-updated',()=>setTimeout(refreshProfile,80));window.addEventListener('tpf:wa-chat-changing',()=>{waSignature='';setTimeout(refreshWhatsapp,350)});setInterval(()=>{const view=$('view-whatsapplive');if(view&&!view.classList.contains('hidden'))refreshWhatsapp()},2000);window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp}}
 M.register('contact-google-inline',{install});
 })();
