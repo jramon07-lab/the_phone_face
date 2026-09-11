@@ -121,11 +121,11 @@ async function run(){
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'unread',''),x=>x.id),['unread']);
 
   context.renderWhatsAppChats();flushFrames();
-  assert.equal(rowCount(),80,'la primera pintura debe estar acotada');
-  assert.match(list.innerHTML,/waLiveLoadMore[^>]*>Mostrar más \(81\)<\/button>/);
+  assert.equal(rowCount(),40,'la primera pintura debe estar acotada');
+  assert.match(list.innerHTML,/waLiveLoadMore[^>]*>Mostrar más \(121\)<\/button>/);
   list.scrollTop=800;list.dispatch('scroll');flushFrames();
-  assert.equal(rowCount(),160,'el scroll debe cargar el siguiente lote');
-  assert.match(list.innerHTML,/Mostrar más \(1\)/);
+  assert.equal(rowCount(),80,'el scroll debe cargar el siguiente lote');
+  assert.match(list.innerHTML,/Mostrar más \(81\)/);
 
   search.value='cliente 125';
   let futureSearchCalls=0;search.addEventListener('input',()=>{futureSearchCalls+=1});

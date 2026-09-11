@@ -478,7 +478,7 @@ function renderWhatsAppChats(){
     const preview=(live?.text||hybridPreview||serverPreview||(String(c.id||"").includes("@g.us")?"Grupo":""));
     const previewTime=live?.timestamp||waMessageTimestamp(hybridLast)||c.lastMessageTime||c.lastMessageTimestamp||c.timestamp||c.lastActivityTime;
     const unread=Math.max(waUnreadCount(c.id),waChatServerUnread(c));
-    return `<div class="waChatRow${active}${unread?" waHasUnread":""}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
+    return `<div class="waChatRow${active}${unread?" waHasUnread":""}" data-wa-chat-id="${esc(c.id)}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
       <div class="waChatRowMain">
         <div class="waChatRowTop"><div><b>${esc(name)}</b>${savedIdentity?.nickname?`<small class="tpfWaListNickname">${esc(savedIdentity.nickname)}</small>`:''}</div><span>${esc(waTime(previewTime))}</span></div>
@@ -487,6 +487,15 @@ function renderWhatsAppChats(){
     </div>`;
   }).join("")||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
   setTimeout(()=>hydrateWaAvatars(rows.map(c=>c.id)),20);
+}
+
+function waMarkActiveChatRow(chatId){
+  const selected=String(chatId||"");
+  document.querySelectorAll("#waLiveChats .waChatRow").forEach(row=>{
+    const active=String(row.dataset.waChatId||"")===selected;
+    row.classList.toggle("active",active);
+    if(active){row.classList.remove("waHasUnread");row.querySelector(".waUnreadBadge")?.remove()}
+  });
 }
 
 window.selectWhatsAppChat=async(chatId)=>{
@@ -502,7 +511,7 @@ window.selectWhatsAppChat=async(chatId)=>{
   waLiveState.history=[];
   $("waMessages").innerHTML='<div class="waLiveEmpty">Cargando conversación…</div>';
   waSetUnread(chatId,0);
-  renderWhatsAppChats();
+  waMarkActiveChatRow(chatId);
   try{localStorage.setItem("tpf_wa_unread",JSON.stringify(waLiveState.unread||{}))}catch(_){}
   waApi("read",{chatId}).catch(()=>{});
   $("waChatEmpty").classList.add("hidden");
@@ -1369,7 +1378,7 @@ renderWhatsAppChats=function(){
     if(meta.favorite)extras.push("★");
     if(waIsUnanswered(c.id))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
 
-    return `<div class="waChatRow${active}${unread?" waHasUnread":""}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
+    return `<div class="waChatRow${active}${unread?" waHasUnread":""}" data-wa-chat-id="${esc(c.id)}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
       <div class="waChatRowMain">
         <div class="waChatRowTop"><div><b>${esc(name)}</b>${savedIdentity?.nickname?`<small class="tpfWaListNickname">${esc(savedIdentity.nickname)}</small>`:''}</div><span>${esc(waTime(previewTime))}</span></div>
@@ -1469,7 +1478,7 @@ window.selectWhatsAppChat=async(chatId)=>{
   }catch(_){}
 
   waSetUnread(id,0);
-  try{renderWhatsAppChats()}catch(_){}
+  try{waMarkActiveChatRow(id)}catch(_){}
   try{waUpdateStats()}catch(_){}
   waApi("read",{chatId}).catch(()=>{});
   waRefreshChatTopButtons();

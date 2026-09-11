@@ -2,7 +2,7 @@
 'use strict';
 const M=window.TPFModules;if(!M)return;
 
-const CHAT_PAGE_SIZE=80;
+const CHAT_PAGE_SIZE=40;
 const AVATAR_BATCH_SIZE=12;
 const AVATAR_MAX_RETRIES=3;
 const waPerformancePage={key:'',limit:CHAT_PAGE_SIZE,total:0,loadingMore:false,scrollFrame:0,avatarFrame:0};
@@ -195,7 +195,7 @@ function waPerformanceRenderRow(chat){
   if(meta.pinned)extras.push('📌');
   if(meta.favorite)extras.push('★');
   if(waPerformanceUnanswered(chat))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
-  return `<div class="waChatRow${active}${unread?' waHasUnread':''}" onclick="selectWhatsAppChat('${String(chat.id).replaceAll("'","\\'")}')"><div class="waAvatar${avatar?' hasPhoto':''}" data-wa-avatar-id="${esc(chat.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?'':esc(initials)}</div><div class="waChatRowMain"><div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(typeof waTime==='function'?waTime(waPerformancePreviewTime(chat)):'')}</span></div><div class="waChatPreviewLine"><div class="waChatPreview">${esc(waPerformancePreview(chat))}</div>${unread?`<span class="waUnreadBadge">${unread>99?'99+':unread}</span>`:''}</div>${extras.length?`<div class="waChatMeta">${extras.join(' ')}</div>`:''}</div></div>`;
+  return `<div class="waChatRow${active}${unread?' waHasUnread':''}" data-wa-chat-id="${esc(chat.id)}" onclick="selectWhatsAppChat('${String(chat.id).replaceAll("'","\\'")}')"><div class="waAvatar${avatar?' hasPhoto':''}" data-wa-avatar-id="${esc(chat.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?'':esc(initials)}</div><div class="waChatRowMain"><div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(typeof waTime==='function'?waTime(waPerformancePreviewTime(chat)):'')}</span></div><div class="waChatPreviewLine"><div class="waChatPreview">${esc(waPerformancePreview(chat))}</div>${unread?`<span class="waUnreadBadge">${unread>99?'99+':unread}</span>`:''}</div>${extras.length?`<div class="waChatMeta">${extras.join(' ')}</div>`:''}</div></div>`;
 }
 function waPerformanceLoadMore(){
   if(waPerformancePage.loadingMore||waPerformancePage.limit>=waPerformancePage.total)return;
