@@ -17,6 +17,7 @@ for(const action of ['Usar datos del CRM','Usar datos de Google','Usar WhatsApp 
 for(const field of ['tpfInlineFirst','tpfInlineLast','tpfInlineNickname'])assert.ok(inline.includes(field),`missing separate contact field: ${field}`);
 assert.match(inline,/Así quedará en los tres sitios/,'the preview must state that all three displays are identical');
 assert.match(inline,/writeGoogle\(person,\{\.\.\.c,name:full\},first,last,visible\)/,'Google alias must receive the unified visible name used by calls');
+assert.match(inline,/names:\[\{givenName:googleVisible,familyName:''\}\]/,'Google Contacts primary name must show the same unified visible name');
 assert.match(inline,/people\/me\/connections/,'Google matching must scan all contacts, not trust a partial search');
 assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must block accidental duplicates');
 assert.match(inline,/Google Contacts no está conectado/,'a missing Google session must not be reported as zero contacts');
