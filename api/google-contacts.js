@@ -55,7 +55,7 @@ module.exports=async function(req,res){
    let email='';const info=await request('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+tokens.access_token}});if(info.ok)email=String((await info.json()).email||'').trim();
    const saved=await request(SB+'/rest/v1/crm_external_credentials?on_conflict=provider',{method:'POST',headers:{...serviceHeaders(),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({provider:PROVIDER,encrypted_value:seal({refresh_token:tokens.refresh_token,email}),updated_by:state.userId,updated_at:new Date().toISOString()})});
    if(!saved.ok)throw fail(503,'No se pudo guardar la autorización común.');
-   res.setHeader('Set-Cookie','tpf_google_contacts_nonce=; Path=/api/google-contacts; HttpOnly; Secure; SameSite=Lax; Max-Age=0');res.setHeader('Location',ORIGIN+'/?googleContacts=connected');return res.status(303).end();
+   res.setHeader('Set-Cookie','tpf_google_contacts_nonce=; Path=/api/; HttpOnly; Secure; SameSite=Lax; Max-Age=0');res.setHeader('Location',ORIGIN+'/?googleContacts=connected');return res.status(303).end();
   }
   const who=await identity(req);
   if(action==='status'){
@@ -67,7 +67,7 @@ module.exports=async function(req,res){
    if(req.method!=='POST')throw fail(405,'Método no permitido.');if(!who.permissions.is_admin)throw fail(403,'Solo el administrador puede conectar Google Contacts.');
    if('https://'+String(req.headers.host||'').toLowerCase()!==ORIGIN)throw fail(409,'Abre la dirección estable del CRM para conectar Google Contacts.');
    const nonce=crypto.randomBytes(24).toString('hex'),verifier=crypto.randomBytes(48).toString('base64url'),state=seal({userId:who.permissions.user_id,nonce,verifier,exp:Date.now()+600000});
-   res.setHeader('Set-Cookie','tpf_google_contacts_nonce='+nonce+'; Path=/api/google-contacts; HttpOnly; Secure; SameSite=Lax; Max-Age=600');
+   res.setHeader('Set-Cookie','tpf_google_contacts_nonce='+nonce+'; Path=/api/; HttpOnly; Secure; SameSite=Lax; Max-Age=600');
    const q=new URLSearchParams({client_id:CLIENT_ID,redirect_uri:CALLBACK,response_type:'code',scope:SCOPE,access_type:'offline',prompt:'consent select_account',state,code_challenge:crypto.createHash('sha256').update(verifier).digest('base64url'),code_challenge_method:'S256'});
    return json(res,200,{ok:true,url:'https://accounts.google.com/o/oauth2/v2/auth?'+q});
   }
