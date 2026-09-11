@@ -415,9 +415,18 @@ async function waSyncSharedView(){
   const view=$("view-whatsapplive"),app=$("app");
   if(document.hidden||!view||view.classList.contains('hidden')||app?.classList.contains('hidden')||waLiveState.loading){waScheduleSharedSync();return}
   waSharedSyncBusy=true;
+  const chatId=waLiveState.selected?.id,selection=waLiveState.selectionVersion;
   try{
     const ok=await waRefreshHybridSummary();
-    if(ok===false)waSharedSyncStatus(false);
+    if(ok===false){waSharedSyncStatus(false);return}
+    // El resumen no contiene el historial abierto. Consultar sólo ese chat,
+    // incluso sin avisos: el cargador limita mensajes y no repinta si son iguales.
+    // No iniciar otra carga si el usuario cambió de conversación o salió.
+    if(chatId&&waLiveState.selected?.id===chatId&&waLiveState.selectionVersion===selection&&
+       !document.hidden&&!view.classList.contains('hidden')&&!app?.classList.contains('hidden')){
+      const historyOk=await window.loadWaHistory(false);
+      if(waLiveState.selected?.id===chatId&&waLiveState.selectionVersion===selection&&historyOk===false)waSharedSyncStatus(false);
+    }
   }catch(e){waSharedSyncStatus(false)}
   finally{waSharedSyncBusy=false;waScheduleSharedSync()}
 }
