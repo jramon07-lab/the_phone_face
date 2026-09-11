@@ -16,9 +16,12 @@ assert.match(inline,/MutationObserver\(scheduleWhatsappNameRepair\)/,'automatic 
 assert.match(inline,/Revisar y unificar/,'all linked WhatsApp names must use one unified review');
 for(const action of ['Usar datos del CRM','Usar datos de Google','Usar WhatsApp como apodo','Nombre','Apellidos','Apodo visible','Guardar en los tres','Ignorar este nombre'])assert.ok(inline.includes(action),`missing unified decision: ${action}`);
 for(const field of ['tpfInlineFirst','tpfInlineLast','tpfInlineNickname'])assert.ok(inline.includes(field),`missing separate contact field: ${field}`);
-assert.match(inline,/Así quedará en los tres sitios/,'the preview must state that all three displays are identical');
-assert.match(inline,/writeGoogle\(person,\{phone:targetPhone[\s\S]*name:full\},first,last,visible\)/,'Google alias must receive the unified visible name used by calls');
-assert.match(inline,/names:\[\{givenName:googleVisible,familyName:''\}\]/,'Google Contacts primary name must show the same unified visible name');
+assert.match(inline,/Así quedarán los datos/,'the preview must show the final field layout before saving');
+assert.match(inline,/writeGoogle\(person,\{phone:targetPhone[\s\S]*name:full\},first,last,nickname\)/,'Google must receive the real nickname instead of the combined display name');
+assert.match(inline,/names:\[\{givenName,familyName\}\]/,'Google Contacts must keep first and last names in their native fields');
+assert.match(inline,/nicknames:googleNickname\?\[\{value:googleNickname,type:'DEFAULT'\}\]/,'Google Contacts must only store the real nickname');
+assert.match(inline,/verifyGoogleSaved\(savedGoogle,targetPhone,first,last,nickname\)/,'Google must confirm every separated name field before CRM changes');
+assert.match(inline,/Google no confirmó correctamente el nombre, los apellidos y el apodo/,'failed field verification must preserve all duplicates');
 assert.match(inline,/people\/me\/connections/,'Google matching must scan all contacts, not trust a partial search');
 assert.match(inline,/!wantedPhone&&wantedEmail/,'duplicate cleanup must never include a different phone merely because it shares an email');
 assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must block accidental duplicates');
@@ -30,7 +33,7 @@ assert.match(inline,/window\.confirm/,'duplicate deletion must require a final c
 assert.match(inline,/:deleteContact/,'confirmed Google duplicates must be deleted through People API');
 assert.match(inline,/Se creará un contacto nuevo en Google/,'a confirmed empty Google search must clearly announce contact creation');
 assert.match(inline,/if\(!person&&!window\.confirm/,'creating a missing Google contact must require confirmation');
-assert.match(inline,/verifyGoogleSaved\(savedGoogle,targetPhone\)/,'Google creation or update must be verified before CRM changes and duplicate cleanup');
+assert.match(inline,/verifiedGoogle=await verifyGoogleSaved\(savedGoogle,targetPhone,first,last,nickname\)[\s\S]*await writeCrm/,'Google creation or update must be verified before CRM changes and duplicate cleanup');
 assert.match(inline,/No se eliminará ningún duplicado/,'a failed Google verification must preserve all duplicate contacts');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
 assert.match(inline,/Es otra persona: crear una segunda ficha/,'a shared phone must offer an explicit second-person decision');
