@@ -78,8 +78,18 @@ async function completeFromCallback(callback,chatId,task){
   }
   await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Tarea marcada como completada ✅'});
   const original=String(callback?.message?.text||task.title||'Tarea');
-  await updateCallbackMessage(callback,{text:`${original}\n\n✅ COMPLETADA`,reply_markup:{inline_keyboard:[]}});
+  await updateCallbackMessage(callback,{text:`${original}\n\n✅ COMPLETADA`,reply_markup:T.reopenKeyboard(task.id)});
   return {completed:true,taskId:task.id};
+}
+
+async function reopenFromCallback(callback,task,baseUrl=''){
+  if(task.status==='completed'){
+    await sbRequest(`agenda_items?id=eq.${encodeURIComponent(task.id)}&status=eq.completed`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:'pending'}});
+  }
+  await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Tarea reactivada ↩️'});
+  const original=String(callback?.message?.text||task.title||'Tarea').replace(/\n\n✅ COMPLETADA$/,'');
+  await updateCallbackMessage(callback,{text:original,reply_markup:T.initialKeyboard(task.id,{phone:task.customer_phone,baseUrl})});
+  return {reopened:true,taskId:task.id};
 }
 
 async function rescheduleFromCallback(callback,task,newAt){
@@ -94,11 +104,12 @@ async function handleCallback(callback,chatId,baseUrl=''){
   const found=await taskForCallback(callback,chatId);
   if(!found.parsed||!found.task)return {completed:false,...found};
   const {parsed,task}=found;
-  if(parsed.action==='complete')return completeFromCallback(callback,chatId,task);
+  if(parsed.action==='reopen')return reopenFromCallback(callback,task,baseUrl);
   if(task.status==='completed'){
     await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Esta tarea ya está completada.',show_alert:true});
     return {completed:true,taskId:task.id};
   }
+  if(parsed.action==='complete')return completeFromCallback(callback,chatId,task);
   if(parsed.action==='menu'){
     await updateCallbackMessage(callback,{reply_markup:T.initialKeyboard(task.id,{phone:task.customer_phone,baseUrl})});
     await telegram('answerCallbackQuery',{callback_query_id:callback.id});
@@ -203,4 +214,4 @@ module.exports=async function handler(req,res){
   }catch(error){console.error('telegram-agenda',error);return json(res,500,{ok:false,error:String(error.message||error)})}
 };
 
-module.exports._test={runCron,handleCallback,completeFromCallback,rescheduleFromCallback,setting,saveSetting};
+module.exports._test={runCron,handleCallback,completeFromCallback,reopenFromCallback,rescheduleFromCallback,setting,saveSetting};
