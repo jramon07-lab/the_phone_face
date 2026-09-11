@@ -1887,7 +1887,14 @@ function openNewOpportunityInStage(stageId){
   $("oppCustomFieldsView").innerHTML='<div class="small oppNoCustom">Completa los datos de la nueva oportunidad.</div>';
   $("oppMetaInfo").textContent="Se creará en la columna: "+stage.name;
   $("oppDetailModal").classList.remove("hidden");
-  setTimeout(()=>$("oppModalTitle")?.focus(),50);
+  setTimeout(()=>{
+    const modal=$("oppDetailModal");
+    const title=$("oppModalTitle");
+    if(!modal||modal.classList.contains("hidden")||!title)return;
+    const active=document.activeElement;
+    if(active&&active!==title&&modal.contains(active))return;
+    title.focus();
+  },50);
 }
 
 function bindStageContextMenuActions(){

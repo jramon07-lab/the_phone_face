@@ -308,7 +308,14 @@ function openContactNewOpportunity(){
   $("oppMetaInfo").textContent="Contacto: "+name;
 
   $("oppDetailModal").classList.remove("hidden");
-  setTimeout(()=>$("oppModalTitle")?.focus(),50);
+  setTimeout(()=>{
+    const modal=$("oppDetailModal");
+    const title=$("oppModalTitle");
+    if(!modal||modal.classList.contains("hidden")||!title)return;
+    const active=document.activeElement;
+    if(active&&active!==title&&modal.contains(active))return;
+    title.focus();
+  },50);
 }
 
 if($("cpNewOpp"))$("cpNewOpp").onclick=openContactNewOpportunity;if($("cpSideNewOpp"))$("cpSideNewOpp").onclick=openContactNewOpportunity;
