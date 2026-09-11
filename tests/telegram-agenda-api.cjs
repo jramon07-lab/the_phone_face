@@ -29,7 +29,7 @@ global.fetch=async(url,options={})=>{
     const body=JSON.parse(options.body);settings.set(body.key,{value:body.value});return response(201,[]);
   }
   if(path.startsWith('agenda_items?')&&method==='GET')return response(200,[task]);
-  if(path.startsWith('agenda_items?')&&method==='PATCH'){task.status='completed';return response(204,null);}
+  if(path.startsWith('agenda_items?')&&method==='PATCH'){Object.assign(task,JSON.parse(options.body||'{}'));return response(204,null);}
   if(path.startsWith('records?'))return response(200,[{id:'c1',data:{'DNI / NIF':'24053874Z'}}]);
   throw Error(`Petición no simulada: ${method} ${href}`);
 };
@@ -41,11 +41,31 @@ function run(req){return new Promise(resolve=>{const res={statusCode:0,headers:{
   let result=await run({method:'GET',headers:{authorization:'Bearer cron-test-secret',host:'crm.example'}});
   assert.equal(result.status,200);assert.equal(result.body.sent,1);assert.equal(result.body.failed,0);
   const sent=telegramCalls.find(call=>call.name==='sendMessage');assert(sent);
-  assert.equal(sent.body.chat_id,'8854110482');assert.equal(sent.body.reply_markup.inline_keyboard[0][0].text,'✅ Marcar como completada');
+  assert.equal(sent.body.chat_id,'8854110482');
+  assert.deepEqual(sent.body.reply_markup.inline_keyboard.flat().map(button=>button.text),['✅ Completar','⏰ Posponer','📅 Cambiar fecha']);
   for(const value of ['Antonio López','600333248','24053874Z'])assert(sent.body.text.includes(value));
-  assert.equal(settings.get('telegram_delivery_agenda_main_a1').value.status,'sent');
+  const delivery=[...settings.entries()].find(([key])=>key.startsWith('telegram_delivery_agenda_main_a1_'));
+  assert.equal(delivery[1].value.status,'sent');
 
   const secret=require('../lib/telegram-agenda-core').webhookSecret('cron-test-secret');
+  result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-menu',data:'tpf:task:postpone:a1',message:{message_id:77,chat:{id:8854110482},text:sent.body.text}}}});
+  assert.equal(result.body.postponeMenu,true);
+  assert(telegramCalls.some(call=>call.name==='editMessageReplyMarkup'&&call.body.reply_markup.inline_keyboard.flat().some(button=>button.text==='Mañana, misma hora')));
+
+  const beforeSnooze=Date.now();
+  result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-snooze',data:'tpf:task:snooze:1h:a1',message:{message_id:77,chat:{id:8854110482},text:sent.body.text}}}});
+  assert.equal(result.body.rescheduled,true);
+  assert(new Date(task.starts_at).getTime()>=beforeSnooze+3599000);
+  assert.equal(task.reminder_at,null);
+  assert(telegramCalls.some(call=>call.name==='editMessageText'&&call.body.text.includes('⏰ POSPUESTA')));
+
+  result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-date-menu',data:'tpf:task:date:a1',message:{message_id:78,chat:{id:8854110482},text:sent.body.text}}}});
+  assert.equal(result.body.dateMenu,true);
+  assert(telegramCalls.some(call=>call.name==='editMessageReplyMarkup'&&call.body.reply_markup.inline_keyboard.flat().some(button=>button.text==='Mañana')));
+
+  result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb-day',data:'tpf:task:day:1:a1',message:{message_id:78,chat:{id:8854110482},text:sent.body.text}}}});
+  assert.equal(result.body.rescheduled,true);
+
   result=await run({method:'POST',headers:{'x-telegram-bot-api-secret-token':secret},body:{callback_query:{id:'cb1',data:'tpf:task:complete:a1',message:{message_id:77,chat:{id:8854110482},text:sent.body.text}}}});
   assert.equal(result.status,200);assert.equal(result.body.completed,true);assert.equal(task.status,'completed');
   assert(telegramCalls.some(call=>call.name==='answerCallbackQuery'));

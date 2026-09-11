@@ -9,7 +9,6 @@ const BOT_TOKEN=String(process.env.TELEGRAM_BOT_TOKEN||'');
 const CRON_SECRET=String(process.env.CRON_SECRET||'');
 const SETTINGS_KEY='team_notification_settings';
 const ENABLED_KEY='telegram_agenda_server_enabled_at';
-const MAX_LOOKBACK_MS=7*24*60*60*1000;
 
 const json=(res,status,body)=>{res.setHeader('Cache-Control','no-store');return res.status(status).json(body)};
 const sbHeaders=(extra={})=>({apikey:SERVICE_KEY,Authorization:`Bearer ${SERVICE_KEY}`,'Content-Type':'application/json',...extra});
@@ -51,26 +50,73 @@ async function ensureWebhook(req){
   return true;
 }
 
-async function completeFromCallback(callback,chatId){
-  const taskId=T.callbackTaskId(callback?.data);
+async function taskForCallback(callback,chatId){
+  const parsed=T.parseCallbackData(callback?.data);
   const callbackChat=String(callback?.message?.chat?.id||'');
-  if(!taskId||callbackChat!==String(chatId)){
+  if(!parsed||callbackChat!==String(chatId)){
     await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Este botón no pertenece a este CRM.',show_alert:true});
-    return {completed:false,rejected:true};
+    return {parsed:null,task:null,rejected:true};
   }
-  const rows=await sbRequest(`agenda_items?id=eq.${encodeURIComponent(taskId)}&select=id,status,title&limit=1`);
+  const rows=await sbRequest(`agenda_items?id=eq.${encodeURIComponent(parsed.taskId)}&select=id,status,title,starts_at,reminder_at&limit=1`);
   const task=rows?.[0];
   if(!task){
     await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'La tarea ya no existe.',show_alert:true});
-    return {completed:false,missing:true};
+    return {parsed,task:null,missing:true};
   }
+  return {parsed,task};
+}
+
+async function updateCallbackMessage(callback,{text,reply_markup}){
+  const body={chat_id:String(callback.message.chat.id),message_id:callback.message.message_id};
+  if(text!==undefined)return telegram('editMessageText',{...body,text,reply_markup,disable_web_page_preview:true});
+  return telegram('editMessageReplyMarkup',{...body,reply_markup});
+}
+
+async function completeFromCallback(callback,chatId,task){
   if(task.status!=='completed'){
-    await sbRequest(`agenda_items?id=eq.${encodeURIComponent(taskId)}&status=eq.pending`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:'completed'}});
+    await sbRequest(`agenda_items?id=eq.${encodeURIComponent(task.id)}&status=eq.pending`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{status:'completed'}});
   }
   await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Tarea marcada como completada ✅'});
   const original=String(callback?.message?.text||task.title||'Tarea');
-  await telegram('editMessageText',{chat_id:callbackChat,message_id:callback.message.message_id,text:`${original}\n\n✅ COMPLETADA`,reply_markup:{inline_keyboard:[]},disable_web_page_preview:true});
-  return {completed:true,taskId};
+  await updateCallbackMessage(callback,{text:`${original}\n\n✅ COMPLETADA`,reply_markup:{inline_keyboard:[]}});
+  return {completed:true,taskId:task.id};
+}
+
+async function rescheduleFromCallback(callback,task,newAt){
+  await sbRequest(`agenda_items?id=eq.${encodeURIComponent(task.id)}&status=eq.pending`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:{starts_at:newAt,reminder_at:null,status:'pending'}});
+  await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Tarea reprogramada ✅'});
+  const original=String(callback?.message?.text||task.title||'Tarea').replace(/\n\n(?:✅ COMPLETADA|⏰ POSPUESTA[\s\S]*)$/,'');
+  await updateCallbackMessage(callback,{text:`${original}\n\n⏰ POSPUESTA: ${T.madridDateTime(newAt)}`,reply_markup:{inline_keyboard:[]}});
+  return {rescheduled:true,taskId:task.id,startsAt:newAt};
+}
+
+async function handleCallback(callback,chatId){
+  const found=await taskForCallback(callback,chatId);
+  if(!found.parsed||!found.task)return {completed:false,...found};
+  const {parsed,task}=found;
+  if(parsed.action==='complete')return completeFromCallback(callback,chatId,task);
+  if(task.status==='completed'){
+    await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Esta tarea ya está completada.',show_alert:true});
+    return {completed:true,taskId:task.id};
+  }
+  if(parsed.action==='menu'){
+    await updateCallbackMessage(callback,{reply_markup:T.initialKeyboard(task.id)});
+    await telegram('answerCallbackQuery',{callback_query_id:callback.id});
+    return {menu:true,taskId:task.id};
+  }
+  if(parsed.action==='postpone'){
+    await updateCallbackMessage(callback,{reply_markup:T.postponeKeyboard(task.id)});
+    await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Elige cuánto quieres posponerla'});
+    return {postponeMenu:true,taskId:task.id};
+  }
+  if(parsed.action==='date'){
+    await updateCallbackMessage(callback,{reply_markup:T.dateKeyboard(task.id)});
+    await telegram('answerCallbackQuery',{callback_query_id:callback.id,text:'Elige el nuevo día'});
+    return {dateMenu:true,taskId:task.id};
+  }
+  if(parsed.action==='snooze')return rescheduleFromCallback(callback,task,T.postponedAt(parsed.value));
+  if(parsed.action==='day')return rescheduleFromCallback(callback,task,T.moveToMadridDay(task.starts_at,Number(parsed.value)));
+  return {ignored:true};
 }
 
 async function claimDelivery(item){
@@ -113,22 +159,30 @@ async function runCron(req){
   const webhookChanged=await ensureWebhook(req);
   let enabled=(await setting(ENABLED_KEY))?.value?.at;
   if(!enabled){enabled=new Date().toISOString();await saveSetting(ENABLED_KEY,{at:enabled});return {ok:true,enabled:true,initialized:true,webhookChanged,sent:0};}
-  const now=Date.now(),floor=Math.max(new Date(enabled).getTime(),now-MAX_LOOKBACK_MS);
+  const now=Date.now(),floor=Math.max(new Date(enabled).getTime(),now-T.DEFAULT_DELIVERY_WINDOW_MS);
   const [main,extra]=await Promise.all([dueRows('starts_at',floor,now),dueRows('reminder_at',floor,now)]);
   const tasks=new Map([...(main||[]),...(extra||[])].map(row=>[String(row.id),row]));
   const due=T.dueDeliveries([...tasks.values()],{enabledAt:new Date(floor).toISOString(),now});
   const dnis=await contactDnis([...tasks.values()]);
-  let sent=0,failed=0;
+  const seen=new Map();
+  let sent=0,failed=0,deduplicated=0;
   for(const item of due){
+    const signature=T.deliverySignature(item);
+    if(seen.has(signature)){
+      await saveSetting(item.key,{status:'sent',deduplicated_at:Date.now(),duplicate_of:seen.get(signature)});
+      deduplicated++;
+      continue;
+    }
+    seen.set(signature,item.key);
     const claim=await claimDelivery(item);if(!claim)continue;
     try{
-      const result=await telegram('sendMessage',{chat_id:String(config.telegram_chat_id),message_thread_id:config.agenda_telegram_thread_id||undefined,text:T.taskMessage(item.task,{kind:item.kind,dni:dnis.get(String(item.task.related_record_id||''))||''}),disable_web_page_preview:true,reply_markup:{inline_keyboard:[[{text:'✅ Marcar como completada',callback_data:T.callbackData(item.task.id)}]]}});
+      const result=await telegram('sendMessage',{chat_id:String(config.telegram_chat_id),message_thread_id:config.agenda_telegram_thread_id||undefined,text:T.taskMessage(item.task,{kind:item.kind,dni:dnis.get(String(item.task.related_record_id||''))||''}),disable_web_page_preview:true,reply_markup:T.initialKeyboard(item.task.id)});
       await saveSetting(item.key,{status:'sent',owner_id:claim.owner_id,attempt:claim.attempt+1,sent_at:Date.now(),message_id:result?.message_id||null});sent++;
     }catch(error){
       await saveSetting(item.key,{status:'pending',owner_id:claim.owner_id,attempt:claim.attempt+1,next_at:Date.now()+60000,last_error:String(error.message||error).slice(0,500)});failed++;
     }
   }
-  return {ok:failed===0,enabled:true,webhookChanged,due:due.length,sent,failed};
+  return {ok:failed===0,enabled:true,webhookChanged,due:due.length,sent,failed,deduplicated};
 }
 
 module.exports=async function handler(req,res){
@@ -142,11 +196,11 @@ module.exports=async function handler(req,res){
       if(!safeEqual(req.headers['x-telegram-bot-api-secret-token'],T.webhookSecret(CRON_SECRET)))return json(res,401,{ok:false,error:'Webhook no autorizado'});
       const config=(await setting(SETTINGS_KEY))?.value||{};
       if(!config.agenda_telegram||!config.telegram_chat_id)return json(res,200,{ok:true,ignored:true});
-      if(req.body?.callback_query)return json(res,200,{ok:true,...await completeFromCallback(req.body.callback_query,config.telegram_chat_id)});
+      if(req.body?.callback_query)return json(res,200,{ok:true,...await handleCallback(req.body.callback_query,config.telegram_chat_id)});
       return json(res,200,{ok:true,ignored:true});
     }
     return json(res,405,{ok:false,error:'Método no permitido'});
   }catch(error){console.error('telegram-agenda',error);return json(res,500,{ok:false,error:String(error.message||error)})}
 };
 
-module.exports._test={runCron,completeFromCallback,setting,saveSetting};
+module.exports._test={runCron,handleCallback,completeFromCallback,rescheduleFromCallback,setting,saveSetting};
