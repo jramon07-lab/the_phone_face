@@ -19,6 +19,9 @@ assert.match(inline,/No se creará ningún contacto/,'failed Google lookup must 
 assert.match(inline,/Google Contacts no está conectado/,'a missing Google session must not be reported as zero contacts');
 assert.match(inline,/Conectar Google y buscar/,'the correction dialog must offer reconnection and retry');
 assert.match(inline,/Elige cuál de los contactos duplicados/,'multiple Google contacts must require an explicit selection');
+assert.match(inline,/Eliminar de Google los otros contactos duplicados/,'duplicate cleanup must be an explicit opt-in');
+assert.match(inline,/window\.confirm/,'duplicate deletion must require a final confirmation');
+assert.match(inline,/:deleteContact/,'confirmed Google duplicates must be deleted through People API');
 assert.doesNotMatch(inline,/writeGoogle\(null/,'inline correction must never create a Google contact implicitly');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
 assert.match(wa,/tpfCreateNickname:waName/,'new WhatsApp contacts must put the displayed name in nickname');
