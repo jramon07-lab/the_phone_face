@@ -7,7 +7,13 @@ process.env.GOOGLE_DRIVE_CLIENT_SECRET='secret';
 process.env.CRM_BACKUP_ENCRYPTION_KEY='encryption';
 
 const originalFetch=global.fetch;
-global.fetch=async()=>({ok:true,json:async()=>[{user_id:'user-1',is_admin:true}]});
+const calls=[];
+global.fetch=async(url,options)=>{
+  calls.push({url,options});
+  if(url.includes('/auth/v1/user'))return {ok:true,json:async()=>({id:'user-1'})};
+  if(url.includes('/rest/v1/user_permissions'))return {ok:true,json:async()=>[{user_id:'user-1',is_admin:true}]};
+  throw new Error('Unexpected request: '+url);
+};
 
 const api=require('../api/google-contacts');
 
@@ -16,7 +22,10 @@ const api=require('../api/google-contacts');
     const result=await api._test.identity({headers:{authorization:'Bearer valid.session.token'}});
     assert.equal(result.permissions.user_id,'user-1');
     assert.equal(result.permissions.is_admin,true);
-    console.log('PASS: Google Contacts accepts the permissions row returned by Supabase RPC.');
+    assert(calls[0].url.endsWith('/auth/v1/user'));
+    assert(calls[1].url.includes('/rest/v1/user_permissions?user_id=eq.user-1'));
+    assert.equal(calls[1].options.headers.Authorization,'Bearer service');
+    console.log('PASS: Google Contacts validates the session with Auth and reads permissions securely on the server.');
   }finally{
     global.fetch=originalFetch;
   }
