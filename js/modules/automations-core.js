@@ -294,7 +294,9 @@ setTimeout(()=>{loadAutomations().catch(()=>{});auto2CheckUnanswered().catch(()=
 function crmMonthStart(d=new Date()){return new Date(d.getFullYear(),d.getMonth(),1)}
 function crmMonthEnd(d=new Date()){return new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59,999)}
 function crmMoney(n){return Number(n||0).toLocaleString("es-ES",{style:"currency",currency:"EUR"})}
+function legacyCommercialDashboardActive(){return !$('view-dashboard')?.classList.contains('tpfDashPro')}
 async function loadCommercialDashboard(){
+  if(!legacyCommercialDashboardActive())return;
   try{
     const now=new Date(),start=crmMonthStart(now),end=crmMonthEnd(now),monthStr=start.toISOString().slice(0,10);
     let goalAmount=0,goalOpps=0;
@@ -304,6 +306,7 @@ async function loadCommercialDashboard(){
     }catch(e){}
     let opps=[];
     try{const {data,error}=await sb.from("sales_opportunities").select("*");if(!error)opps=data||[]}catch(e){}
+    if(!legacyCommercialDashboardActive())return;
     const stages=salesCache?.stages||[];
     const stageName=id=>(stages.find(s=>String(s.id)===String(id))?.name||"").toLowerCase();
     const won=opps.filter(o=>/ganad|cerrad.*gan|won/.test(stageName(o.stage_id)));
@@ -312,11 +315,13 @@ async function loadCommercialDashboard(){
     const open=opps.filter(o=>!/ganad|perdid|cerrad/.test(stageName(o.stage_id)));
     const forecast=open.reduce((s,o)=>s+Number(o.amount||0),0)+wonAmount;
     const progress=goalAmount>0?Math.min(100,Math.round((wonAmount/goalAmount)*100)):0;
+    if(!legacyCommercialDashboardActive())return;
     $("dashGoalAmount").textContent=crmMoney(goalAmount);$("dashWonAmount").textContent=crmMoney(wonAmount);$("dashForecastAmount").textContent=crmMoney(forecast);$("dashGoalProgress").textContent=progress+"%";$("dashGoalBarFill").style.width=progress+"%";
     const byStage={};open.forEach(o=>{const n=stages.find(s=>String(s.id)===String(o.stage_id))?.name||"Sin columna";byStage[n]=(byStage[n]||0)+Number(o.amount||0)});
     $("dashForecastBreakdown").innerHTML=Object.entries(byStage).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n,v])=>`<div class="forecastRow"><b>${esc(n)}</b><span>${esc(crmMoney(v))}</span></div>`).join("")||'<div class="small">Sin oportunidades abiertas.</div>';
     const today0=new Date();today0.setHours(0,0,0,0);const today1=new Date(today0);today1.setDate(today1.getDate()+1);
     let agenda=[];try{const {data,error}=await sb.from("agenda_items").select("*").gte("starts_at",today0.toISOString()).lt("starts_at",today1.toISOString()).order("starts_at",{ascending:true});if(!error)agenda=data||[]}catch(e){}
+    if(!legacyCommercialDashboardActive())return;
     $("dashContactToday").innerHTML=agenda.slice(0,10).map(x=>`<button class="dashItem" onclick="openAppView('agenda')"><b>${esc(x.customer_name||x.title||"Seguimiento")}</b><span>${esc(x.customer_phone||"")} · ${new Date(x.starts_at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span></button>`).join("")||'<div class="small">No tienes contactos programados para hoy.</div>';
     const priority=open.filter(o=>{const d=o.expected_date?new Date(o.expected_date+"T23:59:59").getTime():0;return d&&d<Date.now()}).sort((a,b)=>String(a.expected_date).localeCompare(String(b.expected_date))).slice(0,8);
     $("dashPriorityFollowups").innerHTML=priority.map(o=>`<button class="dashItem" onclick="openOpportunityFull('${o.id}')"><b>${esc(o.client_name||o.title||"Oportunidad")}</b><span>${esc(o.expected_date||"Sin fecha")} · ${esc(crmMoney(o.amount||0))} <i class="priorityTag">Vencida</i></span></button>`).join("")||'<div class="small">No hay seguimientos vencidos.</div>';
