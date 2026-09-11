@@ -39,5 +39,11 @@ assert.equal(preserved.warnings.length,2);
 
 assert.match(source,/const next=await fetchData\(\);D\.data=next;render\(\)/,'the completed snapshot must be assigned atomically');
 assert.match(source,/if\(!D\.data&&\$\('dashAlerts'\)\)/,'a refresh failure must preserve an existing rendered snapshot');
+assert.match(source,/__TPF_DASHBOARD_OWNER__='performance-guard'/,'the new dashboard must claim render ownership before loading');
+
+for(const file of ['js/core/20-main.js','js/modules/automations-core.js']){
+  const legacy=fs.readFileSync(file,'utf8');
+  assert.match(legacy,/__TPF_DASHBOARD_OWNER__===\"performance-guard\"/,'legacy dashboard writers must yield to the new owner in '+file);
+}
 
 console.log('Dashboard navigation consistency regression checks passed');

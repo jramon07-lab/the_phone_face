@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const M=window.TPFModules;if(!M)return;
+window.__TPF_DASHBOARD_OWNER__='performance-guard';
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
 const D={built:false,busy:false,lastLoad:0,data:null,activityAll:false,backupJson:null,backupCsv:null};

@@ -13,6 +13,9 @@ test('Inicio conserva el último resumen completo al salir, volver y fallar una 
   await page.locator('.nav[data-view="dashboard"]').click();
   await expect(page.locator('#view-dashboard')).toBeVisible();
   await expect(page.locator('#mContacts')).not.toHaveText('—',{timeout:15000});
+  await page.waitForTimeout(2500);
+  await expect(page.locator('#view-dashboard')).toHaveClass(/tpfDashPro/);
+  await expect(page.locator('#view-dashboard .dashItem')).toHaveCount(0);
 
   const ids=['mOppTotal','mOppOpen','mOppExpired','mTasks','mTasksToday','mContacts','mConversion'];
   const before=await page.locator(ids.map(id=>`#${id}`).join(',')).allTextContents();

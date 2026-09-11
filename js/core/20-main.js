@@ -2122,6 +2122,7 @@ function buildAlerts(data){
 async function loadDashboard(){
   try{
     const d=await loadCrmData(), today=localDateKey();
+    if(window.__TPF_DASHBOARD_OWNER__==="performance-guard"||$("view-dashboard")?.classList.contains("tpfDashPro"))return;
     const open=d.opps.filter(oppIsOpen), expired=d.opps.filter(oppIsExpired);
     const amount=d.opps.reduce((s,o)=>s+Number(o.amount||0),0);
     const wonStageIds=new Set(d.stages.filter(s=>stageLooksWon(s.name)).map(s=>s.id));
