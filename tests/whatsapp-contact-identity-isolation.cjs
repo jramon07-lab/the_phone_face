@@ -18,9 +18,9 @@ assert.match(inline,/Confirma únicamente si es la misma persona/,'renaming a di
 assert.match(inline,/No se modificará ni creará nada hasta que elijas la persona exacta/,'ambiguous CRM contacts must fail closed and offer an explicit choice');
 assert.match(inline,/d\.TPF_WHATSAPP_CHAT_ID=chatId/,'the confirmed chat-to-contact binding must persist for every PC');
 assert.match(inline,/safe\(saved\.recordId\)===bound/,'persisted WhatsApp display names must belong to the exact saved binding');
-assert.match(inline,/!rowConfirmedForChat\(row,chat\)\)return''/,'CRM names must not replace the public WhatsApp name before confirmation');
+assert.match(inline,/!rowConfirmedForChat\(row,chat\)\)\{clearWhatsappNicknames\(\);return''\}/,'unconfirmed contacts must clear the previous nickname without replacing their names');
 assert.match(core,/confirmedChatId===String\(chat\.id\)/,'the right WhatsApp header must use the CRM identity only after confirmation');
 assert.equal((core.match(/savedIdentity\?\.nickname\?`<small class="tpfWaListNickname">/g)||[]).length,2,'both WhatsApp list renderers must preserve the unified nickname');
 assert.match(html,/whatsapp-green-core\.js\?v=20260911-shared-history-1/,'the browser must load the safe WhatsApp core');
-assert.match(html,/contact-google-inline\.js\?v=20260911-name-observer-1/,'the browser must load the on-demand Google contact helper');
+assert.match(html,/contact-google-inline\.js\?v=20260912-contact-verification-1/,'the browser must load the on-demand Google contact helper');
 console.log('WhatsApp/Google identity remains isolated to the exact chat and phone');
