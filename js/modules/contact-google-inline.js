@@ -22,9 +22,9 @@ function ignoredNames(){try{return JSON.parse(localStorage.getItem(IGNORE_KEY)||
 function readBindings(){try{return JSON.parse(localStorage.getItem(BIND_KEY)||'{}')||{}}catch(_){return{}}}
 function readUnifiedNames(){try{return JSON.parse(localStorage.getItem(UNIFIED_KEY)||'{}')||{}}catch(_){return{}}}
 function forgetBinding(chat){const id=safe(chat?.id);if(!id)return;const map=readBindings();delete map[id];try{localStorage.setItem(BIND_KEY,JSON.stringify(map))}catch(_){}boundLookup=''}
-function rememberBinding(chat,row){const id=safe(chat?.id),recordId=safe(row?.id);if(!id||!recordId)return;const map=readBindings();map[id]=recordId;try{localStorage.setItem(BIND_KEY,JSON.stringify(map))}catch(_){}boundLookup=''}
+function rememberBinding(chat,row){const id=safe(chat?.id),recordId=safe(row?.id);if(!id||!recordId)return;const map=readBindings();if(safe(map[id])===recordId)return;map[id]=recordId;try{localStorage.setItem(BIND_KEY,JSON.stringify(map))}catch(_){}boundLookup=''}
 function rowConfirmedForChat(row,chat){const id=safe(chat?.id),mark=row?.data?.TPF_WHATSAPP_NAME_CONFIRMED;return !!id&&safe(mark?.chat_id)===id}
-function rememberUnifiedName(chat,row){const id=safe(chat?.id),c=contactData(row);if(!id||!c.id||!rowConfirmedForChat(row,chat))return;rememberBinding(chat,row);const map=readUnifiedNames();map[id]={name:c.name,nickname:c.nickname,recordId:c.id,at:new Date().toISOString()};try{localStorage.setItem(UNIFIED_KEY,JSON.stringify(map))}catch(_){} }
+function rememberUnifiedName(chat,row){const id=safe(chat?.id),c=contactData(row);if(!id||!c.id||!rowConfirmedForChat(row,chat))return;rememberBinding(chat,row);const map=readUnifiedNames(),old=map[id];if(old?.name===c.name&&old?.nickname===c.nickname&&old?.recordId===c.id)return;map[id]={name:c.name,nickname:c.nickname,recordId:c.id,at:new Date().toISOString()};try{localStorage.setItem(UNIFIED_KEY,JSON.stringify(map))}catch(_){} }
 function whatsappDisplayIdentity(chat){const id=safe(chat?.id),saved=readUnifiedNames()[id],bound=safe(readBindings()[id]);return saved?.name&&bound&&safe(saved.recordId)===bound?{name:safe(saved.name),nickname:safe(saved.nickname),recordId:bound}:null}
 function waContext(chat=selectedWa(),row=matchedWa()){return{chatId:safe(chat?.id),selection:Number(waLiveState?.selectionVersion||0),recordId:safe(row?.id),phone:phone(chat?.id)}}
 function waContextCurrent(expected,{requireRecord=false}={}){if(!expected?.chatId||safe(selectedWa()?.id)!==expected.chatId||Number(waLiveState?.selectionVersion||0)!==expected.selection)return false;if(requireRecord&&safe(matchedWa()?.id)!==expected.recordId)return false;return true}
@@ -156,15 +156,18 @@ function applyUnifiedWhatsappName(){
  const chat=selectedWa(),row=matchedWa();if(!chat||!row||String(chat.id||'').includes('@g.us'))return'';
  if(!rowMatchesChat(row,chat)||!rowConfirmedForChat(row,chat))return'';const c=contactData(row),preferred=c.name||safe(chat.name)||'Contacto',nickname=safe(c.nickname);if(!preferred)return'';rememberUnifiedName(chat,row);
  for(const id of ['waChatName','waSideName']){const el=$(id);if(el&&el.textContent!==preferred)el.textContent=preferred}
- for(const id of ['waChatNickname','waSideNickname']){const el=$(id);if(!el)continue;el.textContent=nickname;el.classList.toggle('hidden',!nickname)}
+ for(const id of ['waChatNickname','waSideNickname']){const el=$(id);if(!el)continue;if(el.textContent!==nickname)el.textContent=nickname;el.classList.toggle('hidden',!nickname)}
  const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active&&active.textContent!==preferred)active.textContent=preferred;
- const rowMain=active?.closest('.waChatRowMain');if(rowMain){let alias=rowMain.querySelector('.tpfWaListNickname');if(nickname&&!alias){alias=document.createElement('small');alias.className='tpfWaListNickname';active.insertAdjacentElement('afterend',alias)}if(alias){alias.textContent=nickname;alias.classList.toggle('hidden',!nickname)}}
+ const rowMain=active?.closest('.waChatRowMain');if(rowMain){let alias=rowMain.querySelector('.tpfWaListNickname');if(nickname&&!alias){alias=document.createElement('small');alias.className='tpfWaListNickname';active.insertAdjacentElement('afterend',alias)}if(alias){if(alias.textContent!==nickname)alias.textContent=nickname;alias.classList.toggle('hidden',!nickname)}}
  return preferred;
 }
-function scheduleWhatsappNameRepair(){if(waNameRepairQueued)return;waNameRepairQueued=true;queueMicrotask(()=>{waNameRepairQueued=false;applyUnifiedWhatsappName()})}
+// Run after the current event, and do not observe the repair's own DOM writes.
+// Rewriting identical text nodes from a MutationObserver can starve Chrome's UI.
+function scheduleWhatsappNameRepair(){if(waNameRepairQueued)return;waNameRepairQueued=true;setTimeout(()=>{waNameObserver?.disconnect();try{applyUnifiedWhatsappName()}finally{waNameRepairQueued=false;observeWhatsappNameTargets()}},0)}
+function observeWhatsappNameTargets(){if(!waNameObserver)return;[$('waChatName'),$('waChatNickname'),$('waSideName'),$('waSideNickname'),$('waLiveChats')].filter(Boolean).forEach(target=>waNameObserver.observe(target,{childList:true,subtree:true,characterData:true}))}
 function watchWhatsappNames(){
  if(waNameObserver)return;const targets=[$('waChatName'),$('waChatNickname'),$('waSideName'),$('waSideNickname'),$('waLiveChats')].filter(Boolean);if(!targets.length)return;
- waNameObserver=new MutationObserver(scheduleWhatsappNameRepair);targets.forEach(target=>waNameObserver.observe(target,{childList:true,subtree:true,characterData:true}));
+ waNameObserver=new MutationObserver(scheduleWhatsappNameRepair);observeWhatsappNameTargets();
 }
 async function refreshWhatsapp({checkGoogle=true}={}){
  rememberWhatsapp();
