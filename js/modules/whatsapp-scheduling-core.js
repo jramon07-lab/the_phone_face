@@ -267,7 +267,14 @@ function getBrowserNotifyPrefs(){
 let teamNotifyPrefs={
   whatsapp_telegram:false,
   agenda_telegram:false,
-  telegram_chat_id:""
+  telegram_chat_id:"",
+  telegram_forum_enabled:false,
+  agenda_telegram_thread_id:null,
+  whatsapp_telegram_thread_id:null,
+  offers_telegram_thread_id:null,
+  followups_telegram_thread_id:null,
+  incidents_telegram_thread_id:null,
+  daily_summary_telegram_thread_id:null
 };
 async function loadTeamNotifyPrefs(){
   try{
@@ -291,6 +298,11 @@ async function loadNotifySettings(){
   $("notifyWhatsappTelegram").checked=!!teamNotifyPrefs.whatsapp_telegram;
   $("notifyAgendaTelegram").checked=!!teamNotifyPrefs.agenda_telegram;
   $("notifyTelegramChatId").value=teamNotifyPrefs.telegram_chat_id||"";
+  if($("notifyTelegramForumStatus")){
+    $("notifyTelegramForumStatus").textContent=teamNotifyPrefs.telegram_forum_enabled
+      ? "Apartados de Telegram preparados ✓"
+      : "Este Chat ID es el mismo para los dos usuarios.";
+  }
   if($('notifyRequestPermission')){
     const ok=("Notification" in window && Notification.permission==="granted");
     $("notifyRequestPermission").textContent=ok?"Notificaciones permitidas ✓":"Permitir notificaciones en este PC";
@@ -310,7 +322,7 @@ if($('notifySave'))$('notifySave').onclick=async()=>{
     whatsapp_browser:$("notifyWhatsappBrowser").checked,
     agenda_browser:$("notifyAgendaBrowser").checked
   };
-  const shared={
+  const shared={...teamNotifyPrefs,
     whatsapp_telegram:$("notifyWhatsappTelegram").checked,
     agenda_telegram:$("notifyAgendaTelegram").checked,
     telegram_chat_id:$("notifyTelegramChatId").value.trim()
@@ -445,6 +457,7 @@ async function sendTelegramNotification(type,row){
       body:JSON.stringify({
         action:"send",
         chat_id:chatId,
+        message_thread_id:type==="whatsapp"?teamNotifyPrefs.whatsapp_telegram_thread_id:teamNotifyPrefs.agenda_telegram_thread_id,
         text
       })
     });
@@ -527,7 +540,9 @@ async function checkAllNotifications(){
     }
 
     // AGENDA
-    if(browserPrefs.agenda_browser || teamNotifyPrefs.agenda_telegram){
+    // Telegram de Agenda se entrega desde el servidor aunque el CRM esté cerrado.
+    // El navegador conserva exclusivamente sus avisos locales para evitar duplicados.
+    if(browserPrefs.agenda_browser){
       const {data}=await sb.from("agenda_items").select("*")
         .eq("status","pending")
         .limit(100);
@@ -551,9 +566,6 @@ async function checkAllNotifications(){
           };
         }
 
-        if(teamNotifyPrefs.agenda_telegram){
-          await sendTelegramNotification("agenda",row);
-        }
       }
     }
   }catch(e){

@@ -1152,7 +1152,7 @@
           <label><input id="notifyWhatsappTelegram" type="checkbox"> Telegram</label>
         </div>
         <div class="notifyTypeRow">
-          <div><b>Agenda</b><small>Avisa de tareas, llamadas y citas de la Agenda.</small></div>
+          <div><b>Agenda</b><small>Un Telegram justo el día y a la hora de la tarea, con botón para completarla. Solo habrá otro aviso si añades un segundo recordatorio.</small></div>
           <label><input id="notifyAgendaBrowser" type="checkbox"> Navegador</label>
           <label><input id="notifyAgendaTelegram" type="checkbox"> Telegram</label>
         </div>
@@ -1162,12 +1162,13 @@
         <label>Chat ID común de Telegram
           <input id="notifyTelegramChatId" placeholder="Pulsa Detectar mi Telegram">
         </label>
-        <div class="small">Este Chat ID es el mismo para los dos usuarios.</div>
+        <div id="notifyTelegramForumStatus" class="small">Este Chat ID es el mismo para los dos usuarios.</div>
       </div>
 
       <div class="row notifyActions">
         <button id="notifyRequestPermission" class="secondary">Permitir notificaciones en este PC</button>
         <button id="notifyDetectTelegram" class="secondary">Detectar mi Telegram</button>
+        <button id="notifyTelegramTopics" class="secondary">Preparar apartados</button>
         <button id="notifyTelegramTest" class="secondary">Enviar prueba</button>
         <button id="notifySave" class="primary">Guardar notificaciones</button>
         <span id="notifyMsg" class="small"></span>
@@ -1553,9 +1554,9 @@
 <script src="/js/core/00-bootstrap.js?v=20260909-session-local-1"></script>
 <script src="/js/core/api-auth.js?v=20260909-session-1"></script>
 <script src="/js/modules/contacts-sales-core.js?v=20260908-activity-2"></script>
-<script src="/js/modules/whatsapp-scheduling-core.js"></script>
+<script src="/js/modules/whatsapp-scheduling-core.js?v=20260911-telegram-topics-1"></script>
 <script src="/js/modules/agenda-core.js?v=20260906-agenda-compact-2"></script>
-<script src="/js/core/20-main.js?v=20260911-google-account-v7"></script>
+<script src="/js/core/20-main.js?v=20260911-telegram-topics-1"></script>
 <script src="/js/modules/whatsapp-green-core.js?v=20260909-auth-download-1"></script>
 <script src="/js/modules/automations-core.js?v=20260909-stable-reload-1-20260908-activity-2"></script>
 <script src="/js/core/30-enhancements.js"></script>

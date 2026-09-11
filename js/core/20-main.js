@@ -1005,10 +1005,73 @@ async function detectTelegramChat(){
     $("notifyTelegramChatId").value=String(j.chat_id||"");
     const chatId=String(j.chat_id||"");
     $("notifyTelegramChatId").value=chatId;
-    teamNotifyPrefs={...teamNotifyPrefs,telegram_chat_id:chatId};
+    const changedChat=String(teamNotifyPrefs.telegram_chat_id||"")!==chatId;
+    teamNotifyPrefs={...teamNotifyPrefs,telegram_chat_id:chatId,...(changedChat?{
+      telegram_forum_enabled:false,
+      agenda_telegram_thread_id:null,
+      whatsapp_telegram_thread_id:null,
+      offers_telegram_thread_id:null,
+      followups_telegram_thread_id:null,
+      incidents_telegram_thread_id:null,
+      daily_summary_telegram_thread_id:null
+    }:{})};
     localStorage.setItem("tpf_team_notification_settings",JSON.stringify(teamNotifyPrefs));
     try{await sb.from("app_settings").upsert({key:"team_notification_settings",value:teamNotifyPrefs},{onConflict:"key"});}catch(_){}
-    if(msg)msg.textContent="Telegram conectado correctamente.";
+    if(j.chat_type==="supergroup"&&j.is_forum){
+      if(msg)msg.textContent="Grupo con apartados detectado. Pulsa “Preparar apartados”.";
+    }else if(msg){
+      msg.textContent="Se ha detectado el chat privado. Para usar apartados, detecta el grupo con Temas activados.";
+    }
+  }catch(e){
+    if(msg)msg.textContent=e.message||String(e);
+  }
+}
+async function prepareTelegramTopics(){
+  const msg=$("notifyMsg");
+  const chatId=($("notifyTelegramChatId")?.value||"").trim();
+  if(!chatId){
+    if(msg)msg.textContent="Primero detecta el grupo privado de Telegram.";
+    return;
+  }
+  if(!confirm("Se crearán los 6 apartados en el grupo privado de Telegram. ¿Continuar?"))return;
+  if(msg)msg.textContent="Preparando apartados en Telegram...";
+  try{
+    const r=await fetch("/api/telegram",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        action:"setup-forum",
+        chat_id:chatId,
+        topics:{
+          whatsapp:teamNotifyPrefs.whatsapp_telegram_thread_id,
+          offers:teamNotifyPrefs.offers_telegram_thread_id,
+          followups:teamNotifyPrefs.followups_telegram_thread_id,
+          incidents:teamNotifyPrefs.incidents_telegram_thread_id,
+          daily:teamNotifyPrefs.daily_summary_telegram_thread_id
+        }
+      })
+    });
+    const j=await r.json();
+    if(!r.ok||!j.ok)throw new Error(j.error||"No se pudieron preparar los apartados.");
+    teamNotifyPrefs={...teamNotifyPrefs,
+      telegram_chat_id:chatId,
+      telegram_forum_enabled:j.complete!==false,
+      agenda_telegram_thread_id:null,
+      whatsapp_telegram_thread_id:j.topics?.whatsapp||null,
+      offers_telegram_thread_id:j.topics?.offers||null,
+      followups_telegram_thread_id:j.topics?.followups||null,
+      incidents_telegram_thread_id:j.topics?.incidents||null,
+      daily_summary_telegram_thread_id:j.topics?.daily||null
+    };
+    localStorage.setItem("tpf_team_notification_settings",JSON.stringify(teamNotifyPrefs));
+    const {error}=await sb.from("app_settings").upsert({key:"team_notification_settings",value:teamNotifyPrefs},{onConflict:"key"});
+    if(error)throw error;
+    if($("notifyTelegramForumStatus"))$("notifyTelegramForumStatus").textContent=j.complete!==false
+      ? "Apartados de Telegram preparados ✓"
+      : "Faltan algunos apartados; puedes volver a pulsar Preparar apartados.";
+    if(msg)msg.textContent=j.complete!==false
+      ? "Los 6 apartados ya están preparados en Telegram."
+      : "Se crearon algunos apartados. Pulsa de nuevo para completar los que faltan.";
   }catch(e){
     if(msg)msg.textContent=e.message||String(e);
   }
@@ -1028,6 +1091,7 @@ async function sendTelegramTest(){
       body:JSON.stringify({
         action:"test",
         chat_id:chatId,
+        message_thread_id:teamNotifyPrefs.agenda_telegram_thread_id,
         text:"🔔 The Phone Face\nNotificaciones de Telegram conectadas correctamente."
       })
     });
@@ -1039,6 +1103,7 @@ async function sendTelegramTest(){
   }
 }
 if($("notifyDetectTelegram"))$("notifyDetectTelegram").onclick=detectTelegramChat;
+if($("notifyTelegramTopics"))$("notifyTelegramTopics").onclick=prepareTelegramTopics;
 if($("notifyTelegramTest"))$("notifyTelegramTest").onclick=sendTelegramTest;
 
 
