@@ -1,5 +1,5 @@
 const {test,expect}=require('@playwright/test');
-const fs=require('node:fs'),{createHash}=require('node:crypto');
+const fs=require('node:fs'),{hash}=require('node:crypto');
 
 for(const variant of ['stable','agenda-batches'])test('Capacidad: medir buscador, ficha, ventas y agenda sin escrituras '+variant,async({page},info)=>{
   test.setTimeout(150000);page.setDefaultTimeout(15000);
@@ -68,7 +68,7 @@ for(const variant of ['stable','agenda-batches'])test('Capacidad: medir buscador
   result.agendaLoadMs=Math.round(await clock()-start);
   result.agendaRows=await page.locator('#agendaList .agendaItem').count();
   result.agendaRecordRequests=requests.slice(before).filter(r=>r.path.endsWith('/records')).length;
-  result.agendaFingerprint=createHash('sha256').update(await page.locator('#agendaList').innerText()).digest('hex');
+  result.agendaFingerprint=hash('sha256',await page.locator('#agendaList').innerText());
   result.longTasks=await page.evaluate(()=>({count:window.__perfLongTasks.length,maxMs:Math.round(Math.max(0,...window.__perfLongTasks.map(x=>x.duration)))}));
   result.readRequests=requests.length;
   result.blockedWrites=blocked.length;
