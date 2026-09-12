@@ -82,7 +82,7 @@ function buildUi(){
  const app=document.createElement('div');app.id='tpfContactsApp';app.className='tpfContactsApp';app.innerHTML=`
   <div class="tpfContactsHeader">
    <div class="tpfContactsTitle"><h2>Contactos</h2><p>Gestiona clientes, datos, etiquetas y comunicaciones desde un único lugar.</p></div>
-   <div class="tpfContactsHeaderActions"><button id="tpfContactsFields" class="secondary desktopOnly">⚙ Campos</button><button id="tpfContactsRefresh" class="secondary">↻ Actualizar</button><button id="tpfContactsAdd" class="primary tpfContactsPrimary">＋ Agregar contacto</button></div>
+   <div class="tpfContactsHeaderActions"><button id="tpfContactsFields" class="secondary desktopOnly">⚙ Campos</button><button id="tpfContactsVerifyAll" class="secondary">✓ Comprobar los tres</button><button id="tpfContactsRefresh" class="secondary">↻ Actualizar</button><button id="tpfContactsAdd" class="primary tpfContactsPrimary">＋ Agregar contacto</button></div>
   </div>
   <div class="tpfContactsStats"><div class="tpfContactsStat"><span>Total contactos</span><b id="tpfContactsTotal">—</b></div><div class="tpfContactsStat"><span>Con teléfono</span><b id="tpfContactsWithPhone">—</b></div><div class="tpfContactsStat"><span>Con DNI</span><b id="tpfContactsWithDni">—</b></div><div class="tpfContactsStat"><span>Etiquetas</span><b id="tpfContactsLabelsCount">—</b></div></div>
   <div class="tpfContactsToolbar"><div class="tpfContactsSearch"><input id="tpfContactsSearch" placeholder="Buscar por nombre, DNI o teléfono"></div><button id="tpfContactsFiltersToggle" class="secondary">☷ Filtros</button><div class="tpfContactsExportWrap"><button id="tpfContactsExport" class="secondary">⇩ Exportar</button><div id="tpfContactsExportMenu" class="tpfContactsExportMenu hidden"><button data-export="all">Todos los contactos</button><button data-export="filtered">Contactos filtrados</button><button data-export="selected" id="tpfExportSelected">Contactos seleccionados</button></div></div><span id="tpfContactsStatus" class="small"></span></div>
@@ -106,6 +106,7 @@ function bindUi(){
  byId('tpfFilterLabel').addEventListener('change',async e=>{state.filters.label=e.target.value;state.page=1;if(e.target.value&&!state.labelsAllLoaded){setStatus('Cargando etiquetas de contactos…');await loadAllContactLabels();setStatus('');}applyAndRender();});
  byId('tpfContactsRefresh').onclick=()=>loadContacts(true);
  byId('tpfContactsFields').onclick=()=>byId('customFieldsManageBtn')?.click();
+ byId('tpfContactsVerifyAll').onclick=()=>{if(!allowed('can_edit_records'))return showToast('No tienes permiso para validar contactos.',true);window.dispatchEvent(new CustomEvent('tpf:contacts-batch-open'));};
  byId('tpfContactsAdd').onclick=openCreate;
  byId('tpfContactsFiltersToggle').onclick=()=>byId('tpfContactsFilters').classList.toggle('open');
  byId('tpfContactsFiltersClose').onclick=()=>byId('tpfContactsFilters').classList.remove('open');

@@ -8,7 +8,7 @@ test('Identidad: apodo aislado y verificación reutilizada sin consultas a Googl
   await page.evaluate(()=>{
     window.googleReads=0;window.googleContactsConnected=()=>true;window.googleContactsEmail=()=> 'shop@example.test';
     window.googleApi=async()=>{window.googleReads++;throw Error('No debe consultar Google')};
-    const chat={id:'34900000001@c.us',name:'Nombre antiguo'};
+    const chat={id:'34900000001@c.us',name:'Nombre Correcto'};
     const row={id:'fixture-a',data:{NOMBRE:'Nombre',APELLIDOS:'Correcto',APODO:'Alias sólo A','TELÉFONO':'900000001',TPF_WHATSAPP_CHAT_ID:chat.id,TPF_WHATSAPP_NAME_CONFIRMED:{chat_id:chat.id}}};
     row.data.TPF_CONTACT_VERIFIED={version:1,signature:JSON.stringify([row.id,'900000001','Nombre','Correcto','Alias sólo A']),chat_id:chat.id,google_account:'shop@example.test',google_resource:'people/fixture-a',verified_at:'2026-09-12T00:00:00Z'};
     window.fixtureA={chat,row};window.waLiveState={selected:chat,contact:row,selectionVersion:1};
@@ -46,7 +46,7 @@ test('Verificación anterior: guarda solo el estado y lo comparte con WhatsApp',
  await page.route('**/__verified-migration',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><div id="profile"></div><div id="whatsapp"></div>'}));await page.goto('/__verified-migration');
  await page.evaluate(()=>{
   window.googleContactsEmail=()=> 'shop@example.test';window.TPFModules={register(){}};window.writeCount=0;
-  const chat={id:'34900000001@c.us',name:'Anterior'};
+  const chat={id:'34900000001@c.us',name:'Nombre Apellido'};
   const row={id:'fixture',data:{NOMBRE:'Nombre',APELLIDOS:'Apellido',APODO:'Alias','TELÉFONO':'900000001',DNI:'Conservar',TPF_WHATSAPP_NAME_CONFIRMED:{chat_id:chat.id}}};
   window.currentContact=row;window.waLiveState={selected:chat,contact:structuredClone(row)};window.before=JSON.stringify(row.data);
   window.sb={from(){let data;return{update(payload){data=payload.data;return this},eq(key,value){if(key==='data'&&value!==window.before)throw Error('Missing concurrency guard');return this},select(){return this},async single(){window.writeCount++;return{data:{id:row.id,data:structuredClone(data)}}}}}};
