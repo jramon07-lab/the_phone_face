@@ -73,10 +73,24 @@ function renderCalendar(rows){
  $("agendaCalendar").innerHTML=`<div class="agendaMonthNav"><button data-agenda-month="-1" aria-label="Mes anterior">←</button><h3 class="agendaMonthTitle">${n.toLocaleDateString("es-ES",{month:"long",year:"numeric"})}</h3><button data-agenda-month="1" aria-label="Mes siguiente">→</button><button data-agenda-month="today">Hoy</button></div><div class="agendaCalendarGrid">${["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map(x=>`<div class="agendaCalendarHead">${x}</div>`).join("")}${days}</div>`;
 }
 function agendaDni(record){const d=record?.data||{};return d["DNI / NIF"]||d["DNI/NIF"]||d.DNI||d.NIF||""}
-async function agendaResolveContact(row){
+async function agendaLoadLinkedContacts(rows){
+ const ids=[...new Set(rows.map(row=>String(row.related_record_id||'')).filter(Boolean))],cache=new Map();
+ // Bound URLs and requests: up to three batches for the 300 visible agenda rows.
+ await Promise.all(Array.from({length:Math.ceil(ids.length/100)},async(_,index)=>{
+  const batch=ids.slice(index*100,index*100+100),wanted=new Set(batch);
+  batch.forEach(id=>cache.set(id,Promise.resolve(null)));
+  try{
+   const r=await sb.from('records').select('id,data').in('id',batch).eq('source_sheet','BASE DE DATOS');
+   if(r.error)throw r.error;
+   (r.data||[]).forEach(record=>{const id=String(record.id||'');if(wanted.has(id))cache.set(id,Promise.resolve(record));});
+  }catch(e){console.warn('Agenda: no se pudieron consultar los contactos vinculados',e);}
+ }));
+ return cache;
+}
+async function agendaResolveContact(row,cache=agendaContactCache){
  const id=String(row.related_record_id||""),phone=agendaSearchDigits(row.customer_phone);
  const key=id||phone;if(!key)return null;
- if(agendaContactCache.has(key))return agendaContactCache.get(key);
+ if(cache.has(key))return cache.get(key);
  const request=(async()=>{try{
   if(id){const r=await sb.from("records").select("id,data").eq("id",id).eq("source_sheet","BASE DE DATOS").maybeSingle();return r.error?null:r.data;}
   if(phone.length!==9)return null;
@@ -84,7 +98,7 @@ async function agendaResolveContact(row){
   const hits=(r.data||[]).filter(c=>agendaSearchDigits(agendaContactValues(c).phone)===phone);
   return !r.error&&r.data?.length<20&&hits.length===1?hits[0]:null;
  }catch(e){console.warn("Agenda: no se pudo consultar el contacto",e);return null;}})();
- agendaContactCache.set(key,request);return request;
+ cache.set(key,request);return request;
 }
 $("agendaCalendar").onclick=e=>{
  const task=e.target.closest("[data-open-agenda]");if(task)return window.openAgendaItem(task.dataset.openAgenda);
@@ -129,7 +143,10 @@ async function loadAgenda(){
   if(revision!==agendaLoadVersion)return;
   if(one.error){$("agendaList").innerHTML=`<div class="agendaEmpty">${esc(one.error.message)}</div>`;return}
   const rows=visibleRows(one.data||[],contacts?.data||[]);
-  agendaContactCache.clear();await Promise.all(rows.map(async row=>{row.__contact=await agendaResolveContact(row)}));
+ const contactCache=await agendaLoadLinkedContacts(rows);
+ if(revision!==agendaLoadVersion)return;
+ agendaContactCache=contactCache;
+ await Promise.all(rows.map(async row=>{row.__contact=await agendaResolveContact(row,contactCache)}));
   if(revision!==agendaLoadVersion)return;
   window.__agendaRows=one.data||[];
   updateStats(two.data||[]);

@@ -1,8 +1,10 @@
 const {test,expect}=require('@playwright/test');
+const fs=require('node:fs'),{createHash}=require('node:crypto');
 
-test('Capacidad: medir buscador, ficha, ventas y agenda sin escrituras',async({page},info)=>{
+for(const variant of ['stable','agenda-batches'])test('Capacidad: medir buscador, ficha, ventas y agenda sin escrituras '+variant,async({page},info)=>{
   test.setTimeout(150000);page.setDefaultTimeout(15000);
   const blocked=[],errors=[],requests=[];
+  if(variant==='agenda-batches')await page.route('**/js/modules/agenda-core.js*',route=>route.fulfill({contentType:'application/javascript',body:fs.readFileSync('js/modules/agenda-core.js','utf8')}));
   await page.route('**/rest/v1/**',route=>{
     const req=route.request(),url=new URL(req.url()),rpc=url.pathname.split('/rpc/')[1]||'';
     if(['GET','HEAD','OPTIONS'].includes(req.method())||/^(?:crm_get_|wa_get_|crm_can|crm_current_|crm_has_|get_user_|has_permission|is_admin)/.test(rpc)||['sales_board','current_user_permissions','search_records','contact_related_items','crm_list_labels','crm_list_custom_fields','wa_list_templates'].includes(rpc))return route.continue();
@@ -20,7 +22,7 @@ test('Capacidad: medir buscador, ficha, ventas y agenda sin escrituras',async({p
     window.__perfLongTasks=[];
     new PerformanceObserver(list=>{for(const e of list.getEntries())window.__perfLongTasks.push({start:e.startTime,duration:e.duration});}).observe({type:'longtask',buffered:true});
   });
-  const result={};
+  const result={variant};
   const clock=()=>page.evaluate(()=>performance.now());
   let start=await clock();
   await page.goto('/',{waitUntil:'domcontentloaded'});
@@ -66,6 +68,7 @@ test('Capacidad: medir buscador, ficha, ventas y agenda sin escrituras',async({p
   result.agendaLoadMs=Math.round(await clock()-start);
   result.agendaRows=await page.locator('#agendaList .agendaItem').count();
   result.agendaRecordRequests=requests.slice(before).filter(r=>r.path.endsWith('/records')).length;
+  result.agendaFingerprint=createHash('sha256').update(await page.locator('#agendaList').innerText()).digest('hex');
   result.longTasks=await page.evaluate(()=>({count:window.__perfLongTasks.length,maxMs:Math.round(Math.max(0,...window.__perfLongTasks.map(x=>x.duration)))}));
   result.readRequests=requests.length;
   result.blockedWrites=blocked.length;
