@@ -5,17 +5,32 @@ const A='34600000001@c.us',B='34600000002@c.us';
 
 async function openDevice(browser,info,viewport){
   const context=await browser.newContext({baseURL:info.project.use.baseURL,extraHTTPHeaders:info.project.use.extraHTTPHeaders,viewport});
+  context.setDefaultTimeout(15000);
+  context.setDefaultNavigationTimeout(30000);
   return {context,page:await context.newPage()};
 }
 async function login(page){
-  await page.goto('/',{waitUntil:'domcontentloaded'});
-  await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);
-  await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
-  await page.locator('#signin').click();
-  await expect(page.locator('#app')).toBeVisible({timeout:30000});
-  await page.waitForFunction(()=>window.TPFModules?.status().some(m=>m.name==='whatsapp-performance-max'&&m.state==='ready'));
-  await page.locator('.nav[data-view="whatsapplive"]').first().click();
-  await expect(page.locator('#waLiveChats .waChatRow').first()).toBeVisible({timeout:30000});
+  await test.step('Abrir acceso CRM',async()=>{
+    const response=await page.goto('/',{waitUntil:'domcontentloaded'});
+    console.log('MULTIDEVICE_ACCESS',{origin:new URL(page.url()).origin,status:response?.status()});
+    await expect(page.locator('#email')).toBeVisible();
+  });
+  await test.step('Autenticar cuenta de pruebas',async()=>{
+    await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);
+    await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
+    await page.locator('#signin').click();
+    await expect(page.locator('#app')).toBeVisible({timeout:30000});
+    console.log('MULTIDEVICE_LOGIN_OK');
+  });
+  await test.step('Esperar módulo de sincronización',async()=>{
+    await page.waitForFunction(()=>window.TPFModules?.status().some(m=>m.name==='whatsapp-performance-max'&&m.state==='ready'),null,{timeout:20000});
+    console.log('MULTIDEVICE_MODULE_READY');
+  });
+  await test.step('Abrir lista WhatsApp',async()=>{
+    await page.locator('.nav[data-view="whatsapplive"]').first().click();
+    await expect(page.locator('#waLiveChats .waChatRow').first()).toBeVisible({timeout:30000});
+    console.log('MULTIDEVICE_CHATS_READY');
+  });
 }
 async function select(page,id){
   await page.evaluate(id=>window.selectWhatsAppChat(id),id);
@@ -157,7 +172,7 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
     expect(errors).toEqual([]);
   }finally{
     releaseA();releaseNotifications();
-    await Promise.all([one.context.close(),two.context.close()]);
+    await Promise.allSettled([one.context.close(),two.context.close()]);
   }
 });
 
@@ -195,5 +210,5 @@ test('Dos sesiones autenticadas: resumen e historial reales coinciden sin enviar
     },{timeout:45000,intervals:[3000]}).toBe(true);
     await expect.poll(async()=>JSON.stringify(await summary(one.page))===JSON.stringify(await summary(two.page)),{timeout:45000,intervals:[3000]}).toBe(true);
     console.log('MULTIDEVICE_REAL_READ_OK: dos sesiones, resumen e historial coincidentes; sin envíos ni lecturas marcadas.');
-  }finally{await Promise.all([one.context.close(),two.context.close()]);}
+  }finally{await Promise.allSettled([one.context.close(),two.context.close()]);}
 });
