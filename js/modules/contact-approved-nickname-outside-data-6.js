@@ -1,0 +1,2 @@
+window.TPFApodoOutsideCandidates=window.TPFApodoOutsideCandidates||[];
+window.TPFApodoOutsideCandidates.push(...[{"id":"missing-143738670","phone":"143738670","name":"Prueba De Soporte Clientify","dni":"","proposal":"Eliminar · (ELIMINAR)","evidence":"PRUEBA DE SOPORTE CLIENTIFY (ELIMINAR)"},{"id":"missing-247723811","phone":"247723811","name":"Soporte Clientify","dni":"","proposal":"Milee'N😌 Milee'N😌","evidence":"Milee'N😌 Milee'N😌"}]);
