@@ -1078,521 +1078,92 @@
     <div class="card">
       <h3>Nueva etiqueta</h3>
       <div class="row">
-        <input id="labelNewName" placeholder="Ej.: Renovación, Vodafone, Pendiente, VIP">
-        <button id="labelCreate" class="primary">Crear etiqueta</button>
-      </div>
-      <div id="labelCreateMsg" class="small"></div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="align-items:center">
-        <h3 style="margin:0">Etiquetas disponibles</h3>
-        <input id="labelSearch" placeholder="Buscar etiqueta">
-      </div>
-      <div id="labelsGlobalList" class="labelsGlobalList"></div>
-      <div id="labelsEmpty" class="small">No hay etiquetas.</div>
-    </div>
-  </div>
-</section>
-
-<section id="view-settings" class="hidden">
-    <div class="card">
-      <h2>Ajustes</h2>
-      <div class="small">Configuración de sincronización con Google.</div>
-    </div>
-    <div class="card searchConfigCard">
-      <h3>Columnas del buscador</h3>
-      <div class="small">Configura por separado qué columnas verá este usuario al buscar en cada archivo. La selección queda guardada en su cuenta para futuras búsquedas.</div>
-
-      <div id="settingsSearchUserWrap" class="searchConfigTop hidden">
-        <label>Usuario
-          <select id="settingsSearchUserSelect"></select>
-        </label>
-      </div>
-
-      <div class="searchConfigTop">
-        <label>Archivo / origen
-          <select id="settingsSearchSource">
-            <option value="LIQUIDACION">Liquidación</option>
-            <option value="DATA">Data</option>
-            <option value="CLAWBACK">Clawback</option>
-            <option value="AJUSTES">Ajustes</option>
-            <option value="CONTACTOS">Contactos</option>
-          </select>
-        </label>
-        <button id="settingsLoadColumns" class="secondary">Cargar campos</button>
-      </div>
-
-      <div id="settingsSearchUser" class="searchConfigUser"></div>
-      <div id="settingsSearchAdminHelp" class="small">Como administrador puedes elegir un usuario y definir exactamente qué columnas verá en cada archivo.</div>
-      <div id="settingsSearchColumnsInfo" class="searchConfigInfo"></div>
-      <div id="settingsSearchColumnsOptions" class="searchColumnsOptions"></div>
-
-      <div class="searchColumnsActions">
-        <button id="settingsSearchSelectAll" class="secondary">Seleccionar todas</button>
-        <button id="settingsSearchClear" class="secondary">Quitar todas</button>
-        <button id="settingsSearchDefault" class="secondary">Restablecer</button>
-          <button id="settingsSearchUseGlobal" class="secondary">Usar configuración general</button>
-        <button id="settingsSearchSave" class="primary">Guardar configuración</button>
-      </div>
-      <div id="settingsSearchColumnsMsg" class="small"></div>
-    </div>
-
-    <div class="card">
-      <h3>Notificaciones</h3>
-      <div class="small">Elige por separado qué avisos quieres recibir. Telegram será común para los dos usuarios; las notificaciones del navegador se activan en cada PC.</div>
-      <div class="teamTelegramBadge">Telegram: destino único para todo el equipo</div>
-
-      <div class="notifyTypeTable">
-        <div class="notifyTypeHead"><span>Tipo de aviso</span><span>Navegador / PC</span><span>Telegram</span></div>
-        <div class="notifyTypeRow">
-          <div><b>WhatsApp programados</b><small>Avisa cuando un WhatsApp llegue a su hora.</small></div>
-          <label><input id="notifyWhatsappBrowser" type="checkbox"> Navegador</label>
-          <label><input id="notifyWhatsappTelegram" type="checkbox"> Telegram</label>
-        </div>
-        <div class="notifyTypeRow">
-          <div><b>Agenda</b><small>Un Telegram justo el día y a la hora de la tarea, con botón para completarla. Solo habrá otro aviso si añades un segundo recordatorio.</small></div>
-          <label><input id="notifyAgendaBrowser" type="checkbox"> Navegador</label>
-          <label><input id="notifyAgendaTelegram" type="checkbox"> Telegram</label>
-        </div>
-      </div>
-
-      <div id="telegramNotifyFields" class="notifyTelegramFields">
-        <label>Chat ID común de Telegram
-          <input id="notifyTelegramChatId" placeholder="Pulsa Detectar mi Telegram">
-        </label>
-        <div id="notifyTelegramForumStatus" class="small">Este Chat ID es el mismo para los dos usuarios.</div>
-      </div>
-
-      <div class="row notifyActions">
-        <button id="notifyRequestPermission" class="secondary">Permitir notificaciones en este PC</button>
-        <button id="notifyDetectTelegram" class="secondary">Detectar mi Telegram</button>
-        <button id="notifyTelegramTopics" class="secondary">Preparar apartados</button>
-        <button id="notifyTelegramTest" class="secondary">Enviar prueba</button>
-        <button id="notifySave" class="primary">Guardar notificaciones</button>
-        <span id="notifyMsg" class="small"></span>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>WhatsApp</h3>
-      <div class="small">Modo actual de envío para los WhatsApp programados.</div>
-
-      <div class="waModeBox">
-        <label class="waModeOption">
-          <input type="radio" name="waMode" id="waModeManual" value="manual" checked>
-          <div>
-            <b>WhatsApp normal (manual)</b>
-            <span>Cuando llegue la hora, se abre WhatsApp con el número y mensaje preparados. Tú pulsas Enviar.</span>
-          </div>
-        </label>
-
-        <label class="waModeOption waModeDisabled">
-          <input type="radio" name="waMode" id="waModeApi" value="api" disabled>
-          <div>
-            <b>Envío automático por API</b>
-            <span>Disponible cuando conectemos WhatsApp Business API.</span>
-          </div>
-        </label>
-      </div>
-
-      <div class="small waApiReady">La agenda ya queda preparada para reutilizar las mismas programaciones cuando se conecte la API.</div>
-    </div>
-
-    <div class="card">
-      <h3>Google Calendar</h3>
-      <label><input id="settingGoogleCalendar" type="checkbox" style="width:auto"> Sincronizar citas con Google Calendar</label>
-      <p class="small">Cada cita podrá usar sus propios avisos y, cuando esté activado, se guardará también el identificador del evento de Google.</p>
-    </div>
-    <div class="card">
-      <h3>Google Contacts</h3>
-      <div class="row" style="align-items:center;margin-bottom:10px">
-        <button id="connectGoogleContacts" class="secondary">Conectar Google Contacts</button>
-        <button id="disconnectGoogleContacts" class="secondary hidden">Desconectar</button>
-        <span id="googleContactsStatus" class="small">No conectado</span>
-      </div>
-      <label><input id="settingGoogleContacts" type="checkbox" style="width:auto"> Crear contactos también en Google Contacts</label><br>
-      <label><input id="settingGoogleDedup" type="checkbox" checked style="width:auto"> Evitar duplicados por teléfono/email</label><br>
-      <label><input id="settingGoogleUpdate" type="checkbox" checked style="width:auto"> Actualizar Google cuando cambie un contacto</label>
-      <p class="small">La estructura ya está preparada. Para crear contactos de verdad en Google necesitaremos activar permisos de escritura de Google Contacts.</p>
-      <button id="saveGoogleSettings" class="primary">Guardar ajustes</button>
-      <span id="googleSettingsMsg" class="small"></span>
-      <div class="gcaSettingsBox">
-        <div><b>Comprobar antes de sincronizar</b><p class="small">Compara el CRM y Google Contacts sin crear, editar ni borrar contactos.</p></div>
-        <button id="googleContactsAuditBtn" class="secondary" type="button">Comprobar CRM y Google</button>
-      </div>
-    </div>
-   </section>
-
-
-   <section id="view-automations" class="hidden">
-    <div class="pageHeader">
-      <div>
-        <h2>Automatizaciones</h2>
-        <div class="small">Crea reglas del tipo <b>CUANDO ocurra esto → HACER esto</b>. Puedes activarlas, editarlas o borrarlas cuando quieras.</div>
-      </div>
-      <button id="auto2Reload" class="secondary">↻ Actualizar</button>
-    </div>
-
-    <div class="automation2Grid">
-      <div class="card">
-        <div class="automation2Head">
-          <h3 id="auto2FormTitle">Nueva automatización</h3>
-          <span class="auto2NoLimit">Sin límite automático de envíos</span>
-        </div>
-        <input type="hidden" id="auto2Id">
-        <label>Nombre
-          <input id="auto2Name" placeholder="Ej.: Seguimiento de renovación">
-        </label>
-
-        <div class="auto2Builder">
-          <div class="auto2Step">
-            <span class="auto2Badge">CUANDO</span>
-            <select id="auto2Trigger">
-              <option value="message_received">Llega un WhatsApp</option>
-              <option value="message_contains">Llega un WhatsApp que contiene una palabra</option>
-              <option value="opportunity_stage">Una oportunidad cambia de columna</option>
-              <option value="label_assigned">Se asigna una etiqueta a un contacto</option>
-              <option value="unanswered">Un cliente lleva tiempo sin respuesta</option>
-            </select>
-          </div>
-          <div id="auto2TriggerConfig" class="auto2Config"></div>
-
-          <div class="auto2Arrow">↓</div>
-
-          <div class="auto2Step">
-            <span class="auto2Badge action">HACER</span>
-            <select id="auto2Action">
-              <option value="create_task">Crear una tarea</option>
-              <option value="create_opportunity">Crear una oportunidad</option>
-              <option value="assign_label">Asignar una etiqueta</option>
-              <option value="schedule_whatsapp">Programar un WhatsApp</option>
-              <option value="send_template">Enviar una plantilla de WhatsApp</option>
-              <option value="sequence_label_opportunity_whatsapp">Crear oportunidad + esperar + enviar WhatsApp</option>
-            </select>
-          </div>
-          <div id="auto2ActionConfig" class="auto2Config"></div>
-        </div>
-
-        <label class="auto2Enabled"><input id="auto2Enabled" type="checkbox" checked> Activada</label>
-
-        <div class="row">
-          <button id="auto2Save" class="primary">Guardar automatización</button>
-          <button id="auto2Cancel" class="secondary hidden">Cancelar edición</button>
-        </div>
-        <div id="auto2Msg" class="small"></div>
-      </div>
-
-      <div class="card">
-        <div class="row" style="align-items:center">
-          <div>
-            <h3 style="margin:0">Mis automatizaciones</h3>
-            <div class="small">Las reglas se guardan en Supabase y estarán disponibles en todos tus dispositivos.</div>
-          </div>
-          <select id="auto2Filter" style="max-width:170px">
-            <option value="all">Todas</option>
-            <option value="enabled">Activas</option>
-            <option value="disabled">Desactivadas</option>
-          </select>
-        </div>
-        <div id="auto2List" class="automation2List"></div>
-        <div id="auto2Empty" class="small" style="padding:18px 0">Todavía no hay automatizaciones.</div>
-      </div>
-    </div>
-
-    <div class="card automation2Help">
-      <b>Ejemplos</b>
-      <div>• Si llega “renovación” → asignar etiqueta Renovación.</div>
-      <div>• Si una oportunidad entra en “Cerrada” → crear tarea de seguimiento.</div>
-      <div>• Si un cliente lleva 2 horas sin respuesta → crear una tarea.</div>
-      <div>• Si llega un WhatsApp → programar una respuesta para dentro de 30 minutos.</div>
-      <div>• Si asignas una etiqueta → enviar una plantilla concreta.</div>
-    </div>
-
-    <!-- Compatibilidad con el sistema anterior. No se muestran. -->
-    <div class="hidden">
-      <select id="autoStage"></select><select id="autoDelay"><option value="0"></option></select>
-      <input id="autoName"><input id="autoReminderTitle"><button id="autoCreate"></button>
-      <button id="autoReload"></button><div id="autoMsg"></div><div id="automationList"></div><div id="automationEmpty"></div>
-    </div>
-   </section>
-
-   <section id="view-system" class="hidden">
-    <div class="card systemStatusCard">
-      <div class="systemStatusHead">
-        <div>
-          <h2>Estado del sistema</h2>
-          <p class="small">Diagnóstico rápido del CRM. Visible solo para administradores.</p>
-        </div>
-        <button id="systemRefresh" class="primary">Actualizar estado</button>
-      </div>
-      <div class="systemStatusGrid">
-        <div class="systemStatusBox"><span id="systemAppDot" class="systemDot systemDotPending"></span><div><strong>Aplicación / Vercel</strong><small id="systemAppText">Comprobando…</small></div></div>
-        <div class="systemStatusBox"><span id="systemGreenDot" class="systemDot systemDotPending"></span><div><strong>GREEN-API / WhatsApp</strong><small id="systemGreenText">Comprobando…</small></div></div>
-        <div class="systemStatusBox"><span id="systemSupabaseDot" class="systemDot systemDotPending"></span><div><strong>Supabase</strong><small id="systemSupabaseText">Comprobando…</small></div></div>
-        <div class="systemStatusBox"><span id="systemFrontDot" class="systemDot systemDotPending"></span><div><strong>Frontend</strong><small id="systemFrontText">Sin comprobar</small></div></div>
-      </div>
-      <div id="systemBanner" class="systemBanner systemBannerPending">Comprobando estado general…</div>
-      <div class="systemStatusMeta">Última comprobación: <b id="systemCheckedAt">—</b></div>
-    </div>
-    <div class="card">
-      <div class="systemStatusHead">
-        <div><h3>Últimos fallos detectados</h3><p class="small">Errores JavaScript y respuestas HTTP 4xx/5xx detectadas en este navegador.</p></div>
-        <button id="systemClearErrors" class="secondary">Limpiar historial</button>
-      </div>
-      <div id="systemErrorList" class="systemErrorList"><div class="small">No hay fallos registrados.</div></div>
-    </div>
-   </section>
-
-   <section id="view-users" class="hidden">
-    <div class="card">
-      <h2>Usuarios y permisos</h2>
-      <p class="small">El Administrador tiene acceso total. Para cada usuario puedes decidir exactamente qué puede ver y qué puede hacer.</p>
-      <div class="row"><select id="userSelect"></select><button id="permEnableAll" class="secondary">Marcar todo</button><button id="permDisableAll" class="secondary">Quitar todo</button></div>
-      <div id="permGrid" class="permGridNew"></div>
-      <div id="userMsg" class="small"></div>
-    </div>
-    <div class="card">
-      <h3>Campos visibles en DATA</h3>
-      <p class="small">Además de los permisos generales, puedes limitar columnas concretas de DATA.</p>
-      <button id="loadDataFields" class="secondary">Cargar columnas de DATA</button>
-      <div id="fieldPerms" style="margin-top:12px"></div>
-    </div>
-   </section>
-  </main>
-  </div>
- </div>
-</div>
-
-<div id="oppDetailModal" class="modalBack hidden">
-  <div class="modalCard opportunityModalCard" onclick="event.stopPropagation()">
-    <div class="opportunityModalHeader">
-      <div>
-        <div class="opportunityEyebrow">OPORTUNIDAD</div>
-        <h2 id="oppModalHeading">Ficha de oportunidad</h2>
-      </div>
-      <button id="oppModalCloseX" class="modalCloseX" type="button">← Volver</button>
-    </div>
-
-    <input type="hidden" id="oppModalId">
-
-    <div class="opportunitySection">
-      <div class="opportunitySectionTitle">Datos principales</div>
-      <div class="modalGrid opportunityGrid">
-        <label class="full">Título
-          <input id="oppModalTitle" placeholder="Título de la oportunidad">
-        </label>
-        <label>Cliente
-          <input id="oppModalClient" placeholder="Nombre del cliente">
-          <button type="button" id="oppModalOpenContact" class="oppContactOpenBtn">Ver ficha completa</button>
-        </label>
-        <label>Teléfono
-          <input id="oppModalPhone" placeholder="Teléfono">
-        </label>
-        <label class="full opportunityContactSearchLabel">Buscar contacto existente
-          <input id="oppModalDni" placeholder="Escribe nombre, teléfono o DNI" autocomplete="off">
-          <span class="small">Selecciona una coincidencia para vincular la oportunidad con su ficha.</span>
-          <div id="oppContactMatches" class="oppContactMatches hidden"></div>
-        </label>
-        <label>Importe
-          <input id="oppModalAmount" type="number" step="0.01" placeholder="0,00">
-        </label>
-        <label>Fecha prevista
-          <input id="oppModalDate" type="date">
-        </label>
-        <label class="full">Columna / Estado
-          <select id="oppModalStage"></select>
-        </label>
-        <label class="full">Notas
-          <textarea id="oppModalNotes" rows="4" placeholder="Notas de la oportunidad"></textarea>
-        </label>
-      </div>
-    </div>
-
-    <div class="opportunitySection">
-      <div class="opportunitySectionTitle">Campos personalizados</div>
-      <div id="oppCustomFieldsView" class="oppCustomFieldsView"></div>
-    </div>
-
-    <div class="opportunityMeta" id="oppMetaInfo"></div>
-
-    <div class="modalActions opportunityActions">
-      <button id="oppModalSave" class="primary">Guardar cambios</button>
-      <button id="oppModalDelete" class="danger">Eliminar oportunidad</button>
-      <button id="oppModalClose" class="secondary">← Volver</button>
-    </div>
-  </div>
-</div>
-
-<div id="stageContextMenu" class="stageContextMenu hidden" onclick="event.stopPropagation()">
-  <button id="stageMenuNewOpp">＋ Nueva oportunidad</button>
-  <button id="stageMenuNewStage">＋ Nueva columna</button>
-  <button id="stageMenuRename">✎ Editar nombre</button>
-</div>
-
-
-
-
-<div id="contactLabelsModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard">
-    <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
-    <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
-    <div class="waTemplateActions"><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
-  </div>
-</div>
-
-<div id="goalModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard">
-    <div class="waTemplateHead"><h3>Objetivo comercial del mes</h3><button id="goalModalClose" class="secondary">← Volver</button></div>
-    <label>Objetivo de facturación (€)<input id="goalAmountInput" type="number" min="0" step="0.01"></label>
-    <label>Objetivo de oportunidades ganadas<input id="goalOppInput" type="number" min="0" step="1"></label>
-    <div class="waTemplateActions"><button id="goalSave" class="primary">Guardar objetivo</button></div>
-    <div id="goalMsg" class="small"></div>
-  </div>
-</div>
-
-<div id="customFieldsModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard waWideModal">
-    <div class="waTemplateHead"><h3>Campos personalizados de Contactos</h3><button id="customFieldsClose" class="secondary">← Volver</button></div>
-    <div class="customFieldsManagerGrid">
-      <div class="card">
-        <h4>Nuevo campo</h4>
-        <label>Nombre<input id="customFieldName" placeholder="Ej.: Compañía, Fecha renovación, Nº contrato"></label>
-        <label>Tipo<select id="customFieldType">
-          <option value="text">Texto</option>
-          <option value="number">Número</option>
-          <option value="date">Fecha</option>
-          <option value="phone">Teléfono</option>
-          <option value="email">Email</option>
-          <option value="select">Desplegable</option>
-          <option value="boolean">Sí / No</option>
-          <option value="textarea">Texto largo</option>
-        </select></label>
-        <label id="customFieldOptionsWrap" class="hidden">Opciones (una por línea)<textarea id="customFieldOptions" rows="5"></textarea></label>
-        <button id="customFieldCreate" class="primary">Crear campo</button>
-        <div id="customFieldMsg" class="small"></div>
-      </div>
-      <div class="card">
-        <h4>Campos creados</h4>
-        <div id="customFieldsList" class="customFieldsList"></div>
-        <div id="customFieldsEmpty" class="small">No hay campos personalizados.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="multiSearchModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard waWideModal">
-    <div class="waTemplateHead"><h3>Búsqueda múltiple</h3><button id="multiSearchClose" class="secondary">← Volver</button></div>
-    <p class="small">Pega DNI, transacciones u otros identificadores. Puedes poner uno por línea, separados por comas, punto y coma o tabulaciones. También puedes pegar directamente una columna de Excel.</p>
-    <textarea id="multiSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
-    <div class="multiSearchSheets">
-      <label><input type="checkbox" value="LIQUIDACION" checked> Liquidación</label>
-      <label><input type="checkbox" value="DATA" checked> Data</label>
-      <label><input type="checkbox" value="CLAWBACK" checked> Clawback</label>
-      <label><input type="checkbox" value="AJUSTES" checked> Ajustes</label>
-      <label><input type="checkbox" value="VENTAS" checked> Ventas</label>
-      <label><input type="checkbox" value="BASE DE DATOS"> Contactos</label>
-    </div>
-    <div class="row">
-      <button id="multiSearchRun" class="primary">Buscar todos</button>
-      <button id="multiSearchClear" class="secondary">Limpiar</button>
-    </div>
-    <div id="multiSearchMsg" class="small"></div>
-  </div>
-</div>
-
-<div id="crossSearchModal" class="waTemplateBack hidden">
-  <div class="waTemplateCard waWideModal">
-    <div class="waTemplateHead"><h3>Cruzar DNI / transacciones</h3><button id="crossSearchClose" class="secondary">← Volver</button></div>
-    <p class="small">Pega una lista de DNI, NIF o números de transacción. El CRM comprobará cada valor en todas las secciones y te mostrará una matriz de coincidencias.</p>
-    <textarea id="crossSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
-    <div class="row">
-      <button id="crossSearchRun" class="primary">Cruzar datos</button>
-      <button id="crossSearchClear" class="secondary">Limpiar</button>
-    </div>
-    <div id="crossSearchMsg" class="small"></div>
-  </div>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- TPF-PHYSICAL-SPLIT-v1 -->
-<script src="/js/modules/record-links.js?v=20260906-consolidation-1"></script>
-<script src="/js/modules/task-model.js?v=20260906-consolidation-1"></script>
-<script src="/js/modules/contact-party.js?v=20260906-sales-identity-1"></script>
-<script src="/js/core/00-bootstrap.js?v=20260909-session-local-1"></script>
-<script src="/js/core/api-auth.js?v=20260909-session-1"></script>
-<script src="/js/modules/contacts-sales-core.js?v=20260911-google-shared-1"></script>
-<script src="/js/modules/whatsapp-scheduling-core.js?v=20260911-telegram-topics-1"></script>
-<script src="/js/modules/agenda-core.js?v=20260906-agenda-compact-2"></script>
-<script src="/js/core/20-main.js?v=20260912-google-contact-bind-1"></script>
-<script src="/js/modules/whatsapp-green-core.js?v=20260911-shared-history-1"></script>
-<script src="/js/modules/automations-core.js?v=20260911-dashboard-race-1"></script>
-<script src="/js/core/30-enhancements.js"></script>
-<script src="/js/modules/system-status-core.js?v=20260907-stability-1"></script>
-<!-- TPF-MODULAR-RUNTIME-v1 -->
-<script src="/js/modules/runtime.js?v=20260912-contact-name-case-1"></script>
-<script src="/js/modules/google-contacts-audit.js?v=20260911-duplicate-detail-1"></script>
-<script src="/js/modules/contact-google-inline.js?v=20260912-contact-name-case-1"></script>
-<script src="/js/modules/automation-control-center.js?v=20260908-control-center-back-1"></script>
-<script src="/js/modules/automation-safe-test.js?v=20260910-safe-test-4"></script>
-<script src="/js/modules/automations-operator-folders.js?v=20260906-folders-1"></script>
-<script src="/js/modules/alerts-pro-v2.js?v=20260902-01"></script>
-<script src="/js/modules/contact-profile-clean-v2.js?v=20260908-notes-1"></script>
-<script src="/js/modules/whatsapp.js"></script>
-<script src="/js/modules/whatsapp-programs-pro.js?v=20260910-actions-menu-1"></script>
-<script src="/js/modules/agenda.js"></script>
-<script src="/js/modules/contacts-sales.js?v=20260906-sales-identity-1"></script>
-<script src="/js/modules/automations-settings.js"></script>
-<script src="/js/modules/system-status.js"></script>
-<script src="/js/modules/system-monitoring.js?v=20260905-errors-1"></script>
-<script src="/js/modules/edit-presence.js?v=20260902-01"></script>
-<script src="/js/modules/google-drive-backups.js?v=20260902-01"></script>
-<script src="/js/modules/agenda-detail-pro.js?v=20260906-tasks-unified-2"></script>
-<script src="/js/modules/import-mapping.js?v=20260906-import-10"></script>
-
-<script src="/js/modules/contact-desktop-layout.js?v=20260912-summary-accordions-1"></script>
-<script src="/js/modules/contact-notes.js?v=20260908-notes-1"></script>
-<script src="/js/modules/contacts-list-avatars.js?v=20260907-list-avatar-2"></script>
-<script src="/js/modules/contact-authorship.js?v=20260905-11"></script>
-<script src="/js/modules/document-scan-core.js?v=20260906-6"></script>
-<script src="/js/modules/contact-document-scanner.js?v=20260906-validation-4"></script>
-<script src="/js/modules/document-folder-auto.js?v=20260906-1"></script>
-<script src="/js/modules/contact-documents.js?v=20260906-4"></script>
-<script src="/js/modules/whatsapp-received-documents.js?v=20260909-auth-download-1"></script>
-<script src="/js/modules/document-folder-matching.js?v=20260906-1"></script>
-<script src="/js/modules/contact-document-bulk.js?v=20260906-2"></script>
-<script src="/js/modules/browser-navigation.js?v=20260909-draft-order-1"></script>
-<script src="/js/modules/contact-relations.js?v=20260911-holder-search-1"></script>
-<script src="/js/modules/agenda-settings-labels.js?v=20260906-consolidation-1"></script>
-</body></html>
+        <input id="labelNewName" placeholder="Ej.: Renovación, Vodafone, Pendi…30940 tokens truncated…tton><button class="secondary" data-action="schedule" data-id="${esc(r.id)}">◷ Programar</button></div></div></div></article>`).join('');
+ const empty=byId('tpfContactsEmpty');empty.classList.toggle('hidden',rows.length>0||state.loading);const start=state.filtered.length?(state.page-1)*state.pageSize+1:0,end=Math.min(state.page*state.pageSize,state.filtered.length),pages=Math.max(1,Math.ceil(state.filtered.length/state.pageSize));byId('tpfContactsRange').textContent=`${start}–${end} de ${state.filtered.length}`;byId('tpfContactsPageInfo').textContent=`${state.page} / ${pages}`;byId('tpfContactsPrev').disabled=state.page<=1;byId('tpfContactsNext').disabled=state.page>=pages;const all=rows.length&&rows.every(r=>state.selected.has(r.id));byId('tpfSelectPage').checked=!!all;updateBulk();hydrateVisibleLabels(rows);requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('tpf:contacts-rendered')));
+}
+async function hydrateVisibleLabels(rows){const missing=rows.filter(r=>!state.labelsByContact.has(r.id));if(!missing.length)return;await Promise.all(missing.map(r=>getContactLabels(r.id)));if(currentPageRows().some(r=>missing.some(m=>m.id===r.id)))renderListNoHydrate();}
+function renderListNoHydrate(){const rows=currentPageRows(),tbody=byId('tpfContactsRows'),cards=byId('tpfContactsCards');if(!tbody||!cards)return;const scroll=tbody.parentElement?.parentElement?.scrollTop||0;tbody.querySelectorAll('tr').forEach(tr=>{const id=tr.dataset.contactId,cell=tr.children[5];if(cell)cell.innerHTML=labelsHtml(id);});cards.querySelectorAll('[data-contact-id]').forEach(card=>{const box=card.querySelector('.tpfContactCardLabels');if(box)box.innerHTML=labelsHtml(card.dataset.contactId);});if(tbody.parentElement?.parentElement)tbody.parentElement.parentElement.scrollTop=scroll;}
+async function loadAllContactLabels(){if(state.labelsAllLoaded)return;if(state.labelsLoadPromise)return state.labelsLoadPromise;state.labelsLoadPromise=(async()=>{let cursor=0;const workers=Array.from({length:Math.min(8,Math.max(1,state.rows.length))},async()=>{while(cursor<state.rows.length){const r=state.rows[cursor++];if(!state.labelsByContact.has(r.id))await getContactLabels(r.id);}});await Promise.all(workers);state.labelsAllLoaded=true;})();try{await state.labelsLoadPromise;}finally{state.labelsLoadPromise=null;}}
+function updateBulk(){const bar=byId('tpfContactsBulk'),n=state.selected.size;bar.classList.toggle('show',n>0);byId('tpfContactsSelectedCount').textContent=`${n} seleccionado${n===1?'':'s'}`;byId('tpfExportSelected').disabled=n===0;}
+function selectCurrentPage(on){currentPageRows().forEach(r=>on?state.selected.add(r.id):state.selected.delete(r.id));renderList();}
+function handleSelectionChange(e){const cb=e.target.closest('.tpfContactSelect');if(!cb)return;cb.checked?state.selected.add(cb.dataset.id):state.selected.delete(cb.dataset.id);renderList();}
+function rowById(id){return state.rows.find(x=>x.id===safe(id));}
+function handleListAction(e){const b=e.target.closest('[data-action]');if(!b)return;const r=rowById(b.dataset.id);if(!r)return;e.preventDefault();if(b.dataset.action==='open')openProfile(r);else if(b.dataset.action==='edit')openEdit(r);else if(b.dataset.action==='whatsapp')openWhatsapp(r,false);else if(b.dataset.action==='schedule')openWhatsapp(r,true);}
+async function openProfile(r){try{if(typeof window.openContact==='function')await window.openContact(r.id);else if(typeof openContact==='function')await openContact(r.id);else throw new Error('La ficha de contacto no está disponible.');}catch(e){showToast(e?.message||'No se pudo abrir la ficha',true);}}
+function openWhatsapp(r,schedule){if(!r.phone)return showToast('Este contacto no tiene teléfono.',true);if(!allowed(schedule?'can_schedule_whatsapp':'can_use_whatsapp'))return showToast('No tienes permiso para esta acción.',true);const fn=window.openWaQuick||(typeof openWaQuick==='function'?openWaQuick:null);if(!fn)return showToast('WhatsApp no está disponible.',true);fn({phone:r.phone,name:r.fullName,dni:r.dni,contactId:r.id});if(schedule)setTimeout(()=>{const drop=byId('waQuickDrop');if(drop)drop.click();else byId('waQuickScheduleBox')?.classList.remove('hidden');},40);}
+function clearFilters(){state.filters={q:'',name:'',dni:'',phone:'',source:'',label:''};['tpfContactsSearch','tpfFilterName','tpfFilterDni','tpfFilterPhone'].forEach(id=>{if(byId(id))byId(id).value='';});if(byId('tpfFilterSource'))byId('tpfFilterSource').value='';if(byId('tpfFilterLabel'))byId('tpfFilterLabel').value='';state.page=1;applyAndRender();}
+function timestamp(){const d=new Date(),p=n=>safe(n).padStart(2,'0');return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;}
+function exportContacts(scope){if(!allowed('can_export_excel'))return showToast('No tienes permiso para exportar.',true);let rows=scope==='selected'?state.rows.filter(r=>state.selected.has(r.id)):scope==='filtered'?state.filtered:state.rows;if(!rows.length)return showToast('No hay contactos para exportar.',true);if(typeof XLSX==='undefined')return showToast('No se ha cargado el módulo de Excel.',true);const data=rows.map(r=>({Nombre:r.first,Apellidos:r.last,'Nombre y apellidos':r.fullName,DNI:r.dni,Teléfono:r.phone,Email:r.email,Banco:r.bank,Notas:r.notes,Observaciones:r.observations,Origen:r.source==='BASE DE DATOS'?'Contactos':r.source,Etiquetas:(state.labelsByContact.get(r.id)||[]).map(labelName).join(', ')}));const ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[18,26,34,16,16,30,20,35,35,18,32].map(wch=>({wch}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Contactos');XLSX.writeFile(wb,`Contactos_ThePhoneFace_${timestamp()}.xlsx`,{compression:true});byId('tpfContactsExportMenu').classList.add('hidden');}
+
+async function openCreate(){if(byId('tpfCreateWelcome')){if(byId('tpfCreateWelcomeVariant')){byId('tpfCreateWelcomeVariant').value='general';byId('tpfCreateWelcomeVariant').dispatchEvent(new Event('change'));}const capability=await window.TPFAuthorship?.refreshCapability?.();byId('tpfCreateWelcome').checked=!!capability?.enabled;byId('tpfCreateWelcome').disabled=!capability?.enabled;byId('tpfCreateWelcomeHint').textContent=capability?.enabled?'Se enviará al crear este contacto nuevo. Desmarca la casilla si no quieres enviarla.':'Pendiente de activar en el servidor. No se enviará ningún mensaje.';}if(!allowed('can_create_database'))return showToast('No tienes permiso para crear contactos.',true);state.editingId='';await loadGlobalLabels();const back=byId('tpfContactsCreateBack');delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';['tpfCreateFirst','tpfCreateLast','tpfCreateNickname','tpfCreatePhone','tpfCreateEmail','tpfCreateDni','tpfCreateBank','tpfCreateNotes','tpfCreateObs'].forEach(id=>{const el=byId(id);if(el)el.value='';});byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=false);byId('tpfContactsCreateMsg').textContent='';window.TPFContactLabelPicker?.reset();window.TPFContactParty?.fillContact({});back.classList.remove('hidden');setTimeout(()=>byId('tpfCreateFirst').focus(),20);}
+async function openEdit(r){
+ const request=++editRequest;
+ try{
+ if(!allowed('can_edit_records'))throw Error('No tienes permiso para editar contactos.');
+ const fresh=await sb.from('records').select('id,source_sheet,data').eq('id',r.id).single();if(fresh.error)throw fresh.error;
+ if(request!==editRequest)return;r=mapRecord(fresh.data);
+ await loadGlobalLabels();if(request!==editRequest)return;state.editingId=r.id;
+ const values={tpfCreateFirst:r.first,tpfCreateLast:r.last,tpfCreateNickname:r.nickname,tpfCreatePhone:r.phone,tpfCreateEmail:r.email,tpfCreateDni:r.dni,tpfCreateBank:r.bank,tpfCreateNotes:r.notes,tpfCreateObs:r.observations};
+ Object.entries(values).forEach(([id,value])=>{const el=byId(id);if(el)el.value=value||'';});window.TPFContactParty?.fillContact(r.data||{});
+ const labels=await getContactLabels(r.id),ids=new Set(labels.map(labelId));
+ byId('tpfCreateLabels').querySelectorAll('input').forEach(x=>x.checked=ids.has(x.value));
+ byId('tpfContactsCreateMsg').textContent='';
+ if(request!==editRequest)return;
+ const back=byId('tpfContactsCreateBack');delete back.dataset.tpfProfileEditing;back.dataset.editId=r.id;back.querySelector('h3').textContent='Editar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Modifica los datos reales del contacto.';byId('tpfContactsCreateSave').textContent='Guardar cambios';byId('tpfContactsCreateSave').onclick=createContact;window.TPFContactLabelPicker?.reset();back.classList.remove('hidden');
+ }catch(e){showToast(e?.message||'No se pudo abrir el contacto.',true);}
+}
+function closeCreate(){const back=byId('tpfContactsCreateBack');back.classList.add('hidden');state.editingId='';delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';}
+function googleContactBinding(person){
+ const resourceName=String(person?.resourceName||'').trim();if(!resourceName)throw new Error('Google creó el contacto, pero no devolvió su identificador.');
+ const account=typeof googleContactsEmail==='function'?String(googleContactsEmail()||'').trim().toLowerCase():'';
+ return{version:1,resource_name:resourceName,google_account:account,created_at:new Date().toISOString()};
+}
+async function bindNewGoogleContact(id,person){
+ const binding=googleContactBinding(person);
+ for(let attempt=0;attempt<3;attempt++){
+  const loaded=await sb.from('records').select('id,data').eq('id',id).maybeSingle();if(loaded.error)throw loaded.error;if(!loaded.data)throw new Error('La ficha se creó, pero no se pudo recuperar para vincular Google.');
+  const current=loaded.data.data||{};if(String(current?.TPF_GOOGLE_CONTACT?.resource_name||'')===binding.resource_name)return current;
+  const next={...current,TPF_GOOGLE_CONTACT:binding};
+  const saved=await sb.from('records').update({data:next}).eq('id',id).eq('data',JSON.stringify(current)).select('id,data').maybeSingle();
+  if(saved.error){if(attempt===2)throw saved.error;continue}if(saved.data)return saved.data.data||next;
+ }
+ throw new Error('La ficha se creó, pero no se pudo guardar su vínculo de Google.');
+}
+async function syncNewContactToGoogle({fullName,first,last,nickname,phone,email}){
+ const setting=await sb.from('app_settings').select('value').eq('key','google_contacts_sync').maybeSingle();
+ if(setting.error||setting.data?.value!==true)return {message:'',pending:false};
+ if(typeof googleContactsConnected!=='function'||!googleContactsConnected())return {message:'El contacto se creó en el CRM, pero Google Contacts no está conectado.',pending:false};
+ if(typeof createGoogleContact!=='function')return {message:'El contacto se creó en el CRM, pero la sincronización con Google no está disponible.',pending:false};
+ const result=await createGoogleContact(fullName,phone,email,nickname,{first,last,forceNew:true});
+ if(!result?.person?.resourceName)throw new Error('Google no confirmó el contacto recién creado.');
+ return {message:'Contacto creado también en Google Contacts.',pending:true,person:result.person};
+}
+async function createContact(){
+ const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;
+ const first=displayContactCase(byId('tpfCreateFirst').value),last=displayContactCase(byId('tpfCreateLast').value),rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=displayNickname(rawNickname),phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
+ if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';
+ byId('tpfCreateFirst').value=first;byId('tpfCreateLast').value=last;byId('tpfCreatePhone').value=phone;if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;btn.disabled=true;msg.textContent='Guardando…';
+ try{
+  let previous=row?.data||{};
+  if(editing){const fresh=await sb.from('records').select('data').eq('id',editing).single();if(fresh.error)throw fresh.error;previous=fresh.data.data||{};}
+  const full=[first,last].filter(Boolean).join(' ').trim();let data={...previous,'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
+  data.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
+  window.TPFContactRelations?.applyContactData(data,editing);
+  let id='';
+  if(editing){const res=await sb.from('records').update({data}).eq('id',editing).select('id').single();if(res.error)throw res.error;id=res.data.id;}
+  else{const dup=await sb.rpc('find_possible_duplicate_contact',{phone_text:phone||null,dni_text:dni||null,email_text:email||null});if(dup.error)throw dup.error;const duplicateRows=dup.data||[],allowDuplicate=duplicateRows.length&&confirm(`Ya existe ${duplicateRows.length} contacto(s) con el mismo teléfono, DNI o correo.\n\nCancelar evita el duplicado. Pulsa Aceptar solo si son personas distintas.`);if(duplicateRows.length&&!allowDuplicate){msg.textContent='No se creó: abre el contacto existente.';return;}const welcome=!!byId('tpfCreateWelcome')?.checked,cap=window.TPFAuthorship?.capability;if(welcome){const waPhone=phone.replace(/\D/g,'').replace(/^34(?=\d{9}$)/,'');if(waPhone.length===9){const chatId='34'+waPhone+'@c.us';data.TPF_WHATSAPP_CHAT_ID=chatId;data.TPF_WHATSAPP_NAME_CONFIRMED={chat_id:chatId,confirmed_at:new Date().toISOString(),source:'welcome'};}}let res;if(cap?.installed){res=await sb.rpc('crm_create_contact_guarded',{p_variant:byId('tpfCreateWelcomeVariant')?.value||'general',p_data:data,p_labels:[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value),p_welcome:welcome,p_allow_duplicate:allowDuplicate});if(res.error)throw res.error;id=res.data;}else{if(welcome)throw new Error('Bienvenida pendiente de activar');res=await sb.from('records').insert({source_sheet:'BASE DE DATOS',data}).select('id').single();if(res.error)throw res.error;id=res.data.id;}}
+  if(editing||!window.TPFAuthorship?.capability?.installed){const ids=[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value),lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:id,p_label_ids:ids});if(lr.error)throw lr.error;}
+  let completion=editing?'Contacto guardado correctamente.':'Contacto creado correctamente.';
+  let googleSyncPending=false;
+  if(!editing){
+   try{const googleResult=await syncNewContactToGoogle({fullName:full,first,last,nickname,phone,email});if(googleResult.person)data=await bindNewGoogleContact(id,googleResult.person);if(googleResult.message)completion=googleResult.message;googleSyncPending=!!googleResult.pending;}
+   catch(error){completion='El contacto se creó en el CRM, pero no se pudo completar Google Contacts: '+(error?.message||'revisa la conexión.');}
+  }
+  const origin=byId('tpfContactsCreateBack')?.dataset?.origin||'';closeCreate();showToast(completion);await loadContacts(true);
+  try{window.dispatchEvent(new CustomEvent(editing?'tpf:contact-updated':'tpf:contact-created',{detail:{id,phone,origin,previous,data,googleSyncPending}}));}catch(_){}
+ }catch(e){msg.textContent=e?.message||(editing?'No se pudo guardar el contacto.':'No se pudo crear el contacto.');M.report?.('contacts-list-ui',e,editing?'updateContact':'createContact');}
+ finally{btn.disabled=false;}
+}
+
+M.register('contacts-list-ui',{install(){buildUi();if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);window.TPFContactsList={edit:id=>openEdit({id})};}});
+})();
