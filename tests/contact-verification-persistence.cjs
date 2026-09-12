@@ -17,6 +17,7 @@ function fixture(){
  assert.equal(f.stored.data.NOTAS,'Conservar');assert.equal(f.stored.data['DNI / NIF'],'EXISTING');
  assert.equal(f.stored.data.TPF_WHATSAPP_CHAT_ID,chat.id);
  assert.ok(a.savedVerification(f.row,chat));
+ assert.equal(a.savedVerification(f.row,{id:chat.id,name:'Nombre distinto'}),null,'un nombre real distinto de WhatsApp invalida la verificación visible');
  const second=fixture();second.row.data=structuredClone(f.stored.data);
  assert.ok(second.api.savedVerification(second.row,chat),'a new PC can use the persisted confirmation without local storage');
  const card={dataset:{},innerHTML:'',querySelector:()=>({})};
