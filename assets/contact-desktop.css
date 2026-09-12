@@ -52,6 +52,8 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="historial"] [data-cp-ref-pane="historial"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="oportunidades"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="tareas"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="ofertas"],
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="automatizaciones"],
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="programados"]{display:block!important}
 #contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel>.cpSideSection{margin:0 0 14px;border:0;padding:0;box-shadow:none;border-radius:0}
 #contactModal.tpfContactDesktop.tpfContactReference .cpSideTitle b{font-size:16px}
@@ -138,6 +140,18 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference .cpRefMore{display:none}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] .cpRefMore:not([hidden]){display:block;border:0;background:#f1f5fc;color:#2e5fab;padding:8px 12px;margin-top:8px;border-radius:6px;font-size:13px;cursor:pointer}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel>.cpSideSection{margin-bottom:0}
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection,
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus{grid-column:1 / -1;min-width:0;width:100%;box-sizing:border-box}
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection{grid-row:3}
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus{grid-row:4}
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus .casHead>div:first-child>b,
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection .cpOfferTitle b{font-size:16px}
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus :is(.casMetrics span,.casNext,.casPreview>div,.casOpen,.casBadge),
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection :is(.cpOfferTop b,.cpOfferStatus,.cpOfferActions button){font-size:13px;line-height:1.5}
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus :is(.casHead small,.casPreview small),
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection :is(.cpOfferMeta,.cpOfferChecks,.cpOfferCheck b,.cpOfferTitle small){font-size:12px;line-height:1.5}
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus .casMetrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection .cpOfferList{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
 /* Full-size contact photo, matching the WhatsApp avatar viewer. */
@@ -149,6 +163,9 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{grid-template-columns:minmax(0,1fr)}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="tareas"]{grid-column:1;grid-row:2}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] [data-cp-ref-pane="programados"]{grid-row:3}
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection{grid-row:4}
+#contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus{grid-row:5}
+#contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection .cpOfferList{grid-template-columns:minmax(0,1fr)}
 #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpWhatsappPrograms{grid-template-columns:minmax(0,1fr)}
 }
 

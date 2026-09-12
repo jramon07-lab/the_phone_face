@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const js=fs.readFileSync('js/modules/contact-desktop-layout.js','utf8'),css=fs.readFileSync('assets/contact-desktop.css','utf8');
+assert.match(js,/section\.id==='cpOffersSection'\?'ofertas'/);
+assert.match(js,/section\.id==='cpAutomationStatus'\?'automatizaciones'/);
+assert.match(js,/if\(!sections\.includes\(section\)\)sections\.push\(section\)/);
+assert.match(js,/if\(section\.parentElement!==target\)target\.appendChild\(section\)/);
+assert.match(js,/sectionObserver\.observe\(panel,\{childList:true\}\)/);
+for(const key of ['ofertas','automatizaciones'])assert.ok(css.includes('[data-cp-ref-pane="'+key+'"]'));
+assert.match(css,/#cpAutomationStatus\{grid-column:1 \/ -1/);
+console.log('Resumen incluye ofertas y automatizaciones, adopta montaje tardío sin duplicar nodos y conserva el ancho completo');
