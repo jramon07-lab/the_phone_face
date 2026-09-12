@@ -34,8 +34,17 @@
  const panel=document.createElement('div');panel.id='cpRefPanel';panel.setAttribute('role','tabpanel');panel.tabIndex=0;
  const notes=document.createElement('section');notes.id='cpNotesPanel';notes.className='cpSideSection';right.appendChild(notes);
  const sections=[...right.children];sections.forEach(section=>{
-  section.dataset.cpRefPane=section.contains($('cpOpportunities'))?'oportunidades':section.contains($('cpTasks'))?'tareas':section.contains($('cpWhatsappPrograms'))?'programados':section.id==='cpDocumentsPending'?'documentos':'informacion';
+  section.dataset.cpRefPane=section.id==='cpOffersSection'?'ofertas':section.id==='cpAutomationStatus'?'automatizaciones':section.contains($('cpOpportunities'))?'oportunidades':section.contains($('cpTasks'))?'tareas':section.contains($('cpWhatsappPrograms'))?'programados':section.id==='cpDocumentsPending'?'documentos':'informacion';
  });
+ // Modules can mount after this layout. Adopt their existing nodes, never clone them.
+ function syncSummarySections(){
+  for(const [id,key] of [['cpOffersSection','ofertas'],['cpAutomationStatus','automatizaciones']]){
+   const section=$(id);if(!section||!modal.contains(section))continue;
+   if(section.dataset.cpRefPane!==key)section.dataset.cpRefPane=key;
+   if(!sections.includes(section))sections.push(section);
+   const target=mounted?panel:right;if(section.parentElement!==target)target.appendChild(section);
+  }
+ }
  center.dataset.cpRefPane='historial';
  notes.dataset.cpRefPane='notas';
  const docs=$('cpDocumentsPending');
@@ -86,6 +95,7 @@
    identityAnchor.after(identity);centerAnchor.after(center);
    sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();call.remove();
   }
+  syncSummarySections();
  }
  document.addEventListener('click',e=>{
   if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
@@ -111,6 +121,10 @@
  const observer=new MutationObserver(sync);observer.observe(modal,{attributes:true,attributeFilter:['class']});
  ['cpTaskPage','cpTaskDetailPage'].forEach(id=>{if($(id))observer.observe($(id),{attributes:true,attributeFilter:['class']});});
  mq.addEventListener('change',sync);
+ // Only direct section insertions matter; message/content mutations must not retrigger layout.
+ let summaryTimer=0;
+ const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(syncSummarySections,0);});
+ sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
  window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;sync();select(selected);updateCall();refreshPhoto();});
  modal.addEventListener('input',e=>{if(e.target.id==='contactPhone')updateCall();});
  call.addEventListener('click',updateCall);
