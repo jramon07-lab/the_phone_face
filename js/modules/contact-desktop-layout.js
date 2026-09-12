@@ -37,6 +37,65 @@
   section.dataset.cpRefPane=section.id==='cpOffersSection'?'ofertas':section.id==='cpAutomationStatus'?'automatizaciones':section.contains($('cpOpportunities'))?'oportunidades':section.contains($('cpTasks'))?'tareas':section.contains($('cpWhatsappPrograms'))?'programados':section.id==='cpDocumentsPending'?'documentos':'informacion';
  });
  // Modules can mount after this layout. Adopt their existing nodes, never clone them.
+ function summaryCount(selector,root){return root?root.querySelectorAll(selector).length:0;}
+ function summaryText(node){return String(node?.textContent||'').toLowerCase();}
+ function summaryMetrics(key){
+  const opp=$('cpOpportunities'),tasks=$('cpTasks'),programs=$('cpWhatsappPrograms'),offers=$('cpOffersSection');
+  if(key==='work'){
+   const total=Number($('cpOppTotal')?.textContent||summaryCount(':scope > .oppUnifiedCard',opp))||0;
+   const open=Number($('cpOppOpen')?.textContent||0)||0,expired=Number($('cpOppExpired')?.textContent||0)||0;
+   const cards=[...tasks?.querySelectorAll(':scope > .cpTaskWrap')||[]];
+   const completed=cards.filter(x=>/completada|completado/.test(summaryText(x))).length;
+   const overdue=cards.filter(x=>/vencida|vencido/.test(summaryText(x))).length;
+   return 'Oportunidades: '+total+' total · '+open+' abiertas · '+expired+' vencidas  |  Tareas: '+cards.length+' total · '+Math.max(0,cards.length-completed)+' pendientes · '+overdue+' vencidas · '+completed+' completadas';
+  }
+  if(key==='programs'){
+   const total=summaryCount(':scope > .cpWaWrap',programs);
+   return total+' WhatsApp programado'+(total===1?'':'s');
+  }
+  const cards=[...offers?.querySelectorAll('.cpOfferCard,.cpOfferItem')||[]];
+  const rows=cards.length?cards:[...offers?.querySelectorAll('.cpOfferList > *')||[]];
+  const active=rows.filter(x=>/seguimiento activo/.test(summaryText(x))).length;
+  const paused=rows.filter(x=>/seguimiento pausado/.test(summaryText(x))).length;
+  const processed=rows.filter(x=>/tramitado/.test(summaryText(x))).length;
+  return rows.length+' oferta'+(rows.length===1?'':'s')+' · '+active+' activas · '+paused+' pausadas · '+processed+' tramitadas';
+ }
+ function setSummaryMetric(block,text){
+  const metric=block?.querySelector('.tpfSummaryMetric');if(metric&&metric.textContent!==text)metric.textContent=text;
+ }
+ function restoreSummaryGroups(){
+  const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
+  [...root.querySelectorAll('[data-cp-ref-pane]')].forEach(section=>panel.appendChild(section));
+  root.remove();
+ }
+ function makeSummaryGroup(root,key,title,items){
+  const existing=root.querySelector('[data-tpf-summary-group="'+key+'"]');
+  if(existing){setSummaryMetric(existing,summaryMetrics(key));return existing;}
+  const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen='false';
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded','false');
+  const label=document.createElement('span');label.className='tpfSummaryTitle';label.textContent=title;
+  const metric=document.createElement('small');metric.className='tpfSummaryMetric';
+  const arrow=document.createElement('span');arrow.className='tpfSummaryChevron';arrow.setAttribute('aria-hidden','true');arrow.textContent='⌄';
+  trigger.append(label,metric,arrow);
+  const body=document.createElement('div');body.className='tpfSummaryBody';
+  items.filter(Boolean).forEach(item=>body.appendChild(item));
+  trigger.addEventListener('click',()=>{const open=block.dataset.tpfOpen!=='true';block.dataset.tpfOpen=String(open);trigger.setAttribute('aria-expanded',String(open));});
+  block.append(trigger,body);root.appendChild(block);setSummaryMetric(block,summaryMetrics(key));return block;
+ }
+ function applySummaryGroups(){
+  if(!mounted||selected!=='resumen'){restoreSummaryGroups();return;}
+  const root=panel.querySelector('#tpfSummaryAccordion')||document.createElement('div');
+  root.id='tpfSummaryAccordion';root.className='tpfSummaryAccordion';
+  if(!root.parentElement)panel.prepend(root);
+  const opp=sections.find(s=>s.dataset.cpRefPane==='oportunidades'),tasks=sections.find(s=>s.dataset.cpRefPane==='tareas'),programs=sections.find(s=>s.dataset.cpRefPane==='programados');
+  const offers=sections.find(s=>s.dataset.cpRefPane==='ofertas'),automation=sections.find(s=>s.dataset.cpRefPane==='automatizaciones');
+  makeSummaryGroup(root,'work','Oportunidades y tareas pendientes',[opp,tasks]);
+  makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
+  makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers,automation]);
+ }
+ function refreshSummaryMetrics(){
+  panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));
+ }
  function syncSummarySections(){
   for(const [id,key] of [['cpOffersSection','ofertas'],['cpAutomationStatus','automatizaciones']]){
    const section=$(id);if(!section||!modal.contains(section))continue;
