@@ -1,7 +1,7 @@
 const {test,expect}=require('@playwright/test');
 
 test('Identidad: apodo aislado y verificación reutilizada sin consultas a Google',async({page,request})=>{
-  const response=await request.get('/js/modules/contact-google-inline.js?v=20260912-contact-verification-1');
+  const response=await request.get('/js/modules/contact-google-inline.js?v=20260912-profile-nickname-1');
   expect(response.ok()).toBeTruthy();const source=await response.text();
   await page.route('**/__contact-identity-fixture',route=>route.fulfill({contentType:'text/html',body:`<!doctype html><html><head></head><body><div id="view-whatsapplive"><div id="waLiveChats"><div class="waChatRow active"><div class="waChatRowMain"><div class="waChatRowTop"><b>Inicial</b></div></div></div></div><div id="waChatName">Inicial</div><small id="waChatNickname"></small><div id="waSideName">Inicial</div><small id="waSideNickname"></small><div id="waContactCard"><div id="waContactState"></div></div></div></body></html>`}));
   await page.goto('/__contact-identity-fixture');

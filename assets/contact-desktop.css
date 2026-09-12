@@ -1,4 +1,10 @@
 /* Reference layout: scoped to the desktop presentation adapter. */
+#contactModal .cpSeparateIdentity #cpProfileIdentityText{min-width:0;overflow-wrap:anywhere}
+#contactModal .cpSeparateIdentity #cpProfileDisplayName{display:block;font-size:17px;line-height:1.4;color:#132340}
+#contactModal .cpSeparateIdentity #cpProfileNickname{display:block;margin-top:3px;font-size:12px;line-height:1.4;font-weight:500;color:#667085}
+#contactModal .cpSeparateIdentity #cpProfileNickname[hidden]{display:none}
+#contactModal:not(.tpf-contact-editing) .cpSeparateIdentity #contactName{display:none!important}
+#contactModal.tpf-contact-editing #cpProfileIdentityText{display:none}
 .cpDocumentsPending,.cpRefMore{display:none}
 @media(min-width:1024px){
 /* Sales stays behind the profile; the profile owns its vertical scrolling. */
@@ -13,6 +19,9 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{display:grid;grid-template-columns:68px minmax(160px,1fr) auto;align-items:center;gap:8px 18px;text-align:left;background:transparent;border:0;border-radius:0;padding:8px 26px 24px}
 #contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{grid-column:1;grid-row:1 / span 2;width:68px;height:68px;margin:0;background:#e7dcfc;color:#39245e;border-radius:50%;box-shadow:none;font-size:24px}
 #contactModal.tpfContactDesktop.tpfContactReference .cpName{grid-column:2;grid-row:1;font-size:23px!important;text-align:left;line-height:1.4!important;margin:0;padding:0!important;min-height:32px!important;background:transparent!important;border:0!important;color:#132340!important}
+#contactModal.tpfContactDesktop.tpfContactReference #cpProfileIdentityText{grid-column:2;grid-row:1;align-self:center}
+#contactModal.tpfContactDesktop.tpfContactReference #cpProfileDisplayName{font-size:23px}
+#contactModal.tpfContactDesktop.tpfContactReference #cpProfileNickname{font-size:13px}
 #contactModal.tpfContactDesktop.tpfContactReference .cpBadge{grid-column:2;grid-row:2;justify-self:start;padding:4px 12px;font-size:12px;background:#ede5fc;color:#6840ad}
 #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{grid-column:3;grid-row:1 / span 2;display:flex;flex-wrap:wrap;justify-content:flex-end;max-width:690px;gap:8px;margin:0}
 #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button,#contactModal.tpfContactDesktop.tpfContactReference .cpRefCall{width:auto;min-width:95px;min-height:40px;padding:10px 13px;background:#fff;border:1px solid #896ac6;border-radius:7px;color:#6743b1;font-size:14px;font-weight:600;line-height:1.3;text-decoration:none;text-align:center;box-sizing:border-box;cursor:pointer}
