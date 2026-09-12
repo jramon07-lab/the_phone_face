@@ -32,6 +32,12 @@ function forgetBinding(chat){const id=safe(chat?.id);if(!id)return;const map=rea
 function rememberBinding(chat,row){const id=safe(chat?.id),recordId=safe(row?.id);if(!id||!recordId)return;const map=readBindings();if(safe(map[id])===recordId)return;map[id]=recordId;try{localStorage.setItem(BIND_KEY,JSON.stringify(map))}catch(_){}boundLookup=''}
 function rowConfirmedForChat(row,chat){const id=safe(chat?.id),mark=row?.data?.TPF_WHATSAPP_NAME_CONFIRMED;return !!id&&safe(mark?.chat_id)===id}
 function displayCase(value){const text=safe(value).replace(/\s+/g,' ');if(typeof window.TPFContactDisplayCase==='function')return window.TPFContactDisplayCase(text);if(!text||text!==text.toLocaleUpperCase('es-ES'))return text;return text.toLocaleLowerCase('es-ES').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es-ES'))}
+// Esta comparación es más estricta que fold(): solo ignora mayúsculas/minúsculas
+// y espacios. Los acentos, apellidos y apodos diferentes requieren revisión humana.
+function strictText(value){return safe(value).normalize('NFC').replace(/\s+/g,' ').toLocaleLowerCase('es-ES')}
+function strictSame(left,right){const a=strictText(left),b=strictText(right);return !!a&&a===b}
+function strictGoogleAligned(person,c){const g=googleView(person);return strictSame(g.first,c?.first)&&strictSame(g.last,c?.last)&&strictText(g.nickname)===strictText(c?.nickname)}
+function strictWhatsappAligned(chat,c){return !!c?.first&&!!c?.last&&validWaName(chat?.name)&&strictSame(chat?.name,c.name)}
 async function normalizeStoredNickname(row){
  const data=row?.data||{},key=Object.keys(data).find(name=>['APODO','Apodo','ALIAS'].includes(name))||'APODO',raw=safe(data[key]),nickname=displayCase(raw);
  if(!row?.id||!raw||raw===nickname)return row;
@@ -55,16 +61,23 @@ function contactChat(row,candidate=selectedWa()){
 function verificationSignature(row){const c=contactData(row);return JSON.stringify([c.id,phone(c.phone),c.first,c.last,c.nickname])}
 function savedVerification(row,chat){
  const v=row?.data?.TPF_CONTACT_VERIFIED;
+ const c=contactData(row),rawName=safe(chat?.name),savedName=safe(v?.whatsapp_name);
+ if(rawName&&(!validWaName(rawName)||!strictSame(rawName,c.name)||(savedName&&!strictSame(savedName,rawName))))return null;
+ if(savedName&&!strictSame(savedName,c.name))return null;
  return v?.version===1&&v.signature===verificationSignature(row)&&v.google_account===fold(googleAccountEmail())&&
    !!v.google_account&&!!v.google_resource&&!!v.verified_at&&rowConfirmedForChat(row,contactChat(row,chat))&&
    (!chat||v.chat_id===safe(chat.id))?v:null;
 }
-function makeVerification(row,chat,person){return{version:1,signature:verificationSignature(row),chat_id:safe(chat?.id),google_account:fold(googleAccountEmail()),google_resource:safe(person?.resourceName),verified_at:new Date().toISOString()}}
+function makeVerification(row,chat,person){return{version:1,signature:verificationSignature(row),chat_id:safe(chat?.id),whatsapp_name:validWaName(chat?.name)?safe(chat.name):'',google_account:fold(googleAccountEmail()),google_resource:safe(person?.resourceName),verified_at:new Date().toISOString()}}
 function googleBinding(person,account=fold(googleAccountEmail())){const resource=safe(person?.resourceName);return resource?{version:1,resource_name:resource,google_account:safe(account),updated_at:new Date().toISOString()}:null}
 const verificationWrites=new Map();
 async function persistMatchingVerification(row,chat,found){
  const linked=contactChat(row,chat),c=contactData(row),account=fold(googleAccountEmail()),signature=verificationSignature(row);
  if(savedVerification(row,chat))return true;
+ // Si estamos viendo el nombre real de WhatsApp, nunca guardamos una
+ // verificación automática cuando no coincide exactamente con la ficha.
+ // El usuario debe revisarlo desde la pantalla de corrección.
+ if(safe(linked?.name)&&!strictWhatsappAligned(linked,c))return false;
  if(!account||!rowMatchesChat(row,linked)||!rowConfirmedForChat(row,linked)||found.length!==1||!found[0]?.resourceName||!googleAligned(found[0],c.first,c.last,c.nickname)||!googlePhones(found[0]).some(p=>phone(p)===phone(c.phone)))return false;
  const key=signature+'|'+account,original=JSON.stringify(row.data||{});
  if(!verificationWrites.has(key))verificationWrites.set(key,(async()=>{
@@ -80,6 +93,19 @@ async function persistMatchingVerification(row,chat,found){
   for(const target of [row,current(),matchedWa()])if(target&&safe(target.id)===safe(row.id)&&verificationSignature(target)===signature&&JSON.stringify(target.data||{})===original)target.data={...target.data,TPF_CONTACT_VERIFIED:saved.data.TPF_CONTACT_VERIFIED};
   return !!savedVerification(row,chat);
  }finally{verificationWrites.delete(key)}
+}
+async function saveStrictVerification(row,person,chat){
+ const c=contactData(row),account=fold(googleAccountEmail()),chatId=safe(chat?.id),original=JSON.stringify(row?.data||{});
+ if(!row?.id||!account||!chatId||!rowMatchesChat(row,chat))throw Error('La ficha o la conversación cambiaron. Vuelve a analizar antes de aplicar.');
+ if(!strictWhatsappAligned(chat,c))throw Error('El nombre real de WhatsApp no coincide exactamente. No se ha modificado la ficha.');
+ if(!person?.resourceName||!googlePhones(person).some(value=>phone(value)===phone(c.phone))||!strictGoogleAligned(person,c))throw Error('Google no coincide exactamente. No se ha modificado la ficha.');
+ const data={...(row.data||{}),TPF_WHATSAPP_CHAT_ID:chatId,TPF_WHATSAPP_NAME_CONFIRMED:{chat_id:chatId,confirmed_at:new Date().toISOString(),source:'verificacion_estricta'},TPF_GOOGLE_CONTACT:googleBinding(person)};
+ data.TPF_CONTACT_VERIFIED=makeVerification({id:row.id,data},chat,person);
+ const result=await sb.from('records').update({data}).eq('id',row.id).eq('data',original).select('id,data').single();
+ if(result.error)throw result.error;
+ if(!result.data||safe(result.data.id)!==safe(row.id)||!savedVerification(result.data,chat))throw Error('No se confirmó la verificación. No se modificaron los datos del contacto.');
+ for(const target of [row,current(),matchedWa()])if(target&&safe(target.id)===safe(row.id)&&JSON.stringify(target.data||{})===original)target.data={...result.data.data};
+ return result.data;
 }
 async function reviewProfile(){const row=current();if(!row)return;let found=[],error='';try{found=await cachedGoogle(contactData(row),true)}catch(e){error=e?.message||'No se pudo comprobar Google'}if(safe(current()?.id)!==safe(row.id))return;openCorrection({row,chat:contactChat(row),matches:found,googleError:error})}
 function renderVerifiedCard(card,row,chat){
@@ -113,7 +139,7 @@ function chooseGoogleAccount(){clearGoogleCache();connectGoogleContacts(true).ca
 function googlePhones(person){return[...new Set((person?.phoneNumbers||[]).map(x=>safe(x.canonicalForm||x.value)).filter(Boolean))]}
 function googleChoice(person){const g=googleView(person),phones=googlePhones(person);return`${g.name||'Sin nombre'}${g.nickname?` · Apodo: ${g.nickname}`:''}${phones.length?` · Tel: ${phones.join(', ')}`:''}`}
 function googleLine(found,connected,error=''){if(!connected)return'<p>Google: <b>No conectado</b></p>';if(error)return`<p>Google: <b>No se pudo comprobar</b></p>`;if(!found.length)return'<p>Google: <b>No está guardado</b></p>';if(found.length>1)return`<p>Google: <b>${found.length} contactos con este teléfono</b><br>${found.map(p=>esc(googleChoice(p))).join('<br>')}</p>`;const g=googleView(found[0]);return`<p>Google: <b>${esc(g.name||'Sin nombre')}</b>${g.nickname?` · Apodo: ${esc(g.nickname)}`:''}${googlePhones(found[0]).length?` · Tel: ${esc(googlePhones(found[0]).join(', '))}`:''}</p>`}
-function syncState(row,chat,found,connected,error,wa){const c=contactData(row),visible=unifiedVisible(c.first,c.last,c.nickname),account=googleAccountEmail(),linked=contactChat(row,chat),confirmed=chat?rowMatchesChat(row,linked)&&rowConfirmedForChat(row,linked):hasStoredWhatsappBinding(row),phoneMatched=found.length===1&&googlePhones(found[0]).some(p=>phone(p)===phone(c.phone)),aligned=phoneMatched&&googleAligned(found[0],c.first,c.last,c.nickname),ok=connected&&!!account&&!error&&aligned&&confirmed;return{visible,confirmed,waDisplay:confirmed?visible:(safe(wa)||'No Name'),status:ok?'Al día':!connected?'Google no conectado':!account?'Confirma la cuenta de Google':error?'No se pudo comprobar Google':found.length>1?'Duplicados en Google':found.length===0?'No está en Google':phoneMatched?'Vinculado por teléfono · revisa nombre o apodo':'Pendiente de corregir',ok,phoneMatched}}
+function syncState(row,chat,found,connected,error,wa){const c=contactData(row),visible=unifiedVisible(c.first,c.last,c.nickname),account=googleAccountEmail(),linked=contactChat(row,chat),confirmed=chat?rowMatchesChat(row,linked)&&rowConfirmedForChat(row,linked):hasStoredWhatsappBinding(row),rawWa=safe(chat?.name),waDifferent=!!rawWa&&(!validWaName(rawWa)||!strictSame(rawWa,c.name)),phoneMatched=found.length===1&&googlePhones(found[0]).some(p=>phone(p)===phone(c.phone)),aligned=phoneMatched&&googleAligned(found[0],c.first,c.last,c.nickname),ok=connected&&!!account&&!error&&aligned&&confirmed&&!waDifferent;return{visible,confirmed,waDisplay:confirmed?visible:(safe(wa)||'No Name'),status:ok?'Al día':waDifferent?'Nombre de WhatsApp diferente: revisar':!connected?'Google no conectado':!account?'Confirma la cuenta de Google':error?'No se pudo comprobar Google':found.length>1?'Duplicados en Google':found.length===0?'No está en Google':phoneMatched?'Vinculado por teléfono · revisa nombre o apodo':'Pendiente de corregir',ok,phoneMatched,waDifferent}}
 async function cachedGoogle(c,force=false){const key=[fold(googleAccountEmail()),safe(c.googleResource),fold(c.googleAccount),phone(c.phone),fold(c.email)].join('|'),old=googleCache.get(key),now=Date.now();if(!force&&old&&now-old.at<30000)return old.promise;const promise=searchGoogle(c).catch(error=>{googleCache.delete(key);throw error});googleCache.set(key,{at:now,promise});return promise}
 function clearGoogleCache(){googleCache.clear()}
 async function searchGoogle(c){
@@ -281,6 +307,6 @@ async function syncEditedContact(detail={}){
  const row={id:detail.id,data:detail.data},c=contactData(row),old=contactData({id:detail.id,data:detail.previous||detail.data});
  try{let found=await searchGoogle(old);if(found.length===0&&(phone(old.phone)!==phone(c.phone)||fold(old.email)!==fold(c.email)))found=await searchGoogle(c);if(found.length!==1)return;const saved=await writeGoogle(found[0],c,c.first,c.last,c.nickname);await verifyGoogleSaved(saved,c.phone,c.first,c.last,c.nickname);clearGoogleCache();window.dispatchEvent(new CustomEvent('tpf:google-contacts-changed',{detail:{contactId:detail.id,automatic:true}}))}catch(error){console.warn('Sincronizar edición con Google Contacts',error)}
 }
-function install(){ensureStyles();ensureModal();watchWhatsappNames();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-created',event=>{if(event.detail?.googleSyncPending)schedulePendingGoogleCheck(event.detail.id)});window.addEventListener('tpf:contact-updated',event=>{waSignature='';boundLookup='';setTimeout(()=>{refreshProfile();refreshEditedWhatsappContact(event.detail?.id)},80);syncEditedContact(event.detail)});window.addEventListener('tpf:google-contacts-changed',()=>{clearGoogleCache();waSignature='';setTimeout(()=>{refreshProfile();scheduleWhatsappRefresh(100,true)},100)});window.addEventListener('tpf:wa-chat-changing',()=>{waRefreshToken++;waSignature='';boundLookup='';clearWhatsappNicknames();$('tpfWaAliasCard')?.remove();scheduleWhatsappRefresh(900,false)});setInterval(()=>{const view=$('view-whatsapplive');if(!document.hidden&&view&&!view.classList.contains('hidden'))scheduleWhatsappRefresh(0,false)},60000);window.tpfWhatsappDisplayIdentity=whatsappDisplayIdentity;window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp,syncEditedContact,resolveBoundContact:boundContact}}
+function install(){ensureStyles();ensureModal();watchWhatsappNames();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-created',event=>{if(event.detail?.googleSyncPending)schedulePendingGoogleCheck(event.detail.id)});window.addEventListener('tpf:contact-updated',event=>{waSignature='';boundLookup='';setTimeout(()=>{refreshProfile();refreshEditedWhatsappContact(event.detail?.id)},80);syncEditedContact(event.detail)});window.addEventListener('tpf:google-contacts-changed',()=>{clearGoogleCache();waSignature='';setTimeout(()=>{refreshProfile();scheduleWhatsappRefresh(100,true)},100)});window.addEventListener('tpf:wa-chat-changing',()=>{waRefreshToken++;waSignature='';boundLookup='';clearWhatsappNicknames();$('tpfWaAliasCard')?.remove();scheduleWhatsappRefresh(900,false)});setInterval(()=>{const view=$('view-whatsapplive');if(!document.hidden&&view&&!view.classList.contains('hidden'))scheduleWhatsappRefresh(0,false)},60000);window.tpfWhatsappDisplayIdentity=whatsappDisplayIdentity;window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp,syncEditedContact,resolveBoundContact:boundContact,batch:{contactData,googleView,googlePhones,strictText,strictSame,strictGoogleAligned,strictWhatsappAligned,savedVerification,saveStrictVerification}}}
 M.register('contact-google-inline',{install});
 })();
