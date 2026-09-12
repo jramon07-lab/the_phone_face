@@ -19,6 +19,7 @@ function allowed(permission){
   try{return typeof perms==='undefined'||!!perms?.is_admin||!!perms?.[permission];}catch(_){return true;}
 }
 function field(d,...names){for(const n of names){const v=d?.[n];if(v!==undefined&&v!==null&&safe(v).trim()!=='')return v;}return '';}
+function displayNickname(value){const text=safe(value).trim().replace(/\s+/g,' ');if(typeof window.TPFContactDisplayCase==='function')return window.TPFContactDisplayCase(text);if(!text||text!==text.toLocaleUpperCase('es-ES'))return text;return text.toLocaleLowerCase('es-ES').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es-ES'));}
 function splitFullName(value){const s=safe(value).trim().replace(/\s+/g,' ');if(!s)return {first:'',last:''};const p=s.split(' ');return {first:p.shift()||'',last:p.join(' ')};}
 function mapRecord(r){
   const d=r?.data||{};
@@ -29,7 +30,7 @@ function mapRecord(r){
   const fullName=[first,last].filter(Boolean).join(' ').trim()||legacy||'Contacto';
   return {
     id:safe(r.id),source:safe(r.source_sheet||'BASE DE DATOS'),sourceRow:r.source_row??'',createdAt:r.created_at||'',updatedAt:r.updated_at||'',data:d,
-    first,last,fullName,nickname:safe(field(d,'APODO','Apodo','ALIAS')).trim(),
+    first,last,fullName,nickname:displayNickname(field(d,'APODO','Apodo','ALIAS')),
     phone:safe(field(d,'TELÉFONO','TELEFONO','PHONE','MOVIL')).trim(),
     dni:safe(field(d,'DNI / NIF','DNI','NIF')).trim(),
     email:safe(field(d,'EMAIL','Email','email')).trim(),
@@ -204,23 +205,40 @@ async function openEdit(r){
  }catch(e){showToast(e?.message||'No se pudo abrir el contacto.',true);}
 }
 function closeCreate(){const back=byId('tpfContactsCreateBack');back.classList.add('hidden');state.editingId='';delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';}
-async function syncNewContactToGoogle({fullName,nickname,phone,email}){
+function googleContactBinding(person){
+ const resourceName=String(person?.resourceName||'').trim();if(!resourceName)throw new Error('Google creó el contacto, pero no devolvió su identificador.');
+ const account=typeof googleContactsEmail==='function'?String(googleContactsEmail()||'').trim().toLowerCase():'';
+ return{version:1,resource_name:resourceName,google_account:account,created_at:new Date().toISOString()};
+}
+async function bindNewGoogleContact(id,person){
+ const binding=googleContactBinding(person);
+ for(let attempt=0;attempt<3;attempt++){
+  const loaded=await sb.from('records').select('id,data').eq('id',id).maybeSingle();if(loaded.error)throw loaded.error;if(!loaded.data)throw new Error('La ficha se creó, pero no se pudo recuperar para vincular Google.');
+  const current=loaded.data.data||{};if(String(current?.TPF_GOOGLE_CONTACT?.resource_name||'')===binding.resource_name)return current;
+  const next={...current,TPF_GOOGLE_CONTACT:binding};
+  const saved=await sb.from('records').update({data:next}).eq('id',id).eq('data',JSON.stringify(current)).select('id,data').maybeSingle();
+  if(saved.error){if(attempt===2)throw saved.error;continue}if(saved.data)return saved.data.data||next;
+ }
+ throw new Error('La ficha se creó, pero no se pudo guardar su vínculo de Google.');
+}
+async function syncNewContactToGoogle({fullName,first,last,nickname,phone,email}){
  const setting=await sb.from('app_settings').select('value').eq('key','google_contacts_sync').maybeSingle();
  if(setting.error||setting.data?.value!==true)return {message:'',pending:false};
  if(typeof googleContactsConnected!=='function'||!googleContactsConnected())return {message:'El contacto se creó en el CRM, pero Google Contacts no está conectado.',pending:false};
  if(typeof createGoogleContact!=='function')return {message:'El contacto se creó en el CRM, pero la sincronización con Google no está disponible.',pending:false};
- const result=await createGoogleContact(fullName,phone,email,nickname);
- return {message:result?.duplicate?'El contacto se creó en el CRM; ya existía en Google Contacts.':'Contacto creado también en Google Contacts.',pending:true};
+ const result=await createGoogleContact(fullName,phone,email,nickname,{first,last,forceNew:true});
+ if(!result?.person?.resourceName)throw new Error('Google no confirmó el contacto recién creado.');
+ return {message:'Contacto creado también en Google Contacts.',pending:true,person:result.person};
 }
 async function createContact(){
  const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;
- const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=typeof window.TPFContactDisplayCase==='function'?window.TPFContactDisplayCase(rawNickname):rawNickname,phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
+ const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=displayNickname(rawNickname),phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
  if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';
  byId('tpfCreatePhone').value=phone;if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;btn.disabled=true;msg.textContent='Guardando…';
  try{
   let previous=row?.data||{};
   if(editing){const fresh=await sb.from('records').select('data').eq('id',editing).single();if(fresh.error)throw fresh.error;previous=fresh.data.data||{};}
-  const full=[first,last].filter(Boolean).join(' ').trim(),data={...previous,'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
+  const full=[first,last].filter(Boolean).join(' ').trim();let data={...previous,'NOMBRE':first,'APELLIDOS':last,'NOMBRE Y APELLIDOS':full,'APODO':nickname,'TELÉFONO':phone,'DNI / NIF':dni,'DNI':dni,'EMAIL':email,'BANCO':bank,'NOTAS':notes,'OBSERVACIONES':obs};
   data.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
   window.TPFContactRelations?.applyContactData(data,editing);
   let id='';
@@ -230,8 +248,8 @@ async function createContact(){
   let completion=editing?'Contacto guardado correctamente.':'Contacto creado correctamente.';
   let googleSyncPending=false;
   if(!editing){
-   try{const googleResult=await syncNewContactToGoogle({fullName:full,nickname,phone,email});if(googleResult.message)completion=googleResult.message;googleSyncPending=!!googleResult.pending;}
-   catch(error){completion='El contacto se creó en el CRM, pero no se pudo guardar en Google Contacts: '+(error?.message||'revisa la conexión.');}
+   try{const googleResult=await syncNewContactToGoogle({fullName:full,first,last,nickname,phone,email});if(googleResult.person)data=await bindNewGoogleContact(id,googleResult.person);if(googleResult.message)completion=googleResult.message;googleSyncPending=!!googleResult.pending;}
+   catch(error){completion='El contacto se creó en el CRM, pero no se pudo completar Google Contacts: '+(error?.message||'revisa la conexión.');}
   }
   const origin=byId('tpfContactsCreateBack')?.dataset?.origin||'';closeCreate();showToast(completion);await loadContacts(true);
   try{window.dispatchEvent(new CustomEvent(editing?'tpf:contact-updated':'tpf:contact-created',{detail:{id,phone,origin,previous,data,googleSyncPending}}));}catch(_){}
