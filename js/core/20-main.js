@@ -829,18 +829,25 @@ async function findGoogleDuplicate(phone,email){
     return (targetPhone&&phones.includes(targetPhone))||(targetEmail&&emails.includes(targetEmail));
   })||null;
 }
-async function createGoogleContact(name,phone,email){
+function googleContactNameCase(value){
+  const text=String(value||"").trim().replace(/\s+/g," ");
+  if(!text||text!==text.toLocaleUpperCase("es-ES"))return text;
+  return text.toLocaleLowerCase("es-ES").replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase("es-ES"));
+}
+async function createGoogleContact(name,phone,email,nickname=""){
   const duplicate=await findGoogleDuplicate(phone,email);
   if(duplicate)return {duplicate:true,person:duplicate.person};
-  const parts=String(name||"").trim().split(/\s+/);
+  const normalizedName=googleContactNameCase(name),normalizedNickname=googleContactNameCase(nickname);
+  const parts=normalizedName.split(/\s+/);
   const givenName=parts.shift()||"";
   const familyName=parts.join(" ");
   const body={
-    names:[{givenName,familyName,displayName:String(name||"").trim()}],
+    names:[{givenName,familyName,displayName:normalizedName}],
+    nicknames:normalizedNickname?[{value:normalizedNickname,type:"DEFAULT"}]:[],
     phoneNumbers:phone?[{value:phone,type:"mobile"}]:[],
     emailAddresses:email?[{value:email,type:"work"}]:[]
   };
-  const person=await googleApi("people:createContact?personFields=names,emailAddresses,phoneNumbers",{method:"POST",body:JSON.stringify(body)});
+  const person=await googleApi("people:createContact?personFields=names,nicknames,emailAddresses,phoneNumbers",{method:"POST",body:JSON.stringify(body)});
   return {duplicate:false,person};
 }
 
