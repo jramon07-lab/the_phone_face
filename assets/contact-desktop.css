@@ -163,6 +163,31 @@ body.tpfBoardOnly #contactModal.tpfContactDesktop.tpfContactReference{left:0!imp
 #contactModal.tpfContactDesktop.tpfContactReference #cpOffersSection .cpOfferList{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
+/* Closed-by-default summary groups: preserves the existing cards and actions. */
+@media(min-width:1024px){
+#contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{display:block!important;padding:14px!important}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup{border:1px solid #e1e7f0;border-radius:8px;background:#fff;overflow:hidden}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTrigger{width:100%;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) 24px;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:0;color:#1d3557;text-align:left;cursor:pointer}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTitle{font-size:16px;font-weight:750}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryMetric{justify-self:end;color:#60708a;font-size:12px;line-height:1.45;text-align:right}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChevron{justify-self:end;font-size:20px;line-height:1;color:#2f68bd;transition:transform .15s ease}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-open="true"] .tpfSummaryChevron{transform:rotate(180deg)}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-open="false"] .tpfSummaryBody{display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody{border-top:1px solid #e7edf5;padding:12px 14px}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-summary-group="work"] .tpfSummaryBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody>.cpSideSection{display:block!important;margin:0!important;border:0!important;padding:0!important;box-shadow:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody #cpWhatsappPrograms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody #cpOffersSection,
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody #cpAutomationStatus{width:100%;min-width:0;box-sizing:border-box}
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody #cpOffersSection .cpOfferList{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(min-width:1024px) and (max-width:1150px){
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-summary-group="work"] .tpfSummaryBody,
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody #cpWhatsappPrograms,
+#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody #cpOffersSection .cpOfferList{grid-template-columns:minmax(0,1fr)}
+}
+
 /* Full-size contact photo, matching the WhatsApp avatar viewer. */
 .tpfContactAvatarModal{position:fixed;inset:0;z-index:100200;display:flex;align-items:center;justify-content:center;padding:24px;background:#101828b8;box-sizing:border-box}
 .tpfContactAvatarModal img{width:min(480px,82vw);height:min(480px,82vw);max-height:82vh;object-fit:cover;border-radius:18px;background:#fff;box-shadow:0 24px 80px #0008}
