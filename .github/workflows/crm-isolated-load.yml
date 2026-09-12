@@ -1,0 +1,24 @@
+name: CRM isolated load laboratory
+on:
+  push:
+    branches: ['perf/isolated-1200-20260912']
+permissions:
+  contents: read
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify
+      - run: npx playwright test --config=playwright.load.config.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: isolated-load-evidence
+          path: test-results

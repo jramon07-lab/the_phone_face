@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "ignoreCommand": "exit 0",
+  "git": {"deploymentEnabled": {"perf/isolated-1200-20260912": false}},
   "crons": [
     {"path":"/api/crm-backup?action=cron","schedule":"30 1,2 * * *"},
     {"path":"/api/telegram-agenda","schedule":"* * * * *"},

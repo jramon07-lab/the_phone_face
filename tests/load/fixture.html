@@ -1,0 +1,14 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="/app.css"></head><body>
+<main id="view-sales"><p>LABORATORIO · Datos ficticios · Sin conexión a servicios</p><div id="salesSummary"></div><input id="salesSearch"><select id="salesStageFilter"></select><select id="salesSort"><option value="position">Orden</option></select><div id="customFieldsStrip"></div><div id="salesBulkBar"></div><div id="salesScroll"><div id="salesBoard" class="board"></div></div></main>
+<script>
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const refreshSalesBulkStages=()=>{},refreshVisibleSalesStateFilter=()=>{},updateSalesBulkUi=()=>{},applyVisibleSalesStateFilter=()=>{};
+let salesCurrentView='board';window.opened=[];
+window.openOpportunityCard=id=>window.opened.push(id);
+window.moveOpp=(id,stage)=>{const row=salesCache.opportunities.find(o=>o.id===id);row.stage_id=stage;renderSales()};
+window.TPFModules={register(name,module){window.salesModule=module}};
+window.scanCount=0;const nativeQuery=document.querySelectorAll.bind(document);
+document.querySelectorAll=function(selector){if(selector==='#salesBoard .opp')window.scanCount++;return nativeQuery(selector)};
+</script><script src="/renderer.js"></script><script>
+window.seed=count=>{salesCache={fields:[],stages:['Próximo','Seguimiento','Pendiente de tramitar','Tramitado','Ganado','Perdido','Antiguos'].map((name,i)=>({id:'stage-'+i,name})),opportunities:Array.from({length:count},(_,i)=>({id:'lab-'+i,stage_id:'stage-'+i%7,title:'OFERTA FICTICIA '+i,client_name:'Cliente Ficticio '+i,phone:'',notes:'Solo laboratorio',amount:20+i%100,position:i,expected_date:'2026-10-15',status:'open'}))};const t=performance.now();renderSales();return performance.now()-t};
+</script></body></html>
