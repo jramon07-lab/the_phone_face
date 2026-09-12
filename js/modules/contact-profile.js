@@ -18,6 +18,12 @@
   let contactLabelCategoriesRequest=null;
 
   const byId=id=>document.getElementById(id);
+  function normalizeNicknameCase(value){
+    const text=String(value||'').trim();
+    const letters=text.replace(/[^\p{L}]/gu,'');
+    if(!letters||letters!==letters.toLocaleUpperCase('es-ES'))return text;
+    return text.toLocaleLowerCase('es-ES').replace(/(^|[\s'’.-])(\p{L})/gu,(_m,prefix,letter)=>prefix+letter.toLocaleUpperCase('es-ES'));
+  }
   const modal=()=>byId('contactModal');
   const saveButton=()=>byId('contactSave');
   const customFieldRoot=()=>byId('contactCustomFields')||null;
@@ -415,6 +421,10 @@
       },true);
 
       ['pointerdown','focusin','beforeinput','paste','drop'].forEach(type=>document.addEventListener(type,protectContactFieldEvent,true));
+      document.addEventListener('blur',e=>{
+        const input=e.target;
+        if(input?.id==='tpfCreateNickname')input.value=normalizeNicknameCase(input.value);
+      },true);
 
       document.addEventListener('click',e=>{
         if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>normalizeCustomFields(),30);
