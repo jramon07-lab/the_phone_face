@@ -52,3 +52,7 @@ No se ha demostrado una necesidad de subir de Pro. [Supabase Pro](https://supaba
 ## Publicación
 
 Main 080166ff solo cambió el workflow nocturno y el diagnóstico de la prueba de dos PCs; el código de la aplicación coincide con f149533c. PR 33 contiene únicamente dos módulos de PC y una prueba. No se debe fusionar la rama perf/isolated-1200-20260912 completa, porque contiene configuración destinada a impedir despliegues experimentales.
+
+Verificación final de b4572fa2: 130/130 comprobaciones locales. [Ronda completa de Chrome 34678255292](https://github.com/jramon07-lab/the_phone_face/actions/runs/34678255292): 2 pruebas entre sesiones y 54 generales correctas; 3 omitidas por sus condiciones existentes. La [vista previa verificada](https://the-phone-face-app-whatsapp-fotos-y-multimedia-hc0lkwe3w.vercel.app/) está READY. Las mejoras aún no están en main.
+
+El 12 de septiembre a las 06:35:37 UTC, /api/health del dominio estable respondió HTTP 200, ok=true, main 080166ff y entorno production. Este control puntual no diagnostica un aviso de interrupción mostrado por ChatGPT/Codex ni garantiza disponibilidad futura.
