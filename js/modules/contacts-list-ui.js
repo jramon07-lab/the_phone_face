@@ -19,13 +19,14 @@ function allowed(permission){
   try{return typeof perms==='undefined'||!!perms?.is_admin||!!perms?.[permission];}catch(_){return true;}
 }
 function field(d,...names){for(const n of names){const v=d?.[n];if(v!==undefined&&v!==null&&safe(v).trim()!=='')return v;}return '';}
-function displayNickname(value){const text=safe(value).trim().replace(/\s+/g,' ');if(typeof window.TPFContactDisplayCase==='function')return window.TPFContactDisplayCase(text);if(!text||text!==text.toLocaleUpperCase('es-ES'))return text;return text.toLocaleLowerCase('es-ES').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es-ES'));}
+function displayContactCase(value){const text=safe(value).trim().replace(/\s+/g,' ');if(typeof window.TPFContactDisplayCase==='function')return window.TPFContactDisplayCase(text);if(!text||text!==text.toLocaleUpperCase('es-ES'))return text;return text.toLocaleLowerCase('es-ES').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es-ES'));}
+function displayNickname(value){return displayContactCase(value);}
 function splitFullName(value){const s=safe(value).trim().replace(/\s+/g,' ');if(!s)return {first:'',last:''};const p=s.split(' ');return {first:p.shift()||'',last:p.join(' ')};}
 function mapRecord(r){
   const d=r?.data||{};
-  let first=safe(field(d,'NOMBRE')).trim();
-  let last=safe(field(d,'APELLIDOS','APELLIDO')).trim();
-  const legacy=safe(field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL')).trim();
+  let first=displayContactCase(field(d,'NOMBRE'));
+  let last=displayContactCase(field(d,'APELLIDOS','APELLIDO'));
+  const legacy=displayContactCase(field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL'));
   if(!first&&!last&&legacy){const x=splitFullName(legacy);first=x.first;last=x.last;}
   const fullName=[first,last].filter(Boolean).join(' ').trim()||legacy||'Contacto';
   return {
@@ -232,9 +233,9 @@ async function syncNewContactToGoogle({fullName,first,last,nickname,phone,email}
 }
 async function createContact(){
  const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;
- const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=displayNickname(rawNickname),phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
+ const first=displayContactCase(byId('tpfCreateFirst').value),last=displayContactCase(byId('tpfCreateLast').value),rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=displayNickname(rawNickname),phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
  if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';
- byId('tpfCreatePhone').value=phone;if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;btn.disabled=true;msg.textContent='Guardando…';
+ byId('tpfCreateFirst').value=first;byId('tpfCreateLast').value=last;byId('tpfCreatePhone').value=phone;if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;btn.disabled=true;msg.textContent='Guardando…';
  try{
   let previous=row?.data||{};
   if(editing){const fresh=await sb.from('records').select('data').eq('id',editing).single();if(fresh.error)throw fresh.error;previous=fresh.data.data||{};}
