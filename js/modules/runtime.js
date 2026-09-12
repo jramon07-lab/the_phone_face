@@ -18,3 +18,9 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
   s.async=false;
   document.head.appendChild(s);
 })();
+(() => {
+  const s=document.createElement('script');
+  s.src='/js/modules/contact-approved-nickname-editor.js?v=20260912-full-nickname-editor-1';
+  s.async=false;
+  document.head.appendChild(s);
+})();
