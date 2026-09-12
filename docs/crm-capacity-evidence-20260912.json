@@ -1,0 +1,129 @@
+{
+  "date": "2026-09-12",
+  "stableCommit": "080166ff821009652799b78a5136c703dde31166",
+  "candidateCommit": "b4572fa233f08902da63c5650f73d5d56f821537",
+  "candidateUrl": "https://the-phone-face-app-whatsapp-fotos-y-multimedia-hc0lkwe3w.vercel.app/",
+  "productionDatabase": {
+    "bytes": 109784211,
+    "opportunities": 13,
+    "loadTestRecords": 0
+  },
+  "isolatedDatabase": {
+    "syntheticRecords": 4000,
+    "syntheticOpportunities": 1200,
+    "syntheticAgenda": 600,
+    "inheritedAgenda": 2,
+    "activeCrons": 0,
+    "activeAutomations": 0,
+    "outgoingEnabled": 0,
+    "automationJobs": 0
+  },
+  "databaseStats": [
+    {
+      "agenda_list_and_counts": {
+        "max": 0.975,
+        "median": 0.6094999999999999,
+        "n": 12
+      },
+      "contact_related_items": {
+        "max": 1.578,
+        "median": 0.6074999999999999,
+        "n": 12
+      },
+      "sales_board": {
+        "max": 40.828,
+        "median": 32.7755,
+        "n": 12
+      },
+      "search_records": {
+        "max": 29.919,
+        "median": 26.6555,
+        "n": 12
+      }
+    },
+    {
+      "agenda_list_and_counts": {
+        "max": 0.912,
+        "median": 0.612,
+        "n": 12
+      },
+      "contact_related_items": {
+        "max": 1.816,
+        "median": 0.6525000000000001,
+        "n": 12
+      },
+      "sales_board": {
+        "max": 39.161,
+        "median": 34.028,
+        "n": 12
+      },
+      "search_records": {
+        "max": 32.666,
+        "median": 25.746499999999997,
+        "n": 12
+      }
+    }
+  ],
+  "sqlMeasurementScope": "Database-owner SQL execution; excludes HTTP/network and user RLS overhead.",
+  "browserComparison": [
+    {
+      "agendaFingerprint": "7ac15872d2dfb1300bf0a8c8315a7885d35d6385b87511f0eb15b5cc51b8feb5",
+      "agendaLoadMs": 410,
+      "agendaRecordRequests": 12,
+      "agendaRows": 15,
+      "blockedWrites": 14,
+      "chatCount": 2271,
+      "errors": [],
+      "loginMs": 1549,
+      "longTasks": {
+        "count": 5,
+        "maxMs": 285
+      },
+      "opportunities": 13,
+      "profileMs": 233,
+      "readRequests": 110,
+      "salesLoadMs": 223,
+      "searchMs": [
+        356,
+        431,
+        394
+      ],
+      "variant": "stable",
+      "whatsappOpenMs": 2209
+    },
+    {
+      "agendaFingerprint": "7ac15872d2dfb1300bf0a8c8315a7885d35d6385b87511f0eb15b5cc51b8feb5",
+      "agendaLoadMs": 365,
+      "agendaRecordRequests": 5,
+      "agendaRows": 15,
+      "blockedWrites": 14,
+      "chatCount": 2271,
+      "errors": [],
+      "loginMs": 1348,
+      "longTasks": {
+        "count": 4,
+        "maxMs": 284
+      },
+      "opportunities": 13,
+      "profileMs": 210,
+      "readRequests": 100,
+      "salesLoadMs": 236,
+      "searchMs": [
+        346,
+        433,
+        495
+      ],
+      "variant": "agenda-batches",
+      "whatsappOpenMs": 548
+    }
+  ],
+  "browserRun": "https://github.com/jramon07-lab/the_phone_face/actions/runs/34678203304",
+  "nightlyFix": {
+    "pr": 32,
+    "merged": true
+  },
+  "performanceChanges": {
+    "pr": 33,
+    "publishedToStable": false
+  }
+}
