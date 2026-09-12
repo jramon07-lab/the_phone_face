@@ -2,6 +2,7 @@ name: CRM isolated load laboratory
 on:
   push:
     branches: ['perf/isolated-1200-20260912']
+    paths: ['tests/load/**', 'js/modules/sales-fullscreen-ui.js', 'playwright.load.config.js', '.github/workflows/crm-isolated-load.yml']
 permissions:
   contents: read
 jobs:
