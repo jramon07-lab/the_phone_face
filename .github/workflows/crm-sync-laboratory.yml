@@ -2,7 +2,7 @@ name: CRM protected two-PC validation
 on:
   push:
     branches: ['perf/isolated-1200-20260912']
-    paths: ['tests/e2e/crm-whatsapp-multidevice.spec.js', '.github/workflows/crm-sync-laboratory.yml', 'js/modules/whatsapp-*.js']
+    paths: ['tests/e2e/crm-whatsapp-multidevice.spec.js', '.github/workflows/crm-sync-laboratory.yml', 'js/modules/whatsapp-*.js', 'scripts/check-nightly-target.cjs']
 permissions:
   contents: read
 concurrency:
@@ -22,7 +22,8 @@ jobs:
       - name: Compare scheduled target and stable target
         env:
           CONFIGURED_BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL }}
-        run: node -e 'console.log("SCHEDULED_TARGET",new URL(process.env.CONFIGURED_BASE_URL).origin)'
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/check-nightly-target.cjs
       - name: Protected two-PC checks
         env:
           PLAYWRIGHT_BASE_URL: https://the-phone-face-app-whatsapp-fotos-y.vercel.app
