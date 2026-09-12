@@ -6,7 +6,7 @@ const CRM_TEST_PHONE='695661409';
 const phoneDigits=value=>String(value||'').replace(/\D/g,'').slice(-9);
 const money=value=>`${Number(value||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €`;
 const calculateTotal=(offer,quantities={})=>Number(offer?.base_price||0)+(offer?.line_options||[]).reduce((sum,line)=>sum+Number(line.price_delta||0)*Math.max(0,Number(quantities[line.id]||0)),0);
-const firstName=value=>String(value||'Cliente').trim().split(/\s+/)[0]||'Cliente';
+const firstName=value=>{const text=(typeof value==='string'||typeof value==='number')?String(value).trim():'';return text?text.split(/\s+/)[0]:'Cliente';};
 const madridDateKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const localDateTimeValue=(value=new Date())=>{const date=value instanceof Date?value:new Date(value);if(!Number.isFinite(date.getTime()))return'';const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)};
 const nextHalfHourLocal=(now=Date.now())=>localDateTimeValue(new Date(Math.ceil((Number(now)+60000)/1800000)*1800000));
