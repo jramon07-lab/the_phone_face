@@ -204,6 +204,14 @@ async function openEdit(r){
  }catch(e){showToast(e?.message||'No se pudo abrir el contacto.',true);}
 }
 function closeCreate(){const back=byId('tpfContactsCreateBack');back.classList.add('hidden');state.editingId='';delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';}
+async function syncNewContactToGoogle({fullName,phone,email}){
+ const setting=await sb.from('app_settings').select('value').eq('key','google_contacts_sync').maybeSingle();
+ if(setting.error||setting.data?.value!==true)return '';
+ if(typeof googleContactsConnected!=='function'||!googleContactsConnected())return 'El contacto se creó en el CRM, pero Google Contacts no está conectado.';
+ if(typeof createGoogleContact!=='function')return 'El contacto se creó en el CRM, pero la sincronización con Google no está disponible.';
+ const result=await createGoogleContact(fullName,phone,email);
+ return result?.duplicate?'El contacto se creó en el CRM; ya existía en Google Contacts.':'Contacto creado también en Google Contacts.';
+}
 async function createContact(){
  const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;
  const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),nickname=byId('tpfCreateNickname')?.value.trim()||'',phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
@@ -219,7 +227,12 @@ async function createContact(){
   if(editing){const res=await sb.from('records').update({data}).eq('id',editing).select('id').single();if(res.error)throw res.error;id=res.data.id;}
   else{const dup=await sb.rpc('find_possible_duplicate_contact',{phone_text:phone||null,dni_text:dni||null,email_text:email||null});if(dup.error)throw dup.error;const duplicateRows=dup.data||[],allowDuplicate=duplicateRows.length&&confirm(`Ya existe ${duplicateRows.length} contacto(s) con el mismo teléfono, DNI o correo.\n\nCancelar evita el duplicado. Pulsa Aceptar solo si son personas distintas.`);if(duplicateRows.length&&!allowDuplicate){msg.textContent='No se creó: abre el contacto existente.';return;}const welcome=!!byId('tpfCreateWelcome')?.checked,cap=window.TPFAuthorship?.capability;let res;if(cap?.installed){res=await sb.rpc('crm_create_contact_guarded',{p_variant:byId('tpfCreateWelcomeVariant')?.value||'general',p_data:data,p_labels:[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value),p_welcome:welcome,p_allow_duplicate:allowDuplicate});if(res.error)throw res.error;id=res.data;}else{if(welcome)throw new Error('Bienvenida pendiente de activar');res=await sb.from('records').insert({source_sheet:'BASE DE DATOS',data}).select('id').single();if(res.error)throw res.error;id=res.data.id;}}
   if(editing||!window.TPFAuthorship?.capability?.installed){const ids=[...byId('tpfCreateLabels').querySelectorAll('input:checked')].map(x=>x.value),lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:id,p_label_ids:ids});if(lr.error)throw lr.error;}
-  const origin=byId('tpfContactsCreateBack')?.dataset?.origin||'';closeCreate();showToast(editing?'Contacto guardado correctamente.':'Contacto creado correctamente.');await loadContacts(true);
+  let completion=editing?'Contacto guardado correctamente.':'Contacto creado correctamente.';
+  if(!editing){
+   try{const googleResult=await syncNewContactToGoogle({fullName:full,phone,email});if(googleResult)completion=googleResult;}
+   catch(error){completion='El contacto se creó en el CRM, pero no se pudo guardar en Google Contacts: '+(error?.message||'revisa la conexión.');}
+  }
+  const origin=byId('tpfContactsCreateBack')?.dataset?.origin||'';closeCreate();showToast(completion);await loadContacts(true);
   try{window.dispatchEvent(new CustomEvent(editing?'tpf:contact-updated':'tpf:contact-created',{detail:{id,phone,origin,previous,data}}));}catch(_){}
  }catch(e){msg.textContent=e?.message||(editing?'No se pudo guardar el contacto.':'No se pudo crear el contacto.');M.report?.('contacts-list-ui',e,editing?'updateContact':'createContact');}
  finally{btn.disabled=false;}
