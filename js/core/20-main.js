@@ -829,11 +829,13 @@ async function findGoogleDuplicate(phone,email){
     return (targetPhone&&phones.includes(targetPhone))||(targetEmail&&emails.includes(targetEmail));
   })||null;
 }
-function googleContactNameCase(value){
+function contactDisplayCase(value){
   const text=String(value||"").trim().replace(/\s+/g," ");
   if(!text||text!==text.toLocaleUpperCase("es-ES"))return text;
   return text.toLocaleLowerCase("es-ES").replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase("es-ES"));
 }
+window.TPFContactDisplayCase=contactDisplayCase;
+function googleContactNameCase(value){return contactDisplayCase(value)}
 async function createGoogleContact(name,phone,email,nickname=""){
   const duplicate=await findGoogleDuplicate(phone,email);
   if(duplicate)return {duplicate:true,person:duplicate.person};

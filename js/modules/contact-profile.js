@@ -113,8 +113,8 @@
     const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg');
     const first=byId('tpfCreateFirst')?.value.trim()||'',last=byId('tpfCreateLast')?.value.trim()||'';
     if(!first&&!last){if(msg)msg.textContent='Escribe el nombre o los apellidos.';return;}
-    const nickname=byId('tpfCreateNickname')?.value.trim()||'',phone=byId('tpfCreatePhone')?.value.trim()||'',email=byId('tpfCreateEmail')?.value.trim()||'',dni=byId('tpfCreateDni')?.value.trim()||'',bank=byId('tpfCreateBank')?.value.trim()||'',notes=byId('tpfCreateNotes')?.value||'',obs=byId('tpfCreateObs')?.value||'';
-    if(btn)btn.disabled=true;if(msg)msg.textContent='Guardando…';
+    const rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=typeof window.TPFContactDisplayCase==='function'?window.TPFContactDisplayCase(rawNickname):rawNickname,phone=byId('tpfCreatePhone')?.value.trim()||'',email=byId('tpfCreateEmail')?.value.trim()||'',dni=byId('tpfCreateDni')?.value.trim()||'',bank=byId('tpfCreateBank')?.value.trim()||'',notes=byId('tpfCreateNotes')?.value||'',obs=byId('tpfCreateObs')?.value||'';
+    if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;if(btn)btn.disabled=true;if(msg)msg.textContent='Guardando…';
     try{
       const q=await sb.from('records').select('data').eq('id',s.id).maybeSingle();if(q.error)throw q.error;
       const d={...(q.data?.data||{})};

@@ -214,9 +214,9 @@ async function syncNewContactToGoogle({fullName,nickname,phone,email}){
 }
 async function createContact(){
  const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;
- const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),nickname=byId('tpfCreateNickname')?.value.trim()||'',phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
+ const first=byId('tpfCreateFirst').value.trim(),last=byId('tpfCreateLast').value.trim(),rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=typeof window.TPFContactDisplayCase==='function'?window.TPFContactDisplayCase(rawNickname):rawNickname,phone=localSpanishPhone(byId('tpfCreatePhone').value),email=byId('tpfCreateEmail').value.trim(),dni=byId('tpfCreateDni').value.trim(),bank=byId('tpfCreateBank').value.trim(),notes=byId('tpfCreateNotes').value.trim(),obs=byId('tpfCreateObs').value.trim();
  if(!first&&!last)return msg.textContent='Escribe el nombre o los apellidos.';
- byId('tpfCreatePhone').value=phone;btn.disabled=true;msg.textContent='Guardando…';
+ byId('tpfCreatePhone').value=phone;if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;btn.disabled=true;msg.textContent='Guardando…';
  try{
   let previous=row?.data||{};
   if(editing){const fresh=await sb.from('records').select('data').eq('id',editing).single();if(fresh.error)throw fresh.error;previous=fresh.data.data||{};}
