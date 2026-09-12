@@ -836,15 +836,17 @@ function contactDisplayCase(value){
 }
 window.TPFContactDisplayCase=contactDisplayCase;
 function googleContactNameCase(value){return contactDisplayCase(value)}
-async function createGoogleContact(name,phone,email,nickname=""){
-  const duplicate=await findGoogleDuplicate(phone,email);
+async function createGoogleContact(name,phone,email,nickname="",options={}){
+  const forceNew=options?.forceNew===true;
+  const duplicate=forceNew?null:await findGoogleDuplicate(phone,email);
   if(duplicate)return {duplicate:true,person:duplicate.person};
-  const normalizedName=googleContactNameCase(name),normalizedNickname=googleContactNameCase(nickname);
-  const parts=normalizedName.split(/\s+/);
-  const givenName=parts.shift()||"";
-  const familyName=parts.join(" ");
+  const suppliedFirst=googleContactNameCase(options?.first??options?.givenName??""),suppliedLast=googleContactNameCase(options?.last??options?.familyName??"");
+  const normalizedName=googleContactNameCase(name),normalizedNickname=googleContactNameCase(nickname),parts=normalizedName.split(/\s+/);
+  const givenName=suppliedFirst||parts.shift()||"";
+  const familyName=(suppliedFirst||suppliedLast)?suppliedLast:parts.join(" ");
+  const displayName=[givenName,familyName].filter(Boolean).join(" ")||normalizedName;
   const body={
-    names:[{givenName,familyName,displayName:normalizedName}],
+    names:[{givenName,familyName,displayName}],
     nicknames:normalizedNickname?[{value:normalizedNickname,type:"DEFAULT"}]:[],
     phoneNumbers:phone?[{value:phone,type:"mobile"}]:[],
     emailAddresses:email?[{value:email,type:"work"}]:[]
