@@ -1,0 +1,33 @@
+name: CRM readonly performance
+on:
+  push:
+    branches: ['perf/isolated-1200-20260912']
+    paths: ['tests/e2e/crm-performance-readonly.spec.js', '.github/workflows/crm-performance-readonly.yml']
+permissions:
+  contents: read
+concurrency:
+  group: crm-browser-shared-test-account
+  cancel-in-progress: false
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Measure current stable with business writes blocked
+        env:
+          PLAYWRIGHT_BASE_URL: https://the-phone-face-app-whatsapp-fotos-y.vercel.app
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/crm-performance-readonly.spec.js --workers=1 --retries=0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crm-readonly-capacity
+          path: test-results

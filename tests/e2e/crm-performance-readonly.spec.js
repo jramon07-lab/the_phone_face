@@ -1,0 +1,78 @@
+const {test,expect}=require('@playwright/test');
+
+test('Capacidad: medir buscador, ficha, ventas y agenda sin escrituras',async({page},info)=>{
+  test.setTimeout(150000);page.setDefaultTimeout(15000);
+  const blocked=[],errors=[],requests=[];
+  await page.route('**/rest/v1/**',route=>{
+    const req=route.request(),url=new URL(req.url()),rpc=url.pathname.split('/rpc/')[1]||'';
+    if(['GET','HEAD','OPTIONS'].includes(req.method())||/^(?:crm_get_|wa_get_|crm_can|crm_current_|crm_has_|get_user_|has_permission|is_admin)/.test(rpc)||['sales_board','current_user_permissions','search_records','contact_related_items','crm_list_labels','crm_list_custom_fields','wa_list_templates'].includes(rpc))return route.continue();
+    blocked.push(url.pathname);return route.fulfill({json:[]});
+  });
+  await page.route('**/api/**',route=>{
+    const u=new URL(route.request().url()),a=u.searchParams.get('action');
+    if(u.pathname==='/api/green'&&['state','summary','chats','history','avatar'].includes(a))return route.continue();
+    blocked.push(u.pathname+'?action='+(a||''));
+    return route.fulfill({json:{ok:true,setRead:false,notifications:[]}});
+  });
+  page.on('pageerror',e=>errors.push(e.message));
+  page.on('requestfinished',req=>{const u=new URL(req.url());if(!u.pathname.includes('/rest/v1/'))return;const t=req.timing();requests.push({path:u.pathname,ms:Math.round(t.responseEnd-t.requestStart)});});
+  await page.addInitScript(()=>{
+    window.__perfLongTasks=[];
+    new PerformanceObserver(list=>{for(const e of list.getEntries())window.__perfLongTasks.push({start:e.startTime,duration:e.duration});}).observe({type:'longtask',buffered:true});
+  });
+  const result={};
+  const clock=()=>page.evaluate(()=>performance.now());
+  let start=await clock();
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);
+  await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
+  await page.locator('#signin').click();
+  await expect(page.locator('#app')).toBeVisible({timeout:30000});
+  result.loginMs=Math.round(await clock());
+  await page.waitForFunction(()=>window.TPFModules?.status().some(m=>m.name==='whatsapp-performance-max'&&m.state==='ready'));
+  start=await clock();
+  await page.locator('.nav[data-view="whatsapplive"]').first().click();
+  const rows=page.locator('#waLiveChats .waChatRow');
+  await expect(rows.first()).toBeVisible({timeout:30000});
+  result.whatsappOpenMs=Math.round(await clock()-start);
+  result.chatCount=await page.evaluate(()=>waLiveState.chats.length);
+  const name=await rows.locator('.waChatRowTop b').first().textContent();
+  expect(name.trim().length).toBeGreaterThan(2);
+  result.searchMs=[];
+  for(let i=0;i<3;i++){
+    await page.locator('#waLiveSearch').fill('');
+    await expect.poll(()=>rows.count()).toBeGreaterThan(10);
+    start=await clock();
+    await page.locator('#waLiveSearch').fill(name.trim());
+    await expect.poll(()=>rows.locator('.waChatRowTop b').evaluateAll((nodes,q)=>nodes.length>0&&nodes.every(n=>n.textContent.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().includes(q.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase())),name.trim())).toBe(true);
+    result.searchMs.push(Math.round(await clock()-start));
+  }
+  await page.locator('.nav[data-view="sales"]').first().click();
+  start=await clock();await page.evaluate(()=>loadSales());
+  await expect(page.locator('#salesBoard .opp').first()).toBeVisible();
+  result.salesLoadMs=Math.round(await clock()-start);
+  result.opportunities=await page.locator('#salesBoard .opp').count();
+  const seed=await page.evaluate(async()=>{const r=await sb.from('records').select('id').eq('source_sheet','BASE DE DATOS').limit(1);if(r.error)throw Error(r.error.message);return r.data[0]?.id;});
+  expect(seed).toBeTruthy();
+  start=await clock();await page.evaluate(id=>window.openContact(id),seed);
+  await expect(page.locator('#contactModal')).toBeVisible();
+  await expect(page.locator('#contactModal .cpRefEdit')).toBeVisible();
+  result.profileMs=Math.round(await clock()-start);
+  await page.locator('#contactClose').click();
+  await page.locator('.nav[data-view="agenda"]').first().click();
+  const before=requests.length;
+  start=await clock();await page.evaluate(()=>loadAgenda());
+  await expect(page.locator('#view-agenda')).toBeVisible();
+  result.agendaLoadMs=Math.round(await clock()-start);
+  result.agendaRows=await page.locator('#agendaList .agendaItem').count();
+  result.agendaRecordRequests=requests.slice(before).filter(r=>r.path.endsWith('/records')).length;
+  result.longTasks=await page.evaluate(()=>({count:window.__perfLongTasks.length,maxMs:Math.round(Math.max(0,...window.__perfLongTasks.map(x=>x.duration)))}));
+  result.readRequests=requests.length;
+  result.blockedWrites=blocked.length;
+  result.errors=errors;
+  console.log('CRM_READONLY_PERFORMANCE '+JSON.stringify(result));
+  await info.attach('capacity.json',{body:JSON.stringify(result,null,2),contentType:'application/json'});
+  expect(errors).toEqual([]);
+  expect(Math.max(...result.searchMs)).toBeLessThan(3000);
+  expect(result.longTasks.maxMs).toBeLessThan(2500);
+});
