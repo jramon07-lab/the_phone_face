@@ -41,6 +41,11 @@ assert.match(inline,/verifiedGoogle=await verifyGoogleSaved\(savedGoogle,targetP
 assert.match(inline,/No se eliminará ningún duplicado/,'a failed Google verification must preserve all duplicate contacts');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
 assert.match(inline,/Es otra persona: crear una segunda ficha/,'a shared phone must offer an explicit second-person decision');
+assert.match(inline,/unir la otra ficha duplicada del CRM/,'a same-person duplicate must offer an explicit CRM merge');
+assert.match(inline,/crm_merge_duplicate_contact/,'a confirmed CRM merge must use the atomic server-side operation');
+assert.match(inline,/archivada de forma recuperable/,'the removed duplicate must be described as recoverable');
+assert.match(inline,/p_expected_keep_data:savedRow\.data/,'the CRM merge must fail closed when the kept record changed');
+assert.match(inline,/p_expected_duplicate_data:mergeRow\.data/,'the CRM merge must fail closed when the duplicate changed');
 assert.match(inline,/crm_create_contact_with_welcome_variant/,'the second person must be created through the guarded CRM RPC');
 assert.match(inline,/TPF_RELACIONES:\{version:1,managed_contacts:/,'the new contact must retain the selected associated holder');
 assert.match(inline,/TPF_WHATSAPP_CHAT_ID/,'a second person sharing a phone must remain bound to the correct conversation');

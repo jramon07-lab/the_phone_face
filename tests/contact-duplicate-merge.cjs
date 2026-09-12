@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert');
+const sql=fs.readFileSync('supabase/migrations/20260912143000_contact_duplicate_merge.sql','utf8');
+assert.match(sql,/create table if not exists crm_private\.contact_merge_archive/,'a removed duplicate must be recoverable');
+assert.match(sql,/security definer/,'the merge must be atomic despite related protected records');
+assert.match(sql,/auth\.uid\(\) is null or not public\.current_user_is_admin\(\)/,'only a signed-in administrator can merge records');
+assert.match(sql,/revoke all on function[\s\S]*from anon, public/,'anonymous callers must not invoke the merge');
+assert.match(sql,/grant execute on function[\s\S]*to authenticated/,'authorized CRM users can invoke the guarded merge');
+for(const table of ['crm_contact_labels','agenda_items','contact_activity','crm_automation_jobs','crm_server_automation_jobs','crm_offer_instances','crm_offer_response_states','crm_welcome_requests','opportunity_month_labels','sales_opportunities','whatsapp_jobs'])assert.match(sql,new RegExp('(?:insert into public\\.)?'+table),'all linked CRM data must move to the kept record: '+table);
+assert.match(sql,/delete from public\.records where id=p_duplicate_id/,'only the chosen duplicate is removed after all links move');
+assert.match(sql,/same phone|mismo teléfono/,'the merge is limited to a shared phone');
+console.log('contact duplicate merge safety assertions passed');
