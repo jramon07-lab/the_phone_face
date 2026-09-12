@@ -22,5 +22,5 @@ assert.match(inline,/!rowConfirmedForChat\(row,chat\)\)\{clearWhatsappNicknames\
 assert.match(core,/confirmedChatId===String\(chat\.id\)/,'the right WhatsApp header must use the CRM identity only after confirmation');
 assert.equal((core.match(/savedIdentity\?\.nickname\?`<small class="tpfWaListNickname">/g)||[]).length,2,'both WhatsApp list renderers must preserve the unified nickname');
 assert.match(html,/whatsapp-green-core\.js\?v=20260911-shared-history-1/,'the browser must load the safe WhatsApp core');
-assert.match(html,/contact-google-inline\.js\?v=20260912-contact-verification-1/,'the browser must load the on-demand Google contact helper');
+assert.match(html,/contact-google-inline\.js\?v=20260912-profile-nickname-1/,'the browser must load the on-demand Google contact helper');
 console.log('WhatsApp/Google identity remains isolated to the exact chat and phone');
