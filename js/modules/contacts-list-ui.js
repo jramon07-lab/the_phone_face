@@ -187,6 +187,8 @@ async function openProfile(r){try{if(typeof window.openContact==='function')awai
 function openWhatsapp(r,schedule){if(!r.phone)return showToast('Este contacto no tiene teléfono.',true);if(!allowed(schedule?'can_schedule_whatsapp':'can_use_whatsapp'))return showToast('No tienes permiso para esta acción.',true);const fn=window.openWaQuick||(typeof openWaQuick==='function'?openWaQuick:null);if(!fn)return showToast('WhatsApp no está disponible.',true);fn({phone:r.phone,name:r.fullName,dni:r.dni,contactId:r.id});if(schedule)setTimeout(()=>{const drop=byId('waQuickDrop');if(drop)drop.click();else byId('waQuickScheduleBox')?.classList.remove('hidden');},40);}
 function clearFilters(){state.filters={q:'',name:'',dni:'',phone:'',source:'',label:''};['tpfContactsSearch','tpfFilterName','tpfFilterDni','tpfFilterPhone'].forEach(id=>{if(byId(id))byId(id).value='';});if(byId('tpfFilterSource'))byId('tpfFilterSource').value='';if(byId('tpfFilterLabel'))byId('tpfFilterLabel').value='';state.page=1;applyAndRender();}
 function timestamp(){const d=new Date(),p=n=>safe(n).padStart(2,'0');return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;}
+function associatedHolders(r){return Array.isArray(r?.data?.TPF_RELACIONES?.managed_contacts)?r.data.TPF_RELACIONES.managed_contacts.filter(x=>x&&safe(x.record_id).trim()):[];}
+function associatedHolderValues(r,key){return associatedHolders(r).map(x=>safe(x[key]).trim()).filter(Boolean).join(' · ');}
 async function exportContacts(scope){
  if(!allowed('can_export_excel'))return showToast('No tienes permiso para exportar.',true);
  const rows=scope==='selected'?state.rows.filter(r=>state.selected.has(r.id)):scope==='filtered'?state.filtered:state.rows;
@@ -197,9 +199,14 @@ async function exportContacts(scope){
   if(trigger)trigger.disabled=true;
   setStatus(`Preparando ${rows.length} contactos…`);
   await loadAllContactLabels();
-  const data=rows.map(r=>({Nombre:r.first,Apellidos:r.last,'Nombre y apellidos':r.fullName,Apodo:r.nickname,DNI:r.dni,Teléfono:r.phone,Email:r.email,Banco:r.bank,Notas:r.notes,Observaciones:r.observations,Origen:r.source==='BASE DE DATOS'?'Contactos':r.source,Etiquetas:(state.labelsByContact.get(r.id)||[]).map(labelName).join(', ')}));
+  const data=rows.map(r=>{const party=r.data?.TPF_TITULAR||{};return {
+   'ID CRM':r.id,Nombre:r.first,Apellidos:r.last,'Nombre y apellidos':r.fullName,Apodo:r.nickname,DNI:r.dni,Teléfono:r.phone,Email:r.email,Banco:r.bank,Notas:r.notes,Observaciones:r.observations,
+   'Titulares asociados':associatedHolderValues(r,'name'),'DNI titulares asociados':associatedHolderValues(r,'dni'),'Teléfonos titulares asociados':associatedHolderValues(r,'phone'),'ID CRM titulares asociados':associatedHolderValues(r,'record_id'),
+   'Titular de contrato guardado':safe(party.holder_name).trim(),'DNI titular de contrato':safe(party.holder_dni).trim(),'Teléfono titular de contrato':safe(party.holder_phone).trim(),
+   Origen:r.source==='BASE DE DATOS'?'Contactos':r.source,Etiquetas:(state.labelsByContact.get(r.id)||[]).map(labelName).join(', ')
+  };});
   const ws=XLSX.utils.json_to_sheet(data);
-  ws['!cols']=[18,26,34,26,16,16,30,20,35,35,18,32].map(wch=>({wch}));
+  ws['!cols']=[18,18,26,34,26,16,16,30,20,35,35,32,22,24,24,32,32,22,24,18,32].map(wch=>({wch}));
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Contactos');
   XLSX.writeFile(wb,`Contactos_ThePhoneFace_${timestamp()}.xlsx`,{compression:true});
