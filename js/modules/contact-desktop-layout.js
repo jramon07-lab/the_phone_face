@@ -101,7 +101,9 @@
    const section=$(id);if(!section||!modal.contains(section))continue;
    if(section.dataset.cpRefPane!==key)section.dataset.cpRefPane=key;
    if(!sections.includes(section))sections.push(section);
-   const target=mounted?panel:right;if(section.parentElement!==target)target.appendChild(section);
+   const target=mounted?panel:right;
+   const grouped=mounted&&selected==='resumen'&&section.closest('#tpfSummaryAccordion');
+   if(section.parentElement!==target&&!grouped)target.appendChild(section);
   }
  }
  center.dataset.cpRefPane='historial';
@@ -124,6 +126,7 @@
   selected=key;right.dataset.cpRefSelected=key;
   tabs.querySelectorAll('button').forEach(b=>{const on=b.dataset.cpRefTab===key;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;if(on&&focus)b.focus();});
   panel.setAttribute('aria-labelledby','cpRefTab-'+key);
+  applySummaryGroups();refreshSummaryMetrics();
  }
  tabs.addEventListener('click',e=>{const b=e.target.closest('[data-cp-ref-tab]');if(b)select(b.dataset.cpRefTab);});
  tabs.addEventListener('keydown',e=>{
@@ -154,7 +157,7 @@
    identityAnchor.after(identity);centerAnchor.after(center);
    sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();call.remove();
   }
-  syncSummarySections();
+  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();
  }
  document.addEventListener('click',e=>{
   if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
@@ -182,9 +185,9 @@
  mq.addEventListener('change',sync);
  // Only direct section insertions matter; message/content mutations must not retrigger layout.
  let summaryTimer=0;
- const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(syncSummarySections,0);});
+ const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();},0);});
  sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
- window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;sync();select(selected);updateCall();refreshPhoto();});
+ window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;restoreSummaryGroups();sync();select(selected);updateCall();refreshPhoto();});
  modal.addEventListener('input',e=>{if(e.target.id==='contactPhone')updateCall();});
  call.addEventListener('click',updateCall);
 
