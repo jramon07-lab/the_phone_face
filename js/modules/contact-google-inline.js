@@ -20,8 +20,8 @@ function schedulePendingGoogleCheck(id){
 }
 
 function contactData(row=current()){
- const d=row?.data||{},given=field(d,'NOMBRE'),family=field(d,'APELLIDOS','APELLIDO'),legacy=field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL');
- const fallback=splitName(legacy);return{id:safe(row?.id),first:given||fallback.first,last:family||fallback.last,name:[given,family].filter(Boolean).join(' ')||legacy||'Contacto',nickname:field(d,'APODO','Apodo','ALIAS'),phone:field(d,'TELÉFONO','TELEFONO','PHONE','MOVIL'),email:field(d,'EMAIL','Email','email','CORREO'),dni:field(d,'DNI / NIF','DNI','NIF')};
+ const d=row?.data||{},given=field(d,'NOMBRE'),family=field(d,'APELLIDOS','APELLIDO'),legacy=field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL'),google=d?.TPF_GOOGLE_CONTACT||{};
+ const fallback=splitName(legacy);return{id:safe(row?.id),first:given||fallback.first,last:family||fallback.last,name:[given,family].filter(Boolean).join(' ')||legacy||'Contacto',nickname:displayCase(field(d,'APODO','Apodo','ALIAS')),phone:field(d,'TELÉFONO','TELEFONO','PHONE','MOVIL'),email:field(d,'EMAIL','Email','email','CORREO'),dni:field(d,'DNI / NIF','DNI','NIF'),googleResource:safe(google?.resource_name||google?.resourceName||d?.TPF_GOOGLE_CONTACT_RESOURCE),googleAccount:fold(google?.google_account||google?.account||d?.TPF_GOOGLE_CONTACT_ACCOUNT)};
 }
 function validWaName(v){const x=fold(v);return !!x&&!['no name','noname','desconocido','unknown','contacto','sin nombre'].includes(x)&&!/^[+\d\s().-]+$/.test(safe(v))}
 function readAliases(){try{return JSON.parse(localStorage.getItem(ALIAS_KEY)||'{}')||{}}catch(_){return{}}}
@@ -60,6 +60,7 @@ function savedVerification(row,chat){
    (!chat||v.chat_id===safe(chat.id))?v:null;
 }
 function makeVerification(row,chat,person){return{version:1,signature:verificationSignature(row),chat_id:safe(chat?.id),google_account:fold(googleAccountEmail()),google_resource:safe(person?.resourceName),verified_at:new Date().toISOString()}}
+function googleBinding(person,account=fold(googleAccountEmail())){const resource=safe(person?.resourceName);return resource?{version:1,resource_name:resource,google_account:safe(account),updated_at:new Date().toISOString()}:null}
 const verificationWrites=new Map();
 async function persistMatchingVerification(row,chat,found){
  const linked=contactChat(row,chat),c=contactData(row),account=fold(googleAccountEmail()),signature=verificationSignature(row);
@@ -113,12 +114,14 @@ function googlePhones(person){return[...new Set((person?.phoneNumbers||[]).map(x
 function googleChoice(person){const g=googleView(person),phones=googlePhones(person);return`${g.name||'Sin nombre'}${g.nickname?` · Apodo: ${g.nickname}`:''}${phones.length?` · Tel: ${phones.join(', ')}`:''}`}
 function googleLine(found,connected,error=''){if(!connected)return'<p>Google: <b>No conectado</b></p>';if(error)return`<p>Google: <b>No se pudo comprobar</b></p>`;if(!found.length)return'<p>Google: <b>No está guardado</b></p>';if(found.length>1)return`<p>Google: <b>${found.length} contactos con este teléfono</b><br>${found.map(p=>esc(googleChoice(p))).join('<br>')}</p>`;const g=googleView(found[0]);return`<p>Google: <b>${esc(g.name||'Sin nombre')}</b>${g.nickname?` · Apodo: ${esc(g.nickname)}`:''}${googlePhones(found[0]).length?` · Tel: ${esc(googlePhones(found[0]).join(', '))}`:''}</p>`}
 function syncState(row,chat,found,connected,error,wa){const c=contactData(row),visible=unifiedVisible(c.first,c.last,c.nickname),account=googleAccountEmail(),linked=contactChat(row,chat),confirmed=chat?rowMatchesChat(row,linked)&&rowConfirmedForChat(row,linked):hasStoredWhatsappBinding(row),phoneMatched=found.length===1&&googlePhones(found[0]).some(p=>phone(p)===phone(c.phone)),aligned=phoneMatched&&googleAligned(found[0],c.first,c.last,c.nickname),ok=connected&&!!account&&!error&&aligned&&confirmed;return{visible,confirmed,waDisplay:confirmed?visible:(safe(wa)||'No Name'),status:ok?'Al día':!connected?'Google no conectado':!account?'Confirma la cuenta de Google':error?'No se pudo comprobar Google':found.length>1?'Duplicados en Google':found.length===0?'No está en Google':phoneMatched?'Vinculado por teléfono · revisa nombre o apodo':'Pendiente de corregir',ok,phoneMatched}}
-async function cachedGoogle(c,force=false){const key=[fold(googleAccountEmail()),phone(c.phone),fold(c.email)].join('|'),old=googleCache.get(key),now=Date.now();if(!force&&old&&now-old.at<30000)return old.promise;const promise=searchGoogle(c).catch(error=>{googleCache.delete(key);throw error});googleCache.set(key,{at:now,promise});return promise}
+async function cachedGoogle(c,force=false){const key=[fold(googleAccountEmail()),safe(c.googleResource),fold(c.googleAccount),phone(c.phone),fold(c.email)].join('|'),old=googleCache.get(key),now=Date.now();if(!force&&old&&now-old.at<30000)return old.promise;const promise=searchGoogle(c).catch(error=>{googleCache.delete(key);throw error});googleCache.set(key,{at:now,promise});return promise}
 function clearGoogleCache(){googleCache.clear()}
 async function searchGoogle(c){
  if(typeof googleContactsConnected!=='function'||!googleContactsConnected())throw new Error('Google Contacts no está conectado.');
+ const fields='names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata',bound=safe(c.googleResource),boundAccount=fold(c.googleAccount),account=fold(googleAccountEmail());
+ if(bound&&(!boundAccount||boundAccount===account)){try{const direct=await googleApi(bound+'?'+new URLSearchParams({personFields:fields}).toString());if(safe(direct?.resourceName)===bound)return[direct]}catch(error){console.warn('No se pudo leer el contacto de Google vinculado',error)}}
  const found=new Map(),wantedPhone=phone(c.phone),wantedEmail=fold(c.email);let pageToken='';
- do{const qs=new URLSearchParams({personFields:'names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata',pageSize:'1000'});qs.append('sources','READ_SOURCE_TYPE_CONTACT');if(pageToken)qs.set('pageToken',pageToken);const data=await googleApi('people/me/connections?'+qs.toString());(data.connections||[]).forEach(p=>{const phones=(p.phoneNumbers||[]).map(x=>phone(x.canonicalForm||x.value)),emails=(p.emailAddresses||[]).map(x=>fold(x.value));if((wantedPhone&&phones.includes(wantedPhone))||(!wantedPhone&&wantedEmail&&emails.includes(wantedEmail)))found.set(p.resourceName,p)});pageToken=data.nextPageToken||''}while(pageToken);
+ do{const qs=new URLSearchParams({personFields:fields,pageSize:'1000'});qs.append('sources','READ_SOURCE_TYPE_CONTACT');if(pageToken)qs.set('pageToken',pageToken);const data=await googleApi('people/me/connections?'+qs.toString());(data.connections||[]).forEach(p=>{const phones=(p.phoneNumbers||[]).map(x=>phone(x.canonicalForm||x.value)),emails=(p.emailAddresses||[]).map(x=>fold(x.value));if((wantedPhone&&phones.includes(wantedPhone))||(!wantedPhone&&wantedEmail&&emails.includes(wantedEmail)))found.set(p.resourceName,p)});pageToken=data.nextPageToken||''}while(pageToken);
  return[...found.values()];
 }
 function ensureStyles(){if($('tpfGoogleInlineStyles'))return;const s=document.createElement('style');s.id='tpfGoogleInlineStyles';s.textContent=`
@@ -170,7 +173,7 @@ async function writeCrm(row,first,last,nickname,chat,verifiedGoogle){
  const d={...(row.data||{})},name=[first,last].filter(Boolean).join(' ').trim(),chatId=safe(chat?.id);
  d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=name;d.APODO=nickname;
  if(chatId){d.TPF_WHATSAPP_CHAT_ID=chatId;d.TPF_WHATSAPP_NAME_CONFIRMED={chat_id:chatId,confirmed_at:new Date().toISOString()}}
- if(verifiedGoogle)d.TPF_CONTACT_VERIFIED=makeVerification({id:row.id,data:d},chat,verifiedGoogle);else delete d.TPF_CONTACT_VERIFIED;
+ if(verifiedGoogle){const binding=googleBinding(verifiedGoogle);if(binding)d.TPF_GOOGLE_CONTACT=binding;d.TPF_CONTACT_VERIFIED=makeVerification({id:row.id,data:d},chat,verifiedGoogle)}else delete d.TPF_CONTACT_VERIFIED;
  const r=await sb.from('records').update({data:d}).eq('id',row.id).eq('data',JSON.stringify(row.data||{})).select('id,data').single();
  if(r.error)throw r.error;if(!r.data||safe(r.data.id)!==safe(row.id)||verificationSignature(r.data)!==verificationSignature({id:row.id,data:d})||(verifiedGoogle&&!savedVerification(r.data,chat)))throw Error('No se confirmó el guardado del CRM. Vuelve a abrir la ficha antes de reintentar.');
  row.data=r.data.data;return row.data;
