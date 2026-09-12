@@ -204,12 +204,12 @@ async function openEdit(r){
  }catch(e){showToast(e?.message||'No se pudo abrir el contacto.',true);}
 }
 function closeCreate(){const back=byId('tpfContactsCreateBack');back.classList.add('hidden');state.editingId='';delete back.dataset.editId;delete back.dataset.tpfProfileEditing;back.querySelector('h3').textContent='Agregar contacto';back.querySelector('.tpfContactsModalHead .small').textContent='Crea el contacto con todos sus datos principales.';byId('tpfContactsCreateSave').textContent='Crear contacto';}
-async function syncNewContactToGoogle({fullName,phone,email}){
+async function syncNewContactToGoogle({fullName,nickname,phone,email}){
  const setting=await sb.from('app_settings').select('value').eq('key','google_contacts_sync').maybeSingle();
  if(setting.error||setting.data?.value!==true)return {message:'',pending:false};
  if(typeof googleContactsConnected!=='function'||!googleContactsConnected())return {message:'El contacto se creó en el CRM, pero Google Contacts no está conectado.',pending:false};
  if(typeof createGoogleContact!=='function')return {message:'El contacto se creó en el CRM, pero la sincronización con Google no está disponible.',pending:false};
- const result=await createGoogleContact(fullName,phone,email);
+ const result=await createGoogleContact(fullName,phone,email,nickname);
  return {message:result?.duplicate?'El contacto se creó en el CRM; ya existía en Google Contacts.':'Contacto creado también en Google Contacts.',pending:true};
 }
 async function createContact(){
@@ -230,7 +230,7 @@ async function createContact(){
   let completion=editing?'Contacto guardado correctamente.':'Contacto creado correctamente.';
   let googleSyncPending=false;
   if(!editing){
-   try{const googleResult=await syncNewContactToGoogle({fullName:full,phone,email});if(googleResult.message)completion=googleResult.message;googleSyncPending=!!googleResult.pending;}
+   try{const googleResult=await syncNewContactToGoogle({fullName:full,nickname,phone,email});if(googleResult.message)completion=googleResult.message;googleSyncPending=!!googleResult.pending;}
    catch(error){completion='El contacto se creó en el CRM, pero no se pudo guardar en Google Contacts: '+(error?.message||'revisa la conexión.');}
   }
   const origin=byId('tpfContactsCreateBack')?.dataset?.origin||'';closeCreate();showToast(completion);await loadContacts(true);
