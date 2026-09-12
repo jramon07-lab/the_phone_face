@@ -52,4 +52,8 @@ assert.doesNotMatch(saveSlice,/\bAPELLIDOS\s*=/,'la validación masiva no puede 
 assert.doesNotMatch(saveSlice,/\bAPODO\s*=/,'la validación masiva no puede reescribir el apodo');
 assert.match(source,/No se envían mensajes/,'la interfaz debe dejar claro que el análisis no manda WhatsApp');
 assert.match(source,/fetch\('\/api\/green\?action=chats'/,'debe usar los nombres originales devueltos por WhatsApp');
+assert.match(source,/DNI \/ NIF/,'la revisión por lotes debe mostrar el DNI o NIF del CRM');
+assert.match(source,/Validar seleccionados/,'la revisión por lotes debe permitir validar una selección manual');
+assert.match(source,/selectedSafe\(\)/,'solo las coincidencias elegidas pueden validarse');
+assert.match(source,/selectedIds\.has\(rowKey\(row\)\)/,'la aplicación debe conservar exactamente la selección tras volver a comprobar');
 console.log('PASS comprobación masiva: solo valida coincidencias estrictas CRM, Google y WhatsApp');
