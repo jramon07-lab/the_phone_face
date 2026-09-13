@@ -59,12 +59,15 @@ async function sendOfferReplyNow(incomingMessageId:string,chatId:string,secret:s
     if(!phone)return {sent:false,reason:"no_followup_message"};
     const since=new Date(Date.now()-30_000).toISOString();
     const {data:candidates,error:candidatesError}=await sb.from("crm_server_automation_jobs")
-      .select("id,event_key,context")
+      .select("id,event_key,context,action_config")
       .eq("status","pending")
       .like("event_key","offer-reason-%")
       .gte("created_at",since);
     if(candidatesError)throw candidatesError;
     const matching=(candidates||[]).filter((candidate:any)=>{
+      // This previous reply has already been accepted by WhatsApp and is only
+      // waiting for its receipt. It is not a candidate for this new click.
+      if(candidate?.action_config?.__delivery_receipt)return false;
       const candidatePhone=String(candidate?.context?.phone||"").replace(/\D/g,"");
       return candidatePhone===phone||candidatePhone===phone.replace(/^34/,"");
     });
