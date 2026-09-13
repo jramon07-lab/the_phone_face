@@ -109,3 +109,19 @@ test('cerrar elimina el selector y los datos temporales antes de abrir otro cont
   await expect(page.locator('#tpfS3contact')).toHaveText('Para Contacto nuevo');
   await expect(page.locator('#tpfS3msg')).toHaveValue('');
 });
+
+test('todos los accesos rápidos cambian fecha y hora al reprogramar',async({page})=>{
+  await mountFixture(page);
+  await page.evaluate(()=>window.openWaScheduleV3({
+    phone:'600111222',name:'Contacto',message:'Prueba',
+    scheduledAt:'2030-01-01T10:00:00'
+  }));
+  const quick=page.locator('.tpfS3q');
+  await expect(quick).toHaveCount(5);
+  for(let index=0;index<5;index++){
+    const when=await quick.nth(index).getAttribute('data-when');
+    await quick.nth(index).click();
+    await expect(page.locator('#tpfS3date')).toHaveValue(when.slice(0,10));
+    await expect(page.locator('#tpfS3time')).toHaveValue(when.slice(11,16));
+  }
+});
