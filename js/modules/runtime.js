@@ -34,3 +34,9 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
   s.async=false;
   document.head.appendChild(s);
 })();
+(() => {
+  const s=document.createElement('script');
+  s.src='/js/modules/crm-duplicates-review.js?v=20260913-duplicates-1';
+  s.async=false;
+  document.head.appendChild(s);
+})();
