@@ -15,12 +15,14 @@ const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,
 async function cronAuthorized(req:Request){const secret=String(req.headers.get("x-tpf-cron-secret")||"");if(!secret)return false;const {data,error}=await sb.rpc("crm_check_runner_secret",{p_secret:secret});return !error&&data===true;}
 function phoneToChat(ctx:any){const existing=String(ctx?.chat_id||"").trim();if(/^[^@]+@(c\.us|g\.us|lid)$/.test(existing))return existing;let digits=String(ctx?.phone||"").replace(/\D/g,"");if(digits.length===9)digits="34"+digits;if(digits.length<8||digits.length>15)return "";return `${digits}@c.us`;}
 function contactVar(ctx:any,key:string){const data=ctx?.contact_data&&typeof ctx.contact_data==="object"?ctx.contact_data:{};const wanted=String(key||"").trim().toLowerCase();for(const [k,v] of Object.entries(data)){if(String(k).trim().toLowerCase()===wanted)return String(v??"");}return "";}
+function firstName(ctx:any){return String(ctx?.name||"").trim().split(/\s+/)[0]||"cliente";}
 function vars(text:string,ctx:any){return String(text||"")
   .replaceAll("{{contacto.nombre}}",String(ctx?.name||""))
   .replaceAll("{{contacto.telefono}}",String(ctx?.phone||""))
   .replace(/\{\{contacto\.([^}]+)\}\}/gi,(_m,k)=>contactVar(ctx,k))
   .replace(/\{contacto\.([^}]+)\}/gi,(_m,k)=>contactVar(ctx,k))
   .replaceAll("{nombre}",String(ctx?.name||""))
+  .replaceAll("{nombre_seguimiento}",firstName(ctx))
   .replaceAll("{dni}",String(ctx?.dni||""))
   .replaceAll("{telefono}",String(ctx?.phone||""))
   .replaceAll("{oferta_mensaje}",String(ctx?.oferta_mensaje||""))
@@ -86,7 +88,9 @@ async function expandFlow(job:any){const steps=Array.isArray(job.action_config?.
     if(s.kind==="condition"){guard=String(s.condition_type||"");continue;}
     if(s.kind==="action"){
       const type=s.action_type==="send_whatsapp_now"?"__send_whatsapp":String(s.action_type||"");if(!type)throw new Error(`Paso ${i+1}: acción vacía`);actionNo++;
-      const cfg={...(s.config||{}),__flow_guard:guard||null,__flow_step:i+1};const ctx={...(job.context||{}),flow_root:root,flow_started_at:started};const runAt=cursor.toISOString();const key=`${root}:action:${actionNo}`;await enqueueChild(job,key,type,orderedConfig(cfg,ctx,previousEvent),ctx,runAt);previousEvent=key;previous={type,config:{...(s.config||{})},guard,baseIndex:actionNo};continue;
+      const stepConfig={...(s.config||{})};
+      if(["reminder_2","reminder_5"].includes(String(stepConfig.offer_phase||"")))stepConfig.text=String(stepConfig.text||"").replaceAll("{nombre}","{nombre_seguimiento}");
+      const cfg={...stepConfig,__flow_guard:guard||null,__flow_step:i+1};const ctx={...(job.context||{}),flow_root:root,flow_started_at:started};const runAt=cursor.toISOString();const key=`${root}:action:${actionNo}`;await enqueueChild(job,key,type,orderedConfig(cfg,ctx,previousEvent),ctx,runAt);previousEvent=key;previous={type,config:stepConfig,guard,baseIndex:actionNo};continue;
     }
     if(s.kind==="repeat"){
       if(!previous)throw new Error(`Paso ${i+1}: no hay acción anterior para repetir`);const every=durationMs(s.every_value,s.every_unit);const times=Math.max(1,Math.min(100,Number(s.times||1)));if(!every)throw new Error(`Paso ${i+1}: intervalo de repetición inválido`);
