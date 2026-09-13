@@ -170,6 +170,10 @@ function contextFor(prefill={}){
     hasOwn(prefill,'programId')?prefill.programId:
     $('waQuickProgramId')?.value||''
   ).trim();
+  const scheduledAt=String(
+    hasOwn(prefill,'scheduledAt')?prefill.scheduledAt:
+    hasOwn(prefill,'when')?prefill.when:''
+  ).trim();
 
   return{
     phone,
@@ -177,9 +181,15 @@ function contextFor(prefill={}){
     dni,
     message,
     programId,
+    scheduledAt,
     contactId,
     source:String(prefill.source||'direct')
   };
+}
+
+function scheduledDate(value){
+  const parsed=new Date(value||'');
+  return Number.isNaN(parsed.getTime())?null:parsed;
 }
 
 function contextFromQuick(){
@@ -427,9 +437,15 @@ function open(prefill={}){
 
   $('tpfS3phone').value=activeContext.phone;
   $('tpfS3msg').value=activeContext.message;
-  $('tpfS3date').value=localValue(choices[0][1]).slice(0,10);
-  fillTimeChoices($('tpfS3date').value,timeValue(choices[0][1]));
+  const savedDate=scheduledDate(activeContext.scheduledAt);
+  // Al editar conservamos la fecha existente si aún es futura. Si ya venció,
+  // se propone la primera hora futura: nunca se guarda una fecha pasada.
+  const initialDate=savedDate&&savedDate.getTime()>Date.now()?savedDate:choices[0][1];
+  $('tpfS3date').value=localValue(initialDate).slice(0,10);
+  fillTimeChoices($('tpfS3date').value,timeValue(initialDate));
   $('tpfS3contact').textContent=activeContext.name?`Para ${activeContext.name}`:'';
+  $('tpfS3title').textContent=activeContext.programId?'Reprogramar WhatsApp':'Programar WhatsApp';
+  $('tpfS3save').textContent=activeContext.programId?'Guardar cambios':'Programar envío';
 
   overlay.querySelectorAll('.tpfS3q').forEach(button=>{
     button.onclick=()=>{
@@ -491,7 +507,7 @@ function open(prefill={}){
     }catch(error){
       errorBox.textContent=error?.message||'No se pudo programar el WhatsApp.';
       button.disabled=false;
-      button.textContent='Programar envío';
+      button.textContent=values.programId?'Guardar cambios':'Programar envío';
     }
   };
 
@@ -505,6 +521,47 @@ function open(prefill={}){
 
 window.openWaScheduleV3=open;
 window.closeWaScheduleV3=close;
+
+async function openExistingProgram(id){
+  const programId=String(id||'').trim();
+  if(!programId)return;
+  let row=(window.__waRows||[]).find(item=>String(item?.id)===programId)||null;
+  if(!row){
+    const client=supabaseClient();
+    if(!client){
+      alert('No se ha podido cargar el WhatsApp programado.');
+      return;
+    }
+    const result=await client.from('agenda_items').select('*').eq('id',programId).maybeSingle();
+    if(result?.error)throw result.error;
+    row=result?.data||null;
+  }
+  if(!row){
+    alert('Ese WhatsApp programado ya no existe o no está disponible.');
+    return;
+  }
+  return open({
+    programId:row.id,
+    phone:row.whatsapp_phone||row.customer_phone||'',
+    name:row.customer_name||'',
+    message:row.whatsapp_message||'',
+    scheduledAt:row.whatsapp_scheduled_at||row.starts_at||'',
+    contactId:row.related_record_id||null,
+    source:'programmed-edit'
+  });
+}
+
+// Sustituye solo la edición de una programación existente. Al guardar, la
+// persistencia de arriba usa update(...).eq('id', programId): no inserta otra
+// cita, no crea contactos y no toca fichas CRM.
+window.editProgrammedWhatsapp=async id=>{
+  try{return await openExistingProgram(id)}
+  catch(error){
+    console.error('No se pudo abrir el WhatsApp programado.',error);
+    try{if(typeof showToast==='function')showToast(error?.message||'No se pudo abrir el WhatsApp programado.',true);else alert(error?.message||'No se pudo abrir el WhatsApp programado.')}catch(_){}
+    return null;
+  }
+};
 
 function install(){
   ensureStyles();
