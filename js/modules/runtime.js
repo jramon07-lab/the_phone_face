@@ -28,3 +28,9 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
   const files=['contact-approved-nickname-outside-data-1.js','contact-approved-nickname-outside-data-2.js','contact-approved-nickname-outside-data-3.js','contact-approved-nickname-outside-data-4.js','contact-approved-nickname-outside-data-5.js','contact-approved-nickname-outside-data-6.js','contact-approved-nickname-outside-review.js'];
   for(const file of files){const s=document.createElement('script');s.src='/js/modules/'+file+'?v=20260912-outside-nickname-review-1';s.async=false;document.head.appendChild(s)}
 })();
+(() => {
+  const s=document.createElement('script');
+  s.src='/js/modules/google-contacts-full-sync.js?v=20260913-full-sync-1';
+  s.async=false;
+  document.head.appendChild(s);
+})();
