@@ -83,8 +83,8 @@ async function sendOfferReplyNow(incomingMessageId:string,chatId:string,secret:s
   if(claimError)throw claimError;
   if(!job)return {sent:false,reason:"already_claimed"};
 
-  const chatId=phoneToChat(job.context),message=messageVars(String(job.action_config?.text||""),job.context||{}),buttons=Array.isArray(job.action_config?.reply_buttons)?job.action_config.reply_buttons:[];
-  if(!chatId||!message.trim()){
+  const recipientChatId=phoneToChat(job.context),message=messageVars(String(job.action_config?.text||""),job.context||{}),buttons=Array.isArray(job.action_config?.reply_buttons)?job.action_config.reply_buttons:[];
+  if(!recipientChatId||!message.trim()){
     await sb.from("crm_server_automation_jobs").update({status:"pending",error_message:"Respuesta automática pendiente: falta teléfono o texto",updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","running");
     return {sent:false,reason:"invalid_message"};
   }
@@ -106,7 +106,7 @@ async function sendOfferReplyNow(incomingMessageId:string,chatId:string,secret:s
 
   let response:Response,body:any={};
   try{
-    response=await fetch(`${GREEN_PROXY}?action=${buttons.length?"sendbuttons":"send"}`,{method:"POST",headers:{"content-type":"application/json","x-tpf-cron-secret":secret},body:JSON.stringify({chatId,message,...(buttons.length?{buttons}:{})})});
+    response=await fetch(`${GREEN_PROXY}?action=${buttons.length?"sendbuttons":"send"}`,{method:"POST",headers:{"content-type":"application/json","x-tpf-cron-secret":secret},body:JSON.stringify({chatId:recipientChatId,message,...(buttons.length?{buttons}:{})})});
     body=await response.json().catch(()=>({}));
   }catch(error){
     await sb.from("crm_server_automation_jobs").update({status:"failed",error_message:"No se confirmó el envío inmediato; no se reintenta para evitar un duplicado",updated_at:new Date().toISOString()}).eq("id",job.id).eq("status","running");
@@ -121,7 +121,7 @@ async function sendOfferReplyNow(incomingMessageId:string,chatId:string,secret:s
     return {sent:false,reason:retrySafe?"provider_rejected":"provider_unconfirmed"};
   }
 
-  const receipt={idMessage:providerMessageId,chatId,checks:0,acceptedAt:new Date().toISOString()};
+  const receipt={idMessage:providerMessageId,chatId:recipientChatId,checks:0,acceptedAt:new Date().toISOString()};
   try{
     const {error:rememberError}=await sb.from("crm_offer_outgoing_messages").upsert({provider_message_id:providerMessageId,offer_instance_id:offerId,job_id:job.id,phase:String(job.action_config?.offer_phase||"response"),sent_at:new Date().toISOString()},{onConflict:"provider_message_id"});
     if(rememberError)throw rememberError;
