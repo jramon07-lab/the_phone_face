@@ -447,12 +447,26 @@ function open(prefill={}){
   $('tpfS3title').textContent=activeContext.programId?'Reprogramar WhatsApp':'Programar WhatsApp';
   $('tpfS3save').textContent=activeContext.programId?'Guardar cambios':'Programar envío';
 
+  const chooseQuickDate=button=>{
+    const when=String(button?.dataset?.when||'');
+    // Siempre usamos el valor completo que trae cada botón, no la fecha que
+    // estaba abierta al entrar a editar. Así Semana y Mes no pueden quedarse
+    // mostrando Mañana por un refresco anterior del formulario.
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when))return;
+    const dateValue=when.slice(0,10),time=when.slice(11,16);
+    overlay.querySelectorAll('.tpfS3q').forEach(item=>item.classList.remove('on'));
+    button.classList.add('on');
+    $('tpfS3date').value=dateValue;
+    fillTimeChoices(dateValue,time);
+    // Si la hora propuesta está disponible, la dejamos marcada de forma
+    // explícita después de reconstruir las opciones de hora.
+    if(!$('tpfS3time').disabled)$('tpfS3time').value=time;
+  };
   overlay.querySelectorAll('.tpfS3q').forEach(button=>{
-    button.onclick=()=>{
-      overlay.querySelectorAll('.tpfS3q').forEach(item=>item.classList.remove('on'));
-      button.classList.add('on');
-      $('tpfS3date').value=button.dataset.when.slice(0,10);
-      fillTimeChoices($('tpfS3date').value,button.dataset.when.slice(11,16));
+    button.onclick=event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      chooseQuickDate(button);
     };
   });
   $('tpfS3date').onchange=()=>{
