@@ -36,8 +36,8 @@ assert.match(inline,/Eliminar de Google los otros contactos duplicados/,'duplica
 assert.match(inline,/window\.confirm/,'duplicate deletion must require a final confirmation');
 assert.match(inline,/:deleteContact/,'confirmed Google duplicates must be deleted through People API');
 assert.match(inline,/Se creará un contacto nuevo en Google/,'a confirmed empty Google search must clearly announce contact creation');
-assert.match(inline,/if\(!person&&!window\.confirm/,'creating a missing Google contact must require confirmation');
-assert.match(inline,/verifiedGoogle=await verifyGoogleSaved\(savedGoogle,targetPhone,first,last,nickname\)[\s\S]*await writeCrm/,'Google creation or update must be verified before CRM changes and duplicate cleanup');
+assert.match(inline,/if\(!separate&&!person&&!window\.confirm/,'creating a missing Google contact must require confirmation');
+assert.match(inline,/verifiedGoogle=separate\?null:await verifyGoogleSaved\(savedGoogle,targetPhone,first,last,nickname\)[\s\S]*if\(!separate\)await writeCrm/,'Google creation or update must be verified before CRM changes and duplicate cleanup');
 assert.match(inline,/No se eliminará ningún duplicado/,'a failed Google verification must preserve all duplicate contacts');
 assert.doesNotMatch(inline,/obs\.observe\(document\.body/,'the contact helper must not observe the whole page continuously');
 assert.match(inline,/Es otra persona: crear una segunda ficha/,'a shared phone must offer an explicit second-person decision');
@@ -49,10 +49,12 @@ assert.match(inline,/p_expected_duplicate_data:mergeRow\.data/,'the CRM merge mu
 assert.match(inline,/crm_create_contact_with_welcome_variant/,'the second person must be created through the guarded CRM RPC');
 assert.match(inline,/TPF_RELACIONES:\{version:1,managed_contacts:/,'the new contact must retain the selected associated holder');
 assert.match(inline,/TPF_WHATSAPP_CHAT_ID/,'a second person sharing a phone must remain bound to the correct conversation');
-assert.match(inline,/La ficha de \$\{c\.name\} no se modificará/,'the original CRM record must be preserved explicitly');
+assert.match(inline,/Google y la ficha actual no se modificarán/,'the original CRM and Google records must be preserved explicitly');
 assert.match(inline,/searchRecords/,'the associated holder must be searchable before saving');
-assert.match(inline,/preserveExtra:separate/,'splitting a person must not discard unrelated Google contact fields');
-assert.match(inline,/window\.confirm\(`Se creará una ficha nueva/,'creating a second CRM record must require final confirmation');
+assert.match(inline,/savedGoogle=separate\?null:await writeGoogle/,'splitting a person must not write or discard any Google fields');
+assert.match(inline,/window\.confirm\(`Se creará una segunda ficha solo en el CRM/,'creating a second CRM record must require final confirmation');
+assert.match(inline,/Google y llamadas: <b>no se modificarán<\/b>/,'a separate CRM person must never alter Google');
+assert.match(inline,/const person=separate\?null/,'a separate CRM person must not reuse an existing Google contact');
 assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when the user actually confirms the final WhatsApp display name');
 assert.match(inline,/syncEditedContact\(event\.detail\)/,'CRM edits must automatically update an existing Google contact when enabled');
 assert.match(inline,/refreshEditedWhatsappContact\(event\.detail\?\.id\)/,'CRM edits must refresh the open WhatsApp contact immediately');
@@ -61,7 +63,7 @@ assert.match(inline,/WhatsApp dentro del CRM/,'the summary must distinguish the 
 assert.match(inline,/state\.ok\?'Revisar o modificar':'Revisar y unificar'/,'an up-to-date contact must remain reviewable');
 assert.match(inline,/Cuenta de Google/,'both contact surfaces must identify the connected Google account');
 assert.match(inline,/Cambiar cuenta de Google/,'the user must be able to switch to the Google Contacts account they are checking');
-assert.match(inline,/if\(!googleAccountEmail\(\)\)/,'saving must be blocked until the Google account is identified');
+assert.match(inline,/if\(!separate&&!googleAccountEmail\(\)\)/,'Google writes must be blocked until the Google account is identified');
 assert.match(googleApi,/auth\/contacts openid email/,'Google authorization must include identity scopes');
 assert.match(googleApi,/oauth2\/v3\/userinfo/,'the connected Google account email must be resolved on the server');
 assert.match(googleApi,/prompt:'consent select_account'/,'switching Google account must force an account choice');
