@@ -30,7 +30,7 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
 })();
 (() => {
   const s=document.createElement('script');
-  s.src='/js/modules/google-contacts-full-sync.js?v=20260913-dni-phone-5';
+  s.src='/js/modules/google-contacts-full-sync.js?v=20260913-phone-label-6';
   s.async=false;
   document.head.appendChild(s);
 })();
