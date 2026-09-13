@@ -30,7 +30,7 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
 })();
 (() => {
   const s=document.createElement('script');
-  s.src='/js/modules/google-contacts-full-sync.js?v=20260913-sticky-actions-7';
+  s.src='/js/modules/google-contacts-full-sync.js?v=20260913-safe-consolidation-9';
   s.async=false;
   document.head.appendChild(s);
 })();
