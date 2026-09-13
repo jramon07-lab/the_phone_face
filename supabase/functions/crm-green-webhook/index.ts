@@ -39,26 +39,47 @@ async function recordFailure(message:string,detail:unknown){
   }catch(error){console.error("GREEN_WEBHOOK_AUDIT_ERROR",error instanceof Error?error.message:String(error));}
 }
 
-// La decisión ya se registra dentro del trigger de wa_messages. Estos dos
-// mensajes son sólo la continuación conversacional y se reclaman de forma
-// atómica: si este envío inmediato no puede confirmarse, el trabajo sigue
-// pendiente para que el runner periódico lo envíe después, sin duplicarlo.
-async function sendOfferReplyNow(incomingMessageId:string,secret:string){
+// La decisión ya se registra dentro del trigger de wa_messages. Las respuestas
+// posteriores de «Más opciones», «Volver» y «Otro motivo» crean trabajos con
+// claves distintas. También se reclaman aquí de forma atómica para que no
+// esperen a la cola periódica. Ante cualquier ambigüedad se dejan en cola:
+// nunca se envía un mensaje a otra oferta ni se duplica un envío.
+async function sendOfferReplyNow(incomingMessageId:string,chatId:string,secret:string){
   const {data:decision,error:decisionError}=await sb.from("crm_offer_response_states")
     .select("offer_instance_id,action")
     .eq("decision_message_id",incomingMessageId)
     .maybeSingle();
   if(decisionError)throw decisionError;
-  const offerId=String(decision?.offer_instance_id||"").trim();
+  let offerId=String(decision?.offer_instance_id||"").trim();
   const eventKey=decision?.action==="decline"?`offer-reason:${offerId}`:decision?.action==="alternative"?`offer-alternative-ack:${offerId}`:"";
-  if(!eventKey)return {sent:false,reason:"no_followup_message"};
+  let jobId="";
 
-  const {data:job,error:claimError}=await sb.from("crm_server_automation_jobs")
+  if(!eventKey){
+    const phone=chatId.replace(/@[^@]+$/,"").replace(/\D/g,"");
+    if(!phone)return {sent:false,reason:"no_followup_message"};
+    const since=new Date(Date.now()-30_000).toISOString();
+    const {data:candidates,error:candidatesError}=await sb.from("crm_server_automation_jobs")
+      .select("id,event_key,context")
+      .eq("status","pending")
+      .like("event_key","offer-reason-%")
+      .gte("created_at",since);
+    if(candidatesError)throw candidatesError;
+    const matching=(candidates||[]).filter((candidate:any)=>{
+      const candidatePhone=String(candidate?.context?.phone||"").replace(/\D/g,"");
+      return candidatePhone===phone||candidatePhone===phone.replace(/^34/,"");
+    });
+    // Un único trabajo creado por este clic es seguro. Si hubiese dos, no se
+    // adivina: el runner normal conserva el mensaje para revisión.
+    if(matching.length!==1)return {sent:false,reason:matching.length?"ambiguous_followup":"no_followup_message"};
+    jobId=String(matching[0].id||"");
+    offerId=String(matching[0].context?.offer_instance_id||"").trim();
+  }
+
+  let claim=sb.from("crm_server_automation_jobs")
     .update({status:"running",updated_at:new Date().toISOString(),error_message:null})
-    .eq("event_key",eventKey)
-    .eq("status","pending")
-    .select("id,action_config,context")
-    .maybeSingle();
+    .eq("status","pending");
+  claim=jobId?claim.eq("id",jobId):claim.eq("event_key",eventKey);
+  const {data:job,error:claimError}=await claim.select("id,action_config,context").maybeSingle();
   if(claimError)throw claimError;
   if(!job)return {sent:false,reason:"already_claimed"};
 
@@ -134,7 +155,7 @@ Deno.serve(async(req:Request)=>{
   const duplicate=String(error?.code||"")==="23505";
   let immediate:any={sent:false,reason:"duplicate"};
   if(!duplicate){
-    try{immediate=await sendOfferReplyNow(idMessage,secret)}
+    try{immediate=await sendOfferReplyNow(idMessage,chatId,secret)}
     catch(dispatchError){await recordFailure("No se pudo iniciar la respuesta automática de oferta",dispatchError instanceof Error?dispatchError.message:String(dispatchError));}
   }
   return reply({ok:true,accepted:true,duplicate,immediate});
