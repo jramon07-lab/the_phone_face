@@ -1932,7 +1932,12 @@
               ? `Guardado correctamente y eliminados ${removed} duplicados de Google.`
               : `Guardado como “${visible}” en los tres sitios.`;
       window.dispatchEvent(
-        new CustomEvent("tpf:contact-updated", { detail: { id: savedRow.id } }),
+        new CustomEvent("tpf:contact-updated", {
+          detail: {
+            id: savedRow.id,
+            resolution: saveReturn === "batch" ? "google-duplicate" : "",
+          },
+        }),
       );
       if (failed) return;
       setTimeout(() => {
@@ -1946,6 +1951,8 @@
           waLiveState.contact = savedRow;
           waSignature = "";
           refreshWhatsapp();
+        } else if (saveReturn === "batch") {
+          // El lote recibe el evento anterior y vuelve a cargar sin reabrir otra ficha.
         } else if (safe(current()?.id) === safe(row.id))
           window.openContact?.(savedRow.id);
       }, 550);
