@@ -198,7 +198,7 @@
       let status = "coincide",
         person = null;
       if (!p) status = "crm_phone_missing";
-      else if (!c.first || !c.last) status = "crm_name_incomplete";
+      else if (!c.first) status = "crm_name_incomplete";
       else if ((crmByPhone.get(p) || []).length !== 1)
         status = "crm_phone_duplicate";
       const wa = whatsappInfo(
