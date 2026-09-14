@@ -658,7 +658,8 @@
       );
     state.applying = true;
     let done = 0;
-    const failed = [];
+    const failed = [],
+      needsGoogleChoice = [];
     try {
       for (const item of items) {
         try {
@@ -668,14 +669,19 @@
           done++;
           delete state.prepared[preparedKey(item)];
         } catch (error) {
+          // No es un error técnico: hay varios Google para el mismo teléfono.
+          // Abrimos el selector seguro en vez de dejar un aviso sin salida.
+          if (error?.code === "TPF_GOOGLE_DUPLICATES") {
+            needsGoogleChoice.push(item);
+            continue;
+          }
           failed.push({
             label: safe(item.label) || "Contacto sin nombre",
             message: error?.message || "Error desconocido",
           });
         }
       }
-      // Vuelve a leer los tres sitios incluso si uno de los contactos falla.
-      // Así los aplicados dejan de figurar como “Preparado” sin obligar a repetirlos.
+      // Vuelve a leer los tres sitios incluso si uno requiere decisión.
       await run();
       const failedLines = failed
           .slice(0, 5)
@@ -696,12 +702,20 @@
             failedLines +
             more,
         );
-      } else {
+      } else if (!needsGoogleChoice.length) {
         alert(
           "Se han aplicado " +
             done +
             " cambio(s) y se ha actualizado la comparación. Los aplicados ya no quedan preparados.",
         );
+      }
+      if (needsGoogleChoice.length) {
+        const item = needsGoogleChoice[0];
+        // Tras guardar la decisión, el evento tpf:contact-updated quita el borrador
+        // de esta fila y vuelve a cargar la comparación.
+        setTimeout(() => {
+          api.openDecisionForRow?.(item.row, item.chat || null);
+        }, 0);
       }
     } finally {
       state.applying = false;
@@ -870,6 +884,18 @@
   function install() {
     window.TPFContactBatchVerification = { open, analyzeRows, summary };
     window.addEventListener("tpf:contacts-batch-open", open);
+    // Una corrección abierta desde este lote ya terminó de guardarse:
+    // no debe quedar como borrador ni obligar a pulsar Aplicar por segunda vez.
+    window.addEventListener("tpf:contact-updated", (event) => {
+      if (event.detail?.resolution !== "google-duplicate") return;
+      const id = safe(event.detail?.id);
+      if (!id || !state.prepared[id]) return;
+      delete state.prepared[id];
+      delete state.reviewed[id];
+      if (!$("tpfBatchVerifyBack")?.classList.contains("hidden"))
+        setTimeout(() => run(), 0);
+      else render();
+    });
   }
   M.register("contact-batch-verification", { install });
 })();
