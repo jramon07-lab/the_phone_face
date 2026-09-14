@@ -264,6 +264,9 @@
         person,
         chat: wa.chat,
         whatsappStatus: wa.status,
+        verified:
+          status === "coincide" &&
+          !!api.savedVerification?.(row, wa.chat || null),
       });
     }
     return result.sort(
@@ -278,6 +281,7 @@
       coincide: 0,
       crmGoogleDifferent: 0,
       whatsappDifferent: 0,
+      verified: 0,
       greenWhatsappSame: 0,
       greenWhatsappDifferent: 0,
       greenWhatsappOther: 0,
@@ -285,14 +289,18 @@
     };
     for (const row of rows) {
       out.byStatus[row.status] = (out.byStatus[row.status] || 0) + 1;
+      if (row.verified) out.verified++;
       if (row.status === "coincide") {
         out.coincide++;
-        if (row.whatsappStatus === "same") out.greenWhatsappSame++;
-        else if (row.whatsappStatus === "different")
-          out.greenWhatsappDifferent++;
-        else out.greenWhatsappOther++;
+        if (!row.verified) {
+          if (row.whatsappStatus === "same") out.greenWhatsappSame++;
+          else if (row.whatsappStatus === "different")
+            out.greenWhatsappDifferent++;
+          else out.greenWhatsappOther++;
+        }
       } else out.crmGoogleDifferent++;
-      if (row.whatsappStatus !== "same") out.whatsappDifferent++;
+      if (!row.verified && row.whatsappStatus !== "same")
+        out.whatsappDifferent++;
     }
     return out;
   }
@@ -405,14 +413,23 @@
   function selectableGreen(row) {
     return (
       row?.status === "coincide" &&
+      !row?.verified &&
       (row.whatsappStatus === "same" || row.whatsappStatus === "different")
     );
   }
   function matchesFilter(row, filter = state.filter) {
     if (filter === "green_whatsapp_same")
-      return row.status === "coincide" && row.whatsappStatus === "same";
+      return (
+        row.status === "coincide" &&
+        !row.verified &&
+        row.whatsappStatus === "same"
+      );
     if (filter === "green_whatsapp_different")
-      return row.status === "coincide" && row.whatsappStatus === "different";
+      return (
+        row.status === "coincide" &&
+        !row.verified &&
+        row.whatsappStatus === "different"
+      );
     return filter === "all" || row.status === filter;
   }
   function selectedRows(rows = state.results) {
@@ -911,10 +928,14 @@
     const data = summary(),
       all = filtered(),
       selectable = all.filter(selectableGreen),
+      activeGreenGroup =
+        state.filter === "green_whatsapp_same" ||
+        state.filter === "green_whatsapp_different",
+      selectionScope = activeGreenGroup ? selectable : [],
       selectedTotal = selectedRows().length,
       allSelectableSelected =
-        !!selectable.length &&
-        selectable.every((row) => state.selected.has(rowKey(row))),
+        !!selectionScope.length &&
+        selectionScope.every((row) => state.selected.has(rowKey(row))),
       pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
     state.page = Math.min(state.page, pages);
     const rows = all.slice(
@@ -965,13 +986,34 @@
         render();
       };
     });
+    if (data.verified) {
+      const verified = document.createElement("div");
+      verified.className = "tpfBatchGreenGroup verified";
+      verified.innerHTML = `<span><b>Ya verificados</b><small>CRM, Google y WhatsApp vinculados</small></span><strong>${data.verified}</strong>`;
+      body.querySelector(".tpfBatchGreenGroups")?.appendChild(verified);
+    }
+    const selectAll = $("tpfBatchSelectAll"),
+      selectPage = $("tpfBatchSelectPage");
+    if (!activeGreenGroup) {
+      selectAll.disabled = true;
+      selectAll.textContent = "Elige uno de los dos grupos para seleccionar todos";
+      selectPage.disabled = true;
+      selectPage.checked = false;
+    } else {
+      selectAll.disabled = !selectionScope.length;
+      selectAll.textContent = allSelectableSelected
+        ? "Quitar todos de este grupo"
+        : "Seleccionar todos de este grupo (" + selectionScope.length + ")";
+      selectPage.disabled = !selectionScope.length;
+      selectPage.checked = allSelectableSelected;
+    }
     const toggleGroupSelection = () => {
-      setSelected(selectable, !allSelectableSelected);
+      setSelected(selectionScope, !allSelectableSelected);
       render();
     };
-    $("tpfBatchSelectAll").onclick = toggleGroupSelection;
-    $("tpfBatchSelectPage").onchange = (event) => {
-      setSelected(selectable, event.target.checked);
+    selectAll.onclick = toggleGroupSelection;
+    selectPage.onchange = (event) => {
+      setSelected(selectionScope, event.target.checked);
       render();
     };
     $("tpfBatchClearSelected")?.addEventListener("click", () => {
