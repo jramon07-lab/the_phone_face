@@ -1622,12 +1622,17 @@
         phone: targetPhone,
         email: finalEmail,
       });
-      if (existing.length > 1)
-        throw Error(
+      if (existing.length > 1) {
+        const duplicateError = Error(
           "Google tiene " +
             existing.length +
-            " contactos con este teléfono. No se ha creado ninguno. Pulsa “Corregir aquí”, elige el que conservar y confirma si quieres borrar los demás.",
+            " contactos con este teléfono. No se ha creado ninguno. Elige cuál conservar y confirma si quieres borrar los demás.",
         );
+        // El módulo por lotes reconoce este caso y abre directamente el selector.
+        duplicateError.code = "TPF_GOOGLE_DUPLICATES";
+        duplicateError.matches = existing;
+        throw duplicateError;
+      }
       googleTarget = existing[0] || null;
     }
     const savedGoogle = await writeGoogle(
