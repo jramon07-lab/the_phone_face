@@ -91,6 +91,18 @@ assert.equal(totals.greenWhatsappDifferent, 1);
 
 result = analyzeRows(
   [crm('one')],
+  [google('people/one')],
+  [wa('María Rosa')],
+  { ...api, savedVerification: () => true },
+  'shop@example.test',
+);
+assert.equal(result[0].verified, true, 'una vinculación guardada debe reconocerse como verificada');
+totals = summary(result);
+assert.equal(totals.verified, 1);
+assert.equal(totals.greenWhatsappDifferent, 0, 'los verificados no deben quedarse en el grupo pendiente');
+
+result = analyzeRows(
+  [crm('one')],
   [google('people/one', 'María Rosa', 'Ortiz', 'Otro apodo')],
   [wa()],
   api,
@@ -149,6 +161,7 @@ assert.match(source, /Solo selecciona: no cambia ni guarda ninguna ficha/, 'sele
 assert.match(source, /tpfBatchSelectRow/, 'cada contacto seleccionable debe tener su casilla');
 assert.match(source, /Dar por OK y sincronizar/, 'la selección debe poder confirmarse de forma explícita');
 assert.match(source, /confirmThreeWayVerified/, 'el lote debe usar la confirmación segura de los tres sitios');
+assert.match(source, /Ya verificados/, 'los ya confirmados deben separarse de los pendientes');
 assert.match(inline, /function confirmThreeWayVerified/, 'debe existir una confirmación que no reescriba Google ni WhatsApp');
 assert.match(inline, /source: "crm_google_confirmed"/, 'la vinculación de los tres sitios deja trazabilidad');
 console.log('PASS comprobación masiva: separa los verdes por nombre de WhatsApp y solo marca la selección');
