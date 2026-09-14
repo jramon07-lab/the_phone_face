@@ -292,6 +292,7 @@
     try {
       localStorage.setItem(UNIFIED_KEY, JSON.stringify(map));
     } catch (_) {}
+    window.dispatchEvent(new Event("tpf:wa-identity-updated"));
   }
   function whatsappDisplayIdentity(chat) {
     const id = safe(chat?.id),
@@ -1594,27 +1595,28 @@
     const row = decision.row,
       person = decision.person,
       c = contactData(row);
-    if (!row?.id || !person?.resourceName)
-      throw Error(
-        "Falta la ficha exacta de CRM o Google para enviar a papelera.",
-      );
-    if (typeof archiveToTrash !== "function")
-      throw Error("No está disponible la papelera segura del CRM.");
-    const archived = await archiveToTrash("contact", row.id, c.name, {
-      record: {
-        id: row.id,
-        data: row.data,
-        source_sheet: row.source_sheet || "BASE DE DATOS",
-      },
-    });
-    if (!archived)
-      throw Error("No se pudo guardar la copia recuperable del CRM.");
-    await googleApi(person.resourceName + ":deleteContact", {
-      method: "DELETE",
-    });
-    const removed = await sb.from("records").delete().eq("id", row.id);
-    if (removed.error) throw removed.error;
-    forgetBinding(decision.chat || contactChat(row));
+    if (!row?.id && !person?.resourceName)
+      throw Error("Falta la ficha exacta de CRM o Google para enviar a papelera.");
+    if (row?.id) {
+      if (typeof archiveToTrash !== "function")
+        throw Error("No está disponible la papelera segura del CRM.");
+      const archived = await archiveToTrash("contact", row.id, c.name, {
+        record: {
+          id: row.id,
+          data: row.data,
+          source_sheet: row.source_sheet || "BASE DE DATOS",
+        },
+      });
+      if (!archived)
+        throw Error("No se pudo guardar la copia recuperable del CRM.");
+    }
+    if (person?.resourceName)
+      await googleApi(person.resourceName + ":deleteContact", { method: "DELETE" });
+    if (row?.id) {
+      const removed = await sb.from("records").delete().eq("id", row.id);
+      if (removed.error) throw removed.error;
+      forgetBinding(decision.chat || contactChat(row));
+    }
     clearGoogleCache();
     return true;
   }
