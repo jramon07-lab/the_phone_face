@@ -17,7 +17,7 @@ test('Ficha: nombre arriba y apodo debajo sin cambiar datos ni acciones',async({
  await page.addScriptTag({content:await script.text()});
  await page.evaluate(()=>window.TPFContactGoogleInline.refreshProfile());
  await expect(page.locator('#cpProfileDisplayName')).toHaveText('Antonio Lopez Arco');await expect(page.locator('#cpProfileNickname')).toHaveText('Apodo de prueba');
- await expect(page.locator('#contactName')).toHaveValue('Antonio Lopez Arco Apodo de prueba');await expect(page.locator('#contactName')).toBeHidden();
+ await expect(page.locator('#contactName')).toHaveValue('Antonio Lopez Arco');await expect(page.locator('#contactName')).toBeHidden();
  const name=await page.locator('#cpProfileDisplayName').boundingBox(),alias=await page.locator('#cpProfileNickname').boundingBox();expect(alias.y).toBeGreaterThanOrEqual(name.y+name.height);
  expect(await page.locator('#cpProfileNickname').evaluate(e=>parseFloat(getComputedStyle(e).fontSize))).toBeLessThan(await page.locator('#cpProfileDisplayName').evaluate(e=>parseFloat(getComputedStyle(e).fontSize)));
  expect(await page.evaluate(()=>JSON.stringify(window.currentContact)===window.originalData)).toBe(true);

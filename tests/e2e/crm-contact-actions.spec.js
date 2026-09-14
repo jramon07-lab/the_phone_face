@@ -92,6 +92,7 @@ test('cuenta demo por interfaz real: editor separado y oportunidades responden',
   await page.locator('#contactClose').click();
   await expect(page.locator('#contactModal')).toBeHidden({timeout:5000});
   await openRecordThroughUi(page,linked.recordId);
+  await page.locator('#cpRefTab-oportunidades').click();
   await expect(page.locator('#cpOpportunities')).not.toContainText('No hay oportunidades.',{timeout:10000});
   const label=page.locator('#cpOpportunities').getByText(/Ver\s*\/\s*editar/i).first();
   await expect(label).toBeVisible({timeout:10000});

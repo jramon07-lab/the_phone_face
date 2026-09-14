@@ -11,16 +11,20 @@ for(const late of [false,true])test(`Resumen: ofertas y automatizaciones visible
  await page.addScriptTag({content:await script.text()});
  if(late)await page.evaluate(html=>{document.querySelector('.cpRight').insertAdjacentHTML('afterbegin',html);window.offerClicks=0;document.getElementById('testOffer').onclick=()=>window.offerClicks++},dynamic);
  const offers=page.locator('#cpOffersSection'),autos=page.locator('#cpAutomationStatus');
- await expect(page.locator('#cpRefPanel > #cpOffersSection')).toBeVisible();await expect(autos).toBeVisible();
+ // The summary is intentionally grouped and collapsed at first. Open its
+ // offers group before asserting its interactive contents.
+ const offersGroup=page.locator('[data-tpf-summary-group="offers"]');
+ await expect(offersGroup).toBeVisible();await offersGroup.locator('.tpfSummaryTrigger').click();
+ await expect(offers).toBeVisible();await expect(autos).toBeVisible();
  await page.locator('#testOffer').click();expect(await page.evaluate(()=>window.offerClicks)).toBe(1);
  const panel=await page.locator('#cpRefPanel').boundingBox(),box=await autos.boundingBox();expect(box.width).toBeGreaterThan(panel.width*0.9);
  expect(await autos.locator('.casHead b').evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
  await page.locator('#cpRefTab-tareas').click();await expect(offers).toBeHidden();await expect(autos).toBeHidden();
- await page.locator('#cpRefTab-resumen').click();await expect(offers).toBeVisible();await expect(autos).toBeVisible();
+ await page.locator('#cpRefTab-resumen').click();await expect(offersGroup).toBeVisible();await offersGroup.locator('.tpfSummaryTrigger').click();await expect(offers).toBeVisible();await expect(autos).toBeVisible();
  await page.setViewportSize({width:1100,height:900});await expect(offers).toBeVisible();await expect(autos).toBeVisible();
  const narrowOffers=await offers.boundingBox(),narrowAutos=await autos.boundingBox();expect(narrowAutos.y).toBeGreaterThanOrEqual(narrowOffers.y+narrowOffers.height);
  await page.setViewportSize({width:800,height:900});await expect(page.locator('.cpRight > #cpOffersSection')).toBeVisible();
- await page.setViewportSize({width:1440,height:1000});await expect(page.locator('#cpRefPanel > #cpOffersSection')).toBeVisible();
+ await page.setViewportSize({width:1440,height:1000});await expect(offersGroup).toBeVisible();await offersGroup.locator('.tpfSummaryTrigger').click();await expect(offers).toBeVisible();
  await page.locator('#testOffer').click();expect(await page.evaluate(()=>window.offerClicks)).toBe(2);
  expect(await offers.count()).toBe(1);expect(await autos.count()).toBe(1);
 });

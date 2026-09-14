@@ -42,7 +42,9 @@ test('Identidad: apodo aislado y verificación reutilizada sin consultas a Googl
 
 test('Verificación anterior: guarda solo el estado y lo comparte con WhatsApp',async({page,request})=>{
  const response=await request.get('/js/modules/contact-google-inline.js?v=20260912-verified-dropdown-1');expect(response.ok()).toBeTruthy();
- const source=(await response.text()).replace("M.register('contact-google-inline',{install});","window.testApi={persistMatchingVerification,renderVerifiedCard,savedVerification};");
+ const moduleSource=await response.text();
+ const source=moduleSource.replace(/M\.register\(\s*["']contact-google-inline["']\s*,\s*\{\s*install\s*\}\s*\);/,"window.testApi={persistMatchingVerification,renderVerifiedCard,savedVerification};");
+ expect(source).not.toBe(moduleSource);
  await page.route('**/__verified-migration',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><div id="profile"></div><div id="whatsapp"></div>'}));await page.goto('/__verified-migration');
  await page.evaluate(()=>{
   window.googleContactsEmail=()=> 'shop@example.test';window.TPFModules={register(){}};window.writeCount=0;

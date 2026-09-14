@@ -178,6 +178,16 @@ function renderList(){
 async function hydrateVisibleLabels(rows){const missing=rows.filter(r=>!state.labelsByContact.has(r.id));if(!missing.length)return;await Promise.all(missing.map(r=>getContactLabels(r.id)));if(currentPageRows().some(r=>missing.some(m=>m.id===r.id)))renderListNoHydrate();}
 function renderListNoHydrate(){const rows=currentPageRows(),tbody=byId('tpfContactsRows'),cards=byId('tpfContactsCards');if(!tbody||!cards)return;const scroll=tbody.parentElement?.parentElement?.scrollTop||0;tbody.querySelectorAll('tr').forEach(tr=>{const id=tr.dataset.contactId,cell=tr.children[5];if(cell)cell.innerHTML=labelsHtml(id);});cards.querySelectorAll('[data-contact-id]').forEach(card=>{const box=card.querySelector('.tpfContactCardLabels');if(box)box.innerHTML=labelsHtml(card.dataset.contactId);});if(tbody.parentElement?.parentElement)tbody.parentElement.parentElement.scrollTop=scroll;}
 async function loadAllContactLabels(){if(state.labelsAllLoaded)return;if(state.labelsLoadPromise)return state.labelsLoadPromise;state.labelsLoadPromise=(async()=>{let cursor=0;const workers=Array.from({length:Math.min(8,Math.max(1,state.rows.length))},async()=>{while(cursor<state.rows.length){const r=state.rows[cursor++];if(!state.labelsByContact.has(r.id))await getContactLabels(r.id);}});await Promise.all(workers);state.labelsAllLoaded=true;})();try{await state.labelsLoadPromise;}finally{state.labelsLoadPromise=null;}}
+// Exporting one filtered contact must not wait for labels from the entire CRM.
+// Keep the full loader for the label filter, but only hydrate rows that the
+// operator is actually exporting.
+async function loadLabelsForRows(rows){
+ const missing=(rows||[]).filter(r=>r?.id&&!state.labelsByContact.has(r.id));
+ if(!missing.length)return;
+ let cursor=0;
+ const workers=Array.from({length:Math.min(8,missing.length)},async()=>{while(cursor<missing.length){const row=missing[cursor++];await getContactLabels(row.id);}});
+ await Promise.all(workers);
+}
 function updateBulk(){const bar=byId('tpfContactsBulk'),n=state.selected.size;bar.classList.toggle('show',n>0);byId('tpfContactsSelectedCount').textContent=`${n} seleccionado${n===1?'':'s'}`;byId('tpfExportSelected').disabled=n===0;}
 function selectCurrentPage(on){currentPageRows().forEach(r=>on?state.selected.add(r.id):state.selected.delete(r.id));renderList();}
 function handleSelectionChange(e){const cb=e.target.closest('.tpfContactSelect');if(!cb)return;cb.checked?state.selected.add(cb.dataset.id):state.selected.delete(cb.dataset.id);renderList();}
@@ -198,7 +208,7 @@ async function exportContacts(scope){
  try{
   if(trigger)trigger.disabled=true;
   setStatus(`Preparando ${rows.length} contactos…`);
-  await loadAllContactLabels();
+  await loadLabelsForRows(rows);
   const data=rows.map(r=>{const party=r.data?.TPF_TITULAR||{};return {
    'ID CRM':r.id,Nombre:r.first,Apellidos:r.last,'Nombre y apellidos':r.fullName,Apodo:r.nickname,DNI:r.dni,Teléfono:r.phone,Email:r.email,Banco:r.bank,Notas:r.notes,Observaciones:r.observations,
    'Titulares asociados':associatedHolderValues(r,'name'),'DNI titulares asociados':associatedHolderValues(r,'dni'),'Teléfonos titulares asociados':associatedHolderValues(r,'phone'),'ID CRM titulares asociados':associatedHolderValues(r,'record_id'),
