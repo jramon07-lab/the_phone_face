@@ -147,4 +147,8 @@ assert.match(source, /green_whatsapp_different/, 'debe separar el grupo cuyo Wha
 assert.match(source, /Seleccionar todos de este grupo/, 'debe poder seleccionar todos los contactos del grupo');
 assert.match(source, /Solo selecciona: no cambia ni guarda ninguna ficha/, 'seleccionar no puede modificar datos');
 assert.match(source, /tpfBatchSelectRow/, 'cada contacto seleccionable debe tener su casilla');
+assert.match(source, /Dar por OK y sincronizar/, 'la selección debe poder confirmarse de forma explícita');
+assert.match(source, /confirmThreeWayVerified/, 'el lote debe usar la confirmación segura de los tres sitios');
+assert.match(inline, /function confirmThreeWayVerified/, 'debe existir una confirmación que no reescriba Google ni WhatsApp');
+assert.match(inline, /source: "crm_google_confirmed"/, 'la vinculación de los tres sitios deja trazabilidad');
 console.log('PASS comprobación masiva: separa los verdes por nombre de WhatsApp y solo marca la selección');
