@@ -707,20 +707,31 @@
     return safe(readAliases()[phone(c.phone)]?.name);
   }
   function googleView(person) {
-    const entry =
-        person?.names?.find((x) => x?.metadata?.primary) ||
-        person?.names?.[0] ||
+    // Si Google devuelve también datos de perfil, usamos primero la fuente CONTACT:
+    // es la única que podemos editar y la que debe coincidir con el CRM.
+    const isContactSource = (value) =>
+        safe(value?.metadata?.source?.type).toUpperCase() === "CONTACT",
+      names = Array.isArray(person?.names) ? person.names : [],
+      nicknames = Array.isArray(person?.nicknames) ? person.nicknames : [],
+      entry =
+        names.find(isContactSource) ||
+        names.find((x) => x?.metadata?.primary) ||
+        names[0] ||
+        {},
+      nicknameEntry =
+        nicknames.find(isContactSource) ||
+        nicknames.find((x) => x?.metadata?.primary) ||
+        nicknames[0] ||
         {},
       name =
         entry.displayName ||
         [entry.givenName, entry.familyName].filter(Boolean).join(" "),
       fallback = splitName(name);
-    const nickname = person?.nicknames?.[0]?.value || "";
     return {
       name: safe(name),
       first: safe(entry.givenName) || fallback.first,
       last: safe(entry.familyName) || fallback.last,
-      nickname: safe(nickname),
+      nickname: safe(nicknameEntry.value),
       resourceName: safe(person?.resourceName),
     };
   }
@@ -1274,6 +1285,9 @@
     const qs = new URLSearchParams({
       personFields:
         "names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata",
+      // No mezclar datos del perfil general: la comprobación debe leer
+      // únicamente el contacto editable que se acaba de guardar.
+      sources: "READ_SOURCE_TYPE_CONTACT",
     });
     return googleApi(person.resourceName + "?" + qs.toString());
   }
@@ -1336,7 +1350,7 @@
     let full = null;
     // Google Contacts puede tardar unos instantes en devolver el cambio recién guardado.
     // Reintentamos antes de marcarlo como error, sin borrar ni tocar duplicados.
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       full = await detailedPerson(person);
       const phones = (full?.phoneNumbers || []).map((x) =>
           phone(x.canonicalForm || x.value),
@@ -1344,8 +1358,8 @@
         phoneSaved = !wanted || phones.includes(wanted),
         namesSaved = googleAligned(full, first, last, nickname);
       if (full?.resourceName && phoneSaved && namesSaved) return full;
-      if (attempt < 2)
-        await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+      if (attempt < 4)
+        await new Promise((resolve) => window.setTimeout(resolve, 700 * (attempt + 1)));
     }
     const phones = (full?.phoneNumbers || []).map((x) =>
       phone(x.canonicalForm || x.value),
