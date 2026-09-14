@@ -47,7 +47,7 @@ function applyFinalFix(html){
   if(!html.includes('/js/modules/automations-flow-builder.js')&&!html.includes('/js/modules/runtime.js')) html=html.includes('</body>')?html.replace('</body>',autoFlow+'\n</body>'):html+autoFlow;
   const autoSource='<script src="/js/modules/automations-contact-source-ui.js"></script>';
   if(!html.includes('/js/modules/automations-contact-source-ui.js')) html=html.includes('</body>')?html.replace('</body>',autoSource+'\n</body>'):html+autoSource;
-  const contactProfile='<script src="/js/modules/contact-profile.js"></script>';
+  const contactProfile='<script src="/js/modules/contact-profile.js?v=20260914-labels-safe-1"></script>';
   if(!html.includes('/js/modules/contact-profile.js')) html=html.includes('</body>')?html.replace('</body>',contactProfile+'\n</body>'):html+contactProfile;
   const waReadGuard='<script src="/js/modules/whatsapp-read-guard.js"></script>';
   if(!html.includes('/js/modules/whatsapp-read-guard.js')) html=html.includes('</body>')?html.replace('</body>',waReadGuard+'\n</body>'):html+waReadGuard;
