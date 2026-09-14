@@ -16,6 +16,7 @@
     account: "",
     analysedAt: "",
     prepared: {},
+    reviewed: {},
     applying: false,
   };
   const safe = (value) => String(value ?? "").trim();
@@ -387,6 +388,7 @@
     return Object.keys(state.prepared).length;
   }
   function setPrepared(item) {
+    delete state.reviewed[preparedKey(item)];
     state.prepared[preparedKey(item)] = item;
     render();
   }
@@ -394,14 +396,26 @@
     delete state.prepared[safe(row?.row?.id)];
     render();
   }
+  function markReviewed(row) {
+    const id = safe(row?.id);
+    if (!id) return;
+    delete state.prepared[id];
+    state.reviewed[id] = { id, kind: "keep" };
+    render();
+  }
+  function reviewedCount() {
+    return Object.keys(state.reviewed).length;
+  }
   function draftItems() {
-    return Object.values(state.prepared).map((item) => ({
+    const actions = Object.values(state.prepared).map((item) => ({
       id: safe(item?.row?.id),
       kind: item.kind,
       fields: item.fields || null,
       holder: item.holder || null,
+      relationMode: item.relationMode || "self",
       label: safe(item.label),
     }));
+    return [...actions, ...Object.values(state.reviewed)];
   }
   function saveDraft() {
     const items = draftItems();
@@ -434,12 +448,18 @@
       throw Error("Primero pulsa “Actualizar comparación” para leer los contactos actuales.");
     const rows = new Map(state.results.map((item) => [safe(item.row?.id), item]));
     state.prepared = {};
+    state.reviewed = {};
     let loaded = 0,
       missing = 0;
     for (const saved of draft.decisions) {
       const item = rows.get(safe(saved?.id));
-      if (!item || !["edit", "trash"].includes(saved?.kind)) {
+      if (!item || !["edit", "trash", "keep"].includes(saved?.kind)) {
         missing++;
+        continue;
+      }
+      if (saved.kind === "keep") {
+        state.reviewed[safe(item.row.id)] = { id: safe(item.row.id), kind: "keep" };
+        loaded++;
         continue;
       }
       state.prepared[safe(item.row.id)] = {
@@ -449,6 +469,7 @@
         chat: item.chat,
         fields: saved.kind === "edit" ? saved.fields || {} : undefined,
         holder: saved.kind === "edit" ? saved.holder || null : null,
+        relationMode: saved.kind === "edit" ? saved.relationMode || "self" : "self",
         label: safe(saved.label) || item.c?.name || "Contacto",
       };
       loaded++;
@@ -528,7 +549,7 @@
         return `${publicName ? `Sin apodo <small>Nombre público: ${esc(publicName)}</small>` : "Sin apodo"}<button data-pick="wa" data-field="${key}" disabled>Usar WhatsApp</button>`;
       return `${esc(value(key, w) || "—")}<button data-pick="wa" data-field="${key}" ${value(key, w) ? "" : "disabled"}>Usar WhatsApp</button>`;
     };
-    back.innerHTML = `<section class="tpfDecisionCard" role="dialog" aria-modal="true"><header><div><small>DECIDIR Y EDITAR · SIN GUARDAR AÚN</small><h3>${esc(c.name || "Contacto")}</h3><p>Elige un valor por campo o escríbelo. Al confirmar al final se guardará la elección en CRM y Google; WhatsApp queda enlazado a esa ficha.</p></div><button id="tpfDecisionClose" type="button">×</button></header><div class="tpfDecisionWrap"><table><thead><tr><th>Dato</th><th>CRM</th><th>WhatsApp</th><th>Google</th><th>Tu elección final</th></tr></thead><tbody>${fields.map(([title, key]) => `<tr><th>${title}</th><td>${esc(value(key, c))}<button data-pick="crm" data-field="${key}">Usar CRM</button></td><td>${whatsappCell(key)}</td><td>${esc(value(key, g) || "—")}<button data-pick="google" data-field="${key}" ${value(key, g) ? "" : "disabled"}>Usar Google</button></td><td><input data-final="${key}" value="${esc(old[key] ?? value(key, c))}" placeholder="Vacío"></td></tr>`).join("")}</tbody></table><fieldset class="tpfDecisionHolder"><legend>Relación del contrato</legend><label><input type="radio" name="tpf-holder-mode" value="self" checked> Es titular del contrato</label><label><input type="radio" name="tpf-holder-mode" value="associated"> Está asociado a otro titular</label><div id="tpfDecisionHolderBox" hidden><input id="tpfDecisionHolderSearch" type="search" placeholder="Buscar titular por nombre, teléfono o DNI"><div id="tpfDecisionHolderResults"></div><small>Elige una ficha existente. No crea otra ficha.</small></div></fieldset><div class="tpfDecisionActions"><button id="tpfDecisionKeep" class="secondary">Mantener sin cambios</button><button id="tpfDecisionTrash" class="danger" ${item.person?.resourceName ? "" : "disabled"}>Preparar borrado en CRM y Google</button><button id="tpfDecisionSave" class="primary">Preparar esta elección</button></div><small>“Borrar” solo se prepara ahora: no se mueve nada a la papelera hasta pulsar “Aplicar cambios preparados”.</small></div></section>`;
+    back.innerHTML = `<section class="tpfDecisionCard" role="dialog" aria-modal="true"><header><div><small>DECIDIR Y EDITAR · SIN GUARDAR AÚN</small><h3>${esc(c.name || "Contacto")}</h3><p>Elige un valor por campo o escríbelo. Al confirmar al final se guardará la elección en CRM y Google; WhatsApp queda enlazado a esa ficha.</p></div><button id="tpfDecisionClose" type="button">×</button></header><div class="tpfDecisionWrap"><table><thead><tr><th>Dato</th><th>CRM</th><th>WhatsApp</th><th>Google</th><th>Tu elección final</th></tr></thead><tbody>${fields.map(([title, key]) => `<tr><th>${title}</th><td>${esc(value(key, c))}<button data-pick="crm" data-field="${key}">Usar CRM</button></td><td>${whatsappCell(key)}</td><td>${esc(value(key, g) || "—")}<button data-pick="google" data-field="${key}" ${value(key, g) ? "" : "disabled"}>Usar Google</button></td><td><input data-final="${key}" value="${esc(old[key] ?? value(key, c))}" placeholder="Vacío"></td></tr>`).join("")}</tbody></table><fieldset class="tpfDecisionHolder"><legend>Relación del contrato</legend><label><input type="radio" name="tpf-holder-mode" value="self" checked> Es titular del contrato</label><label><input type="radio" name="tpf-holder-mode" value="holder_of"> Es titular y está asociado a otra ficha</label><label><input type="radio" name="tpf-holder-mode" value="associated"> Está asociado a otro titular</label><div id="tpfDecisionHolderBox" hidden><b id="tpfDecisionHolderLabel">Buscar ficha asociada</b><input id="tpfDecisionHolderSearch" type="search" placeholder="Buscar por nombre, teléfono o DNI"><div id="tpfDecisionHolderResults"></div><small>Elige una ficha existente. No crea otra ficha.</small></div></fieldset><div class="tpfDecisionActions"><button id="tpfDecisionKeep" class="secondary">Mantener sin cambios</button><button id="tpfDecisionTrash" class="danger" ${item.person?.resourceName ? "" : "disabled"}>Preparar borrado en CRM y Google</button><button id="tpfDecisionSave" class="primary">Preparar esta elección</button></div><small>“Borrar” solo se prepara ahora: no se mueve nada a la papelera hasta pulsar “Aplicar cambios preparados”.</small></div></section>`;
     back.classList.remove("hidden");
     const sources = { crm: c, wa: w, google: g };
     back.querySelectorAll("[data-pick]").forEach(
@@ -543,8 +564,8 @@
         }),
     );
     let holder = null;
-    const holderBox = $("tpfDecisionHolderBox"), holderSearch = $("tpfDecisionHolderSearch"), holderResults = $("tpfDecisionHolderResults");
-    back.querySelectorAll('[name="tpf-holder-mode"]').forEach((input) => input.onchange = () => { holderBox.hidden = input.value !== "associated" || !input.checked; if (input.value === "self" && input.checked) holder = null; });
+    const holderBox = $("tpfDecisionHolderBox"), holderSearch = $("tpfDecisionHolderSearch"), holderResults = $("tpfDecisionHolderResults"), holderLabel = $("tpfDecisionHolderLabel");
+    back.querySelectorAll('[name="tpf-holder-mode"]').forEach((input) => input.onchange = () => { const mode = back.querySelector('[name="tpf-holder-mode"]:checked')?.value || "self"; holderBox.hidden = mode === "self"; holderLabel.textContent = mode === "associated" ? "Buscar titular del contrato" : "Buscar persona asociada a este titular"; if (mode === "self") holder = null; });
     holderSearch.oninput = async () => { const q = safe(holderSearch.value); holder = null; if (q.length < 2) return holderResults.textContent = ""; holderResults.textContent = "Buscando titulares…"; try { const matches = await window.TPFContactRelations?.searchRecords?.(q) || []; holderResults.innerHTML = matches.filter(x => safe(x.id) !== safe(item.row.id)).slice(0,12).map((x,i) => `<button type="button" class="secondary" data-holder="${i}">${esc(x.name || "Sin nombre")} · ${esc(x.dni || x.phone || "sin datos")}</button>`).join("") || "No se encontró ningún titular."; holderResults.querySelectorAll("[data-holder]").forEach(button => button.onclick = () => { holder = matches.filter(x => safe(x.id) !== safe(item.row.id))[Number(button.dataset.holder)]; holderResults.textContent = `Titular elegido: ${holder.name}`; }); } catch (_) { holderResults.textContent = "No se pudo buscar el titular."; } };
     const close = () => back.classList.add("hidden");
     $("tpfDecisionClose").onclick = close;
@@ -557,13 +578,15 @@
         return alert(
           "Necesitas al menos un nombre para preparar la sincronización. El teléfono puede quedar vacío.",
         );
-      if (back.querySelector('[name="tpf-holder-mode"]:checked')?.value === "associated" && !holder) return alert("Elige el titular asociado o marca que esta persona es titular del contrato.");
+      const relationMode = back.querySelector('[name="tpf-holder-mode"]:checked')?.value || "self";
+      if (relationMode !== "self" && !holder) return alert(relationMode === "associated" ? "Elige el titular del contrato." : "Elige la persona asociada a este titular.");
       setPrepared({
         kind: "edit",
         row: item.row,
         person: item.person,
         chat: item.chat,
         holder,
+        relationMode,
         fields: values,
         label: [values.first, values.last, values.nickname]
           .filter(Boolean)
@@ -582,8 +605,7 @@
       if (button.id === "tpfDecisionKeep") {
         close();
         // "Mantener" does not add or change anything in any of the three sites.
-        delete state.prepared[safe(item.row.id)];
-        render();
+        markReviewed(item.row);
       } else if (button.id === "tpfDecisionTrash") {
         setPrepared({
           kind: "trash",
@@ -662,7 +684,7 @@
       render();
     }
   }
-  function render() {
+  function render(options = {}) {
     const body = $("tpfBatchBody"),
       runButton = $("tpfBatchRun"),
       note = $("tpfBatchNote"),
@@ -702,11 +724,12 @@
       statuses = Object.entries(data.byStatus).sort(
         (a, b) => statusOrder(a[0]) - statusOrder(b[0]),
       );
-    body.innerHTML = `<div class="tpfBatchStats"><div class="tpfBatchStat"><span>Contactos CRM</span><b>${data.total}</b></div><div class="tpfBatchStat ok"><span>CRM y Google iguales</span><b>${data.coincide}</b></div><div class="tpfBatchStat warn"><span>CRM y Google a revisar</span><b>${data.crmGoogleDifferent}</b></div><div class="tpfBatchStat"><span>WhatsApp distinto o no encontrado</span><b>${data.whatsappDifferent}</b></div></div><div class="tpfBatchIntro"><b>Preparados: ${preparedCount()}</b><span>Pulsa <b>Comprobar</b> para elegir campo por campo; <b>Mantener</b> no cambia nada; <b>Borrar</b> solo prepara el envío a papelera.</span></div><div class="tpfBatchBar"><input id="tpfBatchSearch" type="search" placeholder="Buscar nombre, teléfono, DNI o apodo" value="${esc(state.query)}"><select id="tpfBatchFilter"><option value="all">Todos (${data.total})</option>${statuses.map(([key, count]) => `<option value="${esc(key)}" ${state.filter === key ? "selected" : ""}>${esc(label(key))} (${count})</option>`).join("")}</select><small>Cuenta: ${esc(state.account || "—")} · ${esc(state.analysedAt)}</small></div><div class="tpfBatchTableWrap"><table class="tpfBatchTable"><thead><tr><th>Estado</th><th>CRM</th><th>WhatsApp original</th><th>Google</th><th>Teléfono</th><th>DNI / NIF</th><th>Acciones</th></tr></thead><tbody>${
+    body.innerHTML = `<div class="tpfBatchStats"><div class="tpfBatchStat"><span>Contactos CRM</span><b>${data.total}</b></div><div class="tpfBatchStat ok"><span>CRM y Google iguales</span><b>${data.coincide}</b></div><div class="tpfBatchStat warn"><span>CRM y Google a revisar</span><b>${data.crmGoogleDifferent}</b></div><div class="tpfBatchStat"><span>WhatsApp distinto o no encontrado</span><b>${data.whatsappDifferent}</b></div></div><div class="tpfBatchIntro"><b>Preparados: ${preparedCount()} · Revisados sin cambios: ${reviewedCount()}</b><span>Pulsa <b>Comprobar</b> para elegir campo por campo; <b>Mantener</b> deja una marca de revisión, pero no cambia nada; <b>Borrar</b> solo prepara el envío a papelera.</span></div><div class="tpfBatchBar"><input id="tpfBatchSearch" type="search" placeholder="Buscar nombre, teléfono, DNI o apodo" value="${esc(state.query)}"><select id="tpfBatchFilter"><option value="all">Todos (${data.total})</option>${statuses.map(([key, count]) => `<option value="${esc(key)}" ${state.filter === key ? "selected" : ""}>${esc(label(key))} (${count})</option>`).join("")}</select><small>Cuenta: ${esc(state.account || "—")} · ${esc(state.analysedAt)}</small></div><div class="tpfBatchTableWrap"><table class="tpfBatchTable"><thead><tr><th>Estado</th><th>CRM</th><th>WhatsApp original</th><th>Google</th><th>Teléfono</th><th>DNI / NIF</th><th>Acciones</th></tr></thead><tbody>${
       rows
         .map((row, index) => {
           const g = row.person ? batchApi()?.googleView?.(row.person) : null,
             decision = state.prepared[safe(row.row.id)],
+            reviewed = state.reviewed[safe(row.row.id)],
             wa = row.chat?.name || "—",
             gt =
               (
@@ -719,7 +742,7 @@
                   /^(dni|nif|dni \/ nif|dni\/nif)$/i.test(safe(item?.key)),
                 )?.value,
               ) || "—";
-          return `<tr><td><span class="tpfBatchBadge ${esc(row.status)}">${esc(label(row.status))}</span>${decision ? `<small>Preparado: ${esc(decision.kind === "trash" ? "borrar" : decision.kind === "keep" ? "mantener" : "editar")}</small>` : ""}</td><td><b>${esc(row.c?.name || "—")}</b>${row.c?.nickname ? `<small>Apodo: ${esc(row.c.nickname)}</small>` : ""}</td><td><b>${esc(wa)}</b><small class="tpfBatchWa ${esc(row.whatsappStatus)}">${esc(whatsappLabel(row.whatsappStatus))}</small></td><td>${g ? `<b>${esc(g.name || "—")}</b>${g.nickname ? `<small>Apodo: ${esc(g.nickname)}</small>` : ""}<small>Tel.: ${esc(gt)} · DNI: ${esc(gd)}</small>` : "—"}</td><td><b>CRM:</b> ${esc(row.c?.phone || "—")}<small><b>Google:</b> ${esc(gt)}</small></td><td><b>CRM:</b> ${esc(row.c?.dni || "—")}<small><b>Google:</b> ${esc(gd)}</small></td><td><button type="button" class="secondary tpfBatchCheck" data-row-index="${index}">Comprobar</button><button type="button" class="secondary tpfBatchKeep" data-row-index="${index}">Mantener</button><button type="button" class="danger tpfBatchTrash" data-row-index="${index}" ${row.person?.resourceName ? "" : "disabled"}>Borrar</button>${decision ? `<button type="button" class="secondary tpfBatchUndo" data-row-index="${index}">Quitar</button>` : ""}</td></tr>`;
+          return `<tr><td><span class="tpfBatchBadge ${esc(row.status)}">${esc(label(row.status))}</span>${decision ? `<small>Preparado: ${esc(decision.kind === "trash" ? "borrar" : "editar")}</small>` : reviewed ? "<small>Revisado: mantener</small>" : ""}</td><td><b>${esc(row.c?.name || "—")}</b>${row.c?.nickname ? `<small>Apodo: ${esc(row.c.nickname)}</small>` : ""}</td><td><b>${esc(wa)}</b><small class="tpfBatchWa ${esc(row.whatsappStatus)}">${esc(whatsappLabel(row.whatsappStatus))}</small></td><td>${g ? `<b>${esc(g.name || "—")}</b>${g.nickname ? `<small>Apodo: ${esc(g.nickname)}</small>` : ""}<small>Tel.: ${esc(gt)} · DNI: ${esc(gd)}</small>` : "—"}</td><td><b>CRM:</b> ${esc(row.c?.phone || "—")}<small><b>Google:</b> ${esc(gt)}</small></td><td><b>CRM:</b> ${esc(row.c?.dni || "—")}<small><b>Google:</b> ${esc(gd)}</small></td><td><button type="button" class="secondary tpfBatchCheck" data-row-index="${index}">Comprobar</button><button type="button" class="secondary tpfBatchKeep" data-row-index="${index}">Mantener</button><button type="button" class="danger tpfBatchTrash" data-row-index="${index}" ${row.person?.resourceName ? "" : "disabled"}>Borrar</button>${decision || reviewed ? `<button type="button" class="secondary tpfBatchUndo" data-row-index="${index}">Quitar</button>` : ""}</td></tr>`;
         })
         .join("") ||
       '<tr><td colspan="7" class="tpfBatchEmpty">No hay resultados con este filtro.</td></tr>'
@@ -727,7 +750,7 @@
     $("tpfBatchSearch").oninput = (event) => {
       state.query = event.target.value;
       state.page = 1;
-      render();
+      render({ focusSearch: true });
     };
     $("tpfBatchFilter").onchange = (event) => {
       state.filter = event.target.value;
@@ -755,8 +778,7 @@
         button.onclick = () => {
           const item = rows[Number(button.dataset.rowIndex)];
           // Keeping a contact only cancels a previous staged action.
-          delete state.prepared[safe(item.row.id)];
-          render();
+          markReviewed(item.row);
         };
       });
     body.querySelectorAll(".tpfBatchTrash").forEach((button) => {
@@ -774,12 +796,22 @@
     body
       .querySelectorAll(".tpfBatchUndo")
       .forEach((button) => {
-        button.onclick = () =>
-          unsetPrepared(rows[Number(button.dataset.rowIndex)]);
+        button.onclick = () => {
+          const item = rows[Number(button.dataset.rowIndex)];
+          delete state.prepared[safe(item.row.id)];
+          delete state.reviewed[safe(item.row.id)];
+          render();
+        };
       });
     note.textContent = preparedCount()
       ? "Revisa el resumen y pulsa “Aplicar cambios preparados” una sola vez."
       : "Aún no se ha guardado ni borrado nada.";
+    if (options.focusSearch) {
+      const input = $("tpfBatchSearch");
+      input?.focus();
+      const at = input?.value?.length || 0;
+      input?.setSelectionRange?.(at, at);
+    }
   }
   async function run() {
     if (state.running) return;
