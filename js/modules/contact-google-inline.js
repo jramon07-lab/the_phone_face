@@ -1422,6 +1422,42 @@
     row.data = r.data.data;
     return row.data;
   }
+  async function addAssociatedContactToHolder(holder, associated) {
+    const holderId = safe(holder?.record_id || holder?.id),
+      associatedId = safe(associated?.record_id);
+    if (!holderId || !associatedId || holderId === associatedId)
+      throw Error("La relación de titular no es válida.");
+    const current = await sb
+      .from("records")
+      .select("id,data")
+      .eq("id", holderId)
+      .single();
+    if (current.error || !current.data)
+      throw current.error || Error("No se encontró la ficha del titular.");
+    const old = Array.isArray(current.data.data?.TPF_RELACIONES?.managed_contacts)
+        ? current.data.data.TPF_RELACIONES.managed_contacts
+        : [],
+      data = {
+        ...(current.data.data || {}),
+        TPF_RELACIONES: {
+          ...(current.data.data?.TPF_RELACIONES || {}),
+          version: 1,
+          managed_contacts: [
+            ...old.filter((entry) => safe(entry?.record_id) !== associatedId),
+            associated,
+          ],
+        },
+      },
+      updated = await sb
+        .from("records")
+        .update({ data })
+        .eq("id", holderId)
+        .eq("data", JSON.stringify(current.data.data || {}))
+        .select("id,data")
+        .single();
+    if (updated.error || !updated.data)
+      throw updated.error || Error("No se confirmó la relación con el titular.");
+  }
   async function trashCorrection() {
     if (busy) return;
     const row = correctionRow || current(),
@@ -1532,11 +1568,23 @@
         last,
         nickname,
       );
-    await writeCrm(row, first, last, nickname, chat, verified, decision.holder || null, {
+    const relationMode = safe(
+        decision.relationMode || (decision.holder ? "holder_of" : "self"),
+      ),
+      manages = relationMode === "holder_of" ? decision.holder || null : null;
+    await writeCrm(row, first, last, nickname, chat, verified, manages, {
       phone: finalPhone,
       dni: finalDni,
       email: finalEmail,
     });
+    if (relationMode === "associated" && decision.holder) {
+      await addAssociatedContactToHolder(decision.holder, {
+        record_id: safe(row.id),
+        name: [first, last].filter(Boolean).join(" "),
+        phone: finalPhone,
+        dni: finalDni,
+      });
+    }
     rememberBinding(chat, row);
     rememberUnifiedName(chat, row);
     clearGoogleCache();
