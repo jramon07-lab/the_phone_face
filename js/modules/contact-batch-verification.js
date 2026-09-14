@@ -460,8 +460,11 @@
     const close = () => back.classList.add("hidden");
     $("tpfDecisionClose").onclick = close;
     $("tpfDecisionKeep").onclick = () => {
-      setPrepared({ kind: "keep", row: item.row, label: c.name });
       close();
+      // "Mantener" is deliberately not a pending operation: it must not add
+      // anything to WhatsApp, CRM or Google, nor appear in the final counter.
+      delete state.prepared[safe(item.row.id)];
+      render();
     };
     $("tpfDecisionTrash").onclick = () => {
       setPrepared({
@@ -650,28 +653,32 @@
       );
     body
       .querySelectorAll(".tpfBatchKeep")
-      .forEach((button) =>
-        setPrepared({
-          kind: "keep",
-          row: rows[Number(button.dataset.rowIndex)].row,
-          label: rows[Number(button.dataset.rowIndex)].c.name,
-        }),
-      );
-    body.querySelectorAll(".tpfBatchTrash").forEach((button) => {
-      const item = rows[Number(button.dataset.rowIndex)];
-      setPrepared({
-        kind: "trash",
-        row: item.row,
-        person: item.person,
-        chat: item.chat,
-        label: item.c.name,
+      .forEach((button) => {
+        button.onclick = () => {
+          const item = rows[Number(button.dataset.rowIndex)];
+          // Keeping a contact only cancels a previous staged action.
+          delete state.prepared[safe(item.row.id)];
+          render();
+        };
       });
+    body.querySelectorAll(".tpfBatchTrash").forEach((button) => {
+      button.onclick = () => {
+        const item = rows[Number(button.dataset.rowIndex)];
+        setPrepared({
+          kind: "trash",
+          row: item.row,
+          person: item.person,
+          chat: item.chat,
+          label: item.c.name,
+        });
+      };
     });
     body
       .querySelectorAll(".tpfBatchUndo")
-      .forEach((button) =>
-        unsetPrepared(rows[Number(button.dataset.rowIndex)]),
-      );
+      .forEach((button) => {
+        button.onclick = () =>
+          unsetPrepared(rows[Number(button.dataset.rowIndex)]);
+      });
     note.textContent = preparedCount()
       ? "Revisa el resumen y pulsa “Aplicar cambios preparados” una sola vez."
       : "Aún no se ha guardado ni borrado nada.";
