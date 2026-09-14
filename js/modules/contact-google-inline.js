@@ -829,10 +829,32 @@
   }
   function googleAligned(person, first, last, nickname) {
     const g = googleView(person);
+    const wantedName = fold([first, last].filter(Boolean).join(" "));
+    const nameEntries = Array.isArray(person?.names) ? person.names : [];
+    const nicknameEntries = Array.isArray(person?.nicknames)
+      ? person.nicknames
+      : [];
+    // Google puede repartir un mismo nombre entre givenName/familyName de
+    // forma distinta a como estaba guardado en el CRM. Para la confirmación
+    // segura aceptamos cualquiera de sus campos de nombre solo si el nombre
+    // completo resultante coincide exactamente con el elegido por el usuario.
+    const nameMatches =
+      (fold(g.first) === fold(first) && fold(g.last) === fold(last)) ||
+      nameEntries.some((entry) => {
+        const complete =
+          entry?.displayName ||
+          [entry?.givenName, entry?.familyName].filter(Boolean).join(" ");
+        return fold(complete) === wantedName;
+      });
+    // En respuestas de Google puede haber varios apodos (por ejemplo uno del
+    // perfil y otro del contacto). El apodo elegido debe existir, aunque no
+    // sea el primero que Google devuelva.
+    const nicknameMatches = nicknameEntries.some(
+      (entry) => fold(entry?.value) === fold(nickname),
+    );
     return (
-      fold(g.first) === fold(first) &&
-      fold(g.last) === fold(last) &&
-      fold(g.nickname) === fold(nickname)
+      nameMatches &&
+      (nickname ? nicknameMatches : !safe(g.nickname))
     );
   }
   function googleAccountEmail() {
@@ -1196,7 +1218,7 @@
       managed = !!$("tpfInlineSeparatePerson")?.checked,
       box = $("tpfInlinePreview");
     if (!box) return;
-    box.innerHTML = `<h4>Así quedarán tus datos</h4><p><b>CRM, Google y WhatsApp:</b> ${esc(visible)}</p><p>Teléfono: <b>${esc(finalPhone || "—")}</b> · DNI/NIF: <b>${esc(finalDni || "—")}</b> · Correo: <b>${esc(finalEmail || "—")}</b></p>${managed ? `<p>Gestiona el titular: <b>${esc(correctionHolder?.name || "pendiente de elegir")}</b>. No se creará ninguna segunda ficha.</p>` : ""}<small>Estos son los datos elegidos por ti. Se comprueban antes de terminar el guardado.</small>`;
+    box.innerHTML = `<h4>Así quedarán tus datos</h4><p><b>CRM, Google y WhatsApp:</b> ${esc(visible)}</p><p>Apodo visible: <b>${esc(nickname || "—")}</b></p><p>Teléfono: <b>${esc(finalPhone || "—")}</b> · DNI/NIF: <b>${esc(finalDni || "—")}</b> · Correo: <b>${esc(finalEmail || "—")}</b></p>${managed ? `<p>Gestiona el titular: <b>${esc(correctionHolder?.name || "pendiente de elegir")}</b>. No se creará ninguna segunda ficha.</p>` : ""}<small>Estos son los datos elegidos por ti. Se comprueban antes de terminar el guardado.</small>`;
   }
   function openCorrection(options = {}) {
     const row = options.row || current(),
