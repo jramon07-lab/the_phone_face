@@ -348,14 +348,9 @@
     const c = contactData(row),
       rawName = safe(chat?.name),
       savedName = safe(v?.whatsapp_name);
-    if (
-      rawName &&
-      (!validWaName(rawName) ||
-        !strictSame(rawName, c.name) ||
-        (savedName && !strictSame(savedName, rawName)))
-    )
-      return null;
-    if (savedName && !strictSame(savedName, c.name)) return null;
+    // WhatsApp solo aporta el nombre público como referencia. Solo se invalida
+    // si ese nombre público cambia después de que el operador lo confirmara.
+    if (rawName && savedName && !strictSame(savedName, rawName)) return null;
     return v?.version === 1 &&
       v.signature === verificationSignature(row) &&
       v.google_account === fold(googleAccountEmail()) &&
@@ -396,10 +391,8 @@
       account = fold(googleAccountEmail()),
       signature = verificationSignature(row);
     if (savedVerification(row, chat)) return true;
-    // Si estamos viendo el nombre real de WhatsApp, nunca guardamos una
-    // verificación automática cuando no coincide exactamente con la ficha.
-    // El usuario debe revisarlo desde la pantalla de corrección.
-    if (safe(linked?.name) && !strictWhatsappAligned(linked, c)) return false;
+    // WhatsApp solo aporta el nombre público como referencia. La verificación
+    // se basa en el chat confirmado, el teléfono y la coincidencia CRM/Google.
     if (
       !account ||
       !rowMatchesChat(row, linked) ||
