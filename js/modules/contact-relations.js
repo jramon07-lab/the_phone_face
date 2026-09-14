@@ -12,6 +12,14 @@ function links(p){return Array.isArray(p?.managed_contacts)?p.managed_contacts.f
 function match(x,q){return norm([x.name,x.phone,x.dni].join(' ')).includes(norm(q))||(/\d{3}/.test(q)&&x.phone.replace(/\D/g,'').includes(q.replace(/\D/g,'')));}
 async function record(id){const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').eq('id',id).maybeSingle();if(r.error)throw r.error;if(!r.data)throw Error('La ficha vinculada ya no existe o no tienes acceso.');return r.data;}
 async function managers(id){if(!id)return [];const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_RELACIONES:{managed_contacts:[{record_id:id}]}}).limit(20);if(r.error)throw r.error;return r.data||[];}
+async function removeManagedLink(managerId,associatedId){
+ const manager=await record(managerId),old=links(manager.data?.TPF_RELACIONES),next=old.filter(x=>x.record_id!==clean(associatedId));
+ if(next.length===old.length)return false;
+ const data={...(manager.data||{}),TPF_RELACIONES:{...(manager.data?.TPF_RELACIONES||{}),version:1,managed_contacts:next}};
+ const saved=await sb.from('records').update({data}).eq('id',manager.id).eq('data',JSON.stringify(manager.data||{})).select('id,data').single();
+ if(saved.error||!saved.data)throw saved.error||Error('No se confirmó la eliminación de la relación.');
+ return true;
+}
 async function searchRecords(q,active=()=>true){
  // Page under the signed-in user's existing RLS. Never use privileged keys.
  const result=[];for(let start=0;start<50000;start+=500){if(!active())return [];
@@ -135,7 +143,7 @@ P.renderProfile=function(c){
   box.querySelector('[data-rel-cards]').innerHTML=holders.map(x=>holderCard(x,identity(c))).join('')||(!legacy?'No hay titulares vinculados disponibles.':'');
  }catch(e){if(!active())return;const out=box.querySelector('[data-rel-cards]');out.innerHTML='<p>No se pudieron cargar los titulares. Los vínculos se conservan.</p><button type="button" class="secondary" data-rel-retry>Reintentar</button>';out.querySelector('button').onclick=refresh;}};
  refresh();
- managers(c.id).then(rows=>{if(token!==profileToken||!box.isConnected)return;box.querySelector('[data-rel-managedby]').innerHTML=rows.length?`<div class="tpfRelRow">Gestionado por: ${rows.map(r=>button(identity(r))).join(' ')}</div>`:'';}).catch(()=>{if(token===profileToken&&box.isConnected)box.querySelector('[data-rel-managedby]').textContent='No se pudo comprobar quién gestiona esta ficha.';});
+ managers(c.id).then(rows=>{if(token!==profileToken||!box.isConnected)return;const target=box.querySelector('[data-rel-managedby]');target.innerHTML=rows.length?`<div class="tpfRelRow">Gestionado por: ${rows.map(r=>`${button(identity(r))}<button type="button" class="secondary" data-rel-remove-manager="${esc(r.id)}">Quitar relación</button>`).join(' ')}</div>`:'';target.querySelectorAll('[data-rel-remove-manager]').forEach(btn=>btn.onclick=async()=>{const managerId=clean(btn.dataset.relRemoveManager);if(!managerId||!window.confirm('¿Quitar esta relación? No se borra ningún contacto.'))return;btn.disabled=true;try{await removeManagedLink(managerId,c.id);profileRevision++;delete box.dataset.relKey;P.renderProfile(c);window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id:managerId}}));}catch(error){window.alert(error.message||'No se pudo quitar la relación.');btn.disabled=false;}});}).catch(()=>{if(token===profileToken&&box.isConnected)box.querySelector('[data-rel-managedby]').textContent='No se pudo comprobar quién gestiona esta ficha.';});
 };
 window.addEventListener('tpf:contacts-loaded',e=>{
  profileRevision++;
