@@ -658,27 +658,51 @@
       );
     state.applying = true;
     let done = 0;
+    const failed = [];
     try {
       for (const item of items) {
-        if (item.kind === "edit") await api.applyPreparedDecision(item);
-        else if (item.kind === "trash") await api.applyPreparedTrash(item);
-        done++;
-        delete state.prepared[preparedKey(item)];
+        try {
+          if (item.kind === "edit") await api.applyPreparedDecision(item);
+          else if (item.kind === "trash") await api.applyPreparedTrash(item);
+          else continue;
+          done++;
+          delete state.prepared[preparedKey(item)];
+        } catch (error) {
+          failed.push({
+            label: safe(item.label) || "Contacto sin nombre",
+            message: error?.message || "Error desconocido",
+          });
+        }
       }
-      alert(
-        "Se han aplicado " +
-          done +
-          " cambio(s). Ahora se actualizará la comparación.",
-      );
+      // Vuelve a leer los tres sitios incluso si uno de los contactos falla.
+      // Así los aplicados dejan de figurar como “Preparado” sin obligar a repetirlos.
       await run();
-    } catch (error) {
-      alert(
-        "Se aplicaron " +
-          done +
-          " cambio(s) y se detuvo para evitar más cambios.\n\n" +
-          (error?.message || "Error desconocido") +
-          "\n\nRevisa el contacto indicado antes de volver a aplicar.",
-      );
+      const failedLines = failed
+          .slice(0, 5)
+          .map((item) => "• " + item.label + ": " + item.message)
+          .join("\n"),
+        more =
+          failed.length > 5
+            ? "\n… y " + (failed.length - 5) + " contacto(s) más."
+            : "";
+      if (failed.length) {
+        alert(
+          "Se aplicaron " +
+            done +
+            " de " +
+            items.length +
+            " cambio(s) y se actualizó la comparación.\n\n" +
+            "No se aplicaron estos contactos; quedan preparados para revisarlos:\n" +
+            failedLines +
+            more,
+        );
+      } else {
+        alert(
+          "Se han aplicado " +
+            done +
+            " cambio(s) y se ha actualizado la comparación. Los aplicados ya no quedan preparados.",
+        );
+      }
     } finally {
       state.applying = false;
       render();
