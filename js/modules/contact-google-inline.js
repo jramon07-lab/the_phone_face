@@ -1332,20 +1332,31 @@
       throw Error(
         "Google no confirmó el contacto. No se eliminará ningún duplicado.",
       );
-    const full = await detailedPerson(person),
-      wanted = phone(wantedPhone),
-      phones = (full?.phoneNumbers || []).map((x) =>
-        phone(x.canonicalForm || x.value),
-      );
+    const wanted = phone(wantedPhone);
+    let full = null;
+    // Google Contacts puede tardar unos instantes en devolver el cambio recién guardado.
+    // Reintentamos antes de marcarlo como error, sin borrar ni tocar duplicados.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      full = await detailedPerson(person);
+      const phones = (full?.phoneNumbers || []).map((x) =>
+          phone(x.canonicalForm || x.value),
+        ),
+        phoneSaved = !wanted || phones.includes(wanted),
+        namesSaved = googleAligned(full, first, last, nickname);
+      if (full?.resourceName && phoneSaved && namesSaved) return full;
+      if (attempt < 2)
+        await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+    }
+    const phones = (full?.phoneNumbers || []).map((x) =>
+      phone(x.canonicalForm || x.value),
+    );
     if (!full?.resourceName || (wanted && !phones.includes(wanted)))
       throw Error(
         "Google no devolvió el teléfono guardado. No se eliminará ningún duplicado.",
       );
-    if (!googleAligned(full, first, last, nickname))
-      throw Error(
-        "Google no confirmó correctamente el nombre, los apellidos y el apodo. No se eliminará ningún duplicado.",
-      );
-    return full;
+    throw Error(
+      "Google no confirmó correctamente el nombre, los apellidos y el apodo. No se eliminará ningún duplicado.",
+    );
   }
   async function writeCrm(
     row,
