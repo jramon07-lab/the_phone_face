@@ -564,6 +564,70 @@
         target.data = { ...result.data.data };
     return result.data;
   }
+  // CRM y Google ya coinciden, pero WhatsApp puede enseñar un nombre público
+  // distinto. En ese caso no se toca el perfil de WhatsApp ni se reescribe
+  // Google: solo se guarda el vínculo seguro y la identidad final elegida en
+  // CRM para que los tres queden confirmados por el mismo teléfono.
+  async function confirmThreeWayVerified(row, person, chat) {
+    const c = contactData(row),
+      account = fold(googleAccountEmail()),
+      chatId = safe(chat?.id),
+      original = JSON.stringify(row?.data || {});
+    if (!row?.id || !account || !chatId || !rowMatchesChat(row, chat))
+      throw Error(
+        "La ficha o la conversación cambiaron. Vuelve a analizar antes de confirmar.",
+      );
+    if (
+      !person?.resourceName ||
+      !googlePhones(person).some((value) => phone(value) === phone(c.phone)) ||
+      !strictGoogleAligned(person, c)
+    )
+      throw Error(
+        "CRM y Google ya no coinciden exactamente. No se ha modificado la ficha.",
+      );
+    const data = {
+      ...(row.data || {}),
+      TPF_WHATSAPP_CHAT_ID: chatId,
+      TPF_WHATSAPP_NAME_CONFIRMED: {
+        chat_id: chatId,
+        confirmed_at: new Date().toISOString(),
+        source: "crm_google_confirmed",
+      },
+      TPF_GOOGLE_CONTACT: googleBinding(person),
+    };
+    data.TPF_CONTACT_VERIFIED = makeVerification(
+      { id: row.id, data },
+      chat,
+      person,
+    );
+    delete data.TPF_CRM_GOOGLE_SYNC;
+    const result = await sb
+      .from("records")
+      .update({ data })
+      .eq("id", row.id)
+      .eq("data", original)
+      .select("id,data")
+      .single();
+    if (result.error) throw result.error;
+    if (
+      !result.data ||
+      safe(result.data.id) !== safe(row.id) ||
+      !savedVerification(result.data, chat)
+    )
+      throw Error(
+        "No se confirmó la sincronización. No se modificaron los datos del contacto.",
+      );
+    for (const target of [row, current(), matchedWa()])
+      if (
+        target &&
+        safe(target.id) === safe(row.id) &&
+        JSON.stringify(target.data || {}) === original
+      )
+        target.data = { ...result.data.data };
+    rememberBinding(chat, row);
+    rememberUnifiedName(chat, row);
+    return result.data;
+  }
   async function reviewProfile() {
     const row = current();
     if (!row) return;
@@ -2560,6 +2624,7 @@
       openDecisionForRow,
       applyPreparedDecision,
       applyPreparedTrash,
+      confirmThreeWayVerified,
       batch: {
         contactData,
         googleView,
