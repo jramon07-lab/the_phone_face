@@ -681,7 +681,23 @@
           });
         }
       }
-      // Vuelve a leer los tres sitios incluso si uno requiere decisión.
+      // Si Google tiene varios contactos, la decisión debe aparecer ya:
+      // no esperamos a releer los 1.318 contactos antes de abrirla.
+      // Al guardar, el evento tpf:contact-updated elimina el borrador y recarga.
+      if (needsGoogleChoice.length) {
+        const item = needsGoogleChoice[0];
+        state.applying = false;
+        render();
+        if (typeof api.openDecisionForRow === "function") {
+          api.openDecisionForRow(item.row, item.chat || null);
+          return;
+        }
+        failed.push({
+          label: safe(item.label) || "Contacto sin nombre",
+          message: "No se pudo abrir el selector de duplicados.",
+        });
+      }
+      // Vuelve a leer los tres sitios cuando no queda una decisión abierta.
       await run();
       const failedLines = failed
           .slice(0, 5)
@@ -702,20 +718,12 @@
             failedLines +
             more,
         );
-      } else if (!needsGoogleChoice.length) {
+      } else {
         alert(
           "Se han aplicado " +
             done +
             " cambio(s) y se ha actualizado la comparación. Los aplicados ya no quedan preparados.",
         );
-      }
-      if (needsGoogleChoice.length) {
-        const item = needsGoogleChoice[0];
-        // Tras guardar la decisión, el evento tpf:contact-updated quita el borrador
-        // de esta fila y vuelve a cargar la comparación.
-        setTimeout(() => {
-          api.openDecisionForRow?.(item.row, item.chat || null);
-        }, 0);
       }
     } finally {
       state.applying = false;
