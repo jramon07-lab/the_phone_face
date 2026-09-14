@@ -279,7 +279,17 @@
   function rememberUnifiedName(chat, row) {
     const id = safe(chat?.id),
       c = contactData(row);
-    if (!id || !c.id || !rowConfirmedForChat(row, chat)) return;
+    // El nombre elegido en CRM/Google es el que mostramos al entrar el primer
+    // WhatsApp. No hace falta esperar a que hubiera una conversación anterior:
+    // basta con que la conversación sea exactamente del mismo teléfono y la
+    // ficha ya esté verificada.
+    if (
+      !id ||
+      !c.id ||
+      !rowMatchesChat(row, chat) ||
+      (!rowConfirmedForChat(row, chat) && !savedVerification(row, chat))
+    )
+      return;
     rememberBinding(chat, row);
     const map = readUnifiedNames(),
       old = map[id];
@@ -350,21 +360,23 @@
     return JSON.stringify([c.id, phone(c.phone), c.first, c.last, c.nickname]);
   }
   function savedVerification(row, chat) {
-    const v = row?.data?.TPF_CONTACT_VERIFIED;
-    const c = contactData(row),
-      rawName = safe(chat?.name),
-      savedName = safe(v?.whatsapp_name);
-    // WhatsApp solo aporta el nombre público como referencia. Solo se invalida
-    // si ese nombre público cambia después de que el operador lo confirmara.
-    if (rawName && savedName && !strictSame(savedName, rawName)) return null;
+    const v = row?.data?.TPF_CONTACT_VERIFIED || savedCrmGoogleSync(row),
+      account = fold(googleAccountEmail()),
+      storedChat = safe(v?.chat_id),
+      directChat = !chat || rowMatchesChat(row, chat),
+      savedChatMatches =
+        !storedChat || rowMatchesChat(row, { id: storedChat });
+    // El nombre público que WhatsApp enseña no sustituye la identidad que ya
+    // se eligió y guardó. Si el teléfono coincide, se muestra siempre el
+    // nombre final de CRM/Google; solo una edición explícita puede cambiarlo.
     return v?.version === 1 &&
       v.signature === verificationSignature(row) &&
-      v.google_account === fold(googleAccountEmail()) &&
+      v.google_account === account &&
       !!v.google_account &&
       !!v.google_resource &&
       !!v.verified_at &&
-      rowConfirmedForChat(row, contactChat(row, chat)) &&
-      (!chat || v.chat_id === safe(chat.id))
+      directChat &&
+      savedChatMatches
       ? v
       : null;
   }
@@ -436,7 +448,6 @@
     if (
       !account ||
       !rowMatchesChat(row, linked) ||
-      !rowConfirmedForChat(row, linked) ||
       found.length !== 1 ||
       !found[0]?.resourceName ||
       !googleAligned(found[0], c.first, c.last, c.nickname) ||
@@ -2034,11 +2045,7 @@
         googleContactsConnected();
     if ($("contactName")) $("contactName").value = visible;
     renderProfileIdentity(c);
-    if (
-      connected &&
-      (renderVerifiedCard(card, row, null) || renderCrmGoogleSyncedCard(card, row))
-    )
-      return;
+    if (connected && renderVerifiedCard(card, row, null)) return;
     delete card.dataset.verification;
     card.innerHTML = `<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Comprobando…</span><p>${wa ? `WhatsApp muestra: <b>${esc(wa)}</b>` : "Abre su conversación para detectar el nombre actual de WhatsApp."}</p>`;
     if (!connected) {
@@ -2166,7 +2173,10 @@
       clearWhatsappNicknames();
       return "";
     }
-    if (!rowMatchesChat(row, chat) || !rowConfirmedForChat(row, chat)) {
+    if (
+      !rowMatchesChat(row, chat) ||
+      (!rowConfirmedForChat(row, chat) && !savedVerification(row, chat))
+    ) {
       clearWhatsappNicknames();
       return "";
     }
