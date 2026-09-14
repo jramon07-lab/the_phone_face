@@ -429,6 +429,11 @@ export default async function handler(req, res) {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
       if (!chatId) return res.status(400).json({ ok: false, error: "Falta chatId." });
+      // GREEN-API only accepts a real individual WhatsApp identifier here.
+      // Rejecting malformed values locally avoids repeated provider errors.
+      if (!/^\d{10,15}@c\.us$/.test(chatId)) {
+        return res.status(200).json({ ok: true, chatId, urlAvatar: "", base64Avatar: "", available: false, skipped: true });
+      }
       try {
         const data = await greenFetch("getAvatar", {
           method: "POST",
