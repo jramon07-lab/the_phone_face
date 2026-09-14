@@ -416,7 +416,9 @@
     return {
       first: parts.shift() || "",
       last: parts.join(" "),
-      nickname: name,
+      // WhatsApp supplies its public display name, not an editable CRM alias.
+      // Never present that name as an "apodo" that could be copied by mistake.
+      nickname: "",
       phone: item?.c?.phone || "",
       dni: "",
       email: "",
@@ -439,7 +441,13 @@
         ["Correo", "email"],
       ],
       back = $("tpfBatchDecision");
-    back.innerHTML = `<section class="tpfDecisionCard" role="dialog" aria-modal="true"><header><div><small>DECIDIR Y EDITAR · SIN GUARDAR AÚN</small><h3>${esc(c.name || "Contacto")}</h3><p>Elige un valor por campo o escríbelo. Al confirmar al final se guardará la elección en CRM y Google; WhatsApp queda enlazado a esa ficha.</p></div><button id="tpfDecisionClose" type="button">×</button></header><div class="tpfDecisionWrap"><table><thead><tr><th>Dato</th><th>CRM</th><th>WhatsApp</th><th>Google</th><th>Tu elección final</th></tr></thead><tbody>${fields.map(([title, key]) => `<tr><th>${title}</th><td>${esc(value(key, c))}<button data-pick="crm" data-field="${key}">Usar CRM</button></td><td>${esc(value(key, w) || "—")}<button data-pick="wa" data-field="${key}" ${value(key, w) ? "" : "disabled"}>Usar WhatsApp</button></td><td>${esc(value(key, g) || "—")}<button data-pick="google" data-field="${key}" ${value(key, g) ? "" : "disabled"}>Usar Google</button></td><td><input data-final="${key}" value="${esc(old[key] ?? value(key, c))}" placeholder="Vacío"></td></tr>`).join("")}</tbody></table><fieldset class="tpfDecisionHolder"><legend>Relación del contrato</legend><label><input type="radio" name="tpf-holder-mode" value="self" checked> Es titular del contrato</label><label><input type="radio" name="tpf-holder-mode" value="associated"> Está asociado a otro titular</label><div id="tpfDecisionHolderBox" hidden><input id="tpfDecisionHolderSearch" type="search" placeholder="Buscar titular por nombre, teléfono o DNI"><div id="tpfDecisionHolderResults"></div><small>Elige una ficha existente. No crea otra ficha.</small></div></fieldset><div class="tpfDecisionActions"><button id="tpfDecisionKeep" class="secondary">Mantener sin cambios</button><button id="tpfDecisionTrash" class="danger" ${item.person?.resourceName ? "" : "disabled"}>Preparar borrado en CRM y Google</button><button id="tpfDecisionSave" class="primary">Preparar esta elección</button></div><small>“Borrar” solo se prepara ahora: no se mueve nada a la papelera hasta pulsar “Aplicar cambios preparados”.</small></div></section>`;
+    const whatsappCell = (key) => {
+      const publicName = safe(item.chat?.name);
+      if (key === "nickname")
+        return `${publicName ? `Sin apodo <small>Nombre público: ${esc(publicName)}</small>` : "Sin apodo"}<button data-pick="wa" data-field="${key}" disabled>Usar WhatsApp</button>`;
+      return `${esc(value(key, w) || "—")}<button data-pick="wa" data-field="${key}" ${value(key, w) ? "" : "disabled"}>Usar WhatsApp</button>`;
+    };
+    back.innerHTML = `<section class="tpfDecisionCard" role="dialog" aria-modal="true"><header><div><small>DECIDIR Y EDITAR · SIN GUARDAR AÚN</small><h3>${esc(c.name || "Contacto")}</h3><p>Elige un valor por campo o escríbelo. Al confirmar al final se guardará la elección en CRM y Google; WhatsApp queda enlazado a esa ficha.</p></div><button id="tpfDecisionClose" type="button">×</button></header><div class="tpfDecisionWrap"><table><thead><tr><th>Dato</th><th>CRM</th><th>WhatsApp</th><th>Google</th><th>Tu elección final</th></tr></thead><tbody>${fields.map(([title, key]) => `<tr><th>${title}</th><td>${esc(value(key, c))}<button data-pick="crm" data-field="${key}">Usar CRM</button></td><td>${whatsappCell(key)}</td><td>${esc(value(key, g) || "—")}<button data-pick="google" data-field="${key}" ${value(key, g) ? "" : "disabled"}>Usar Google</button></td><td><input data-final="${key}" value="${esc(old[key] ?? value(key, c))}" placeholder="Vacío"></td></tr>`).join("")}</tbody></table><fieldset class="tpfDecisionHolder"><legend>Relación del contrato</legend><label><input type="radio" name="tpf-holder-mode" value="self" checked> Es titular del contrato</label><label><input type="radio" name="tpf-holder-mode" value="associated"> Está asociado a otro titular</label><div id="tpfDecisionHolderBox" hidden><input id="tpfDecisionHolderSearch" type="search" placeholder="Buscar titular por nombre, teléfono o DNI"><div id="tpfDecisionHolderResults"></div><small>Elige una ficha existente. No crea otra ficha.</small></div></fieldset><div class="tpfDecisionActions"><button id="tpfDecisionKeep" class="secondary">Mantener sin cambios</button><button id="tpfDecisionTrash" class="danger" ${item.person?.resourceName ? "" : "disabled"}>Preparar borrado en CRM y Google</button><button id="tpfDecisionSave" class="primary">Preparar esta elección</button></div><small>“Borrar” solo se prepara ahora: no se mueve nada a la papelera hasta pulsar “Aplicar cambios preparados”.</small></div></section>`;
     back.classList.remove("hidden");
     const sources = { crm: c, wa: w, google: g };
     back.querySelectorAll("[data-pick]").forEach(
