@@ -380,13 +380,24 @@
   function savedCrmGoogleSync(row) {
     const current = row?.data?.TPF_CRM_GOOGLE_SYNC,
       legacy = row?.data?.TPF_CONTACT_VERIFIED,
-      v = current || (!phone(contactData(row).phone) ? legacy : null);
+      c = contactData(row),
+      savedChat = safe(row?.data?.TPF_WHATSAPP_CHAT_ID),
+      confirmedChat = safe(row?.data?.TPF_WHATSAPP_NAME_CONFIRMED?.chat_id),
+      hasConfirmedWhatsApp =
+        !!savedChat &&
+        savedChat === confirmedChat &&
+        phone(savedChat) === phone(c.phone),
+      v = current || (!phone(c.phone) ? legacy : null);
+    // También es válida cuando hay teléfono pero no existe una conversación de
+    // WhatsApp vinculada. En ese caso se verifica CRM + Google, sin fingir que
+    // WhatsApp ha sido comprobado.
     return v?.version === 1 &&
       v.signature === verificationSignature(row) &&
       v.google_account === fold(googleAccountEmail()) &&
       !!v.google_account && !!v.google_resource && !!v.verified_at &&
-      !phone(contactData(row).phone)
-      ? v : null;
+      !hasConfirmedWhatsApp
+      ? v
+      : null;
   }
   function makeCrmGoogleSync(row, person) {
     return {
@@ -1608,7 +1619,10 @@
       finalDni = safe(fields.dni ?? c.dni),
       finalEmail = safe(fields.email ?? c.email),
       targetPhone = phone(finalPhone),
-      chat = decision.chat || contactChat(row);
+      hasPreparedChat = Object.prototype.hasOwnProperty.call(decision, "chat"),
+      // El lote aporta chat: undefined cuando no existe conversación. No se
+      // inventa un chat por teléfono: se guarda como CRM + Google sincronizados.
+      chat = hasPreparedChat ? decision.chat : contactChat(row);
     if (!row?.id || !first)
       throw Error(
         "La decisión preparada necesita al menos un nombre. El teléfono puede quedar vacío.",
