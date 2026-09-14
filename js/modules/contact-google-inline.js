@@ -373,6 +373,27 @@
       verified_at: new Date().toISOString(),
     };
   }
+  // Un contacto sin teléfono no puede tener conversación de WhatsApp. Aun así
+  // CRM y Google sí pueden quedar comprobados y sincronizados de forma segura.
+  function savedCrmGoogleSync(row) {
+    const v = row?.data?.TPF_CRM_GOOGLE_SYNC;
+    return v?.version === 1 &&
+      v.signature === verificationSignature(row) &&
+      v.google_account === fold(googleAccountEmail()) &&
+      !!v.google_account && !!v.google_resource && !!v.verified_at &&
+      !phone(contactData(row).phone)
+      ? v : null;
+  }
+  function makeCrmGoogleSync(row, person) {
+    return {
+      version: 1,
+      signature: verificationSignature(row),
+      google_account: fold(googleAccountEmail()),
+      google_resource: safe(person?.resourceName),
+      verified_at: new Date().toISOString(),
+      no_whatsapp: true,
+    };
+  }
   function googleBinding(person, account = fold(googleAccountEmail())) {
     const resource = safe(person?.resourceName);
     return resource
@@ -611,6 +632,18 @@
       button.onclick = chat
         ? () => openWhatsappCorrection(row, safe(chat.name), chat)
         : reviewProfile;
+    return true;
+  }
+  function renderCrmGoogleSyncedCard(card, row) {
+    const c = contactData(row), v = savedCrmGoogleSync(row);
+    if (!v) return false;
+    const signature = "crm-google|" + v.signature + "|" + v.google_account;
+    if (card.dataset.verification !== signature) {
+      card.dataset.verification = signature;
+      card.innerHTML = `<details class="tpfVerifiedDetails"><summary style="cursor:pointer"><b>CRM y Google</b> <span class="tpfGoogleInlineStatus ok">CRM y Google verificados · sin WhatsApp</span></summary><p><b>${esc(unifiedVisible(c.first, c.last, c.nickname))}</b></p>${googleAccountLine(true)}<p>Sin teléfono: no hay conversación de WhatsApp que comprobar.</p><div class="tpfGoogleInlineActions"><button class="secondary" type="button" data-review-link>Revisar vinculación</button></div></details>`;
+    }
+    const button = card.querySelector("[data-review-link]");
+    if (button) button.onclick = reviewProfile;
     return true;
   }
   function clearWhatsappNicknames() {
@@ -1364,12 +1397,24 @@
     if (verifiedGoogle) {
       const binding = googleBinding(verifiedGoogle);
       if (binding) d.TPF_GOOGLE_CONTACT = binding;
-      d.TPF_CONTACT_VERIFIED = makeVerification(
-        { id: row.id, data: d },
-        chat,
-        verifiedGoogle,
-      );
-    } else delete d.TPF_CONTACT_VERIFIED;
+      if (chatId) {
+        d.TPF_CONTACT_VERIFIED = makeVerification(
+          { id: row.id, data: d },
+          chat,
+          verifiedGoogle,
+        );
+        delete d.TPF_CRM_GOOGLE_SYNC;
+      } else {
+        delete d.TPF_CONTACT_VERIFIED;
+        d.TPF_CRM_GOOGLE_SYNC = makeCrmGoogleSync(
+          { id: row.id, data: d },
+          verifiedGoogle,
+        );
+      }
+    } else {
+      delete d.TPF_CONTACT_VERIFIED;
+      delete d.TPF_CRM_GOOGLE_SYNC;
+    }
     let r = await sb
       .from("records")
       .update({ data: d })
@@ -1408,7 +1453,8 @@
       safe(r.data.id) !== safe(row.id) ||
       verificationSignature(r.data) !==
         verificationSignature({ id: row.id, data: d }) ||
-      (verifiedGoogle && !savedVerification(r.data, chat))
+      (verifiedGoogle && chatId && !savedVerification(r.data, chat)) ||
+      (verifiedGoogle && !chatId && !savedCrmGoogleSync(r.data))
     )
       throw Error(
         "No se confirmó el guardado del CRM. No se ha eliminado ningún contacto.",
@@ -1908,7 +1954,11 @@
         googleContactsConnected();
     if ($("contactName")) $("contactName").value = visible;
     renderProfileIdentity(c);
-    if (connected && renderVerifiedCard(card, row, null)) return;
+    if (
+      connected &&
+      (renderVerifiedCard(card, row, null) || renderCrmGoogleSyncedCard(card, row))
+    )
+      return;
     delete card.dataset.verification;
     card.innerHTML = `<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Comprobando…</span><p>${wa ? `WhatsApp muestra: <b>${esc(wa)}</b>` : "Abre su conversación para detectar el nombre actual de WhatsApp."}</p>`;
     if (!connected) {
