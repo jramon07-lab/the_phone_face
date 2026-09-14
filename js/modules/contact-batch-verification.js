@@ -807,6 +807,77 @@
       render();
     }
   }
+  async function approveSelected() {
+    const items = selectedRows();
+    if (!items.length)
+      return alert("Selecciona primero contactos verdes para confirmarlos.");
+    const preview = items
+        .slice(0, 8)
+        .map((item) => "• " + safe(item.c?.name || "Contacto sin nombre"))
+        .join("\n"),
+      extra = items.length > 8 ? "\n… y " + (items.length - 8) + " más" : "";
+    if (
+      !confirm(
+        "Se confirmarán " +
+          items.length +
+          " contacto(s) en CRM, Google y WhatsApp:\n\n" +
+          preview +
+          extra +
+          "\n\nCRM y Google ya coinciden. Se guardará el vínculo seguro con el chat de WhatsApp y se mostrará el nombre final del CRM. No se cambia el nombre público de WhatsApp. ¿Confirmas?",
+      )
+    )
+      return;
+    const api = window.TPFContactGoogleInline;
+    if (!api?.confirmThreeWayVerified)
+      return alert(
+        "El módulo seguro todavía no está listo. Actualiza la página una vez e inténtalo de nuevo.",
+      );
+    state.applying = true;
+    let done = 0;
+    const failed = [];
+    try {
+      for (const item of items) {
+        try {
+          await api.confirmThreeWayVerified(item.row, item.person, item.chat);
+          state.selected.delete(rowKey(item));
+          done++;
+        } catch (error) {
+          failed.push({
+            label: safe(item.c?.name) || "Contacto sin nombre",
+            message: error?.message || "Error desconocido",
+          });
+        }
+      }
+      await run();
+      const failedLines = failed
+          .slice(0, 5)
+          .map((item) => "• " + item.label + ": " + item.message)
+          .join("\n"),
+        more =
+          failed.length > 5
+            ? "\n… y " + (failed.length - 5) + " contacto(s) más."
+            : "";
+      if (failed.length)
+        alert(
+          "Se confirmaron " +
+            done +
+            " de " +
+            items.length +
+            " contacto(s). Los que no se pudieron confirmar siguen seleccionados para revisarlos:\n\n" +
+            failedLines +
+            more,
+        );
+      else
+        alert(
+          "Se confirmaron " +
+            done +
+            " contacto(s) en CRM, Google y WhatsApp. Ya aparecen como verificados.",
+        );
+    } finally {
+      state.applying = false;
+      render();
+    }
+  }
   function render(options = {}) {
     const body = $("tpfBatchBody"),
       runButton = $("tpfBatchRun"),
@@ -907,6 +978,19 @@
       state.selected.clear();
       render();
     });
+    const selectionBar = body.querySelector(".tpfBatchSelection");
+    if (selectionBar) {
+      const approve = document.createElement("button");
+      approve.id = "tpfBatchApproveSelected";
+      approve.className = "primary";
+      approve.type = "button";
+      approve.disabled = !selectedTotal || state.applying;
+      approve.textContent = selectedTotal
+        ? "Dar por OK y sincronizar los " + selectedTotal + " seleccionados"
+        : "Dar por OK y sincronizar seleccionados";
+      approve.onclick = approveSelected;
+      selectionBar.insertBefore(approve, selectionBar.querySelector("small"));
+    }
     body.querySelectorAll(".tpfBatchSelectRow").forEach((input) => {
       input.onchange = () => {
         const row = rows[Number(input.dataset.rowIndex)];
