@@ -1343,19 +1343,28 @@
         "Google no confirmó el contacto. No se eliminará ningún duplicado.",
       );
     const wanted = phone(wantedPhone);
-    let full = null;
-    // Google Contacts puede tardar unos instantes en devolver el cambio recién guardado.
-    // Reintentamos antes de marcarlo como error, sin borrar ni tocar duplicados.
-    for (let attempt = 0; attempt < 5; attempt++) {
-      full = await detailedPerson(person);
-      const phones = (full?.phoneNumbers || []).map((x) =>
+    const savedAsRequested = (candidate) => {
+      const phones = (candidate?.phoneNumbers || []).map((x) =>
           phone(x.canonicalForm || x.value),
         ),
         phoneSaved = !wanted || phones.includes(wanted),
-        namesSaved = googleAligned(full, first, last, nickname);
-      if (full?.resourceName && phoneSaved && namesSaved) return full;
+        namesSaved = googleAligned(candidate, first, last, nickname);
+      return !!candidate?.resourceName && phoneSaved && namesSaved;
+    };
+    // La respuesta del propio create/update de Google ya contiene los campos
+    // solicitados. Se acepta primero esa confirmación; una lectura inmediata
+    // puede seguir devolviendo una versión anterior durante unos segundos.
+    if (savedAsRequested(person)) return person;
+    let full = null;
+    // Si Google no devolvió aún todos los campos, esperamos y comprobamos de
+    // nuevo. Nunca se borra ni se unifica ningún duplicado en este proceso.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      full = await detailedPerson(person);
+      if (savedAsRequested(full)) return full;
       if (attempt < 4)
-        await new Promise((resolve) => window.setTimeout(resolve, 700 * (attempt + 1)));
+        await new Promise((resolve) =>
+          window.setTimeout(resolve, 700 * (attempt + 1)),
+        );
     }
     const phones = (full?.phoneNumbers || []).map((x) =>
       phone(x.canonicalForm || x.value),
