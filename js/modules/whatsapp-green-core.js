@@ -1881,12 +1881,26 @@ async function crmRefreshCurrentContactLabels(){
   try{
     const rows=await crmGetContactLabels(cid);
     currentContactLabelIds=rows.map(x=>x.id);
-    $("contactLabelsList").innerHTML=rows.map(x=>`<span class="contactLabelChip">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
+    $("contactLabelsList").innerHTML=rows.map(x=>`<button type="button" class="contactLabelChip contactLabelChipRemove" data-label-id="${esc(x.id)}" title="Quitar etiqueta ${esc(x.name)}" aria-label="Quitar etiqueta ${esc(x.name)}"><span>${esc(x.name)}</span><b aria-hidden="true">×</b></button>`).join("")||'<span class="small">Sin etiquetas</span>';
     if(waLiveState?.contact&&String(waLiveState.contact.id)===String(cid)){
       $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
     }
   }catch(e){console.warn("Etiquetas contacto",e)}
 }
+$("contactLabelsList").onclick=async e=>{
+  const chip=e.target.closest?.(".contactLabelChipRemove");
+  if(!chip||!currentContact)return;
+  e.preventDefault();
+  const labelId=String(chip.dataset.labelId||'');if(!labelId)return;
+  const previous=[...currentContactLabelIds];
+  chip.disabled=true;
+  try{
+    const ids=previous.filter(id=>String(id)!==labelId);
+    const {error}=await sb.rpc("crm_set_contact_labels",{p_contact_id:currentContact.id,p_label_ids:ids});
+    if(error)throw error;
+    await crmRefreshCurrentContactLabels();renderWhatsAppChats();
+  }catch(err){chip.disabled=false;alert(err?.message||'No se pudo quitar la etiqueta.');}
+};
 $("contactManageLabels").onclick=async()=>{
   if(!currentContact)return;
   try{await crmLoadLabels()}catch(e){return alert(e.message)}
