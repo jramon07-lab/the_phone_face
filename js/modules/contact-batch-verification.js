@@ -67,7 +67,35 @@
     const id = chatId(chat?.id);
     return !!phone(id) && /@c\.us$/i.test(id);
   }
-  function binding(row) {
+  function syncMarker(row, c, currentAccount) {
+    const marks = [
+        row?.data?.TPF_CONTACT_VERIFIED,
+        row?.data?.TPF_CRM_GOOGLE_SYNC,
+      ],
+      signature = JSON.stringify([
+        safe(row?.id),
+        phone(c?.phone),
+        safe(c?.first),
+        safe(c?.last),
+        safe(c?.nickname),
+      ]);
+    for (const mark of marks) {
+      const resource = safe(mark?.google_resource),
+        markerAccount = safe(mark?.google_account).toLocaleLowerCase("es-ES");
+      if (
+        mark?.version === 1 &&
+        mark?.signature === signature &&
+        !!mark?.verified_at &&
+        !!resource &&
+        markerAccount === currentAccount
+      )
+        return { resource, account: markerAccount };
+    }
+    return null;
+  }
+  function binding(row, c, currentAccount) {
+    const marker = syncMarker(row, c, currentAccount);
+    if (marker) return marker;
     const value = row?.data?.TPF_GOOGLE_CONTACT || {};
     return {
       resource: safe(
@@ -140,7 +168,7 @@
     return { chat: matches[0], status: "same" };
   }
   function pickGoogle(row, c, byId, byPhone, currentAccount) {
-    const saved = binding(row),
+    const saved = binding(row, c, currentAccount),
       p = phone(c.phone);
     if (saved.resource) {
       if (saved.account && saved.account !== currentAccount)
@@ -194,12 +222,13 @@
       whatsappByPhone = indexByPhone(chats, (item) => [item.id]),
       result = [];
     for (const { row, c } of crm) {
-      const p = phone(c.phone);
+      const p = phone(c.phone),
+        marker = syncMarker(row, c, currentAccount);
       let status = "coincide",
         person = null;
-      if (!p) status = "crm_phone_missing";
-      else if (!c.first) status = "crm_name_incomplete";
-      else if ((crmByPhone.get(p) || []).length !== 1)
+      if (!c.first) status = "crm_name_incomplete";
+      else if (!p && !marker) status = "crm_phone_missing";
+      else if (p && (crmByPhone.get(p) || []).length !== 1)
         status = "crm_phone_duplicate";
       const wa = whatsappInfo(
         p
@@ -219,10 +248,11 @@
         if (google.status) status = google.status;
         else {
           person = google.person;
-          if (
-            !api.googlePhones(person).some((value) => phone(value) === p) ||
-            !api.strictGoogleAligned(person, c)
-          )
+          const googlePhones = api.googlePhones(person).map(phone).filter(Boolean),
+            phoneMatches = p
+              ? googlePhones.includes(p)
+              : googlePhones.length === 0;
+          if (!phoneMatches || !api.strictGoogleAligned(person, c))
             status = "google_data_mismatch";
         }
       }
