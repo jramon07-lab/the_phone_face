@@ -17,6 +17,7 @@
     analysedAt: "",
     prepared: {},
     reviewed: {},
+    selected: new Set(),
     applying: false,
   };
   const safe = (value) => String(value ?? "").trim();
@@ -277,12 +278,20 @@
       coincide: 0,
       crmGoogleDifferent: 0,
       whatsappDifferent: 0,
+      greenWhatsappSame: 0,
+      greenWhatsappDifferent: 0,
+      greenWhatsappOther: 0,
       byStatus: {},
     };
     for (const row of rows) {
       out.byStatus[row.status] = (out.byStatus[row.status] || 0) + 1;
-      if (row.status === "coincide") out.coincide++;
-      else out.crmGoogleDifferent++;
+      if (row.status === "coincide") {
+        out.coincide++;
+        if (row.whatsappStatus === "same") out.greenWhatsappSame++;
+        else if (row.whatsappStatus === "different")
+          out.greenWhatsappDifferent++;
+        else out.greenWhatsappOther++;
+      } else out.crmGoogleDifferent++;
       if (row.whatsappStatus !== "same") out.whatsappDifferent++;
     }
     return out;
@@ -355,7 +364,7 @@
     if ($("tpfBatchVerifyStyles")) return;
     const style = document.createElement("style");
     style.id = "tpfBatchVerifyStyles";
-    style.textContent = `.tpfBatchBack{position:fixed;inset:0;z-index:290000;display:grid;place-items:center;padding:16px;background:#101828b8}.tpfBatchBack.hidden{display:none!important}.tpfBatchModal{display:flex;flex-direction:column;width:min(1160px,100%);height:min(92vh,820px);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 26px 85px #0007;color:#1d2939}.tpfBatchHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid #e4e7ec}.tpfBatchHead h2{margin:3px 0 4px;font-size:21px}.tpfBatchHead p{margin:0;color:#667085;font-size:12px}.tpfBatchHead small{font-weight:800;color:#175cd3}.tpfBatchHead button{border:0;background:#f2f4f7;border-radius:50%;width:36px;height:36px;font-size:21px}.tpfBatchBody{flex:1;min-height:0;overflow:auto;padding:18px 20px}.tpfBatchIntro,.tpfBatchProgress,.tpfBatchError{padding:18px;border:1px solid #d0d5dd;border-radius:12px;background:#f8fafc}.tpfBatchIntro b,.tpfBatchProgress b{display:block;margin-bottom:5px}.tpfBatchIntro ul{margin:10px 0 0;padding-left:20px;color:#475467;font-size:12px;line-height:1.55}.tpfBatchProgress{color:#175cd3}.tpfBatchError{border-color:#fecdca;background:#fff5f5;color:#9b2737}.tpfBatchStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.tpfBatchStat{padding:12px;border:1px solid #e4e7ec;border-radius:10px;background:#fff}.tpfBatchStat span{display:block;color:#667085;font-size:10px;text-transform:uppercase}.tpfBatchStat b{display:block;margin-top:3px;font-size:23px}.tpfBatchStat.ok{background:#ecfdf3;border-color:#abefc6}.tpfBatchStat.warn{background:#fff7ed;border-color:#fed7aa}.tpfBatchBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 12px}.tpfBatchBar input{flex:1;min-width:230px}.tpfBatchBar select{min-width:220px}.tpfBatchBar small{color:#667085}.tpfBatchTable{width:100%;border-collapse:collapse;min-width:880px}.tpfBatchTableWrap{overflow:auto;border:1px solid #e4e7ec;border-radius:10px}.tpfBatchTable th,.tpfBatchTable td{padding:10px;border-bottom:1px solid #eaecf0;text-align:left;vertical-align:top;font-size:11px}.tpfBatchTable th{position:sticky;top:0;background:#f8fafc;text-transform:uppercase;color:#667085;font-size:9px;letter-spacing:.04em}.tpfBatchTable td small{display:block;color:#667085;margin-top:3px}.tpfBatchBadge{display:inline-block;padding:4px 7px;border-radius:999px;background:#f2f4f7;font-weight:750;font-size:10px}.tpfBatchBadge.coincide{background:#ecfdf3;color:#027a48}.tpfBatchBadge.google_data_mismatch{background:#fff0e8;color:#b54708}.tpfBatchWa.same{color:#027a48}.tpfBatchWa.different{color:#b54708}.tpfBatchPager{display:flex;align-items:center;justify-content:center;gap:10px;padding-top:13px}.tpfBatchEmpty{padding:25px;color:#667085;text-align:center}.tpfBatchFoot{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:14px 20px;border-top:1px solid #e4e7ec}.tpfBatchFoot .tpfBatchNote{margin-right:auto;color:#667085;font-size:11px}.tpfBatchFoot button{min-height:38px}@media(max-width:760px){.tpfBatchBack{padding:6px}.tpfBatchModal{height:98vh;border-radius:12px}.tpfBatchStats{grid-template-columns:repeat(2,minmax(0,1fr))}.tpfBatchBody{padding:13px}.tpfBatchHead,.tpfBatchFoot{padding:13px}.tpfBatchBar{align-items:stretch}.tpfBatchBar input,.tpfBatchBar select{min-width:100%;width:100%}}`;
+    style.textContent = `.tpfBatchBack{position:fixed;inset:0;z-index:290000;display:grid;place-items:center;padding:16px;background:#101828b8}.tpfBatchBack.hidden{display:none!important}.tpfBatchModal{display:flex;flex-direction:column;width:min(1160px,100%);height:min(92vh,820px);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 26px 85px #0007;color:#1d2939}.tpfBatchHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 20px;border-bottom:1px solid #e4e7ec}.tpfBatchHead h2{margin:3px 0 4px;font-size:21px}.tpfBatchHead p{margin:0;color:#667085;font-size:12px}.tpfBatchHead small{font-weight:800;color:#175cd3}.tpfBatchHead button{border:0;background:#f2f4f7;border-radius:50%;width:36px;height:36px;font-size:21px}.tpfBatchBody{flex:1;min-height:0;overflow:auto;padding:18px 20px}.tpfBatchIntro,.tpfBatchProgress,.tpfBatchError{padding:18px;border:1px solid #d0d5dd;border-radius:12px;background:#f8fafc}.tpfBatchIntro b,.tpfBatchProgress b{display:block;margin-bottom:5px}.tpfBatchIntro ul{margin:10px 0 0;padding-left:20px;color:#475467;font-size:12px;line-height:1.55}.tpfBatchProgress{color:#175cd3}.tpfBatchError{border-color:#fecdca;background:#fff5f5;color:#9b2737}.tpfBatchStats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.tpfBatchStat{padding:12px;border:1px solid #e4e7ec;border-radius:10px;background:#fff}.tpfBatchStat span{display:block;color:#667085;font-size:10px;text-transform:uppercase}.tpfBatchStat b{display:block;margin-top:3px;font-size:23px}.tpfBatchStat.ok{background:#ecfdf3;border-color:#abefc6}.tpfBatchStat.warn{background:#fff7ed;border-color:#fed7aa}.tpfBatchGreenGroups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}.tpfBatchGreenGroup{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid #abefc6;border-radius:10px;background:#f0fdf4;color:#166534;text-align:left}.tpfBatchGreenGroup.is-active{outline:2px solid #175cd3;outline-offset:1px}.tpfBatchGreenGroup b{display:block;font-size:12px}.tpfBatchGreenGroup small{display:block;margin-top:2px;color:#15803d;font-size:10px}.tpfBatchGreenGroup strong{font-size:22px}.tpfBatchGreenGroup.different{border-color:#fed7aa;background:#fffbeb;color:#9a3412}.tpfBatchGreenGroup.different small{color:#b45309}.tpfBatchSelection{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 12px;padding:9px 10px;border:1px solid #d0d5dd;border-radius:10px;background:#f8fafc;font-size:11px}.tpfBatchSelection b{margin-right:auto}.tpfBatchSelection button{padding:5px 8px;font-size:10px}.tpfBatchBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 12px}.tpfBatchBar input{flex:1;min-width:230px}.tpfBatchBar select{min-width:220px}.tpfBatchBar small{color:#667085}.tpfBatchTable{width:100%;border-collapse:collapse;min-width:940px}.tpfBatchTableWrap{overflow:auto;border:1px solid #e4e7ec;border-radius:10px}.tpfBatchTable th,.tpfBatchTable td{padding:10px;border-bottom:1px solid #eaecf0;text-align:left;vertical-align:top;font-size:11px}.tpfBatchTable th{position:sticky;top:0;background:#f8fafc;text-transform:uppercase;color:#667085;font-size:9px;letter-spacing:.04em}.tpfBatchTable td small{display:block;color:#667085;margin-top:3px}.tpfBatchSelect{width:34px;text-align:center!important}.tpfBatchSelect input{width:16px;height:16px;accent-color:#175cd3}.tpfBatchBadge{display:inline-block;padding:4px 7px;border-radius:999px;background:#f2f4f7;font-weight:750;font-size:10px}.tpfBatchBadge.coincide{background:#ecfdf3;color:#027a48}.tpfBatchBadge.google_data_mismatch{background:#fff0e8;color:#b54708}.tpfBatchWa.same{color:#027a48}.tpfBatchWa.different{color:#b54708}.tpfBatchPager{display:flex;align-items:center;justify-content:center;gap:10px;padding-top:13px}.tpfBatchEmpty{padding:25px;color:#667085;text-align:center}.tpfBatchFoot{display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:14px 20px;border-top:1px solid #e4e7ec}.tpfBatchFoot .tpfBatchNote{margin-right:auto;color:#667085;font-size:11px}.tpfBatchFoot button{min-height:38px}@media(max-width:760px){.tpfBatchBack{padding:6px}.tpfBatchModal{height:98vh;border-radius:12px}.tpfBatchStats{grid-template-columns:repeat(2,minmax(0,1fr))}.tpfBatchGreenGroups{grid-template-columns:1fr}.tpfBatchBody{padding:13px}.tpfBatchHead,.tpfBatchFoot{padding:13px}.tpfBatchBar{align-items:stretch}.tpfBatchBar input,.tpfBatchBar select{min-width:100%;width:100%}}`;
     document.head.appendChild(style);
   }
   function decisionStyles() {
@@ -390,11 +399,49 @@
     if (state.running) return;
     $("tpfBatchVerifyBack")?.classList.add("hidden");
   }
+  function rowKey(item) {
+    return safe(item?.row?.id);
+  }
+  function selectableGreen(row) {
+    return (
+      row?.status === "coincide" &&
+      (row.whatsappStatus === "same" || row.whatsappStatus === "different")
+    );
+  }
+  function matchesFilter(row, filter = state.filter) {
+    if (filter === "green_whatsapp_same")
+      return row.status === "coincide" && row.whatsappStatus === "same";
+    if (filter === "green_whatsapp_different")
+      return row.status === "coincide" && row.whatsappStatus === "different";
+    return filter === "all" || row.status === filter;
+  }
+  function selectedRows(rows = state.results) {
+    return (rows || []).filter(
+      (row) => selectableGreen(row) && state.selected.has(rowKey(row)),
+    );
+  }
+  function pruneSelected() {
+    // Mientras la comparación está en curso no se borra la selección: al
+    // terminar se conserva solo la de fichas que siguen siendo válidas.
+    if (!state.results.length) return;
+    const valid = new Set(
+      state.results.filter(selectableGreen).map((row) => rowKey(row)),
+    );
+    for (const id of [...state.selected]) if (!valid.has(id)) state.selected.delete(id);
+  }
+  function setSelected(rows, checked) {
+    for (const row of rows || []) {
+      const id = rowKey(row);
+      if (!id || !selectableGreen(row)) continue;
+      if (checked) state.selected.add(id);
+      else state.selected.delete(id);
+    }
+  }
   function filtered() {
     const text = safe(state.query).toLocaleLowerCase("es-ES");
     return state.results.filter(
       (row) =>
-        (state.filter === "all" || row.status === state.filter) &&
+        matchesFilter(row) &&
         (!text ||
           [
             row.c?.name,
@@ -789,8 +836,14 @@
         "Pulsa “Actualizar comparación” para leer los datos actuales.";
       return;
     }
+    pruneSelected();
     const data = summary(),
       all = filtered(),
+      selectable = all.filter(selectableGreen),
+      selectedTotal = selectedRows().length,
+      allSelectableSelected =
+        !!selectable.length &&
+        selectable.every((row) => state.selected.has(rowKey(row))),
       pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
     state.page = Math.min(state.page, pages);
     const rows = all.slice(
@@ -800,12 +853,13 @@
       statuses = Object.entries(data.byStatus).sort(
         (a, b) => statusOrder(a[0]) - statusOrder(b[0]),
       );
-    body.innerHTML = `<div class="tpfBatchStats"><div class="tpfBatchStat"><span>Contactos CRM</span><b>${data.total}</b></div><div class="tpfBatchStat ok"><span>CRM y Google iguales</span><b>${data.coincide}</b></div><div class="tpfBatchStat warn"><span>CRM y Google a revisar</span><b>${data.crmGoogleDifferent}</b></div><div class="tpfBatchStat"><span>WhatsApp distinto o no encontrado</span><b>${data.whatsappDifferent}</b></div></div><div class="tpfBatchIntro"><b>Preparados: ${preparedCount()} · Revisados sin cambios: ${reviewedCount()}</b><span>Pulsa <b>Comprobar</b> para elegir campo por campo; <b>Mantener</b> deja una marca de revisión, pero no cambia nada; <b>Borrar</b> solo prepara el envío a papelera.</span></div><div class="tpfBatchBar"><input id="tpfBatchSearch" type="search" placeholder="Buscar nombre, teléfono, DNI o apodo" value="${esc(state.query)}"><select id="tpfBatchFilter"><option value="all">Todos (${data.total})</option>${statuses.map(([key, count]) => `<option value="${esc(key)}" ${state.filter === key ? "selected" : ""}>${esc(label(key))} (${count})</option>`).join("")}</select><small>Cuenta: ${esc(state.account || "—")} · ${esc(state.analysedAt)}</small></div><div class="tpfBatchTableWrap"><table class="tpfBatchTable"><thead><tr><th>Estado</th><th>CRM</th><th>WhatsApp original</th><th>Google</th><th>Teléfono</th><th>DNI / NIF</th><th>Acciones</th></tr></thead><tbody>${
+    body.innerHTML = `<div class="tpfBatchStats"><div class="tpfBatchStat"><span>Contactos CRM</span><b>${data.total}</b></div><div class="tpfBatchStat ok"><span>CRM y Google iguales</span><b>${data.coincide}</b></div><div class="tpfBatchStat warn"><span>CRM y Google a revisar</span><b>${data.crmGoogleDifferent}</b></div><div class="tpfBatchStat"><span>WhatsApp distinto o no encontrado</span><b>${data.whatsappDifferent}</b></div></div><div class="tpfBatchGreenGroups"><button type="button" class="tpfBatchGreenGroup ${state.filter === "green_whatsapp_same" ? "is-active" : ""}" data-green-filter="green_whatsapp_same"><span><b>WhatsApp coincide con CRM</b><small>CRM y Google ya coinciden</small></span><strong>${data.greenWhatsappSame}</strong></button><button type="button" class="tpfBatchGreenGroup different ${state.filter === "green_whatsapp_different" ? "is-active" : ""}" data-green-filter="green_whatsapp_different"><span><b>Nombre distinto en WhatsApp</b><small>CRM y Google ya coinciden</small></span><strong>${data.greenWhatsappDifferent}</strong></button></div><div class="tpfBatchIntro"><b>Preparados: ${preparedCount()} · Revisados sin cambios: ${reviewedCount()}</b><span>Pulsa <b>Comprobar</b> para elegir campo por campo; <b>Mantener</b> deja una marca de revisión, pero no cambia nada; <b>Borrar</b> solo prepara el envío a papelera.</span></div><div class="tpfBatchBar"><input id="tpfBatchSearch" type="search" placeholder="Buscar nombre, teléfono, DNI o apodo" value="${esc(state.query)}"><select id="tpfBatchFilter"><option value="all">Todos (${data.total})</option><option value="green_whatsapp_same" ${state.filter === "green_whatsapp_same" ? "selected" : ""}>CRM y Google iguales · WhatsApp coincide (${data.greenWhatsappSame})</option><option value="green_whatsapp_different" ${state.filter === "green_whatsapp_different" ? "selected" : ""}>CRM y Google iguales · Nombre distinto en WhatsApp (${data.greenWhatsappDifferent})</option>${statuses.map(([key, count]) => `<option value="${esc(key)}" ${state.filter === key ? "selected" : ""}>${esc(label(key))} (${count})</option>`).join("")}</select><small>Cuenta: ${esc(state.account || "—")} · ${esc(state.analysedAt)}</small></div><div class="tpfBatchSelection"><b>${selectedTotal ? `${selectedTotal} seleccionado${selectedTotal === 1 ? "" : "s"}` : "Sin selección"}</b><button id="tpfBatchSelectAll" class="secondary" type="button" ${selectable.length ? "" : "disabled"}>${allSelectableSelected ? "Quitar todos de este grupo" : `Seleccionar todos de este grupo (${selectable.length})`}</button>${selectedTotal ? `<button id="tpfBatchClearSelected" class="secondary" type="button">Quitar selección (${selectedTotal})</button>` : ""}<small>Solo selecciona: no cambia ni guarda ninguna ficha.</small></div><div class="tpfBatchTableWrap"><table class="tpfBatchTable"><thead><tr><th class="tpfBatchSelect"><input id="tpfBatchSelectPage" type="checkbox" aria-label="Seleccionar todos los contactos de este grupo" ${allSelectableSelected ? "checked" : ""} ${selectable.length ? "" : "disabled"}></th><th>Estado</th><th>CRM</th><th>WhatsApp original</th><th>Google</th><th>Teléfono</th><th>DNI / NIF</th><th>Acciones</th></tr></thead><tbody>${
       rows
         .map((row, index) => {
           const g = row.person ? batchApi()?.googleView?.(row.person) : null,
             decision = state.prepared[safe(row.row.id)],
             reviewed = state.reviewed[safe(row.row.id)],
+            checked = state.selected.has(rowKey(row)),
             wa = row.chat?.name || "—",
             gt =
               (
@@ -818,10 +872,10 @@
                   /^(dni|nif|dni \/ nif|dni\/nif)$/i.test(safe(item?.key)),
                 )?.value,
               ) || "—";
-          return `<tr><td><span class="tpfBatchBadge ${esc(row.status)}">${esc(label(row.status))}</span>${decision ? `<small>Preparado: ${esc(decision.kind === "trash" ? "borrar" : "editar")}</small>` : reviewed ? "<small>Revisado: mantener</small>" : ""}</td><td><b>${esc(row.c?.name || "—")}</b>${row.c?.nickname ? `<small>Apodo: ${esc(row.c.nickname)}</small>` : ""}</td><td><b>${esc(wa)}</b><small class="tpfBatchWa ${esc(row.whatsappStatus)}">${esc(whatsappLabel(row.whatsappStatus))}</small></td><td>${g ? `<b>${esc(g.name || "—")}</b>${g.nickname ? `<small>Apodo: ${esc(g.nickname)}</small>` : ""}<small>Tel.: ${esc(gt)} · DNI: ${esc(gd)}</small>` : "—"}</td><td><b>CRM:</b> ${esc(row.c?.phone || "—")}<small><b>Google:</b> ${esc(gt)}</small></td><td><b>CRM:</b> ${esc(row.c?.dni || "—")}<small><b>Google:</b> ${esc(gd)}</small></td><td><button type="button" class="secondary tpfBatchCheck" data-row-index="${index}">Comprobar</button><button type="button" class="secondary tpfBatchKeep" data-row-index="${index}">Mantener</button><button type="button" class="danger tpfBatchTrash" data-row-index="${index}">${row.person?.resourceName ? "Borrar" : "Borrar del CRM"}</button>${decision || reviewed ? `<button type="button" class="secondary tpfBatchUndo" data-row-index="${index}">Quitar</button>` : ""}</td></tr>`;
+          return `<tr><td class="tpfBatchSelect">${selectableGreen(row) ? `<input class="tpfBatchSelectRow" type="checkbox" data-row-index="${index}" aria-label="Seleccionar ${esc(row.c?.name || "contacto")}" ${checked ? "checked" : ""}>` : "—"}</td><td><span class="tpfBatchBadge ${esc(row.status)}">${esc(label(row.status))}</span>${decision ? `<small>Preparado: ${esc(decision.kind === "trash" ? "borrar" : "editar")}</small>` : reviewed ? "<small>Revisado: mantener</small>" : ""}</td><td><b>${esc(row.c?.name || "—")}</b>${row.c?.nickname ? `<small>Apodo: ${esc(row.c.nickname)}</small>` : ""}</td><td><b>${esc(wa)}</b><small class="tpfBatchWa ${esc(row.whatsappStatus)}">${esc(whatsappLabel(row.whatsappStatus))}</small></td><td>${g ? `<b>${esc(g.name || "—")}</b>${g.nickname ? `<small>Apodo: ${esc(g.nickname)}</small>` : ""}<small>Tel.: ${esc(gt)} · DNI: ${esc(gd)}</small>` : "—"}</td><td><b>CRM:</b> ${esc(row.c?.phone || "—")}<small><b>Google:</b> ${esc(gt)}</small></td><td><b>CRM:</b> ${esc(row.c?.dni || "—")}<small><b>Google:</b> ${esc(gd)}</small></td><td><button type="button" class="secondary tpfBatchCheck" data-row-index="${index}">Comprobar</button><button type="button" class="secondary tpfBatchKeep" data-row-index="${index}">Mantener</button><button type="button" class="danger tpfBatchTrash" data-row-index="${index}">${row.person?.resourceName ? "Borrar" : "Borrar del CRM"}</button>${decision || reviewed ? `<button type="button" class="secondary tpfBatchUndo" data-row-index="${index}">Quitar</button>` : ""}</td></tr>`;
         })
         .join("") ||
-      '<tr><td colspan="7" class="tpfBatchEmpty">No hay resultados con este filtro.</td></tr>'
+      '<tr><td colspan="8" class="tpfBatchEmpty">No hay resultados con este filtro.</td></tr>'
     }</tbody></table></div><div class="tpfBatchPager"><button id="tpfBatchPrev" class="secondary" type="button" ${state.page <= 1 ? "disabled" : ""}>Anterior</button><span>Página ${state.page} de ${pages}</span><button id="tpfBatchNext" class="secondary" type="button" ${state.page >= pages ? "disabled" : ""}>Siguiente</button></div>`;
     $("tpfBatchSearch").oninput = (event) => {
       state.query = event.target.value;
@@ -833,6 +887,34 @@
       state.page = 1;
       render();
     };
+    body.querySelectorAll("[data-green-filter]").forEach((button) => {
+      button.onclick = () => {
+        state.filter = button.dataset.greenFilter;
+        state.page = 1;
+        render();
+      };
+    });
+    const toggleGroupSelection = () => {
+      setSelected(selectable, !allSelectableSelected);
+      render();
+    };
+    $("tpfBatchSelectAll").onclick = toggleGroupSelection;
+    $("tpfBatchSelectPage").onchange = (event) => {
+      setSelected(selectable, event.target.checked);
+      render();
+    };
+    $("tpfBatchClearSelected")?.addEventListener("click", () => {
+      state.selected.clear();
+      render();
+    });
+    body.querySelectorAll(".tpfBatchSelectRow").forEach((input) => {
+      input.onchange = () => {
+        const row = rows[Number(input.dataset.rowIndex)];
+        if (!row) return;
+        setSelected([row], input.checked);
+        render();
+      };
+    });
     $("tpfBatchPrev").onclick = () => {
       state.page = Math.max(1, state.page - 1);
       render();
