@@ -342,7 +342,7 @@
     back = document.createElement("div");
     back.id = "tpfBatchVerifyBack";
     back.className = "tpfBatchBack hidden";
-    back.innerHTML = `<section class="tpfBatchModal" role="dialog" aria-modal="true" aria-labelledby="tpfBatchTitle"><header class="tpfBatchHead"><div><small>REVISIÓN COMPLETA · NO SE GUARDA HASTA EL FINAL</small><h2 id="tpfBatchTitle">CRM, Google y WhatsApp</h2><p>Elige y edita los datos. Todos los cambios se preparan primero y se confirman juntos al final.</p></div><button id="tpfBatchClose" type="button" aria-label="Cerrar">×</button></header><div id="tpfBatchBody" class="tpfBatchBody"></div><footer class="tpfBatchFoot"><span id="tpfBatchNote" class="tpfBatchNote"></span><button id="tpfBatchApply" class="primary" type="button">Aplicar cambios preparados (0)</button><button id="tpfBatchRun" class="secondary" type="button">Actualizar comparación</button></footer></section><div id="tpfBatchDecision" class="tpfBatchDecision hidden"></div>`;
+    back.innerHTML = `<section class="tpfBatchModal" role="dialog" aria-modal="true" aria-labelledby="tpfBatchTitle"><header class="tpfBatchHead"><div><small>REVISIÓN COMPLETA · NO SE GUARDA HASTA EL FINAL</small><h2 id="tpfBatchTitle">CRM, Google y WhatsApp</h2><p>Elige y edita los datos. Todos los cambios se preparan primero y se confirman juntos al final.</p></div><button id="tpfBatchClose" type="button" aria-label="Cerrar">×</button></header><div id="tpfBatchBody" class="tpfBatchBody"></div><footer class="tpfBatchFoot"><span id="tpfBatchNote" class="tpfBatchNote"></span><button id="tpfBatchSaveDraft" class="secondary" type="button">Guardar borrador</button><button id="tpfBatchLoadDraft" class="secondary" type="button">Cargar borrador</button><input id="tpfBatchDraftFile" type="file" accept="application/json,.json" hidden><button id="tpfBatchApply" class="primary" type="button">Aplicar cambios preparados (0)</button><button id="tpfBatchRun" class="secondary" type="button">Actualizar comparación</button></footer></section><div id="tpfBatchDecision" class="tpfBatchDecision hidden"></div>`;
     document.body.appendChild(back);
     $("tpfBatchClose").onclick = close;
     back.onclick = (event) => {
@@ -350,6 +350,9 @@
     };
     $("tpfBatchRun").onclick = run;
     $("tpfBatchApply").onclick = applyPrepared;
+    $("tpfBatchSaveDraft").onclick = saveDraft;
+    $("tpfBatchLoadDraft").onclick = () => $("tpfBatchDraftFile").click();
+    $("tpfBatchDraftFile").onchange = loadDraftFile;
     return back;
   }
   function close() {
@@ -390,6 +393,84 @@
   function unsetPrepared(row) {
     delete state.prepared[safe(row?.row?.id)];
     render();
+  }
+  function draftItems() {
+    return Object.values(state.prepared).map((item) => ({
+      id: safe(item?.row?.id),
+      kind: item.kind,
+      fields: item.fields || null,
+      holder: item.holder || null,
+      label: safe(item.label),
+    }));
+  }
+  function saveDraft() {
+    const items = draftItems();
+    if (!items.length)
+      return alert("No hay decisiones preparadas para guardar en el borrador.");
+    const data = {
+      type: "TPF_CONTACTS_DRAFT",
+      version: 1,
+      saved_at: new Date().toISOString(),
+      google_account: state.account,
+      decisions: items,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      }),
+      link = document.createElement("a"),
+      date = new Date().toISOString().slice(0, 10);
+    link.href = URL.createObjectURL(blob);
+    link.download = "Borrador-contactos-CRM-Google-WhatsApp-" + date + ".json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    alert("Borrador guardado. No se ha cambiado ningún contacto.");
+  }
+  function restoreDraft(draft) {
+    if (draft?.type !== "TPF_CONTACTS_DRAFT" || !Array.isArray(draft.decisions))
+      throw Error("Este archivo no es un borrador válido de contactos.");
+    if (!state.results.length)
+      throw Error("Primero pulsa “Actualizar comparación” para leer los contactos actuales.");
+    const rows = new Map(state.results.map((item) => [safe(item.row?.id), item]));
+    state.prepared = {};
+    let loaded = 0,
+      missing = 0;
+    for (const saved of draft.decisions) {
+      const item = rows.get(safe(saved?.id));
+      if (!item || !["edit", "trash"].includes(saved?.kind)) {
+        missing++;
+        continue;
+      }
+      state.prepared[safe(item.row.id)] = {
+        kind: saved.kind,
+        row: item.row,
+        person: item.person,
+        chat: item.chat,
+        fields: saved.kind === "edit" ? saved.fields || {} : undefined,
+        holder: saved.kind === "edit" ? saved.holder || null : null,
+        label: safe(saved.label) || item.c?.name || "Contacto",
+      };
+      loaded++;
+    }
+    render();
+    alert(
+      "Borrador cargado: " +
+        loaded +
+        " decisión(es)." +
+        (missing ? " " + missing + " no se encontró o ya no es aplicable." : "") +
+        " Aún no se ha cambiado nada.",
+    );
+  }
+  async function loadDraftFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      restoreDraft(JSON.parse(await file.text()));
+    } catch (error) {
+      alert(error?.message || "No se pudo cargar el borrador.");
+    }
   }
   function googleFields(person) {
     const api = batchApi(),
