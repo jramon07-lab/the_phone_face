@@ -102,13 +102,16 @@
       legacy = displayCase(
         field(d, "NOMBRE Y APELLIDOS", "CLIENTE", "CLIENTE FINAL"),
       ),
-      google = d?.TPF_GOOGLE_CONTACT || {};
-    const fallback = splitName(legacy);
+      google = d?.TPF_GOOGLE_CONTACT || {},
+      hasStructuredName = !!given || !!family,
+      fallback = splitName(legacy),
+      first = given || (hasStructuredName ? "" : fallback.first),
+      last = family || (hasStructuredName ? "" : fallback.last);
     return {
       id: safe(row?.id),
-      first: given || fallback.first,
-      last: family || fallback.last,
-      name: [given, family].filter(Boolean).join(" ") || legacy || "Contacto",
+      first,
+      last,
+      name: [first, last].filter(Boolean).join(" ") || legacy || "Contacto",
       nickname: displayCase(field(d, "APODO", "Apodo", "ALIAS")),
       phone: field(d, "TELÉFONO", "TELEFONO", "PHONE", "MOVIL"),
       email: field(d, "EMAIL", "Email", "email", "CORREO"),
@@ -228,7 +231,6 @@
   function strictWhatsappAligned(chat, c) {
     return (
       !!c?.first &&
-      !!c?.last &&
       validWaName(chat?.name) &&
       strictSame(chat?.name, c.name)
     );
@@ -1015,15 +1017,9 @@
     return { first: parts.shift() || "", last: parts.join(" ") };
   }
   function unifiedVisible(first, last, nickname) {
-    const full =
-        [safe(first), safe(last)].filter(Boolean).join(" ") || "Sin nombre",
-      alias = safe(nickname),
-      f = fold(full),
-      a = fold(alias);
-    if (!alias) return full;
-    if (a === f || a.startsWith(f + " ")) return alias;
-    if (f.includes(a)) return full;
-    return full + " " + alias;
+    // El nombre y el apodo se muestran en líneas separadas; nunca se concatenan
+    // para no convertir un apodo en un falso apellido.
+    return [safe(first), safe(last)].filter(Boolean).join(" ") || "Sin nombre";
   }
   function editableNickname(name, nickname) {
     const base = safe(name),
@@ -1616,8 +1612,26 @@
       throw Error(
         "Conecta y confirma la cuenta correcta de Google antes de aplicar.",
       );
+    let googleTarget = decision.person || null;
+    // Nunca crear otro contacto a ciegas: si ya existe uno se reutiliza;
+    // si hay varios, se detiene para que el usuario elija uno de forma segura.
+    if (!googleTarget?.resourceName) {
+      const existing = await searchGoogle({
+        googleResource: c.googleResource,
+        googleAccount: c.googleAccount,
+        phone: targetPhone,
+        email: finalEmail,
+      });
+      if (existing.length > 1)
+        throw Error(
+          "Google tiene " +
+            existing.length +
+            " contactos con este teléfono. No se ha creado ninguno. Pulsa “Corregir aquí”, elige el que conservar y confirma si quieres borrar los demás.",
+        );
+      googleTarget = existing[0] || null;
+    }
     const savedGoogle = await writeGoogle(
-        decision.person || null,
+        googleTarget,
         {
           phone: targetPhone,
           email: finalEmail,
