@@ -467,24 +467,7 @@
     holderSearch.oninput = async () => { const q = safe(holderSearch.value); holder = null; if (q.length < 2) return holderResults.textContent = ""; holderResults.textContent = "Buscando titulares…"; try { const matches = await window.TPFContactRelations?.searchRecords?.(q) || []; holderResults.innerHTML = matches.filter(x => safe(x.id) !== safe(item.row.id)).slice(0,12).map((x,i) => `<button type="button" class="secondary" data-holder="${i}">${esc(x.name || "Sin nombre")} · ${esc(x.dni || x.phone || "sin datos")}</button>`).join("") || "No se encontró ningún titular."; holderResults.querySelectorAll("[data-holder]").forEach(button => button.onclick = () => { holder = matches.filter(x => safe(x.id) !== safe(item.row.id))[Number(button.dataset.holder)]; holderResults.textContent = `Titular elegido: ${holder.name}`; }); } catch (_) { holderResults.textContent = "No se pudo buscar el titular."; } };
     const close = () => back.classList.add("hidden");
     $("tpfDecisionClose").onclick = close;
-    $("tpfDecisionKeep").onclick = () => {
-      close();
-      // "Mantener" is deliberately not a pending operation: it must not add
-      // anything to WhatsApp, CRM or Google, nor appear in the final counter.
-      delete state.prepared[safe(item.row.id)];
-      render();
-    };
-    $("tpfDecisionTrash").onclick = () => {
-      setPrepared({
-        kind: "trash",
-        row: item.row,
-        person: item.person,
-        chat: item.chat,
-        label: c.name,
-      });
-      close();
-    };
-    $("tpfDecisionSave").onclick = () => {
+    const prepareChoice = () => {
       const values = {};
       back
         .querySelectorAll("[data-final]")
@@ -506,6 +489,32 @@
           .join(" "),
       });
       close();
+    };
+    // One delegated handler for the three bottom actions. It remains active
+    // even if the modal content is redrawn while the user is working.
+    back.onclick = (event) => {
+      const button = event.target.closest(
+        "#tpfDecisionKeep, #tpfDecisionTrash, #tpfDecisionSave",
+      );
+      if (!button || button.disabled) return;
+      event.preventDefault();
+      if (button.id === "tpfDecisionKeep") {
+        close();
+        // "Mantener" does not add or change anything in any of the three sites.
+        delete state.prepared[safe(item.row.id)];
+        render();
+      } else if (button.id === "tpfDecisionTrash") {
+        setPrepared({
+          kind: "trash",
+          row: item.row,
+          person: item.person,
+          chat: item.chat,
+          label: c.name,
+        });
+        close();
+      } else {
+        prepareChoice();
+      }
     };
   }
   async function applyPrepared() {
