@@ -376,7 +376,9 @@
   // Un contacto sin teléfono no puede tener conversación de WhatsApp. Aun así
   // CRM y Google sí pueden quedar comprobados y sincronizados de forma segura.
   function savedCrmGoogleSync(row) {
-    const v = row?.data?.TPF_CRM_GOOGLE_SYNC;
+    const current = row?.data?.TPF_CRM_GOOGLE_SYNC,
+      legacy = row?.data?.TPF_CONTACT_VERIFIED,
+      v = current || (!phone(contactData(row).phone) ? legacy : null);
     return v?.version === 1 &&
       v.signature === verificationSignature(row) &&
       v.google_account === fold(googleAccountEmail()) &&
