@@ -108,7 +108,7 @@ async function saveStrictVerification(row,person,chat){
  return result.data;
 }
 async function reviewProfile(){const row=current();if(!row)return;let found=[],error='';try{found=await cachedGoogle(contactData(row),true)}catch(e){error=e?.message||'No se pudo comprobar Google'}if(safe(current()?.id)!==safe(row.id))return;openCorrection({row,chat:contactChat(row),matches:found,googleError:error})}
-async function openDecisionForRow(row,chat=null){if(!row?.id)return;let found=[],error='';try{found=await searchGoogle(contactData(row))}catch(e){error=e?.message||'No se pudo comprobar Google'}openCorrection({row,chat:contactChat(row,chat),whatsapp:safe(chat?.name),matches:found,googleError:error,returnTo:'batch'})}
+function openDecisionForRow(row,chat=null){if(!row?.id)return;const linked=contactChat(row,chat),whatsapp=safe(chat?.name);openCorrection({row,chat:linked,whatsapp,matches:[],googleError:'Comprobando Google…',returnTo:'batch'});searchGoogle(contactData(row)).then(found=>{if(safe(correctionRow?.id)!==safe(row.id)||$('tpfInlineBack')?.classList.contains('hidden'))return;openCorrection({row,chat:linked,whatsapp,matches:found,googleError:'',returnTo:'batch'})}).catch(error=>{if(safe(correctionRow?.id)!==safe(row.id)||$('tpfInlineBack')?.classList.contains('hidden'))return;openCorrection({row,chat:linked,whatsapp,matches:[],googleError:error?.message||'No se pudo comprobar Google',returnTo:'batch'})})}
 function renderVerifiedCard(card,row,chat){
  const c=contactData(row),v=savedVerification(row,chat);if(!v)return false;
  const signature='verified|'+v.signature+'|'+v.google_account;
