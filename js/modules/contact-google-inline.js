@@ -221,10 +221,14 @@
     return !!a && a === b;
   }
   function strictGoogleAligned(person, c) {
-    const g = googleView(person);
+    const g = googleView(person),
+      first = strictText(c?.first);
+    // El apellido y el apodo pueden estar vacíos por decisión del operador.
+    // Deben coincidir como vacíos, pero el nombre principal siempre es obligatorio.
     return (
-      strictSame(g.first, c?.first) &&
-      strictSame(g.last, c?.last) &&
+      !!first &&
+      strictText(g.first) === first &&
+      strictText(g.last) === strictText(c?.last) &&
       strictText(g.nickname) === strictText(c?.nickname)
     );
   }
