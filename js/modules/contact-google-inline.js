@@ -1,370 +1,2394 @@
-(function(){
-'use strict';
-const M=window.TPFModules;if(!M)return;
-const $=id=>document.getElementById(id),ALIAS_KEY='tpf_whatsapp_names_by_phone_v1',IGNORE_KEY='tpf_whatsapp_name_ignored_v1',BIND_KEY='tpf_whatsapp_contact_bindings_v1',UNIFIED_KEY='tpf_whatsapp_unified_names_v1';
-const safe=v=>String(v??'').trim(),esc=v=>safe(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fold=v=>safe(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
-const phone=v=>{let x=safe(v).replace(/\D/g,'');if(x.startsWith('00'))x=x.slice(2);if(x.startsWith('34')&&x.length===11)x=x.slice(2);return x.slice(-9)};
-const field=(d,...keys)=>{for(const key of keys)if(safe(d?.[key]))return safe(d[key]);return''};
-const current=()=>{try{return typeof currentContact!=='undefined'?currentContact:null}catch(_){return null}};
-const selectedWa=()=>{try{return typeof waLiveState!=='undefined'?waLiveState?.selected:null}catch(_){return null}};
-const matchedWa=()=>{try{return typeof waLiveState!=='undefined'?waLiveState?.contact:null}catch(_){return null}};
-let activeId='',matches=[],busy=false,waSignature='',correctionRow=null,correctionMatches=[],correctionWhatsapp='',correctionChat=null,correctionGoogleError='',correctionReturn='profile',correctionHolder=null,holderResults=[],holderSearchToken=0,correctionCrmDuplicates=[],waNameObserver=null,waNameRepairQueued=false,boundLookup='',waRefreshToken=0,waRefreshTimer=0,waRefreshRunning=false,waRefreshPending=false;
-const googleCache=new Map();
-const pendingGoogleChecks=new Map();
-function googleCheckPending(id){return (pendingGoogleChecks.get(safe(id))||0)>Date.now()}
-function schedulePendingGoogleCheck(id){
- const key=safe(id);if(!key)return;pendingGoogleChecks.set(key,Date.now()+60000);
- const retry=()=>{if(!googleCheckPending(key))return;if(safe(current()?.id)===key)refreshProfile();setTimeout(retry,5000)};
- setTimeout(retry,2500);
-}
+(function () {
+  "use strict";
+  const M = window.TPFModules;
+  if (!M) return;
+  const $ = (id) => document.getElementById(id),
+    ALIAS_KEY = "tpf_whatsapp_names_by_phone_v1",
+    IGNORE_KEY = "tpf_whatsapp_name_ignored_v1",
+    BIND_KEY = "tpf_whatsapp_contact_bindings_v1",
+    UNIFIED_KEY = "tpf_whatsapp_unified_names_v1";
+  const safe = (v) => String(v ?? "").trim(),
+    esc = (v) =>
+      safe(v).replace(
+        /[&<>"']/g,
+        (c) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[c],
+      );
+  const fold = (v) =>
+    safe(v)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  const phone = (v) => {
+    let x = safe(v).replace(/\D/g, "");
+    if (x.startsWith("00")) x = x.slice(2);
+    if (x.startsWith("34") && x.length === 11) x = x.slice(2);
+    return x.slice(-9);
+  };
+  const field = (d, ...keys) => {
+    for (const key of keys) if (safe(d?.[key])) return safe(d[key]);
+    return "";
+  };
+  const current = () => {
+    try {
+      return typeof currentContact !== "undefined" ? currentContact : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  const selectedWa = () => {
+    try {
+      return typeof waLiveState !== "undefined" ? waLiveState?.selected : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  const matchedWa = () => {
+    try {
+      return typeof waLiveState !== "undefined" ? waLiveState?.contact : null;
+    } catch (_) {
+      return null;
+    }
+  };
+  let activeId = "",
+    matches = [],
+    busy = false,
+    waSignature = "",
+    correctionRow = null,
+    correctionMatches = [],
+    correctionWhatsapp = "",
+    correctionChat = null,
+    correctionGoogleError = "",
+    correctionReturn = "profile",
+    correctionHolder = null,
+    holderResults = [],
+    holderSearchToken = 0,
+    correctionCrmDuplicates = [],
+    waNameObserver = null,
+    waNameRepairQueued = false,
+    boundLookup = "",
+    waRefreshToken = 0,
+    waRefreshTimer = 0,
+    waRefreshRunning = false,
+    waRefreshPending = false;
+  const googleCache = new Map();
+  const pendingGoogleChecks = new Map();
+  function googleCheckPending(id) {
+    return (pendingGoogleChecks.get(safe(id)) || 0) > Date.now();
+  }
+  function schedulePendingGoogleCheck(id) {
+    const key = safe(id);
+    if (!key) return;
+    pendingGoogleChecks.set(key, Date.now() + 60000);
+    const retry = () => {
+      if (!googleCheckPending(key)) return;
+      if (safe(current()?.id) === key) refreshProfile();
+      setTimeout(retry, 5000);
+    };
+    setTimeout(retry, 2500);
+  }
 
-function contactData(row=current()){
- const d=row?.data||{},given=displayCase(field(d,'NOMBRE')),family=displayCase(field(d,'APELLIDOS','APELLIDO')),legacy=displayCase(field(d,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL')),google=d?.TPF_GOOGLE_CONTACT||{};
- const fallback=splitName(legacy);return{id:safe(row?.id),first:given||fallback.first,last:family||fallback.last,name:[given,family].filter(Boolean).join(' ')||legacy||'Contacto',nickname:displayCase(field(d,'APODO','Apodo','ALIAS')),phone:field(d,'TELÉFONO','TELEFONO','PHONE','MOVIL'),email:field(d,'EMAIL','Email','email','CORREO'),dni:field(d,'DNI / NIF','DNI','NIF'),googleResource:safe(google?.resource_name||google?.resourceName||d?.TPF_GOOGLE_CONTACT_RESOURCE),googleAccount:fold(google?.google_account||google?.account||d?.TPF_GOOGLE_CONTACT_ACCOUNT)};
-}
-function validWaName(v){const x=fold(v);return !!x&&!['no name','noname','desconocido','unknown','contacto','sin nombre'].includes(x)&&!/^[+\d\s().-]+$/.test(safe(v))}
-function readAliases(){try{return JSON.parse(localStorage.getItem(ALIAS_KEY)||'{}')||{}}catch(_){return{}}}
-function ignoredNames(){try{return JSON.parse(localStorage.getItem(IGNORE_KEY)||'{}')||{}}catch(_){return{}}}
-function readBindings(){try{return JSON.parse(localStorage.getItem(BIND_KEY)||'{}')||{}}catch(_){return{}}}
-function readUnifiedNames(){try{return JSON.parse(localStorage.getItem(UNIFIED_KEY)||'{}')||{}}catch(_){return{}}}
-function forgetBinding(chat){const id=safe(chat?.id);if(!id)return;const map=readBindings();delete map[id];try{localStorage.setItem(BIND_KEY,JSON.stringify(map))}catch(_){}boundLookup=''}
-function rememberBinding(chat,row){const id=safe(chat?.id),recordId=safe(row?.id);if(!id||!recordId)return;const map=readBindings();if(safe(map[id])===recordId)return;map[id]=recordId;try{localStorage.setItem(BIND_KEY,JSON.stringify(map))}catch(_){}boundLookup=''}
-function rowConfirmedForChat(row,chat){const id=safe(chat?.id),mark=row?.data?.TPF_WHATSAPP_NAME_CONFIRMED;return !!id&&safe(mark?.chat_id)===id}
-function displayCase(value){const text=safe(value).replace(/\s+/g,' ');if(typeof window.TPFContactDisplayCase==='function')return window.TPFContactDisplayCase(text);if(!text||text!==text.toLocaleUpperCase('es-ES'))return text;return text.toLocaleLowerCase('es-ES').replace(/(^|[\s'-])\p{L}/gu,c=>c.toLocaleUpperCase('es-ES'))}
-// Esta comparación es más estricta que fold(): solo ignora mayúsculas/minúsculas
-// y espacios. Los acentos, apellidos y apodos diferentes requieren revisión humana.
-function strictText(value){return safe(value).normalize('NFC').replace(/\s+/g,' ').toLocaleLowerCase('es-ES')}
-function strictSame(left,right){const a=strictText(left),b=strictText(right);return !!a&&a===b}
-function strictGoogleAligned(person,c){const g=googleView(person);return strictSame(g.first,c?.first)&&strictSame(g.last,c?.last)&&strictText(g.nickname)===strictText(c?.nickname)}
-function strictWhatsappAligned(chat,c){return !!c?.first&&!!c?.last&&validWaName(chat?.name)&&strictSame(chat?.name,c.name)}
-async function normalizeStoredNickname(row){
- const data=row?.data||{},key=Object.keys(data).find(name=>['APODO','Apodo','ALIAS'].includes(name))||'APODO',raw=safe(data[key]),nickname=displayCase(raw);
- if(!row?.id||!raw||raw===nickname)return row;
- const next={...data,[key]:nickname};
- try{const result=await sb.from('records').update({data:next}).eq('id',row.id).select('id,data').single();if(result.error)throw result.error;if(!result.data)return row;for(const target of [row,current(),matchedWa()])if(target&&safe(target.id)===safe(row.id))target.data={...result.data.data};return result.data}catch(error){console.warn('Normalizar apodo del contacto',error);return row}
-}
-// En la ficha no hay una conversación abierta. En ese caso usamos solo el vínculo guardado si coincide con su teléfono; al abrir WhatsApp la comprobación vuelve a ser estricta por chat.
-function hasStoredWhatsappBinding(row){const c=contactData(row),chatId=safe(row?.data?.TPF_WHATSAPP_CHAT_ID),mark=safe(row?.data?.TPF_WHATSAPP_NAME_CONFIRMED?.chat_id);return !!chatId&&phone(chatId)===phone(c.phone)&&(!mark||mark===chatId)}
-function rememberUnifiedName(chat,row){const id=safe(chat?.id),c=contactData(row);if(!id||!c.id||!rowConfirmedForChat(row,chat))return;rememberBinding(chat,row);const map=readUnifiedNames(),old=map[id];if(old?.name===c.name&&old?.nickname===c.nickname&&old?.recordId===c.id)return;map[id]={name:c.name,nickname:c.nickname,recordId:c.id,at:new Date().toISOString()};try{localStorage.setItem(UNIFIED_KEY,JSON.stringify(map))}catch(_){} }
-function whatsappDisplayIdentity(chat){const id=safe(chat?.id),saved=readUnifiedNames()[id],bound=safe(readBindings()[id]);return saved?.name&&bound&&safe(saved.recordId)===bound?{name:safe(saved.name),nickname:safe(saved.nickname),recordId:bound}:null}
-function waContext(chat=selectedWa(),row=matchedWa()){return{chatId:safe(chat?.id),selection:Number(waLiveState?.selectionVersion||0),recordId:safe(row?.id),phone:phone(chat?.id)}}
-function waContextCurrent(expected,{requireRecord=false}={}){if(!expected?.chatId||safe(selectedWa()?.id)!==expected.chatId||Number(waLiveState?.selectionVersion||0)!==expected.selection)return false;if(requireRecord&&safe(matchedWa()?.id)!==expected.recordId)return false;return true}
-function rowMatchesChat(row,chat){const c=contactData(row),chatPhone=phone(chat?.id);return !!row&&!!chatPhone&&phone(c.phone)===chatPhone}
-function contactChat(row,candidate=selectedWa()){
- if(rowMatchesChat(row,candidate))return candidate;
- const c=contactData(row),saved=safe(row?.data?.TPF_WHATSAPP_CHAT_ID);
- if(saved&&rowMatchesChat(row,{id:saved}))return{id:saved};
- let digits=safe(c.phone).replace(/\D/g,'').replace(/^00/,'');if(digits.length===9)digits='34'+digits;
- return digits?{id:digits+'@c.us'}:null;
-}
-function verificationSignature(row){const c=contactData(row);return JSON.stringify([c.id,phone(c.phone),c.first,c.last,c.nickname])}
-function savedVerification(row,chat){
- const v=row?.data?.TPF_CONTACT_VERIFIED;
- const c=contactData(row),rawName=safe(chat?.name),savedName=safe(v?.whatsapp_name);
- if(rawName&&(!validWaName(rawName)||!strictSame(rawName,c.name)||(savedName&&!strictSame(savedName,rawName))))return null;
- if(savedName&&!strictSame(savedName,c.name))return null;
- return v?.version===1&&v.signature===verificationSignature(row)&&v.google_account===fold(googleAccountEmail())&&
-   !!v.google_account&&!!v.google_resource&&!!v.verified_at&&rowConfirmedForChat(row,contactChat(row,chat))&&
-   (!chat||v.chat_id===safe(chat.id))?v:null;
-}
-function makeVerification(row,chat,person){return{version:1,signature:verificationSignature(row),chat_id:safe(chat?.id),whatsapp_name:validWaName(chat?.name)?safe(chat.name):'',google_account:fold(googleAccountEmail()),google_resource:safe(person?.resourceName),verified_at:new Date().toISOString()}}
-function googleBinding(person,account=fold(googleAccountEmail())){const resource=safe(person?.resourceName);return resource?{version:1,resource_name:resource,google_account:safe(account),updated_at:new Date().toISOString()}:null}
-const verificationWrites=new Map();
-async function persistMatchingVerification(row,chat,found){
- const linked=contactChat(row,chat),c=contactData(row),account=fold(googleAccountEmail()),signature=verificationSignature(row);
- if(savedVerification(row,chat))return true;
- // Si estamos viendo el nombre real de WhatsApp, nunca guardamos una
- // verificación automática cuando no coincide exactamente con la ficha.
- // El usuario debe revisarlo desde la pantalla de corrección.
- if(safe(linked?.name)&&!strictWhatsappAligned(linked,c))return false;
- if(!account||!rowMatchesChat(row,linked)||!rowConfirmedForChat(row,linked)||found.length!==1||!found[0]?.resourceName||!googleAligned(found[0],c.first,c.last,c.nickname)||!googlePhones(found[0]).some(p=>phone(p)===phone(c.phone)))return false;
- const key=signature+'|'+account,original=JSON.stringify(row.data||{});
- if(!verificationWrites.has(key))verificationWrites.set(key,(async()=>{
-  const data={...row.data,TPF_CONTACT_VERIFIED:makeVerification(row,linked,found[0])};
-  const result=await sb.from('records').update({data}).eq('id',row.id).eq('data',original).select('id,data').single();
-  if(result.error)throw result.error;
-  if(!result.data||safe(result.data.id)!==safe(row.id)||!savedVerification(result.data,linked)||verificationSignature(result.data)!==signature)throw Error('No se confirmó la verificación guardada. Vuelve a abrir la ficha.');
-  return result.data;
- })());
- try{
-  const saved=await verificationWrites.get(key);
-  if(account!==fold(googleAccountEmail()))return false;
-  for(const target of [row,current(),matchedWa()])if(target&&safe(target.id)===safe(row.id)&&verificationSignature(target)===signature&&JSON.stringify(target.data||{})===original)target.data={...target.data,TPF_CONTACT_VERIFIED:saved.data.TPF_CONTACT_VERIFIED};
-  return !!savedVerification(row,chat);
- }finally{verificationWrites.delete(key)}
-}
-async function saveStrictVerification(row,person,chat){
- const c=contactData(row),account=fold(googleAccountEmail()),chatId=safe(chat?.id),original=JSON.stringify(row?.data||{});
- if(!row?.id||!account||!chatId||!rowMatchesChat(row,chat))throw Error('La ficha o la conversación cambiaron. Vuelve a analizar antes de aplicar.');
- if(!strictWhatsappAligned(chat,c))throw Error('El nombre real de WhatsApp no coincide exactamente. No se ha modificado la ficha.');
- if(!person?.resourceName||!googlePhones(person).some(value=>phone(value)===phone(c.phone))||!strictGoogleAligned(person,c))throw Error('Google no coincide exactamente. No se ha modificado la ficha.');
- const data={...(row.data||{}),TPF_WHATSAPP_CHAT_ID:chatId,TPF_WHATSAPP_NAME_CONFIRMED:{chat_id:chatId,confirmed_at:new Date().toISOString(),source:'verificacion_estricta'},TPF_GOOGLE_CONTACT:googleBinding(person)};
- data.TPF_CONTACT_VERIFIED=makeVerification({id:row.id,data},chat,person);
- const result=await sb.from('records').update({data}).eq('id',row.id).eq('data',original).select('id,data').single();
- if(result.error)throw result.error;
- if(!result.data||safe(result.data.id)!==safe(row.id)||!savedVerification(result.data,chat))throw Error('No se confirmó la verificación. No se modificaron los datos del contacto.');
- for(const target of [row,current(),matchedWa()])if(target&&safe(target.id)===safe(row.id)&&JSON.stringify(target.data||{})===original)target.data={...result.data.data};
- return result.data;
-}
-async function reviewProfile(){const row=current();if(!row)return;let found=[],error='';try{found=await cachedGoogle(contactData(row),true)}catch(e){error=e?.message||'No se pudo comprobar Google'}if(safe(current()?.id)!==safe(row.id))return;openCorrection({row,chat:contactChat(row),matches:found,googleError:error})}
-function updateDecisionGoogleMatches(row,found,error=''){
- if(safe(correctionRow?.id)!==safe(row?.id)||$('tpfInlineBack')?.classList.contains('hidden'))return;
- correctionMatches=found||[];correctionGoogleError=safe(error);
- const c=contactData(row),available=correctionMatches,select=$('tpfInlineGoogle'),needsChoice=available.length>1||(available.length===1&&!googleAligned(available[0],c.first,c.last,c.nickname));
- if(select)select.innerHTML=available.length?(needsChoice?'<option value="">Elige el contacto exacto; no se combinará automáticamente</option>':'')+available.map((p,i)=>`<option value="${i}">${esc(googleChoice(p))}</option>`).join(''):`<option value="">${correctionGoogleError?'No se pudo comprobar Google':'Se creará un contacto nuevo en Google'}</option>`;
- const useGoogle=$('tpfInlineUseGoogle');if(useGoogle)useGoogle.disabled=!available.length;
- const deleteWrap=$('tpfInlineDeleteWrap'),deleteBox=$('tpfInlineDeleteDuplicates');if(deleteWrap)deleteWrap.classList.toggle('hidden',available.length<2);if(deleteBox)deleteBox.checked=false;
- const source=$('tpfInlineSource');if(source)source.innerHTML=`<b>WhatsApp actual</b>${esc(correctionWhatsapp||'No Name')}<br><b style="margin-top:7px">CRM actual</b>${esc(c.name)}${c.nickname?` · Apodo: ${esc(c.nickname)}`:''}<br><b style="margin-top:7px">Cuenta de Google</b>${esc(googleAccountEmail()||'Sin identificar')}<br><b style="margin-top:7px">Google actual</b>${available.length?available.map(p=>esc(googleView(p).name||'Sin nombre')).join(' / '):correctionGoogleError?'No se pudo comprobar':'No localizado'}`;
- const msg=$('tpfInlineMsg');if(msg)msg.textContent=correctionGoogleError?'Google no se ha podido comprobar. No se creará ningún contacto.':available.length>1?`Google tiene ${available.length} contactos con este teléfono. Elige cuál conservar; los demás no se borrarán sin tu confirmación.`:available.length===0?'No hay contacto de Google con este teléfono. Si guardas, se creará uno nuevo tras confirmarlo.':'';
-}
-function openDecisionForRow(row,chat=null){
- if(!row?.id)return;
- const linked=contactChat(row,chat);
- openCorrection({row,chat:linked,whatsapp:safe(chat?.name),matches:[],googleError:'Comprobando Google…',returnTo:'batch'});
- searchGoogle(contactData(row)).then(found=>updateDecisionGoogleMatches(row,found)).catch(error=>updateDecisionGoogleMatches(row,[],error?.message||'No se pudo comprobar Google'));
-}
-function renderVerifiedCard(card,row,chat){
- const c=contactData(row),v=savedVerification(row,chat);if(!v)return false;
- const signature='verified|'+v.signature+'|'+v.google_account;
- if(card.dataset.verification!==signature){card.dataset.verification=signature;card.innerHTML=`<details class="tpfVerifiedDetails"><summary style="cursor:pointer"><b>CRM, Google y WhatsApp</b> <span class="tpfGoogleInlineStatus ok">Contacto verificado</span></summary><p><b>${esc(unifiedVisible(c.first,c.last,c.nickname))}</b></p>${googleAccountLine(true)}<p>Verificación guardada · Sin comprobaciones repetidas</p><div class="tpfGoogleInlineActions"><button class="secondary" type="button" data-review-link>Revisar vinculación</button></div></details>`}
- const button=card.querySelector('[data-review-link]');if(button)button.onclick=chat?()=>openWhatsappCorrection(row,safe(chat.name),chat):reviewProfile;
- return true;
-}
-function clearWhatsappNicknames(){for(const id of ['waChatNickname','waSideNickname']){const el=$(id);if(!el)continue;if(el.textContent)el.textContent='';el.classList.toggle('hidden',true)}}
-function ignoreName(chat,name,on=true){const map=ignoredNames(),key=phone(chat?.id);if(!key)return;if(on)map[key]=safe(name);else delete map[key];try{localStorage.setItem(IGNORE_KEY,JSON.stringify(map))}catch(_){}waSignature=''}
-function rememberWhatsapp(){
- let chats=[];try{const selected=selectedWa();if(selected)chats=[selected]}catch(_){}
- const map=readAliases(),now=new Date().toISOString();let changed=false;
- chats.forEach(chat=>{const p=phone(chat?.id),name=safe(chat?.name);if(!p||!name||map[p]?.name===name)return;map[p]={name,at:now};changed=true});if(!changed)return;
- const entries=Object.entries(map).sort((a,b)=>safe(b[1]?.at).localeCompare(safe(a[1]?.at))).slice(0,2500);
- try{localStorage.setItem(ALIAS_KEY,JSON.stringify(Object.fromEntries(entries)))}catch(_){}
-}
-function whatsappName(c){
- const chat=selectedWa(),linked=matchedWa();if(linked&&String(linked.id)===String(c.id)&&phone(chat?.id)===phone(c.phone)&&safe(chat?.name))return safe(chat.name);
- return safe(readAliases()[phone(c.phone)]?.name);
-}
-function googleView(person){
- const entry=person?.names?.find(x=>x?.metadata?.primary)||person?.names?.[0]||{},name=entry.displayName||[entry.givenName,entry.familyName].filter(Boolean).join(' '),fallback=splitName(name);
- const nickname=person?.nicknames?.[0]?.value||'';return{name:safe(name),first:safe(entry.givenName)||fallback.first,last:safe(entry.familyName)||fallback.last,nickname:safe(nickname),resourceName:safe(person?.resourceName)};
-}
-function googleAligned(person,first,last,nickname){const g=googleView(person);return fold(g.first)===fold(first)&&fold(g.last)===fold(last)&&fold(g.nickname)===fold(nickname)}
-function googleAccountEmail(){return typeof googleContactsEmail==='function'?safe(googleContactsEmail()):''}
-function googleAccountLine(connected){return`<p>Cuenta de Google: <b>${esc(connected?(googleAccountEmail()||'Sin identificar; vuelve a elegirla'):'No conectada')}</b></p>`}
-function chooseGoogleAccount(){clearGoogleCache();connectGoogleContacts(true).catch(error=>alert(error?.message||'No se pudo conectar Google.'))}
-function googlePhones(person){return[...new Set((person?.phoneNumbers||[]).map(x=>safe(x.canonicalForm||x.value)).filter(Boolean))]}
-function googleChoice(person){const g=googleView(person),phones=googlePhones(person);return`${g.name||'Sin nombre'}${g.nickname?` · Apodo: ${g.nickname}`:''}${phones.length?` · Tel: ${phones.join(', ')}`:''}`}
-function googleLine(found,connected,error=''){if(!connected)return'<p>Google: <b>No conectado</b></p>';if(error)return`<p>Google: <b>No se pudo comprobar</b></p>`;if(!found.length)return'<p>Google: <b>No está guardado</b></p>';if(found.length>1)return`<p>Google: <b>${found.length} contactos con este teléfono</b><br>${found.map(p=>esc(googleChoice(p))).join('<br>')}</p>`;const g=googleView(found[0]);return`<p>Google: <b>${esc(g.name||'Sin nombre')}</b>${g.nickname?` · Apodo: ${esc(g.nickname)}`:''}${googlePhones(found[0]).length?` · Tel: ${esc(googlePhones(found[0]).join(', '))}`:''}</p>`}
-function syncState(row,chat,found,connected,error,wa){const c=contactData(row),visible=unifiedVisible(c.first,c.last,c.nickname),account=googleAccountEmail(),linked=contactChat(row,chat),confirmed=chat?rowMatchesChat(row,linked)&&rowConfirmedForChat(row,linked):hasStoredWhatsappBinding(row),rawWa=safe(chat?.name),waDifferent=!!rawWa&&(!validWaName(rawWa)||!strictSame(rawWa,c.name)),phoneMatched=found.length===1&&googlePhones(found[0]).some(p=>phone(p)===phone(c.phone)),aligned=phoneMatched&&googleAligned(found[0],c.first,c.last,c.nickname),ok=connected&&!!account&&!error&&aligned&&confirmed&&!waDifferent;return{visible,confirmed,waDisplay:confirmed?visible:(safe(wa)||'No Name'),status:ok?'Al día':waDifferent?'Nombre de WhatsApp diferente: revisar':!connected?'Google no conectado':!account?'Confirma la cuenta de Google':error?'No se pudo comprobar Google':found.length>1?'Duplicados en Google':found.length===0?'No está en Google':phoneMatched?'Vinculado por teléfono · revisa nombre o apodo':'Pendiente de corregir',ok,phoneMatched,waDifferent}}
-async function cachedGoogle(c,force=false){const key=[fold(googleAccountEmail()),safe(c.googleResource),fold(c.googleAccount),phone(c.phone),fold(c.email)].join('|'),old=googleCache.get(key),now=Date.now();if(!force&&old&&now-old.at<30000)return old.promise;const promise=searchGoogle(c).catch(error=>{googleCache.delete(key);throw error});googleCache.set(key,{at:now,promise});return promise}
-function clearGoogleCache(){googleCache.clear()}
-async function searchGoogle(c){
- if(typeof googleContactsConnected!=='function'||!googleContactsConnected())throw new Error('Google Contacts no está conectado.');
- const fields='names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata',bound=safe(c.googleResource),boundAccount=fold(c.googleAccount),account=fold(googleAccountEmail());
- if(bound&&(!boundAccount||boundAccount===account)){try{const direct=await googleApi(bound+'?'+new URLSearchParams({personFields:fields}).toString());if(safe(direct?.resourceName)===bound)return[direct]}catch(error){console.warn('No se pudo leer el contacto de Google vinculado',error)}}
- const found=new Map(),wantedPhone=phone(c.phone),wantedEmail=fold(c.email);let pageToken='';
- do{const qs=new URLSearchParams({personFields:fields,pageSize:'1000'});qs.append('sources','READ_SOURCE_TYPE_CONTACT');if(pageToken)qs.set('pageToken',pageToken);const data=await googleApi('people/me/connections?'+qs.toString());(data.connections||[]).forEach(p=>{const phones=(p.phoneNumbers||[]).map(x=>phone(x.canonicalForm||x.value)),emails=(p.emailAddresses||[]).map(x=>fold(x.value));if((wantedPhone&&phones.includes(wantedPhone))||(!wantedPhone&&wantedEmail&&emails.includes(wantedEmail)))found.set(p.resourceName,p)});pageToken=data.nextPageToken||''}while(pageToken);
- return[...found.values()];
-}
-function ensureStyles(){if($('tpfGoogleInlineStyles'))return;const s=document.createElement('style');s.id='tpfGoogleInlineStyles';s.textContent=`
+  function contactData(row = current()) {
+    const d = row?.data || {},
+      given = displayCase(field(d, "NOMBRE")),
+      family = displayCase(field(d, "APELLIDOS", "APELLIDO")),
+      legacy = displayCase(
+        field(d, "NOMBRE Y APELLIDOS", "CLIENTE", "CLIENTE FINAL"),
+      ),
+      google = d?.TPF_GOOGLE_CONTACT || {};
+    const fallback = splitName(legacy);
+    return {
+      id: safe(row?.id),
+      first: given || fallback.first,
+      last: family || fallback.last,
+      name: [given, family].filter(Boolean).join(" ") || legacy || "Contacto",
+      nickname: displayCase(field(d, "APODO", "Apodo", "ALIAS")),
+      phone: field(d, "TELÉFONO", "TELEFONO", "PHONE", "MOVIL"),
+      email: field(d, "EMAIL", "Email", "email", "CORREO"),
+      dni: field(d, "DNI / NIF", "DNI", "NIF"),
+      googleResource: safe(
+        google?.resource_name ||
+          google?.resourceName ||
+          d?.TPF_GOOGLE_CONTACT_RESOURCE,
+      ),
+      googleAccount: fold(
+        google?.google_account ||
+          google?.account ||
+          d?.TPF_GOOGLE_CONTACT_ACCOUNT,
+      ),
+    };
+  }
+  function validWaName(v) {
+    const x = fold(v);
+    return (
+      !!x &&
+      ![
+        "no name",
+        "noname",
+        "desconocido",
+        "unknown",
+        "contacto",
+        "sin nombre",
+      ].includes(x) &&
+      !/^[+\d\s().-]+$/.test(safe(v))
+    );
+  }
+  function readAliases() {
+    try {
+      return JSON.parse(localStorage.getItem(ALIAS_KEY) || "{}") || {};
+    } catch (_) {
+      return {};
+    }
+  }
+  function ignoredNames() {
+    try {
+      return JSON.parse(localStorage.getItem(IGNORE_KEY) || "{}") || {};
+    } catch (_) {
+      return {};
+    }
+  }
+  function readBindings() {
+    try {
+      return JSON.parse(localStorage.getItem(BIND_KEY) || "{}") || {};
+    } catch (_) {
+      return {};
+    }
+  }
+  function readUnifiedNames() {
+    try {
+      return JSON.parse(localStorage.getItem(UNIFIED_KEY) || "{}") || {};
+    } catch (_) {
+      return {};
+    }
+  }
+  function forgetBinding(chat) {
+    const id = safe(chat?.id);
+    if (!id) return;
+    const map = readBindings();
+    delete map[id];
+    try {
+      localStorage.setItem(BIND_KEY, JSON.stringify(map));
+    } catch (_) {}
+    boundLookup = "";
+  }
+  function rememberBinding(chat, row) {
+    const id = safe(chat?.id),
+      recordId = safe(row?.id);
+    if (!id || !recordId) return;
+    const map = readBindings();
+    if (safe(map[id]) === recordId) return;
+    map[id] = recordId;
+    try {
+      localStorage.setItem(BIND_KEY, JSON.stringify(map));
+    } catch (_) {}
+    boundLookup = "";
+  }
+  function rowConfirmedForChat(row, chat) {
+    const id = safe(chat?.id),
+      mark = row?.data?.TPF_WHATSAPP_NAME_CONFIRMED;
+    return !!id && safe(mark?.chat_id) === id;
+  }
+  function displayCase(value) {
+    const text = safe(value).replace(/\s+/g, " ");
+    if (typeof window.TPFContactDisplayCase === "function")
+      return window.TPFContactDisplayCase(text);
+    if (!text || text !== text.toLocaleUpperCase("es-ES")) return text;
+    return text
+      .toLocaleLowerCase("es-ES")
+      .replace(/(^|[\s'-])\p{L}/gu, (c) => c.toLocaleUpperCase("es-ES"));
+  }
+  // Esta comparación es más estricta que fold(): solo ignora mayúsculas/minúsculas
+  // y espacios. Los acentos, apellidos y apodos diferentes requieren revisión humana.
+  function strictText(value) {
+    return safe(value)
+      .normalize("NFC")
+      .replace(/\s+/g, " ")
+      .toLocaleLowerCase("es-ES");
+  }
+  function strictSame(left, right) {
+    const a = strictText(left),
+      b = strictText(right);
+    return !!a && a === b;
+  }
+  function strictGoogleAligned(person, c) {
+    const g = googleView(person);
+    return (
+      strictSame(g.first, c?.first) &&
+      strictSame(g.last, c?.last) &&
+      strictText(g.nickname) === strictText(c?.nickname)
+    );
+  }
+  function strictWhatsappAligned(chat, c) {
+    return (
+      !!c?.first &&
+      !!c?.last &&
+      validWaName(chat?.name) &&
+      strictSame(chat?.name, c.name)
+    );
+  }
+  async function normalizeStoredNickname(row) {
+    const data = row?.data || {},
+      key =
+        Object.keys(data).find((name) =>
+          ["APODO", "Apodo", "ALIAS"].includes(name),
+        ) || "APODO",
+      raw = safe(data[key]),
+      nickname = displayCase(raw);
+    if (!row?.id || !raw || raw === nickname) return row;
+    const next = { ...data, [key]: nickname };
+    try {
+      const result = await sb
+        .from("records")
+        .update({ data: next })
+        .eq("id", row.id)
+        .select("id,data")
+        .single();
+      if (result.error) throw result.error;
+      if (!result.data) return row;
+      for (const target of [row, current(), matchedWa()])
+        if (target && safe(target.id) === safe(row.id))
+          target.data = { ...result.data.data };
+      return result.data;
+    } catch (error) {
+      console.warn("Normalizar apodo del contacto", error);
+      return row;
+    }
+  }
+  // En la ficha no hay una conversación abierta. En ese caso usamos solo el vínculo guardado si coincide con su teléfono; al abrir WhatsApp la comprobación vuelve a ser estricta por chat.
+  function hasStoredWhatsappBinding(row) {
+    const c = contactData(row),
+      chatId = safe(row?.data?.TPF_WHATSAPP_CHAT_ID),
+      mark = safe(row?.data?.TPF_WHATSAPP_NAME_CONFIRMED?.chat_id);
+    return (
+      !!chatId && phone(chatId) === phone(c.phone) && (!mark || mark === chatId)
+    );
+  }
+  function rememberUnifiedName(chat, row) {
+    const id = safe(chat?.id),
+      c = contactData(row);
+    if (!id || !c.id || !rowConfirmedForChat(row, chat)) return;
+    rememberBinding(chat, row);
+    const map = readUnifiedNames(),
+      old = map[id];
+    if (
+      old?.name === c.name &&
+      old?.nickname === c.nickname &&
+      old?.recordId === c.id
+    )
+      return;
+    map[id] = {
+      name: c.name,
+      nickname: c.nickname,
+      recordId: c.id,
+      at: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(UNIFIED_KEY, JSON.stringify(map));
+    } catch (_) {}
+  }
+  function whatsappDisplayIdentity(chat) {
+    const id = safe(chat?.id),
+      saved = readUnifiedNames()[id],
+      bound = safe(readBindings()[id]);
+    return saved?.name && bound && safe(saved.recordId) === bound
+      ? {
+          name: safe(saved.name),
+          nickname: safe(saved.nickname),
+          recordId: bound,
+        }
+      : null;
+  }
+  function waContext(chat = selectedWa(), row = matchedWa()) {
+    return {
+      chatId: safe(chat?.id),
+      selection: Number(waLiveState?.selectionVersion || 0),
+      recordId: safe(row?.id),
+      phone: phone(chat?.id),
+    };
+  }
+  function waContextCurrent(expected, { requireRecord = false } = {}) {
+    if (
+      !expected?.chatId ||
+      safe(selectedWa()?.id) !== expected.chatId ||
+      Number(waLiveState?.selectionVersion || 0) !== expected.selection
+    )
+      return false;
+    if (requireRecord && safe(matchedWa()?.id) !== expected.recordId)
+      return false;
+    return true;
+  }
+  function rowMatchesChat(row, chat) {
+    const c = contactData(row),
+      chatPhone = phone(chat?.id);
+    return !!row && !!chatPhone && phone(c.phone) === chatPhone;
+  }
+  function contactChat(row, candidate = selectedWa()) {
+    if (rowMatchesChat(row, candidate)) return candidate;
+    const c = contactData(row),
+      saved = safe(row?.data?.TPF_WHATSAPP_CHAT_ID);
+    if (saved && rowMatchesChat(row, { id: saved })) return { id: saved };
+    let digits = safe(c.phone).replace(/\D/g, "").replace(/^00/, "");
+    if (digits.length === 9) digits = "34" + digits;
+    return digits ? { id: digits + "@c.us" } : null;
+  }
+  function verificationSignature(row) {
+    const c = contactData(row);
+    return JSON.stringify([c.id, phone(c.phone), c.first, c.last, c.nickname]);
+  }
+  function savedVerification(row, chat) {
+    const v = row?.data?.TPF_CONTACT_VERIFIED;
+    const c = contactData(row),
+      rawName = safe(chat?.name),
+      savedName = safe(v?.whatsapp_name);
+    if (
+      rawName &&
+      (!validWaName(rawName) ||
+        !strictSame(rawName, c.name) ||
+        (savedName && !strictSame(savedName, rawName)))
+    )
+      return null;
+    if (savedName && !strictSame(savedName, c.name)) return null;
+    return v?.version === 1 &&
+      v.signature === verificationSignature(row) &&
+      v.google_account === fold(googleAccountEmail()) &&
+      !!v.google_account &&
+      !!v.google_resource &&
+      !!v.verified_at &&
+      rowConfirmedForChat(row, contactChat(row, chat)) &&
+      (!chat || v.chat_id === safe(chat.id))
+      ? v
+      : null;
+  }
+  function makeVerification(row, chat, person) {
+    return {
+      version: 1,
+      signature: verificationSignature(row),
+      chat_id: safe(chat?.id),
+      whatsapp_name: validWaName(chat?.name) ? safe(chat.name) : "",
+      google_account: fold(googleAccountEmail()),
+      google_resource: safe(person?.resourceName),
+      verified_at: new Date().toISOString(),
+    };
+  }
+  function googleBinding(person, account = fold(googleAccountEmail())) {
+    const resource = safe(person?.resourceName);
+    return resource
+      ? {
+          version: 1,
+          resource_name: resource,
+          google_account: safe(account),
+          updated_at: new Date().toISOString(),
+        }
+      : null;
+  }
+  const verificationWrites = new Map();
+  async function persistMatchingVerification(row, chat, found) {
+    const linked = contactChat(row, chat),
+      c = contactData(row),
+      account = fold(googleAccountEmail()),
+      signature = verificationSignature(row);
+    if (savedVerification(row, chat)) return true;
+    // Si estamos viendo el nombre real de WhatsApp, nunca guardamos una
+    // verificación automática cuando no coincide exactamente con la ficha.
+    // El usuario debe revisarlo desde la pantalla de corrección.
+    if (safe(linked?.name) && !strictWhatsappAligned(linked, c)) return false;
+    if (
+      !account ||
+      !rowMatchesChat(row, linked) ||
+      !rowConfirmedForChat(row, linked) ||
+      found.length !== 1 ||
+      !found[0]?.resourceName ||
+      !googleAligned(found[0], c.first, c.last, c.nickname) ||
+      !googlePhones(found[0]).some((p) => phone(p) === phone(c.phone))
+    )
+      return false;
+    const key = signature + "|" + account,
+      original = JSON.stringify(row.data || {});
+    if (!verificationWrites.has(key))
+      verificationWrites.set(
+        key,
+        (async () => {
+          const data = {
+            ...row.data,
+            TPF_CONTACT_VERIFIED: makeVerification(row, linked, found[0]),
+          };
+          const result = await sb
+            .from("records")
+            .update({ data })
+            .eq("id", row.id)
+            .eq("data", original)
+            .select("id,data")
+            .single();
+          if (result.error) throw result.error;
+          if (
+            !result.data ||
+            safe(result.data.id) !== safe(row.id) ||
+            !savedVerification(result.data, linked) ||
+            verificationSignature(result.data) !== signature
+          )
+            throw Error(
+              "No se confirmó la verificación guardada. Vuelve a abrir la ficha.",
+            );
+          return result.data;
+        })(),
+      );
+    try {
+      const saved = await verificationWrites.get(key);
+      if (account !== fold(googleAccountEmail())) return false;
+      for (const target of [row, current(), matchedWa()])
+        if (
+          target &&
+          safe(target.id) === safe(row.id) &&
+          verificationSignature(target) === signature &&
+          JSON.stringify(target.data || {}) === original
+        )
+          target.data = {
+            ...target.data,
+            TPF_CONTACT_VERIFIED: saved.data.TPF_CONTACT_VERIFIED,
+          };
+      return !!savedVerification(row, chat);
+    } finally {
+      verificationWrites.delete(key);
+    }
+  }
+  async function saveStrictVerification(row, person, chat) {
+    const c = contactData(row),
+      account = fold(googleAccountEmail()),
+      chatId = safe(chat?.id),
+      original = JSON.stringify(row?.data || {});
+    if (!row?.id || !account || !chatId || !rowMatchesChat(row, chat))
+      throw Error(
+        "La ficha o la conversación cambiaron. Vuelve a analizar antes de aplicar.",
+      );
+    if (!strictWhatsappAligned(chat, c))
+      throw Error(
+        "El nombre real de WhatsApp no coincide exactamente. No se ha modificado la ficha.",
+      );
+    if (
+      !person?.resourceName ||
+      !googlePhones(person).some((value) => phone(value) === phone(c.phone)) ||
+      !strictGoogleAligned(person, c)
+    )
+      throw Error(
+        "Google no coincide exactamente. No se ha modificado la ficha.",
+      );
+    const data = {
+      ...(row.data || {}),
+      TPF_WHATSAPP_CHAT_ID: chatId,
+      TPF_WHATSAPP_NAME_CONFIRMED: {
+        chat_id: chatId,
+        confirmed_at: new Date().toISOString(),
+        source: "verificacion_estricta",
+      },
+      TPF_GOOGLE_CONTACT: googleBinding(person),
+    };
+    data.TPF_CONTACT_VERIFIED = makeVerification(
+      { id: row.id, data },
+      chat,
+      person,
+    );
+    const result = await sb
+      .from("records")
+      .update({ data })
+      .eq("id", row.id)
+      .eq("data", original)
+      .select("id,data")
+      .single();
+    if (result.error) throw result.error;
+    if (
+      !result.data ||
+      safe(result.data.id) !== safe(row.id) ||
+      !savedVerification(result.data, chat)
+    )
+      throw Error(
+        "No se confirmó la verificación. No se modificaron los datos del contacto.",
+      );
+    for (const target of [row, current(), matchedWa()])
+      if (
+        target &&
+        safe(target.id) === safe(row.id) &&
+        JSON.stringify(target.data || {}) === original
+      )
+        target.data = { ...result.data.data };
+    return result.data;
+  }
+  async function reviewProfile() {
+    const row = current();
+    if (!row) return;
+    let found = [],
+      error = "";
+    try {
+      found = await cachedGoogle(contactData(row), true);
+    } catch (e) {
+      error = e?.message || "No se pudo comprobar Google";
+    }
+    if (safe(current()?.id) !== safe(row.id)) return;
+    openCorrection({
+      row,
+      chat: contactChat(row),
+      matches: found,
+      googleError: error,
+    });
+  }
+  function updateDecisionGoogleMatches(row, found, error = "") {
+    if (
+      safe(correctionRow?.id) !== safe(row?.id) ||
+      $("tpfInlineBack")?.classList.contains("hidden")
+    )
+      return;
+    correctionMatches = found || [];
+    correctionGoogleError = safe(error);
+    const c = contactData(row),
+      available = correctionMatches,
+      select = $("tpfInlineGoogle"),
+      needsChoice =
+        available.length > 1 ||
+        (available.length === 1 &&
+          !googleAligned(available[0], c.first, c.last, c.nickname));
+    if (select)
+      select.innerHTML = available.length
+        ? (needsChoice
+            ? '<option value="">Elige el contacto exacto; no se combinará automáticamente</option>'
+            : "") +
+          available
+            .map(
+              (p, i) => `<option value="${i}">${esc(googleChoice(p))}</option>`,
+            )
+            .join("")
+        : `<option value="">${correctionGoogleError ? "No se pudo comprobar Google" : "Se creará un contacto nuevo en Google"}</option>`;
+    const useGoogle = $("tpfInlineUseGoogle");
+    if (useGoogle) useGoogle.disabled = !available.length;
+    const deleteWrap = $("tpfInlineDeleteWrap"),
+      deleteBox = $("tpfInlineDeleteDuplicates");
+    if (deleteWrap) deleteWrap.classList.toggle("hidden", available.length < 2);
+    if (deleteBox) deleteBox.checked = false;
+    const source = $("tpfInlineSource");
+    if (source)
+      source.innerHTML = `<b>WhatsApp actual</b>${esc(correctionWhatsapp || "No Name")}<br><b style="margin-top:7px">CRM actual</b>${esc(c.name)}${c.nickname ? ` · Apodo: ${esc(c.nickname)}` : ""}<br><b style="margin-top:7px">Cuenta de Google</b>${esc(googleAccountEmail() || "Sin identificar")}<br><b style="margin-top:7px">Google actual</b>${available.length ? available.map((p) => esc(googleView(p).name || "Sin nombre")).join(" / ") : correctionGoogleError ? "No se pudo comprobar" : "No localizado"}`;
+    const msg = $("tpfInlineMsg");
+    if (msg)
+      msg.textContent = correctionGoogleError
+        ? "Google no se ha podido comprobar. No se creará ningún contacto."
+        : available.length > 1
+          ? `Google tiene ${available.length} contactos con este teléfono. Elige cuál conservar; los demás no se borrarán sin tu confirmación.`
+          : available.length === 0
+            ? "No hay contacto de Google con este teléfono. Si guardas, se creará uno nuevo tras confirmarlo."
+            : "";
+  }
+  function openDecisionForRow(row, chat = null) {
+    if (!row?.id) return;
+    const linked = contactChat(row, chat);
+    openCorrection({
+      row,
+      chat: linked,
+      whatsapp: safe(chat?.name),
+      matches: [],
+      googleError: "Comprobando Google…",
+      returnTo: "batch",
+    });
+    searchGoogle(contactData(row))
+      .then((found) => updateDecisionGoogleMatches(row, found))
+      .catch((error) =>
+        updateDecisionGoogleMatches(
+          row,
+          [],
+          error?.message || "No se pudo comprobar Google",
+        ),
+      );
+  }
+  function renderVerifiedCard(card, row, chat) {
+    const c = contactData(row),
+      v = savedVerification(row, chat);
+    if (!v) return false;
+    const signature = "verified|" + v.signature + "|" + v.google_account;
+    if (card.dataset.verification !== signature) {
+      card.dataset.verification = signature;
+      card.innerHTML = `<details class="tpfVerifiedDetails"><summary style="cursor:pointer"><b>CRM, Google y WhatsApp</b> <span class="tpfGoogleInlineStatus ok">Contacto verificado</span></summary><p><b>${esc(unifiedVisible(c.first, c.last, c.nickname))}</b></p>${googleAccountLine(true)}<p>Verificación guardada · Sin comprobaciones repetidas</p><div class="tpfGoogleInlineActions"><button class="secondary" type="button" data-review-link>Revisar vinculación</button></div></details>`;
+    }
+    const button = card.querySelector("[data-review-link]");
+    if (button)
+      button.onclick = chat
+        ? () => openWhatsappCorrection(row, safe(chat.name), chat)
+        : reviewProfile;
+    return true;
+  }
+  function clearWhatsappNicknames() {
+    for (const id of ["waChatNickname", "waSideNickname"]) {
+      const el = $(id);
+      if (!el) continue;
+      if (el.textContent) el.textContent = "";
+      el.classList.toggle("hidden", true);
+    }
+  }
+  function ignoreName(chat, name, on = true) {
+    const map = ignoredNames(),
+      key = phone(chat?.id);
+    if (!key) return;
+    if (on) map[key] = safe(name);
+    else delete map[key];
+    try {
+      localStorage.setItem(IGNORE_KEY, JSON.stringify(map));
+    } catch (_) {}
+    waSignature = "";
+  }
+  function rememberWhatsapp() {
+    let chats = [];
+    try {
+      const selected = selectedWa();
+      if (selected) chats = [selected];
+    } catch (_) {}
+    const map = readAliases(),
+      now = new Date().toISOString();
+    let changed = false;
+    chats.forEach((chat) => {
+      const p = phone(chat?.id),
+        name = safe(chat?.name);
+      if (!p || !name || map[p]?.name === name) return;
+      map[p] = { name, at: now };
+      changed = true;
+    });
+    if (!changed) return;
+    const entries = Object.entries(map)
+      .sort((a, b) => safe(b[1]?.at).localeCompare(safe(a[1]?.at)))
+      .slice(0, 2500);
+    try {
+      localStorage.setItem(
+        ALIAS_KEY,
+        JSON.stringify(Object.fromEntries(entries)),
+      );
+    } catch (_) {}
+  }
+  function whatsappName(c) {
+    const chat = selectedWa(),
+      linked = matchedWa();
+    if (
+      linked &&
+      String(linked.id) === String(c.id) &&
+      phone(chat?.id) === phone(c.phone) &&
+      safe(chat?.name)
+    )
+      return safe(chat.name);
+    return safe(readAliases()[phone(c.phone)]?.name);
+  }
+  function googleView(person) {
+    const entry =
+        person?.names?.find((x) => x?.metadata?.primary) ||
+        person?.names?.[0] ||
+        {},
+      name =
+        entry.displayName ||
+        [entry.givenName, entry.familyName].filter(Boolean).join(" "),
+      fallback = splitName(name);
+    const nickname = person?.nicknames?.[0]?.value || "";
+    return {
+      name: safe(name),
+      first: safe(entry.givenName) || fallback.first,
+      last: safe(entry.familyName) || fallback.last,
+      nickname: safe(nickname),
+      resourceName: safe(person?.resourceName),
+    };
+  }
+  function googleAligned(person, first, last, nickname) {
+    const g = googleView(person);
+    return (
+      fold(g.first) === fold(first) &&
+      fold(g.last) === fold(last) &&
+      fold(g.nickname) === fold(nickname)
+    );
+  }
+  function googleAccountEmail() {
+    return typeof googleContactsEmail === "function"
+      ? safe(googleContactsEmail())
+      : "";
+  }
+  function googleAccountLine(connected) {
+    return `<p>Cuenta de Google: <b>${esc(connected ? googleAccountEmail() || "Sin identificar; vuelve a elegirla" : "No conectada")}</b></p>`;
+  }
+  function chooseGoogleAccount() {
+    clearGoogleCache();
+    connectGoogleContacts(true).catch((error) =>
+      alert(error?.message || "No se pudo conectar Google."),
+    );
+  }
+  function googlePhones(person) {
+    return [
+      ...new Set(
+        (person?.phoneNumbers || [])
+          .map((x) => safe(x.canonicalForm || x.value))
+          .filter(Boolean),
+      ),
+    ];
+  }
+  function googleChoice(person) {
+    const g = googleView(person),
+      phones = googlePhones(person);
+    return `${g.name || "Sin nombre"}${g.nickname ? ` · Apodo: ${g.nickname}` : ""}${phones.length ? ` · Tel: ${phones.join(", ")}` : ""}`;
+  }
+  function googleLine(found, connected, error = "") {
+    if (!connected) return "<p>Google: <b>No conectado</b></p>";
+    if (error) return `<p>Google: <b>No se pudo comprobar</b></p>`;
+    if (!found.length) return "<p>Google: <b>No está guardado</b></p>";
+    if (found.length > 1)
+      return `<p>Google: <b>${found.length} contactos con este teléfono</b><br>${found.map((p) => esc(googleChoice(p))).join("<br>")}</p>`;
+    const g = googleView(found[0]);
+    return `<p>Google: <b>${esc(g.name || "Sin nombre")}</b>${g.nickname ? ` · Apodo: ${esc(g.nickname)}` : ""}${googlePhones(found[0]).length ? ` · Tel: ${esc(googlePhones(found[0]).join(", "))}` : ""}</p>`;
+  }
+  function syncState(row, chat, found, connected, error, wa) {
+    const c = contactData(row),
+      visible = unifiedVisible(c.first, c.last, c.nickname),
+      account = googleAccountEmail(),
+      linked = contactChat(row, chat),
+      confirmed = chat
+        ? rowMatchesChat(row, linked) && rowConfirmedForChat(row, linked)
+        : hasStoredWhatsappBinding(row),
+      rawWa = safe(chat?.name),
+      waDifferent =
+        !!rawWa && (!validWaName(rawWa) || !strictSame(rawWa, c.name)),
+      phoneMatched =
+        found.length === 1 &&
+        googlePhones(found[0]).some((p) => phone(p) === phone(c.phone)),
+      aligned =
+        phoneMatched && googleAligned(found[0], c.first, c.last, c.nickname),
+      ok =
+        connected &&
+        !!account &&
+        !error &&
+        aligned &&
+        confirmed &&
+        !waDifferent;
+    return {
+      visible,
+      confirmed,
+      waDisplay: confirmed ? visible : safe(wa) || "No Name",
+      status: ok
+        ? "Al día"
+        : waDifferent
+          ? "Nombre de WhatsApp diferente: revisar"
+          : !connected
+            ? "Google no conectado"
+            : !account
+              ? "Confirma la cuenta de Google"
+              : error
+                ? "No se pudo comprobar Google"
+                : found.length > 1
+                  ? "Duplicados en Google"
+                  : found.length === 0
+                    ? "No está en Google"
+                    : phoneMatched
+                      ? "Vinculado por teléfono · revisa nombre o apodo"
+                      : "Pendiente de corregir",
+      ok,
+      phoneMatched,
+      waDifferent,
+    };
+  }
+  async function cachedGoogle(c, force = false) {
+    const key = [
+        fold(googleAccountEmail()),
+        safe(c.googleResource),
+        fold(c.googleAccount),
+        phone(c.phone),
+        fold(c.email),
+      ].join("|"),
+      old = googleCache.get(key),
+      now = Date.now();
+    if (!force && old && now - old.at < 30000) return old.promise;
+    const promise = searchGoogle(c).catch((error) => {
+      googleCache.delete(key);
+      throw error;
+    });
+    googleCache.set(key, { at: now, promise });
+    return promise;
+  }
+  function clearGoogleCache() {
+    googleCache.clear();
+  }
+  async function searchGoogle(c) {
+    if (
+      typeof googleContactsConnected !== "function" ||
+      !googleContactsConnected()
+    )
+      throw new Error("Google Contacts no está conectado.");
+    const fields =
+        "names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata",
+      bound = safe(c.googleResource),
+      boundAccount = fold(c.googleAccount),
+      account = fold(googleAccountEmail());
+    if (bound && (!boundAccount || boundAccount === account)) {
+      try {
+        const direct = await googleApi(
+          bound +
+            "?" +
+            new URLSearchParams({ personFields: fields }).toString(),
+        );
+        if (safe(direct?.resourceName) === bound) return [direct];
+      } catch (error) {
+        console.warn("No se pudo leer el contacto de Google vinculado", error);
+      }
+    }
+    const found = new Map(),
+      wantedPhone = phone(c.phone),
+      wantedEmail = fold(c.email);
+    let pageToken = "";
+    do {
+      const qs = new URLSearchParams({
+        personFields: fields,
+        pageSize: "1000",
+      });
+      qs.append("sources", "READ_SOURCE_TYPE_CONTACT");
+      if (pageToken) qs.set("pageToken", pageToken);
+      const data = await googleApi("people/me/connections?" + qs.toString());
+      (data.connections || []).forEach((p) => {
+        const phones = (p.phoneNumbers || []).map((x) =>
+            phone(x.canonicalForm || x.value),
+          ),
+          emails = (p.emailAddresses || []).map((x) => fold(x.value));
+        if (
+          (wantedPhone && phones.includes(wantedPhone)) ||
+          (!wantedPhone && wantedEmail && emails.includes(wantedEmail))
+        )
+          found.set(p.resourceName, p);
+      });
+      pageToken = data.nextPageToken || "";
+    } while (pageToken);
+    return [...found.values()];
+  }
+  function ensureStyles() {
+    if ($("tpfGoogleInlineStyles")) return;
+    const s = document.createElement("style");
+    s.id = "tpfGoogleInlineStyles";
+    s.textContent = `
  #tpfGoogleInlineCard,#tpfWaAliasCard{border:1px solid #d0d5dd;border-radius:12px;padding:12px;background:#fff;margin:0 0 12px;color:#344054}
  #tpfGoogleInlineCard h4,#tpfWaAliasCard h4{margin:0 0 7px;font-size:13px}#tpfGoogleInlineCard p,#tpfWaAliasCard p{margin:4px 0;font-size:11px;line-height:1.4;color:#667085}
  .tpfGoogleInlineStatus{display:inline-flex;padding:3px 7px;border-radius:999px;background:#eff8ff;color:#175cd3;font-size:10px;font-weight:750}.tpfGoogleInlineStatus.ok{background:#ecfdf3;color:#027a48}.tpfGoogleInlineStatus.warn{background:#fff4e5;color:#b54708}
  .tpfGoogleInlineActions{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.tpfGoogleInlineActions button{padding:6px 8px;font-size:10px;cursor:pointer}
  .waContactNickname{display:block;color:#475467;font-size:10px;font-weight:700;margin-top:2px}.waContactNickname.hidden{display:none!important}.tpfWaListNickname{display:block;color:#667085;font-size:9px;font-weight:600;line-height:1.25;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .tpfInlineBack{position:fixed;inset:0;z-index:280000;display:grid;place-items:center;padding:16px;background:#101828b8}.tpfInlineBack.hidden{display:none!important}.tpfInlineModal{width:min(660px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 24px 80px #0006}.tpfInlineModal header{display:flex;justify-content:space-between;gap:12px;padding:16px 18px;border-bottom:1px solid #e4e7ec}.tpfInlineModal h3{margin:0}.tpfInlineModal header button{width:34px;height:34px;border:0;border-radius:50%;font-size:20px}.tpfInlineBody{padding:16px 18px}.tpfInlineSource{padding:10px;border-radius:9px;background:#f2f4f7;margin-bottom:12px;font-size:11px}.tpfInlineSource b{display:block;margin-bottom:3px}.tpfInlineChoices{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}.tpfInlineChoices button{padding:7px 9px;font-size:10px}.tpfInlineGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.tpfInlineGrid label{display:flex;flex-direction:column;gap:5px;font-size:11px}.tpfInlineGrid label.full{grid-column:1/-1}.tpfInlineGrid input,.tpfInlineGrid select{width:100%;box-sizing:border-box}.tpfInlineSeparate{margin:0 0 12px;padding:11px;border:1px solid #d0d5dd;border-radius:10px}.tpfInlineSeparate>label{display:flex;align-items:flex-start;gap:9px;font-weight:750;font-size:12px}.tpfInlineSeparate input[type=checkbox]{width:auto;margin-top:2px}.tpfInlineHolder{margin-top:10px;padding-top:10px;border-top:1px solid #e4e7ec}.tpfInlineHolder.hidden{display:none}.tpfInlineHolder p{margin:0 0 8px;font-size:11px}.tpfInlineHolderSelected{padding:8px;border-radius:8px;background:#ecfdf3;color:#027a48;font-size:11px;font-weight:700}.tpfInlineHolderResults{display:grid;gap:5px;margin-top:6px}.tpfInlineHolderResults button{text-align:left}.tpfInlineHolderSearch{margin-top:8px}.tpfInlineCrmDuplicates{margin:0 0 12px;padding:11px;border:1px solid #fdb022;border-radius:10px;background:#fffaeb}.tpfInlineCrmDuplicates.hidden{display:none}.tpfInlineCrmDuplicates label{display:flex;align-items:flex-start;gap:8px;font-weight:750;font-size:12px}.tpfInlineCrmDuplicates input[type=checkbox]{width:auto;margin-top:2px}.tpfInlineCrmDuplicates select{width:100%;margin-top:8px}.tpfInlineCrmDuplicates small{display:block;margin-top:7px;color:#854a0e;font-size:10px;line-height:1.4}#tpfInlineDeleteWrap{padding:10px;border:1px solid #fdb022;border-radius:9px;background:#fffaeb}#tpfInlineDeleteWrap span{display:flex;align-items:center;gap:8px;font-weight:700}#tpfInlineDeleteDuplicates{width:auto}.tpfInlinePreview{margin-top:13px;padding:12px;border:1px solid #b2ddff;border-radius:10px;background:#eff8ff}.tpfInlinePreview h4{margin:0 0 8px;color:#175cd3}.tpfInlinePreview p{margin:5px 0;font-size:11px}.tpfInlinePreview small{display:block;margin-top:8px;color:#667085}.tpfInlineMsg{min-height:18px;margin-top:10px;font-size:11px;color:#475467}.tpfInlineModal footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #e4e7ec}@media(max-width:650px){.tpfInlineGrid{grid-template-columns:1fr}}
- `;document.head.appendChild(s)}
-function ensureModal(){let back=$('tpfInlineBack');if(back)return back;back=document.createElement('div');back.id='tpfInlineBack';back.className='tpfInlineBack hidden';back.innerHTML=`<section class="tpfInlineModal" role="dialog" aria-modal="true"><header><div><small>DECISIÓN DEL CONTACTO</small><h3>Datos finales para CRM, Google y WhatsApp</h3></div><button id="tpfInlineClose" type="button">×</button></header><div class="tpfInlineBody"><div id="tpfInlineSource" class="tpfInlineSource"></div><div id="tpfInlineDeleteInfo" class="tpfInlineDeleteInfo">Borrar envía la ficha del CRM y el contacto de Google a sus papeleras. La conversación de WhatsApp no se borra; se quita su vínculo con esta ficha.</div><div class="tpfInlineSeparate"><label><input id="tpfInlineSeparatePerson" type="checkbox"><span>Esta persona lleva el contacto de otro titular</span></label><div id="tpfInlineHolderPanel" class="tpfInlineHolder hidden"><p>Se conservará una sola ficha. Elige el titular al que gestiona esta persona.</p><div id="tpfInlineHolderSelected" class="tpfInlineHolderSelected"></div><label class="tpfInlineHolderSearch">Buscar titular<input id="tpfInlineHolderSearch" type="search" placeholder="Nombre, teléfono o DNI" autocomplete="off"></label><div id="tpfInlineHolderResults" class="tpfInlineHolderResults"></div></div></div><div class="tpfInlineChoices"><button id="tpfInlineUseCrm" class="secondary" type="button">Usar datos del CRM</button><button id="tpfInlineUseGoogle" class="secondary" type="button">Usar datos de Google</button><button id="tpfInlineUseWhatsapp" class="secondary" type="button">Usar WhatsApp como apodo</button></div><div class="tpfInlineGrid"><label class="full">Contacto de Google que se conservará<select id="tpfInlineGoogle"></select></label><label>Nombre<input id="tpfInlineFirst" autocomplete="given-name" placeholder="Ejemplo: Mariano"></label><label>Apellidos<input id="tpfInlineLast" autocomplete="family-name" placeholder="Ejemplo: Sánchez López"></label><label class="full">Apodo visible<input id="tpfInlineNickname" placeholder="Ejemplo: Hijo de María"></label><label>Teléfono<input id="tpfInlinePhone" inputmode="tel" autocomplete="tel" placeholder="Ejemplo: 600000000"></label><label>DNI / NIF<input id="tpfInlineDni" autocomplete="off" placeholder="Ejemplo: 12345678A"></label><label class="full">Correo<input id="tpfInlineEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></label><label id="tpfInlineDeleteWrap" class="full hidden"><span><input id="tpfInlineDeleteDuplicates" type="checkbox"> Eliminar de Google los otros contactos duplicados</span><small>Solo se eliminarán después de mostrarte una confirmación.</small></label></div><div id="tpfInlinePreview" class="tpfInlinePreview"></div><div id="tpfInlineMsg" class="tpfInlineMsg"></div></div><footer><button id="tpfInlineIgnore" class="secondary hidden" type="button">Ignorar este nombre</button><button id="tpfInlineReconnect" class="secondary hidden" type="button">Conectar Google y buscar</button><button id="tpfInlineTrash" class="secondary danger" type="button">Enviar a papelera</button><button id="tpfInlineCancel" class="secondary" type="button">Cerrar sin cambios</button><button id="tpfInlineSave" class="primary" type="button">Guardar en los tres</button></footer></section>`;document.body.appendChild(back);const close=()=>back.classList.add('hidden');$('tpfInlineClose').onclick=close;$('tpfInlineCancel').onclick=close;back.onclick=e=>{if(e.target===back)close()};$('tpfInlineSave').onclick=saveCorrection;$('tpfInlineTrash').onclick=trashCorrection;$('tpfInlineSeparatePerson').addEventListener('change',toggleSeparatePerson);$('tpfInlineHolderSearch').addEventListener('input',searchHolders);['tpfInlineFirst','tpfInlineLast','tpfInlineNickname','tpfInlinePhone','tpfInlineDni','tpfInlineEmail'].forEach(id=>$(id).addEventListener('input',renderFinalPreview));return back}
-function ensureCrmDuplicatePanel(){let panel=$('tpfInlineCrmDuplicates');if(panel)return panel;panel=document.createElement('div');panel.id='tpfInlineCrmDuplicates';panel.className='tpfInlineCrmDuplicates hidden';panel.innerHTML='<label><input id="tpfInlineMergeCrmDuplicate" type="checkbox"><span>Es la misma persona: unir la otra ficha duplicada del CRM</span></label><select id="tpfInlineCrmDuplicate" disabled></select><small>Se conservará esta ficha. Se trasladarán las oportunidades, tareas, etiquetas, automatizaciones y el vínculo de WhatsApp; la otra quedará archivada de forma recuperable.</small>';$('tpfInlineSource')?.insertAdjacentElement('afterend',panel);$('tpfInlineMergeCrmDuplicate').onchange=()=>{$('tpfInlineCrmDuplicate').disabled=!$('tpfInlineMergeCrmDuplicate').checked;renderFinalPreview()};$('tpfInlineCrmDuplicate').onchange=renderFinalPreview;return panel}
-function crmDuplicateOption(row){const c=contactData(row);return`${c.name||'Sin nombre'}${c.nickname?` · ${c.nickname}`:''}${c.dni?` · DNI ${c.dni}`:''}${c.phone?` · ${c.phone}`:''}`}
-function renderCrmDuplicates(){const panel=ensureCrmDuplicatePanel(),check=$('tpfInlineMergeCrmDuplicate'),select=$('tpfInlineCrmDuplicate');if(!panel||!check||!select)return;const usable=correctionCrmDuplicates.filter(row=>safe(row?.id)!==safe(correctionRow?.id));panel.classList.toggle('hidden',!usable.length);check.checked=false;select.disabled=true;select.innerHTML=usable.map(row=>`<option value="${esc(row.id)}">${esc(crmDuplicateOption(row))}</option>`).join('')}
-async function loadCrmDuplicates(row){const expectedId=safe(row?.id),c=contactData(row);if(!expectedId||!phone(c.phone)||typeof sb==='undefined')return;try{const r=await sb.rpc('find_possible_duplicate_contact',{phone_text:c.phone,dni_text:null,email_text:null});if(safe(correctionRow?.id)!==expectedId||$('tpfInlineBack')?.classList.contains('hidden'))return;if(r.error)throw r.error;correctionCrmDuplicates=(r.data||[]).filter(item=>safe(item?.id)!==expectedId&&phone(contactData(item).phone)===phone(c.phone));renderCrmDuplicates()}catch(error){console.warn('Buscar fichas duplicadas del CRM',error)}}
-function splitName(name){const parts=safe(name).split(/\s+/).filter(Boolean);return{first:parts.shift()||'',last:parts.join(' ')}}
-function unifiedVisible(first,last,nickname){const full=[safe(first),safe(last)].filter(Boolean).join(' ')||'Sin nombre',alias=safe(nickname),f=fold(full),a=fold(alias);if(!alias)return full;if(a===f||a.startsWith(f+' '))return alias;if(f.includes(a))return full;return full+' '+alias}
-function editableNickname(name,nickname){const base=safe(name),alias=safe(nickname);return fold(alias).startsWith(fold(base)+' ')?safe(alias.slice(base.length)):alias}
-function holderIdentity(row){const c=contactData(row);return{record_id:c.id,name:c.name,phone:c.phone,dni:c.dni}}
-function renderHolder(){const box=$('tpfInlineHolderSelected');if(box)box.innerHTML=correctionHolder?`Titular asociado: ${esc(correctionHolder.name||'Sin nombre')} · ${esc(correctionHolder.dni||correctionHolder.phone||'sin datos')}`:'Elige un titular asociado.'}
-function toggleSeparatePerson(){const on=!!$('tpfInlineSeparatePerson')?.checked;$('tpfInlineHolderPanel')?.classList.toggle('hidden',!on);correctionHolder=null;holderResults=[];$('tpfInlineHolderResults').innerHTML='';$('tpfInlineGoogle').disabled=false;$('tpfInlineDeleteWrap')?.classList.toggle('hidden',correctionMatches.length<2);$('tpfInlineSave').textContent='Guardar en los tres';renderHolder();renderFinalPreview()}
-async function searchHolders(e){const q=safe(e?.target?.value),out=$('tpfInlineHolderResults'),token=++holderSearchToken;if(q.length<2){out.textContent=q?'Escribe al menos dos caracteres.':'';return}out.textContent='Buscando…';try{const api=window.TPFContactRelations;if(!api?.searchRecords)throw Error('El buscador de titulares aún no está disponible.');holderResults=await api.searchRecords(q,()=>token===holderSearchToken&&!$('tpfInlineBack')?.classList.contains('hidden'));if(token!==holderSearchToken)return;out.innerHTML=holderResults.map((x,i)=>`<button type="button" class="secondary" data-inline-holder="${i}"><b>${esc(x.name||'Sin nombre')}</b><small>${esc(x.dni||x.phone||'')}</small></button>`).join('')||'No se encontraron contactos.';out.querySelectorAll('[data-inline-holder]').forEach(b=>b.onclick=()=>{correctionHolder=holderResults[Number(b.dataset.inlineHolder)];renderHolder();out.textContent='Titular seleccionado.';renderFinalPreview()})}catch(error){if(token===holderSearchToken)out.textContent=error?.message||'No se pudo buscar.'}}
-function renderFinalPreview(){const first=displayCase($('tpfInlineFirst')?.value),last=displayCase($('tpfInlineLast')?.value),nickname=displayCase($('tpfInlineNickname')?.value),finalPhone=safe($('tpfInlinePhone')?.value),finalDni=safe($('tpfInlineDni')?.value),finalEmail=safe($('tpfInlineEmail')?.value),visible=unifiedVisible(first,last,nickname),managed=!!$('tpfInlineSeparatePerson')?.checked,box=$('tpfInlinePreview');if(!box)return;box.innerHTML=`<h4>Así quedarán tus datos</h4><p><b>CRM, Google y WhatsApp:</b> ${esc(visible)}</p><p>Teléfono: <b>${esc(finalPhone||'—')}</b> · DNI/NIF: <b>${esc(finalDni||'—')}</b> · Correo: <b>${esc(finalEmail||'—')}</b></p>${managed?`<p>Gestiona el titular: <b>${esc(correctionHolder?.name||'pendiente de elegir')}</b>. No se creará ninguna segunda ficha.</p>`:''}<small>Estos son los datos elegidos por ti. Se comprueban antes de terminar el guardado.</small>`}
-function openCorrection(options={}){
- const row=options.row||current(),c=contactData(row),wa=options.whatsapp??whatsappName(c),available=options.matches||matches,back=ensureModal(),select=$('tpfInlineGoogle'),disconnected=typeof googleContactsConnected!=='function'||!googleContactsConnected(),unidentified=!disconnected&&!googleAccountEmail();
- correctionRow=row;correctionMatches=available;correctionWhatsapp=wa;correctionChat=contactChat(row,options.chat||selectedWa());correctionGoogleError=safe(options.googleError);correctionReturn=options.returnTo||'profile';correctionHolder=null;holderResults=[];correctionCrmDuplicates=[];renderCrmDuplicates();
- $('tpfInlineSeparatePerson').checked=false;$('tpfInlineHolderPanel').classList.add('hidden');$('tpfInlineHolderSearch').value='';$('tpfInlineHolderResults').innerHTML='';$('tpfInlineGoogle').disabled=false;$('tpfInlineSave').textContent='Guardar en los tres';renderHolder();
- $('tpfInlineFirst').value=c.first;$('tpfInlineLast').value=c.last;$('tpfInlineNickname').value=c.nickname;$('tpfInlinePhone').value=c.phone;$('tpfInlineDni').value=c.dni;$('tpfInlineEmail').value=c.email;
- $('tpfInlineSource').innerHTML=`<b>WhatsApp actual</b>${esc(wa||'No Name')}<br><b style="margin-top:7px">CRM actual</b>${esc(c.name)}${c.nickname?` · Apodo: ${esc(c.nickname)}`:''}<br><b style="margin-top:7px">Cuenta de Google</b>${esc(googleAccountEmail()||'Sin identificar')}<br><b style="margin-top:7px">Google actual</b>${available.length?available.map(p=>esc(googleView(p).name||'Sin nombre')).join(' / '):'No localizado todavía'}`;
- const needsChoice=available.length>1||(available.length===1&&!googleAligned(available[0],c.first,c.last,c.nickname));
- select.innerHTML=available.length?(needsChoice?'<option value="">Elige el contacto exacto; no se combinará automáticamente</option>':'')+available.map((p,i)=>`<option value="${i}">${esc(googleChoice(p))}</option>`).join(''):`<option value="">${disconnected?'Google no conectado':correctionGoogleError?'No se pudo comprobar Google':'Se creará un contacto nuevo en Google'}</option>`;
- const deleteWrap=$('tpfInlineDeleteWrap'),deleteBox=$('tpfInlineDeleteDuplicates');deleteWrap.classList.toggle('hidden',available.length<2);deleteBox.checked=false;
- const googleDetails=person=>{const g=googleView(person),dni=safe((person?.userDefined||[]).find(item=>['dni','nif','dni / nif','dni/nif','documento','documento de identidad'].includes(fold(item?.key)))?.value),email=safe(person?.emailAddresses?.[0]?.value),mobile=safe(person?.phoneNumbers?.[0]?.value);return{...g,dni,email,phone:mobile}};
- const apply=(values={})=>{$('tpfInlineFirst').value=safe(values.first);$('tpfInlineLast').value=safe(values.last);$('tpfInlineNickname').value=safe(values.nickname);$('tpfInlinePhone').value=safe(values.phone);$('tpfInlineDni').value=safe(values.dni);$('tpfInlineEmail').value=safe(values.email);renderFinalPreview()};
- $('tpfInlineUseCrm').onclick=()=>apply({first:c.first,last:c.last,nickname:c.nickname,phone:c.phone,dni:c.dni,email:c.email});
- $('tpfInlineUseGoogle').disabled=!available.length;$('tpfInlineUseGoogle').onclick=()=>{const g=googleDetails(available[Number(select.value)]||available[0]);apply({first:g.first,last:g.last,nickname:editableNickname(g.name,g.nickname),phone:g.phone,dni:g.dni,email:g.email})};
- $('tpfInlineUseWhatsapp').disabled=!validWaName(wa);$('tpfInlineUseWhatsapp').onclick=()=>{$('tpfInlineNickname').value=wa;renderFinalPreview()};
- const ignore=$('tpfInlineIgnore');ignore.classList.toggle('hidden',correctionReturn!=='whatsapp');ignore.onclick=()=>{ignoreName(correctionChat,correctionWhatsapp,true);back.classList.add('hidden');refreshWhatsapp()};
- const reconnect=$('tpfInlineReconnect');reconnect.textContent=unidentified?'Elegir cuenta de Google':'Conectar Google y buscar';reconnect.classList.toggle('hidden',!disconnected&&!unidentified&&!correctionGoogleError);reconnect.onclick=()=>connectGoogleContacts(true).catch(error=>{$('tpfInlineMsg').textContent=error?.message||'No se pudo conectar Google.'});
- $('tpfInlineMsg').textContent=disconnected?'Google Contacts está desconectado. Pulsa “Conectar Google y buscar”.':unidentified?'Antes de guardar, elige la misma cuenta que utilizas en Google Contacts.':correctionGoogleError?'Google no se ha podido comprobar. No se creará ningún contacto.':available.length>1?`Google tiene ${available.length} contactos con este teléfono. Elige cuál conservar; los demás no se borrarán sin tu confirmación.`:available.length===0?'Se ha comprobado Google: al guardar se creará un contacto nuevo.':'';renderFinalPreview();back.classList.remove('hidden');loadCrmDuplicates(row);
-}
-async function openWhatsappCorrection(row,name,chat){const expected=waContext(chat,row);if(!rowMatchesChat(row,chat)||!waContextCurrent(expected,{requireRecord:true}))return alert('La conversación cambió o el contacto no coincide. Vuelve a abrir el cliente antes de unificar.');let found=[],googleError='';try{found=await searchGoogle(contactData(row))}catch(error){googleError=error?.message||'No se pudo comprobar Google'}if(!waContextCurrent(expected,{requireRecord:true}))return;openCorrection({row,whatsapp:name,matches:found,chat,googleError,returnTo:'whatsapp'})}
-async function detailedPerson(person){if(!person?.resourceName)return null;const qs=new URLSearchParams({personFields:'names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata'});return googleApi(person.resourceName+'?'+qs.toString())}
-function replaceDni(items,dni){const keys=['dni','nif','dni / nif','dni/nif','documento','documento de identidad'],kept=(items||[]).filter(x=>!keys.includes(fold(x.key)));if(dni)kept.push({key:'DNI / NIF',value:dni});return kept}
-async function writeGoogle(person,c,first,last,nickname){
- if(typeof googleContactsConnected!=='function'||!googleContactsConnected())return{skipped:true};
- const givenName=displayCase(first),familyName=displayCase(last),googleNickname=displayCase(nickname);const body={names:[{givenName,familyName}],nicknames:googleNickname?[{value:googleNickname,type:'DEFAULT'}]:[],phoneNumbers:c.phone?[{value:c.phone,type:'mobile'}]:[],emailAddresses:c.email?[{value:c.email,type:'work'}]:[],userDefined:replaceDni([],c.dni)};
- if(!person)return googleApi('people:createContact?personFields=names,nicknames,emailAddresses,phoneNumbers,userDefined',{method:'POST',body:JSON.stringify(body)});
- const full=await detailedPerson(person);body.resourceName=full.resourceName;body.etag=full.etag;body.userDefined=(c.preserveExtra?full.userDefined||[]:replaceDni(full.userDefined,c.dni)).map(x=>({key:x.key,value:x.value}));
- return googleApi(full.resourceName+':updateContact?updatePersonFields=names,nicknames,emailAddresses,phoneNumbers,userDefined&personFields=names,nicknames,emailAddresses,phoneNumbers,userDefined',{method:'PATCH',body:JSON.stringify(body)});
-}
-async function verifyGoogleSaved(person,wantedPhone,first,last,nickname){if(!person?.resourceName)throw Error('Google no confirmó el contacto. No se eliminará ningún duplicado.');const full=await detailedPerson(person),wanted=phone(wantedPhone),phones=(full?.phoneNumbers||[]).map(x=>phone(x.canonicalForm||x.value));if(!full?.resourceName||(wanted&&!phones.includes(wanted)))throw Error('Google no devolvió el teléfono guardado. No se eliminará ningún duplicado.');if(!googleAligned(full,first,last,nickname))throw Error('Google no confirmó correctamente el nombre, los apellidos y el apodo. No se eliminará ningún duplicado.');return full}
-async function writeCrm(row,first,last,nickname,chat,verifiedGoogle,managedHolder=null,override={}){
- const normalizedFirst=displayCase(first),normalizedLast=displayCase(last),normalizedNickname=displayCase(nickname),d={...(row.data||{})},name=[normalizedFirst,normalizedLast].filter(Boolean).join(' ').trim(),chatId=safe(chat?.id);
- d.NOMBRE=normalizedFirst;d.APELLIDOS=normalizedLast;d['NOMBRE Y APELLIDOS']=name;d.APODO=normalizedNickname;if(Object.hasOwn(override,'phone'))d.TELÉFONO=safe(override.phone);if(Object.hasOwn(override,'dni'))d['DNI / NIF']=safe(override.dni);if(Object.hasOwn(override,'email'))d.EMAIL=safe(override.email);
- if(managedHolder?.record_id&&safe(managedHolder.record_id)!==safe(row.id)){const old=Array.isArray(d.TPF_RELACIONES?.managed_contacts)?d.TPF_RELACIONES.managed_contacts:[],items=[...old.filter(item=>safe(item?.record_id)!==safe(managedHolder.record_id)),{...managedHolder}];d.TPF_RELACIONES={...(d.TPF_RELACIONES||{}),version:1,managed_contacts:items}}
- if(chatId){d.TPF_WHATSAPP_CHAT_ID=chatId;d.TPF_WHATSAPP_NAME_CONFIRMED={chat_id:chatId,confirmed_at:new Date().toISOString()}}
- if(verifiedGoogle){const binding=googleBinding(verifiedGoogle);if(binding)d.TPF_GOOGLE_CONTACT=binding;d.TPF_CONTACT_VERIFIED=makeVerification({id:row.id,data:d},chat,verifiedGoogle)}else delete d.TPF_CONTACT_VERIFIED;
- let r=await sb.from('records').update({data:d}).eq('id',row.id).eq('data',JSON.stringify(row.data||{})).select('id,data').single();
- // La comparación puede tardar y actualizar metadatos del propio CRM. Reintentamos
- // una vez sobre la ficha recién leída, conservando todo lo que no ha decidido el usuario.
- if(!r.data){
-  const latest=await sb.from('records').select('id,data').eq('id',row.id).single();
-  if(latest.error||!latest.data)throw latest.error||Error('La ficha del CRM ya no existe.');
-  const changed=Object.fromEntries(Object.entries(d).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify((row.data||{})[key]))),retryData={...(latest.data.data||{}),...changed};
-  r=await sb.from('records').update({data:retryData}).eq('id',row.id).eq('data',JSON.stringify(latest.data.data||{})).select('id,data').single();
- }
- if(r.error)throw r.error;if(!r.data||safe(r.data.id)!==safe(row.id)||verificationSignature(r.data)!==verificationSignature({id:row.id,data:d})||(verifiedGoogle&&!savedVerification(r.data,chat)))throw Error('No se confirmó el guardado del CRM. No se ha eliminado ningún contacto.');
- row.data=r.data.data;return row.data;
-}
-async function trashCorrection(){
- if(busy)return;
- const row=correctionRow||current(),c=contactData(row),available=correctionMatches||[],selected=safe($('tpfInlineGoogle')?.value),person=available.length===1?available[0]:available[Number(selected)];
- const msg=$('tpfInlineMsg'),trash=$('tpfInlineTrash'),save=$('tpfInlineSave');
- if(!row?.id){msg.textContent='No se encontró la ficha del CRM.';return}
- if(!person?.resourceName){msg.textContent='Antes de borrar, espera a que se compruebe Google y elige el contacto exacto. Así no se borra otro por error.';return}
- const details=`${c.name}${c.nickname?` · ${c.nickname}`:''}\nTeléfono: ${c.phone||'—'}\nDNI/NIF: ${c.dni||'—'}`;
- if(!window.confirm(`¿Enviar a las papeleras esta persona?\n\n${details}\n\n• Se guardará una copia recuperable en la papelera del CRM.\n• El contacto elegido se enviará a la papelera de Google.\n• La conversación de WhatsApp se conserva, pero deja de estar vinculada.\n\n¿Confirmas?`))return;
- busy=true;trash.disabled=true;save.disabled=true;msg.textContent='Enviando a papeleras…';
- try{
-  if(typeof archiveToTrash!=='function')throw Error('No está disponible la papelera segura del CRM.');
-  const archived=await archiveToTrash('contact',row.id,c.name,{record:{id:row.id,data:row.data,source_sheet:row.source_sheet||'BASE DE DATOS'}});
-  if(!archived)throw Error('No se pudo guardar la copia recuperable del CRM. No se ha borrado nada.');
-  await googleApi(person.resourceName+':deleteContact',{method:'DELETE'});
-  const removed=await sb.from('records').delete().eq('id',row.id);
-  if(removed.error)throw Error(`Google ya se envió a la papelera, pero el CRM no se pudo borrar: ${removed.error.message}`);
-  forgetBinding(correctionChat);clearGoogleCache();$('tpfInlineBack')?.classList.add('hidden');
-  alert('Enviado a las papeleras del CRM y Google. La conversación de WhatsApp se ha conservado sin vínculo. Actualiza la comparación para verlo.');
- }catch(error){msg.textContent=error?.message||'No se pudo enviar a la papelera.'}finally{busy=false;trash.disabled=false;save.disabled=false}
-}
-async function applyPreparedDecision(decision={}){
- const row=decision.row,c=contactData(row),fields=decision.fields||{},first=displayCase(fields.first??c.first),last=displayCase(fields.last??c.last),nickname=displayCase(fields.nickname??c.nickname),finalPhone=safe(fields.phone??c.phone),finalDni=safe(fields.dni??c.dni),finalEmail=safe(fields.email??c.email),targetPhone=phone(finalPhone),chat=decision.chat||contactChat(row);
- if(!row?.id||!first||!targetPhone)throw Error('La decisión preparada no tiene un nombre y teléfono válidos.');
- if(typeof googleContactsConnected!=='function'||!googleContactsConnected()||!googleAccountEmail())throw Error('Conecta y confirma la cuenta correcta de Google antes de aplicar.');
- const savedGoogle=await writeGoogle(decision.person||null,{phone:targetPhone,email:finalEmail,dni:finalDni,preserveExtra:false},first,last,nickname),verified=await verifyGoogleSaved(savedGoogle,targetPhone,first,last,nickname);
- await writeCrm(row,first,last,nickname,chat,verified,null,{phone:finalPhone,dni:finalDni,email:finalEmail});
- rememberBinding(chat,row);rememberUnifiedName(chat,row);clearGoogleCache();return{row,person:verified};
-}
-async function applyPreparedTrash(decision={}){
- const row=decision.row,person=decision.person,c=contactData(row);if(!row?.id||!person?.resourceName)throw Error('Falta la ficha exacta de CRM o Google para enviar a papelera.');
- if(typeof archiveToTrash!=='function')throw Error('No está disponible la papelera segura del CRM.');
- const archived=await archiveToTrash('contact',row.id,c.name,{record:{id:row.id,data:row.data,source_sheet:row.source_sheet||'BASE DE DATOS'}});if(!archived)throw Error('No se pudo guardar la copia recuperable del CRM.');
- await googleApi(person.resourceName+':deleteContact',{method:'DELETE'});const removed=await sb.from('records').delete().eq('id',row.id);if(removed.error)throw removed.error;forgetBinding(decision.chat||contactChat(row));clearGoogleCache();return true;
-}
-async function saveCorrection(){
- if(busy)return;
- const row=correctionRow||current(),available=correctionMatches,c=contactData(row),first=displayCase($('tpfInlineFirst').value),last=displayCase($('tpfInlineLast').value),nickname=displayCase($('tpfInlineNickname').value),finalPhone=safe($('tpfInlinePhone').value),finalDni=safe($('tpfInlineDni').value),finalEmail=safe($('tpfInlineEmail').value),full=[first,last].filter(Boolean).join(' '),visible=unifiedVisible(first,last,nickname),msg=$('tpfInlineMsg'),btn=$('tpfInlineSave'),selection=safe($('tpfInlineGoogle').value),separate=!!$('tpfInlineSeparatePerson')?.checked,deleteOthers=!separate&&available.length>1&&!!$('tpfInlineDeleteDuplicates')?.checked,mergeDuplicate=!!$('tpfInlineMergeCrmDuplicate')?.checked,mergeId=safe($('tpfInlineCrmDuplicate')?.value),mergeRow=correctionCrmDuplicates.find(item=>safe(item?.id)===mergeId),targetPhone=phone(finalPhone);
- if(mergeDuplicate&&(!mergeRow||phone(contactData(mergeRow).phone)!==phone(c.phone))){msg.textContent='La ficha duplicada cambió. Cierra y vuelve a revisar antes de unificar.';return}
- if(!row||!first){msg.textContent='Escribe al menos el nombre de la persona.';return}if(!targetPhone){msg.textContent='Escribe un teléfono válido antes de guardar.';return}if(correctionChat?.id&&targetPhone!==phone(correctionChat.id)){msg.textContent='Para cambiar el teléfono sin mezclar personas, abre primero la conversación de WhatsApp del número nuevo y vuelve a decidir.';return}if(correctionReturn==='whatsapp'){const expected=waContext(correctionChat,row);if(!rowMatchesChat(row,correctionChat)||!waContextCurrent(expected,{requireRecord:true})){msg.textContent='No se guardará: la conversación cambió o esta ficha no corresponde a su teléfono. Cierra y vuelve a abrir el cliente.';return}}if(separate&&!correctionHolder){msg.textContent='Elige el titular al que gestiona esta persona.';return}if(typeof googleContactsConnected!=='function'||!googleContactsConnected()){msg.textContent='Conecta Google Contacts antes de guardar en los tres sitios.';return}if(!googleAccountEmail()){msg.textContent='Elige y confirma primero la cuenta correcta de Google.';return}if(correctionGoogleError){msg.textContent='No se guardará: vuelve a conectar Google y compruébalo otra vez.';return}const needsGoogleChoice=available.length>1||(available.length===1&&!googleAligned(available[0],c.first,c.last,c.nickname));if(needsGoogleChoice&&!selection){msg.textContent='El contacto de Google tiene otro nombre. Elige expresamente el contacto exacto; no se combinará automáticamente.';return}
- const person=available.length?available[Number(selection)]:null;
- if(separate&&!window.confirm(`Se guardará una sola ficha para “${visible}” y quedará como persona que gestiona a ${correctionHolder.name}. No se creará ninguna segunda ficha. ¿Confirmas?`))return;
- if(mergeDuplicate&&!window.confirm(`Se unirá la ficha “${crmDuplicateOption(mergeRow)}” con esta ficha. Se conservarán esta ficha, sus titulares y oportunidades; se trasladarán los datos vinculados de la otra y esta quedará archivada de forma recuperable. ¿Confirmas?`))return;
- if(!person&&!window.confirm(`Google no tiene ningún contacto con el teléfono ${targetPhone}. Se creará uno nuevo como “${visible}”. ¿Confirmas?`))return;
- if(person&&!googleAligned(person,first,last,nickname)&&!window.confirm(`El contacto de Google elegido es “${googleChoice(person)}”. Se cambiará a “${visible}”. Confirma únicamente si es la misma persona.`))return;
- if(deleteOthers){const chosen=googleView(person).name||full,count=available.length-1;if(!window.confirm(`Vas a conservar “${chosen}” y eliminar de Google los otros ${count} contactos con este teléfono. ¿Confirmas el borrado?`))return}
- const saveAccount=googleAccountEmail(),saveChat=correctionChat,saveReturn=correctionReturn,saveContext=saveReturn==='whatsapp'?waContext(correctionChat,row):null;
- busy=true;btn.disabled=true;msg.textContent='Guardando…';
- try{
-  const savedGoogle=await writeGoogle(person,{phone:targetPhone,email:finalEmail,dni:finalDni,preserveExtra:false,name:full},first,last,nickname),verifiedGoogle=await verifyGoogleSaved(savedGoogle,targetPhone,first,last,nickname);if(!person)correctionMatches=[verifiedGoogle];
-  if(googleAccountEmail()!==saveAccount)throw Error('La cuenta de Google cambió durante el guardado. Vuelve a revisar la vinculación.');
-  const savedRow=row;
-  await writeCrm(row,first,last,nickname,correctionChat,verifiedGoogle,separate?correctionHolder:null,{phone:finalPhone,dni:finalDni,email:finalEmail});
-  if(mergeDuplicate){const merged=await sb.rpc('crm_merge_duplicate_contact',{p_keep_id:savedRow.id,p_duplicate_id:mergeRow.id,p_expected_keep_data:savedRow.data,p_expected_duplicate_data:mergeRow.data});if(merged.error)throw merged.error;if(safe(merged.data)!==safe(savedRow.id))throw Error('No se confirmó la unificación de la ficha. No se eliminó ningún contacto.');correctionCrmDuplicates=[]}
-  rememberBinding(correctionChat,savedRow);rememberUnifiedName(correctionChat,savedRow);
-  let removed=0,failed=0;if(deleteOthers){for(const duplicate of available){if(safe(duplicate.resourceName)===safe(verifiedGoogle.resourceName))continue;try{await googleApi(duplicate.resourceName+':deleteContact',{method:'DELETE'});removed++}catch(_){failed++}}await verifyGoogleSaved(verifiedGoogle,targetPhone,first,last,nickname)}clearGoogleCache();
-  msg.textContent=failed?`La ficha se guardó, pero ${failed} duplicados no pudieron eliminarse.`:separate?`Guardado “${visible}” y asociado como persona que gestiona a ${correctionHolder.name}.`:mergeDuplicate?`Unificada correctamente la ficha duplicada de “${visible}”.`:(deleteOthers?`Guardado correctamente y eliminados ${removed} duplicados de Google.`:`Guardado como “${visible}” en los tres sitios.`);
-  window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id:savedRow.id}}));if(failed)return;
-  setTimeout(()=>{$('tpfInlineBack').classList.add('hidden');if(saveReturn==='whatsapp'){if(!waContextCurrent(saveContext)||!rowMatchesChat(savedRow,saveChat))return;waLiveState.contact=savedRow;waSignature='';refreshWhatsapp()}else if(safe(current()?.id)===safe(row.id))window.openContact?.(savedRow.id)},550)
- }catch(e){msg.textContent=e?.message||'No se pudo guardar.'}finally{busy=false;btn.disabled=false}
-}
-function renderProfileIdentity(c){
- const input=$('contactName'),identity=input?.closest('.cpIdentity');if(!identity)return;
- let box=$('cpProfileIdentityText');
- if(!box){box=document.createElement('div');box.id='cpProfileIdentityText';const name=document.createElement('strong'),nickname=document.createElement('small');name.id='cpProfileDisplayName';nickname.id='cpProfileNickname';box.append(name,nickname);input.before(box);identity.classList.add('cpSeparateIdentity')}
- const name=$('cpProfileDisplayName'),nickname=$('cpProfileNickname');
- if(name.textContent!==c.name)name.textContent=c.name;
- if(nickname.textContent!==c.nickname)nickname.textContent=c.nickname;
- nickname.hidden=!c.nickname;
-}
-async function refreshProfile(){
- const row=current(),root=document.querySelector('#contactModal .cpRight');if(!row||!root||$('contactModal')?.classList.contains('hidden'))return;await normalizeStoredNickname(row);if(safe(current()?.id)!==safe(row.id))return;activeId=String(row.id);let card=$('tpfGoogleInlineCard');if(!card){card=document.createElement('section');card.id='tpfGoogleInlineCard';root.prepend(card)}const c=contactData(row),visible=unifiedVisible(c.first,c.last,c.nickname),wa=whatsappName(c),connected=typeof googleContactsConnected==='function'&&googleContactsConnected();if($('contactName'))$('contactName').value=visible;renderProfileIdentity(c);if(connected&&renderVerifiedCard(card,row,null))return;delete card.dataset.verification;card.innerHTML=`<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Comprobando…</span><p>${wa?`WhatsApp muestra: <b>${esc(wa)}</b>`:'Abre su conversación para detectar el nombre actual de WhatsApp.'}</p>`;
- if(!connected){matches=[];const state=syncState(row,null,[],false,'',wa);card.innerHTML=`<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">${esc(state.status)}</span><p>CRM: <b>${esc(visible)}</b></p>${googleAccountLine(false)}${googleLine([],false)}<p>WhatsApp dentro del CRM: <b>${esc(state.waDisplay)}</b></p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Corregir nombre y apodo</button><button id="tpfInlineConnect" class="secondary" type="button">Conectar Google</button></div>`;$('tpfInlineEdit').onclick=reviewProfile;$('tpfInlineConnect').onclick=()=>connectGoogleContacts();return}
- try{const account=fold(googleAccountEmail()),identity=verificationSignature(row),pending=googleCheckPending(row.id);const checked=await cachedGoogle(c,pending);if(safe(row.id)!==safe(current()?.id)||account!==fold(googleAccountEmail())||identity!==verificationSignature(current()))return;matches=checked;if(!checked.length&&pending){card.innerHTML=`<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Verificando Google…</span><p>El contacto acaba de crearse. La comprobación continúa en segundo plano.</p>`;return}pendingGoogleChecks.delete(safe(row.id));if(await persistMatchingVerification(row,null,checked)){if(safe(row.id)!==safe(current()?.id))return;renderVerifiedCard(card,row,null);scheduleWhatsappRefresh(0,false);return}if(safe(row.id)!==safe(current()?.id))return;const state=syncState(row,null,matches,true,'',wa);card.innerHTML=`<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus ${state.ok?'ok':'warn'}">${esc(state.status)}</span><p>CRM: <b>${esc(visible)}</b></p>${googleAccountLine(true)}${googleLine(matches,true)}<p>WhatsApp dentro del CRM: <b>${esc(state.waDisplay)}</b></p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="${state.ok?'secondary':'primary'}" type="button">${state.ok?'Revisar o modificar':'Corregir aquí'}</button><button id="tpfInlineSwitchGoogle" class="secondary" type="button">Cambiar cuenta de Google</button></div>`;$('tpfInlineEdit').onclick=reviewProfile;$('tpfInlineSwitchGoogle').onclick=chooseGoogleAccount}catch(e){if(safe(row.id)!==safe(current()?.id))return;card.innerHTML=`<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">No se pudo comprobar</span><p>CRM: <b>${esc(visible)}</b></p>${googleAccountLine(true)}${googleLine([],true,e?.message)}<p>WhatsApp dentro del CRM: <b>${esc(wa||'No Name')}</b></p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Volver a comprobar</button><button id="tpfInlineSwitchGoogle" class="secondary" type="button">Cambiar cuenta de Google</button></div>`;$('tpfInlineEdit').onclick=reviewProfile;$('tpfInlineSwitchGoogle').onclick=chooseGoogleAccount}
-}
-async function boundContact(chat){
- const chatId=safe(chat?.id);if(!chatId)return null;const localId=safe(readBindings()[chatId]);
- if(localId){const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').eq('id',localId).maybeSingle();if(r.error)throw r.error;if(r.data&&rowMatchesChat(r.data,chat))return r.data;forgetBinding(chat)}
- const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_WHATSAPP_CHAT_ID:chatId}).limit(3);if(r.error)throw r.error;const exact=(r.data||[]).filter(row=>rowMatchesChat(row,chat));if(exact.length!==1)return null;const row=exact[0];rememberBinding(chat,row);return row;
-}
-async function applyBoundWhatsappContact(expected){
- const chat=selectedWa();if(!chat||String(chat.id||'').includes('@g.us'))return null;const key=safe(chat.id);let currentRow=matchedWa();if(!waContextCurrent(expected))return null;if(currentRow&&!rowMatchesChat(currentRow,chat)){waLiveState.contact=null;currentRow=null}if(currentRow?.data?.TPF_WHATSAPP_CHAT_ID===key){rememberBinding(chat,currentRow);return currentRow}
- const lookup=[key,safe(readBindings()[key]),safe(currentRow?.id)].join('|');if(boundLookup===lookup&&currentRow)return currentRow;boundLookup=lookup;
- try{const row=await boundContact(chat);if(!waContextCurrent(expected))return null;if(!row)return currentRow;if(!rowMatchesChat(row,chat))return null;waLiveState.contact=row;rememberUnifiedName(chat,row);const c=contactData(row);$('waContactState').innerHTML='<span class="pill green">Contacto encontrado</span>';$('waOpenContactTop')?.classList.remove('hidden');$('waSideOpenContact')?.classList.remove('hidden');$('waSideCreateContact')?.classList.add('hidden');$('waSideIdentity')?.classList.remove('hidden');if($('waSideDni'))$('waSideDni').textContent=c.dni||'—';if($('waSidePhoneDetail'))$('waSidePhoneDetail').textContent=c.phone||phone(chat.id)||'—';if($('waSideNotes'))$('waSideNotes').textContent=field(row.data,'NOTAS','NOTES','OBSERVACIONES')||'—';if(typeof loadWaContactSideData==='function')await loadWaContactSideData(row,phone(chat.id));return row}catch(error){console.warn('Vínculo de conversación',error);return null}
-}
-function applyUnifiedWhatsappName(){
- const chat=selectedWa(),row=matchedWa();if(!chat||!row||String(chat.id||'').includes('@g.us')){clearWhatsappNicknames();return''}
- if(!rowMatchesChat(row,chat)||!rowConfirmedForChat(row,chat)){clearWhatsappNicknames();return''}const c=contactData(row),preferred=c.name||safe(chat.name)||'Contacto',nickname=safe(c.nickname);if(!preferred)return'';rememberUnifiedName(chat,row);
- for(const id of ['waChatName','waSideName']){const el=$(id);if(el&&el.textContent!==preferred)el.textContent=preferred}
- for(const id of ['waChatNickname','waSideNickname']){const el=$(id);if(!el)continue;if(el.textContent!==nickname)el.textContent=nickname;el.classList.toggle('hidden',!nickname)}
- const active=document.querySelector('.waChatRow.active .waChatRowTop b');if(active&&active.textContent!==preferred)active.textContent=preferred;
- const rowMain=active?.closest('.waChatRowMain');if(rowMain){let alias=rowMain.querySelector('.tpfWaListNickname');if(nickname&&!alias){alias=document.createElement('small');alias.className='tpfWaListNickname';active.insertAdjacentElement('afterend',alias)}if(alias){if(alias.textContent!==nickname)alias.textContent=nickname;alias.classList.toggle('hidden',!nickname)}}
- return preferred;
-}
-// Run after the current event, and do not observe the repair's own DOM writes.
-// Rewriting identical text nodes from a MutationObserver can starve Chrome's UI.
-function scheduleWhatsappNameRepair(){if(waNameRepairQueued)return;waNameRepairQueued=true;setTimeout(()=>{waNameObserver?.disconnect();try{applyUnifiedWhatsappName()}finally{waNameRepairQueued=false;observeWhatsappNameTargets()}},0)}
-function observeWhatsappNameTargets(){if(!waNameObserver)return;[$('waChatName'),$('waChatNickname'),$('waSideName'),$('waSideNickname'),$('waLiveChats')].filter(Boolean).forEach(target=>waNameObserver.observe(target,{childList:true,subtree:true,characterData:true}))}
-function watchWhatsappNames(){
- if(waNameObserver)return;const targets=[$('waChatName'),$('waChatNickname'),$('waSideName'),$('waSideNickname'),$('waLiveChats')].filter(Boolean);if(!targets.length)return;
- waNameObserver=new MutationObserver(scheduleWhatsappNameRepair);observeWhatsappNameTargets();
-}
-async function refreshWhatsapp({checkGoogle=true}={}){
- rememberWhatsapp();
- const token=++waRefreshToken,chat=selectedWa(),host=$('waContactCard'),expected=waContext(chat);
- if(!chat||!host||String(chat.id||'').includes('@g.us'))return $('tpfWaAliasCard')?.remove();
- await applyBoundWhatsappContact(expected);if(token!==waRefreshToken||!waContextCurrent(expected))return;let row=matchedWa();if(row&&!rowMatchesChat(row,chat)){waLiveState.contact=null;row=null}if(row){await normalizeStoredNickname(row);if(token!==waRefreshToken||!waContextCurrent(expected))return;row=matchedWa()}
- const c=contactData(row),preferred=applyUnifiedWhatsappName();
- const name=safe(chat.name);
- let card=$('tpfWaAliasCard');if(!card){card=document.createElement('section');card.id='tpfWaAliasCard';const state=$('waContactState');state?.insertAdjacentElement('afterend',card)}if(!card)return;
- const ignored=ignoredNames()[phone(chat.id)]===name;
- if(ignored){const signature=['ignored',safe(chat.id),name].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;card.innerHTML=`<h4>Nombre de WhatsApp ignorado</h4><p><b>${esc(name)}</b> no se aplicará.</p><div class="tpfGoogleInlineActions"><button id="tpfWaReviewAgain" class="secondary" type="button">Revisar de nuevo</button></div>`;$('tpfWaReviewAgain').onclick=()=>{ignoreName(chat,name,false);refreshWhatsapp()};return}
- if(!row){const candidates=(waLiveState?.contactCandidates||[]).filter(item=>rowMatchesChat(item,chat));if(candidates.length>1){const signature=['ambiguous',safe(chat.id),...candidates.map(item=>safe(item.id))].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;card.innerHTML=`<h4>Elige la ficha correcta</h4><span class="tpfGoogleInlineStatus warn">${candidates.length} contactos del CRM comparten este teléfono</span><p>No se modificará ni creará nada hasta que elijas la persona exacta.</p><div class="tpfGoogleInlineActions">${candidates.map((item,index)=>{const x=contactData(item);return`<button type="button" class="secondary" data-tpf-wa-candidate="${index}">${esc(x.name)}${x.nickname?` · ${esc(x.nickname)}`:''}</button>`}).join('')}</div>`;card.querySelectorAll('[data-tpf-wa-candidate]').forEach(button=>button.onclick=()=>{const chosen=candidates[Number(button.dataset.tpfWaCandidate)];if(!chosen||safe(selectedWa()?.id)!==safe(chat.id))return;waLiveState.contact=chosen;waLiveState.contactCandidates=[chosen];rememberBinding(chat,chosen);waSignature='';refreshWhatsapp()});return}if(!validWaName(name))return card.remove();const signature=['new',safe(chat.id),name].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;card.innerHTML=`<h4>Nombre actual de WhatsApp</h4><p><b>${esc(name)}</b> · Todavía no existe una ficha vinculada.</p><div class="tpfGoogleInlineActions"><button id="tpfWaCreateReview" class="primary" type="button">Crear y unificar</button></div>`;$('tpfWaCreateReview').onclick=()=>window.createWaContact?.();return}
- const connected=typeof googleContactsConnected==='function'&&googleContactsConnected();if(connected&&renderVerifiedCard(card,row,chat))return;delete card.dataset.verification;const checkedAccount=fold(googleAccountEmail());let found=[],googleError='';if(connected&&checkGoogle){try{found=await cachedGoogle(c)}catch(error){googleError=error?.message||'No se pudo comprobar Google'}}if(checkedAccount!==fold(googleAccountEmail())||token!==waRefreshToken||!waContextCurrent({...expected,recordId:safe(row.id)},{requireRecord:true}))return;
- if(connected&&checkGoogle&&!googleError){try{if(await persistMatchingVerification(row,chat,found)){if(token!==waRefreshToken||!waContextCurrent({...expected,recordId:safe(row.id)},{requireRecord:true}))return;renderVerifiedCard(card,row,chat);return}}catch(error){googleError=error?.message||'No se confirmó la verificación'}if(token!==waRefreshToken||!waContextCurrent({...expected,recordId:safe(row.id)},{requireRecord:true}))return;}
- const state=connected&&!checkGoogle?{...syncState(row,chat,[],false,'',name),status:'Google pendiente de comprobar',ok:false}:syncState(row,chat,found,connected,googleError,name),googleStatus=connected&&!checkGoogle?'<p>Google: <b>Se comprobará al revisar o unificar</b></p>':googleLine(found,connected,googleError),signature=['sync',safe(chat.id),safe(row.id),name,state.status,...found.map(p=>p.resourceName)].join('|');if(signature===waSignature&&card.innerHTML)return;waSignature=signature;
- card.innerHTML=`<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus ${state.ok?'ok':'warn'}">${esc(state.status)}</span><p>CRM: <b>${esc(state.visible)}</b></p>${googleAccountLine(connected)}${googleStatus}<p>WhatsApp dentro del CRM: <b>${esc(state.waDisplay)}</b></p><div class="tpfGoogleInlineActions"><button id="tpfWaUnifiedReview" class="${state.ok?'secondary':'primary'}" type="button">${state.ok?'Revisar o modificar':'Revisar y unificar'}</button>${connected?'<button id="tpfWaSwitchGoogle" class="secondary" type="button">Cambiar cuenta de Google</button>':''}</div>`;
- $('tpfWaUnifiedReview').onclick=()=>openWhatsappCorrection(row,name,chat);if(connected)$('tpfWaSwitchGoogle').onclick=chooseGoogleAccount;
-}
-function scheduleWhatsappRefresh(delay=700,checkGoogle=false){
- clearTimeout(waRefreshTimer);waRefreshTimer=setTimeout(async()=>{waRefreshTimer=0;if(waRefreshRunning){waRefreshPending=true;return}waRefreshRunning=true;try{await refreshWhatsapp({checkGoogle})}finally{waRefreshRunning=false;if(waRefreshPending){waRefreshPending=false;scheduleWhatsappRefresh(500,false)}}},delay)
-}
-async function refreshEditedWhatsappContact(id){
- const chat=selectedWa(),row=matchedWa();if(!chat||!row||String(row.id)!==String(id||row.id))return;
- try{const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').eq('id',row.id).maybeSingle();if(r.error)throw r.error;if(!r.data)return;waLiveState.contact=r.data;waSignature='';clearGoogleCache();await refreshWhatsapp()}catch(error){console.warn('Actualizar contacto en WhatsApp',error)}
-}
-async function settingEnabled(key,defaultValue=true){try{const r=await sb.from('app_settings').select('value').eq('key',key).maybeSingle();if(r.error)return defaultValue;return r.data?.value!==false}catch(_){return defaultValue}}
-async function syncEditedContact(detail={}){
- if(detail.googleSync||!detail.id||!detail.data||typeof googleContactsConnected!=='function'||!googleContactsConnected()||!await settingEnabled('google_contacts_update',true))return;
- const row={id:detail.id,data:detail.data},c=contactData(row),old=contactData({id:detail.id,data:detail.previous||detail.data});
- try{let found=await searchGoogle(old);if(found.length===0&&(phone(old.phone)!==phone(c.phone)||fold(old.email)!==fold(c.email)))found=await searchGoogle(c);if(found.length!==1)return;const saved=await writeGoogle(found[0],c,c.first,c.last,c.nickname);await verifyGoogleSaved(saved,c.phone,c.first,c.last,c.nickname);clearGoogleCache();window.dispatchEvent(new CustomEvent('tpf:google-contacts-changed',{detail:{contactId:detail.id,automatic:true}}))}catch(error){console.warn('Sincronizar edición con Google Contacts',error)}
-}
-function install(){ensureStyles();ensureModal();watchWhatsappNames();window.addEventListener('tpf:contact-open',()=>setTimeout(refreshProfile,0));window.addEventListener('tpf:contact-created',event=>{if(event.detail?.googleSyncPending)schedulePendingGoogleCheck(event.detail.id)});window.addEventListener('tpf:contact-updated',event=>{waSignature='';boundLookup='';setTimeout(()=>{refreshProfile();refreshEditedWhatsappContact(event.detail?.id)},80);syncEditedContact(event.detail)});window.addEventListener('tpf:google-contacts-changed',()=>{clearGoogleCache();waSignature='';setTimeout(()=>{refreshProfile();scheduleWhatsappRefresh(100,true)},100)});window.addEventListener('tpf:wa-chat-changing',()=>{waRefreshToken++;waSignature='';boundLookup='';clearWhatsappNicknames();$('tpfWaAliasCard')?.remove();scheduleWhatsappRefresh(900,false)});setInterval(()=>{const view=$('view-whatsapplive');if(!document.hidden&&view&&!view.classList.contains('hidden'))scheduleWhatsappRefresh(0,false)},60000);window.tpfWhatsappDisplayIdentity=whatsappDisplayIdentity;window.TPFContactGoogleInline={refreshProfile,refreshWhatsapp,syncEditedContact,resolveBoundContact:boundContact,openDecisionForRow,applyPreparedDecision,applyPreparedTrash,batch:{contactData,googleView,googlePhones,strictText,strictSame,strictGoogleAligned,strictWhatsappAligned,savedVerification,saveStrictVerification}}}
-M.register('contact-google-inline',{install});
+ `;
+    document.head.appendChild(s);
+  }
+  function ensureModal() {
+    let back = $("tpfInlineBack");
+    if (back) return back;
+    back = document.createElement("div");
+    back.id = "tpfInlineBack";
+    back.className = "tpfInlineBack hidden";
+    back.innerHTML = `<section class="tpfInlineModal" role="dialog" aria-modal="true"><header><div><small>DECISIÓN DEL CONTACTO</small><h3>Datos finales para CRM, Google y WhatsApp</h3></div><button id="tpfInlineClose" type="button">×</button></header><div class="tpfInlineBody"><div id="tpfInlineSource" class="tpfInlineSource"></div><div id="tpfInlineDeleteInfo" class="tpfInlineDeleteInfo">Borrar envía la ficha del CRM y el contacto de Google a sus papeleras. La conversación de WhatsApp no se borra; se quita su vínculo con esta ficha.</div><div class="tpfInlineSeparate"><label><input id="tpfInlineSeparatePerson" type="checkbox"><span>Esta persona lleva el contacto de otro titular</span></label><div id="tpfInlineHolderPanel" class="tpfInlineHolder hidden"><p>Se conservará una sola ficha. Elige el titular al que gestiona esta persona.</p><div id="tpfInlineHolderSelected" class="tpfInlineHolderSelected"></div><label class="tpfInlineHolderSearch">Buscar titular<input id="tpfInlineHolderSearch" type="search" placeholder="Nombre, teléfono o DNI" autocomplete="off"></label><div id="tpfInlineHolderResults" class="tpfInlineHolderResults"></div></div></div><div class="tpfInlineChoices"><button id="tpfInlineUseCrm" class="secondary" type="button">Usar datos del CRM</button><button id="tpfInlineUseGoogle" class="secondary" type="button">Usar datos de Google</button><button id="tpfInlineUseWhatsapp" class="secondary" type="button">Usar WhatsApp como apodo</button></div><div class="tpfInlineGrid"><label class="full">Contacto de Google que se conservará<select id="tpfInlineGoogle"></select></label><label>Nombre<input id="tpfInlineFirst" autocomplete="given-name" placeholder="Ejemplo: Mariano"></label><label>Apellidos<input id="tpfInlineLast" autocomplete="family-name" placeholder="Ejemplo: Sánchez López"></label><label class="full">Apodo visible<input id="tpfInlineNickname" placeholder="Ejemplo: Hijo de María"></label><label>Teléfono<input id="tpfInlinePhone" inputmode="tel" autocomplete="tel" placeholder="Ejemplo: 600000000"></label><label>DNI / NIF<input id="tpfInlineDni" autocomplete="off" placeholder="Ejemplo: 12345678A"></label><label class="full">Correo<input id="tpfInlineEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></label><label id="tpfInlineDeleteWrap" class="full hidden"><span><input id="tpfInlineDeleteDuplicates" type="checkbox"> Eliminar de Google los otros contactos duplicados</span><small>Solo se eliminarán después de mostrarte una confirmación.</small></label></div><div id="tpfInlinePreview" class="tpfInlinePreview"></div><div id="tpfInlineMsg" class="tpfInlineMsg"></div></div><footer><button id="tpfInlineIgnore" class="secondary hidden" type="button">Ignorar este nombre</button><button id="tpfInlineReconnect" class="secondary hidden" type="button">Conectar Google y buscar</button><button id="tpfInlineTrash" class="secondary danger" type="button">Enviar a papelera</button><button id="tpfInlineCancel" class="secondary" type="button">Cerrar sin cambios</button><button id="tpfInlineSave" class="primary" type="button">Guardar en los tres</button></footer></section>`;
+    document.body.appendChild(back);
+    const close = () => back.classList.add("hidden");
+    $("tpfInlineClose").onclick = close;
+    $("tpfInlineCancel").onclick = close;
+    back.onclick = (e) => {
+      if (e.target === back) close();
+    };
+    $("tpfInlineSave").onclick = saveCorrection;
+    $("tpfInlineTrash").onclick = trashCorrection;
+    $("tpfInlineSeparatePerson").addEventListener(
+      "change",
+      toggleSeparatePerson,
+    );
+    $("tpfInlineHolderSearch").addEventListener("input", searchHolders);
+    [
+      "tpfInlineFirst",
+      "tpfInlineLast",
+      "tpfInlineNickname",
+      "tpfInlinePhone",
+      "tpfInlineDni",
+      "tpfInlineEmail",
+    ].forEach((id) => $(id).addEventListener("input", renderFinalPreview));
+    return back;
+  }
+  function ensureCrmDuplicatePanel() {
+    let panel = $("tpfInlineCrmDuplicates");
+    if (panel) return panel;
+    panel = document.createElement("div");
+    panel.id = "tpfInlineCrmDuplicates";
+    panel.className = "tpfInlineCrmDuplicates hidden";
+    panel.innerHTML =
+      '<label><input id="tpfInlineMergeCrmDuplicate" type="checkbox"><span>Es la misma persona: unir la otra ficha duplicada del CRM</span></label><select id="tpfInlineCrmDuplicate" disabled></select><small>Se conservará esta ficha. Se trasladarán las oportunidades, tareas, etiquetas, automatizaciones y el vínculo de WhatsApp; la otra quedará archivada de forma recuperable.</small>';
+    $("tpfInlineSource")?.insertAdjacentElement("afterend", panel);
+    $("tpfInlineMergeCrmDuplicate").onchange = () => {
+      $("tpfInlineCrmDuplicate").disabled = !$("tpfInlineMergeCrmDuplicate")
+        .checked;
+      renderFinalPreview();
+    };
+    $("tpfInlineCrmDuplicate").onchange = renderFinalPreview;
+    return panel;
+  }
+  function crmDuplicateOption(row) {
+    const c = contactData(row);
+    return `${c.name || "Sin nombre"}${c.nickname ? ` · ${c.nickname}` : ""}${c.dni ? ` · DNI ${c.dni}` : ""}${c.phone ? ` · ${c.phone}` : ""}`;
+  }
+  function renderCrmDuplicates() {
+    const panel = ensureCrmDuplicatePanel(),
+      check = $("tpfInlineMergeCrmDuplicate"),
+      select = $("tpfInlineCrmDuplicate");
+    if (!panel || !check || !select) return;
+    const usable = correctionCrmDuplicates.filter(
+      (row) => safe(row?.id) !== safe(correctionRow?.id),
+    );
+    panel.classList.toggle("hidden", !usable.length);
+    check.checked = false;
+    select.disabled = true;
+    select.innerHTML = usable
+      .map(
+        (row) =>
+          `<option value="${esc(row.id)}">${esc(crmDuplicateOption(row))}</option>`,
+      )
+      .join("");
+  }
+  async function loadCrmDuplicates(row) {
+    const expectedId = safe(row?.id),
+      c = contactData(row);
+    if (!expectedId || !phone(c.phone) || typeof sb === "undefined") return;
+    try {
+      const r = await sb.rpc("find_possible_duplicate_contact", {
+        phone_text: c.phone,
+        dni_text: null,
+        email_text: null,
+      });
+      if (
+        safe(correctionRow?.id) !== expectedId ||
+        $("tpfInlineBack")?.classList.contains("hidden")
+      )
+        return;
+      if (r.error) throw r.error;
+      correctionCrmDuplicates = (r.data || []).filter(
+        (item) =>
+          safe(item?.id) !== expectedId &&
+          phone(contactData(item).phone) === phone(c.phone),
+      );
+      renderCrmDuplicates();
+    } catch (error) {
+      console.warn("Buscar fichas duplicadas del CRM", error);
+    }
+  }
+  function splitName(name) {
+    const parts = safe(name).split(/\s+/).filter(Boolean);
+    return { first: parts.shift() || "", last: parts.join(" ") };
+  }
+  function unifiedVisible(first, last, nickname) {
+    const full =
+        [safe(first), safe(last)].filter(Boolean).join(" ") || "Sin nombre",
+      alias = safe(nickname),
+      f = fold(full),
+      a = fold(alias);
+    if (!alias) return full;
+    if (a === f || a.startsWith(f + " ")) return alias;
+    if (f.includes(a)) return full;
+    return full + " " + alias;
+  }
+  function editableNickname(name, nickname) {
+    const base = safe(name),
+      alias = safe(nickname);
+    return fold(alias).startsWith(fold(base) + " ")
+      ? safe(alias.slice(base.length))
+      : alias;
+  }
+  function holderIdentity(row) {
+    const c = contactData(row);
+    return { record_id: c.id, name: c.name, phone: c.phone, dni: c.dni };
+  }
+  function renderHolder() {
+    const box = $("tpfInlineHolderSelected");
+    if (box)
+      box.innerHTML = correctionHolder
+        ? `Titular asociado: ${esc(correctionHolder.name || "Sin nombre")} · ${esc(correctionHolder.dni || correctionHolder.phone || "sin datos")}`
+        : "Elige un titular asociado.";
+  }
+  function toggleSeparatePerson() {
+    const on = !!$("tpfInlineSeparatePerson")?.checked;
+    $("tpfInlineHolderPanel")?.classList.toggle("hidden", !on);
+    correctionHolder = null;
+    holderResults = [];
+    $("tpfInlineHolderResults").innerHTML = "";
+    $("tpfInlineGoogle").disabled = false;
+    $("tpfInlineDeleteWrap")?.classList.toggle(
+      "hidden",
+      correctionMatches.length < 2,
+    );
+    $("tpfInlineSave").textContent = "Guardar en los tres";
+    renderHolder();
+    renderFinalPreview();
+  }
+  async function searchHolders(e) {
+    const q = safe(e?.target?.value),
+      out = $("tpfInlineHolderResults"),
+      token = ++holderSearchToken;
+    if (q.length < 2) {
+      out.textContent = q ? "Escribe al menos dos caracteres." : "";
+      return;
+    }
+    out.textContent = "Buscando…";
+    try {
+      const api = window.TPFContactRelations;
+      if (!api?.searchRecords)
+        throw Error("El buscador de titulares aún no está disponible.");
+      holderResults = await api.searchRecords(
+        q,
+        () =>
+          token === holderSearchToken &&
+          !$("tpfInlineBack")?.classList.contains("hidden"),
+      );
+      if (token !== holderSearchToken) return;
+      out.innerHTML =
+        holderResults
+          .map(
+            (x, i) =>
+              `<button type="button" class="secondary" data-inline-holder="${i}"><b>${esc(x.name || "Sin nombre")}</b><small>${esc(x.dni || x.phone || "")}</small></button>`,
+          )
+          .join("") || "No se encontraron contactos.";
+      out.querySelectorAll("[data-inline-holder]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            correctionHolder = holderResults[Number(b.dataset.inlineHolder)];
+            renderHolder();
+            out.textContent = "Titular seleccionado.";
+            renderFinalPreview();
+          }),
+      );
+    } catch (error) {
+      if (token === holderSearchToken)
+        out.textContent = error?.message || "No se pudo buscar.";
+    }
+  }
+  function renderFinalPreview() {
+    const first = displayCase($("tpfInlineFirst")?.value),
+      last = displayCase($("tpfInlineLast")?.value),
+      nickname = displayCase($("tpfInlineNickname")?.value),
+      finalPhone = safe($("tpfInlinePhone")?.value),
+      finalDni = safe($("tpfInlineDni")?.value),
+      finalEmail = safe($("tpfInlineEmail")?.value),
+      visible = unifiedVisible(first, last, nickname),
+      managed = !!$("tpfInlineSeparatePerson")?.checked,
+      box = $("tpfInlinePreview");
+    if (!box) return;
+    box.innerHTML = `<h4>Así quedarán tus datos</h4><p><b>CRM, Google y WhatsApp:</b> ${esc(visible)}</p><p>Teléfono: <b>${esc(finalPhone || "—")}</b> · DNI/NIF: <b>${esc(finalDni || "—")}</b> · Correo: <b>${esc(finalEmail || "—")}</b></p>${managed ? `<p>Gestiona el titular: <b>${esc(correctionHolder?.name || "pendiente de elegir")}</b>. No se creará ninguna segunda ficha.</p>` : ""}<small>Estos son los datos elegidos por ti. Se comprueban antes de terminar el guardado.</small>`;
+  }
+  function openCorrection(options = {}) {
+    const row = options.row || current(),
+      c = contactData(row),
+      wa = options.whatsapp ?? whatsappName(c),
+      available = options.matches || matches,
+      back = ensureModal(),
+      select = $("tpfInlineGoogle"),
+      disconnected =
+        typeof googleContactsConnected !== "function" ||
+        !googleContactsConnected(),
+      unidentified = !disconnected && !googleAccountEmail();
+    correctionRow = row;
+    correctionMatches = available;
+    correctionWhatsapp = wa;
+    correctionChat = contactChat(row, options.chat || selectedWa());
+    correctionGoogleError = safe(options.googleError);
+    correctionReturn = options.returnTo || "profile";
+    correctionHolder = null;
+    holderResults = [];
+    correctionCrmDuplicates = [];
+    renderCrmDuplicates();
+    $("tpfInlineSeparatePerson").checked = false;
+    $("tpfInlineHolderPanel").classList.add("hidden");
+    $("tpfInlineHolderSearch").value = "";
+    $("tpfInlineHolderResults").innerHTML = "";
+    $("tpfInlineGoogle").disabled = false;
+    $("tpfInlineSave").textContent = "Guardar en los tres";
+    renderHolder();
+    $("tpfInlineFirst").value = c.first;
+    $("tpfInlineLast").value = c.last;
+    $("tpfInlineNickname").value = c.nickname;
+    $("tpfInlinePhone").value = c.phone;
+    $("tpfInlineDni").value = c.dni;
+    $("tpfInlineEmail").value = c.email;
+    $("tpfInlineSource").innerHTML =
+      `<b>WhatsApp actual</b>${esc(wa || "No Name")}<br><b style="margin-top:7px">CRM actual</b>${esc(c.name)}${c.nickname ? ` · Apodo: ${esc(c.nickname)}` : ""}<br><b style="margin-top:7px">Cuenta de Google</b>${esc(googleAccountEmail() || "Sin identificar")}<br><b style="margin-top:7px">Google actual</b>${available.length ? available.map((p) => esc(googleView(p).name || "Sin nombre")).join(" / ") : "No localizado todavía"}`;
+    const needsChoice =
+      available.length > 1 ||
+      (available.length === 1 &&
+        !googleAligned(available[0], c.first, c.last, c.nickname));
+    select.innerHTML = available.length
+      ? (needsChoice
+          ? '<option value="">Elige el contacto exacto; no se combinará automáticamente</option>'
+          : "") +
+        available
+          .map(
+            (p, i) => `<option value="${i}">${esc(googleChoice(p))}</option>`,
+          )
+          .join("")
+      : `<option value="">${disconnected ? "Google no conectado" : correctionGoogleError ? "No se pudo comprobar Google" : "Se creará un contacto nuevo en Google"}</option>`;
+    const deleteWrap = $("tpfInlineDeleteWrap"),
+      deleteBox = $("tpfInlineDeleteDuplicates");
+    deleteWrap.classList.toggle("hidden", available.length < 2);
+    deleteBox.checked = false;
+    const googleDetails = (person) => {
+      const g = googleView(person),
+        dni = safe(
+          (person?.userDefined || []).find((item) =>
+            [
+              "dni",
+              "nif",
+              "dni / nif",
+              "dni/nif",
+              "documento",
+              "documento de identidad",
+            ].includes(fold(item?.key)),
+          )?.value,
+        ),
+        email = safe(person?.emailAddresses?.[0]?.value),
+        mobile = safe(person?.phoneNumbers?.[0]?.value);
+      return { ...g, dni, email, phone: mobile };
+    };
+    const apply = (values = {}) => {
+      $("tpfInlineFirst").value = safe(values.first);
+      $("tpfInlineLast").value = safe(values.last);
+      $("tpfInlineNickname").value = safe(values.nickname);
+      $("tpfInlinePhone").value = safe(values.phone);
+      $("tpfInlineDni").value = safe(values.dni);
+      $("tpfInlineEmail").value = safe(values.email);
+      renderFinalPreview();
+    };
+    $("tpfInlineUseCrm").onclick = () =>
+      apply({
+        first: c.first,
+        last: c.last,
+        nickname: c.nickname,
+        phone: c.phone,
+        dni: c.dni,
+        email: c.email,
+      });
+    $("tpfInlineUseGoogle").disabled = !available.length;
+    $("tpfInlineUseGoogle").onclick = () => {
+      const g = googleDetails(available[Number(select.value)] || available[0]);
+      apply({
+        first: g.first,
+        last: g.last,
+        nickname: editableNickname(g.name, g.nickname),
+        phone: g.phone,
+        dni: g.dni,
+        email: g.email,
+      });
+    };
+    $("tpfInlineUseWhatsapp").disabled = !validWaName(wa);
+    $("tpfInlineUseWhatsapp").onclick = () => {
+      $("tpfInlineNickname").value = wa;
+      renderFinalPreview();
+    };
+    const ignore = $("tpfInlineIgnore");
+    ignore.classList.toggle("hidden", correctionReturn !== "whatsapp");
+    ignore.onclick = () => {
+      ignoreName(correctionChat, correctionWhatsapp, true);
+      back.classList.add("hidden");
+      refreshWhatsapp();
+    };
+    const reconnect = $("tpfInlineReconnect");
+    reconnect.textContent = unidentified
+      ? "Elegir cuenta de Google"
+      : "Conectar Google y buscar";
+    reconnect.classList.toggle(
+      "hidden",
+      !disconnected && !unidentified && !correctionGoogleError,
+    );
+    reconnect.onclick = () =>
+      connectGoogleContacts(true).catch((error) => {
+        $("tpfInlineMsg").textContent =
+          error?.message || "No se pudo conectar Google.";
+      });
+    $("tpfInlineMsg").textContent = disconnected
+      ? "Google Contacts está desconectado. Pulsa “Conectar Google y buscar”."
+      : unidentified
+        ? "Antes de guardar, elige la misma cuenta que utilizas en Google Contacts."
+        : correctionGoogleError
+          ? "Google no se ha podido comprobar. No se creará ningún contacto."
+          : available.length > 1
+            ? `Google tiene ${available.length} contactos con este teléfono. Elige cuál conservar; los demás no se borrarán sin tu confirmación.`
+            : available.length === 0
+              ? "Se ha comprobado Google: al guardar se creará un contacto nuevo."
+              : "";
+    renderFinalPreview();
+    back.classList.remove("hidden");
+    loadCrmDuplicates(row);
+  }
+  async function openWhatsappCorrection(row, name, chat) {
+    const expected = waContext(chat, row);
+    if (
+      !rowMatchesChat(row, chat) ||
+      !waContextCurrent(expected, { requireRecord: true })
+    )
+      return alert(
+        "La conversación cambió o el contacto no coincide. Vuelve a abrir el cliente antes de unificar.",
+      );
+    let found = [],
+      googleError = "";
+    try {
+      found = await searchGoogle(contactData(row));
+    } catch (error) {
+      googleError = error?.message || "No se pudo comprobar Google";
+    }
+    if (!waContextCurrent(expected, { requireRecord: true })) return;
+    openCorrection({
+      row,
+      whatsapp: name,
+      matches: found,
+      chat,
+      googleError,
+      returnTo: "whatsapp",
+    });
+  }
+  async function detailedPerson(person) {
+    if (!person?.resourceName) return null;
+    const qs = new URLSearchParams({
+      personFields:
+        "names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata",
+    });
+    return googleApi(person.resourceName + "?" + qs.toString());
+  }
+  function replaceDni(items, dni) {
+    const keys = [
+        "dni",
+        "nif",
+        "dni / nif",
+        "dni/nif",
+        "documento",
+        "documento de identidad",
+      ],
+      kept = (items || []).filter((x) => !keys.includes(fold(x.key)));
+    if (dni) kept.push({ key: "DNI / NIF", value: dni });
+    return kept;
+  }
+  async function writeGoogle(person, c, first, last, nickname) {
+    if (
+      typeof googleContactsConnected !== "function" ||
+      !googleContactsConnected()
+    )
+      return { skipped: true };
+    const givenName = displayCase(first),
+      familyName = displayCase(last),
+      googleNickname = displayCase(nickname);
+    const body = {
+      names: [{ givenName, familyName }],
+      nicknames: googleNickname
+        ? [{ value: googleNickname, type: "DEFAULT" }]
+        : [],
+      phoneNumbers: c.phone ? [{ value: c.phone, type: "mobile" }] : [],
+      emailAddresses: c.email ? [{ value: c.email, type: "work" }] : [],
+      userDefined: replaceDni([], c.dni),
+    };
+    if (!person)
+      return googleApi(
+        "people:createContact?personFields=names,nicknames,emailAddresses,phoneNumbers,userDefined",
+        { method: "POST", body: JSON.stringify(body) },
+      );
+    const full = await detailedPerson(person);
+    body.resourceName = full.resourceName;
+    body.etag = full.etag;
+    body.userDefined = (
+      c.preserveExtra
+        ? full.userDefined || []
+        : replaceDni(full.userDefined, c.dni)
+    ).map((x) => ({ key: x.key, value: x.value }));
+    return googleApi(
+      full.resourceName +
+        ":updateContact?updatePersonFields=names,nicknames,emailAddresses,phoneNumbers,userDefined&personFields=names,nicknames,emailAddresses,phoneNumbers,userDefined",
+      { method: "PATCH", body: JSON.stringify(body) },
+    );
+  }
+  async function verifyGoogleSaved(person, wantedPhone, first, last, nickname) {
+    if (!person?.resourceName)
+      throw Error(
+        "Google no confirmó el contacto. No se eliminará ningún duplicado.",
+      );
+    const full = await detailedPerson(person),
+      wanted = phone(wantedPhone),
+      phones = (full?.phoneNumbers || []).map((x) =>
+        phone(x.canonicalForm || x.value),
+      );
+    if (!full?.resourceName || (wanted && !phones.includes(wanted)))
+      throw Error(
+        "Google no devolvió el teléfono guardado. No se eliminará ningún duplicado.",
+      );
+    if (!googleAligned(full, first, last, nickname))
+      throw Error(
+        "Google no confirmó correctamente el nombre, los apellidos y el apodo. No se eliminará ningún duplicado.",
+      );
+    return full;
+  }
+  async function writeCrm(
+    row,
+    first,
+    last,
+    nickname,
+    chat,
+    verifiedGoogle,
+    managedHolder = null,
+    override = {},
+  ) {
+    const normalizedFirst = displayCase(first),
+      normalizedLast = displayCase(last),
+      normalizedNickname = displayCase(nickname),
+      d = { ...(row.data || {}) },
+      name = [normalizedFirst, normalizedLast].filter(Boolean).join(" ").trim(),
+      chatId = safe(chat?.id);
+    d.NOMBRE = normalizedFirst;
+    d.APELLIDOS = normalizedLast;
+    d["NOMBRE Y APELLIDOS"] = name;
+    d.APODO = normalizedNickname;
+    if (Object.hasOwn(override, "phone")) d.TELÉFONO = safe(override.phone);
+    if (Object.hasOwn(override, "dni")) d["DNI / NIF"] = safe(override.dni);
+    if (Object.hasOwn(override, "email")) d.EMAIL = safe(override.email);
+    if (
+      managedHolder?.record_id &&
+      safe(managedHolder.record_id) !== safe(row.id)
+    ) {
+      const old = Array.isArray(d.TPF_RELACIONES?.managed_contacts)
+          ? d.TPF_RELACIONES.managed_contacts
+          : [],
+        items = [
+          ...old.filter(
+            (item) => safe(item?.record_id) !== safe(managedHolder.record_id),
+          ),
+          { ...managedHolder },
+        ];
+      d.TPF_RELACIONES = {
+        ...(d.TPF_RELACIONES || {}),
+        version: 1,
+        managed_contacts: items,
+      };
+    }
+    if (chatId) {
+      d.TPF_WHATSAPP_CHAT_ID = chatId;
+      d.TPF_WHATSAPP_NAME_CONFIRMED = {
+        chat_id: chatId,
+        confirmed_at: new Date().toISOString(),
+      };
+    }
+    if (verifiedGoogle) {
+      const binding = googleBinding(verifiedGoogle);
+      if (binding) d.TPF_GOOGLE_CONTACT = binding;
+      d.TPF_CONTACT_VERIFIED = makeVerification(
+        { id: row.id, data: d },
+        chat,
+        verifiedGoogle,
+      );
+    } else delete d.TPF_CONTACT_VERIFIED;
+    let r = await sb
+      .from("records")
+      .update({ data: d })
+      .eq("id", row.id)
+      .eq("data", JSON.stringify(row.data || {}))
+      .select("id,data")
+      .single();
+    // La comparación puede tardar y actualizar metadatos del propio CRM. Reintentamos
+    // una vez sobre la ficha recién leída, conservando todo lo que no ha decidido el usuario.
+    if (!r.data) {
+      const latest = await sb
+        .from("records")
+        .select("id,data")
+        .eq("id", row.id)
+        .single();
+      if (latest.error || !latest.data)
+        throw latest.error || Error("La ficha del CRM ya no existe.");
+      const changed = Object.fromEntries(
+          Object.entries(d).filter(
+            ([key, value]) =>
+              JSON.stringify(value) !== JSON.stringify((row.data || {})[key]),
+          ),
+        ),
+        retryData = { ...(latest.data.data || {}), ...changed };
+      r = await sb
+        .from("records")
+        .update({ data: retryData })
+        .eq("id", row.id)
+        .eq("data", JSON.stringify(latest.data.data || {}))
+        .select("id,data")
+        .single();
+    }
+    if (r.error) throw r.error;
+    if (
+      !r.data ||
+      safe(r.data.id) !== safe(row.id) ||
+      verificationSignature(r.data) !==
+        verificationSignature({ id: row.id, data: d }) ||
+      (verifiedGoogle && !savedVerification(r.data, chat))
+    )
+      throw Error(
+        "No se confirmó el guardado del CRM. No se ha eliminado ningún contacto.",
+      );
+    row.data = r.data.data;
+    return row.data;
+  }
+  async function trashCorrection() {
+    if (busy) return;
+    const row = correctionRow || current(),
+      c = contactData(row),
+      available = correctionMatches || [],
+      selected = safe($("tpfInlineGoogle")?.value),
+      person =
+        available.length === 1 ? available[0] : available[Number(selected)];
+    const msg = $("tpfInlineMsg"),
+      trash = $("tpfInlineTrash"),
+      save = $("tpfInlineSave");
+    if (!row?.id) {
+      msg.textContent = "No se encontró la ficha del CRM.";
+      return;
+    }
+    if (!person?.resourceName) {
+      msg.textContent =
+        "Antes de borrar, espera a que se compruebe Google y elige el contacto exacto. Así no se borra otro por error.";
+      return;
+    }
+    const details = `${c.name}${c.nickname ? ` · ${c.nickname}` : ""}\nTeléfono: ${c.phone || "—"}\nDNI/NIF: ${c.dni || "—"}`;
+    if (
+      !window.confirm(
+        `¿Enviar a las papeleras esta persona?\n\n${details}\n\n• Se guardará una copia recuperable en la papelera del CRM.\n• El contacto elegido se enviará a la papelera de Google.\n• La conversación de WhatsApp se conserva, pero deja de estar vinculada.\n\n¿Confirmas?`,
+      )
+    )
+      return;
+    busy = true;
+    trash.disabled = true;
+    save.disabled = true;
+    msg.textContent = "Enviando a papeleras…";
+    try {
+      if (typeof archiveToTrash !== "function")
+        throw Error("No está disponible la papelera segura del CRM.");
+      const archived = await archiveToTrash("contact", row.id, c.name, {
+        record: {
+          id: row.id,
+          data: row.data,
+          source_sheet: row.source_sheet || "BASE DE DATOS",
+        },
+      });
+      if (!archived)
+        throw Error(
+          "No se pudo guardar la copia recuperable del CRM. No se ha borrado nada.",
+        );
+      await googleApi(person.resourceName + ":deleteContact", {
+        method: "DELETE",
+      });
+      const removed = await sb.from("records").delete().eq("id", row.id);
+      if (removed.error)
+        throw Error(
+          `Google ya se envió a la papelera, pero el CRM no se pudo borrar: ${removed.error.message}`,
+        );
+      forgetBinding(correctionChat);
+      clearGoogleCache();
+      $("tpfInlineBack")?.classList.add("hidden");
+      alert(
+        "Enviado a las papeleras del CRM y Google. La conversación de WhatsApp se ha conservado sin vínculo. Actualiza la comparación para verlo.",
+      );
+    } catch (error) {
+      msg.textContent = error?.message || "No se pudo enviar a la papelera.";
+    } finally {
+      busy = false;
+      trash.disabled = false;
+      save.disabled = false;
+    }
+  }
+  async function applyPreparedDecision(decision = {}) {
+    const row = decision.row,
+      c = contactData(row),
+      fields = decision.fields || {},
+      first = displayCase(fields.first ?? c.first),
+      last = displayCase(fields.last ?? c.last),
+      nickname = displayCase(fields.nickname ?? c.nickname),
+      finalPhone = safe(fields.phone ?? c.phone),
+      finalDni = safe(fields.dni ?? c.dni),
+      finalEmail = safe(fields.email ?? c.email),
+      targetPhone = phone(finalPhone),
+      chat = decision.chat || contactChat(row);
+    if (!row?.id || !first)
+      throw Error(
+        "La decisión preparada necesita al menos un nombre. El teléfono puede quedar vacío.",
+      );
+    if (
+      typeof googleContactsConnected !== "function" ||
+      !googleContactsConnected() ||
+      !googleAccountEmail()
+    )
+      throw Error(
+        "Conecta y confirma la cuenta correcta de Google antes de aplicar.",
+      );
+    const savedGoogle = await writeGoogle(
+        decision.person || null,
+        {
+          phone: targetPhone,
+          email: finalEmail,
+          dni: finalDni,
+          preserveExtra: false,
+        },
+        first,
+        last,
+        nickname,
+      ),
+      verified = await verifyGoogleSaved(
+        savedGoogle,
+        targetPhone,
+        first,
+        last,
+        nickname,
+      );
+    await writeCrm(row, first, last, nickname, chat, verified, decision.holder || null, {
+      phone: finalPhone,
+      dni: finalDni,
+      email: finalEmail,
+    });
+    rememberBinding(chat, row);
+    rememberUnifiedName(chat, row);
+    clearGoogleCache();
+    return { row, person: verified };
+  }
+  async function applyPreparedTrash(decision = {}) {
+    const row = decision.row,
+      person = decision.person,
+      c = contactData(row);
+    if (!row?.id || !person?.resourceName)
+      throw Error(
+        "Falta la ficha exacta de CRM o Google para enviar a papelera.",
+      );
+    if (typeof archiveToTrash !== "function")
+      throw Error("No está disponible la papelera segura del CRM.");
+    const archived = await archiveToTrash("contact", row.id, c.name, {
+      record: {
+        id: row.id,
+        data: row.data,
+        source_sheet: row.source_sheet || "BASE DE DATOS",
+      },
+    });
+    if (!archived)
+      throw Error("No se pudo guardar la copia recuperable del CRM.");
+    await googleApi(person.resourceName + ":deleteContact", {
+      method: "DELETE",
+    });
+    const removed = await sb.from("records").delete().eq("id", row.id);
+    if (removed.error) throw removed.error;
+    forgetBinding(decision.chat || contactChat(row));
+    clearGoogleCache();
+    return true;
+  }
+  async function saveCorrection() {
+    if (busy) return;
+    const row = correctionRow || current(),
+      available = correctionMatches,
+      c = contactData(row),
+      first = displayCase($("tpfInlineFirst").value),
+      last = displayCase($("tpfInlineLast").value),
+      nickname = displayCase($("tpfInlineNickname").value),
+      finalPhone = safe($("tpfInlinePhone").value),
+      finalDni = safe($("tpfInlineDni").value),
+      finalEmail = safe($("tpfInlineEmail").value),
+      full = [first, last].filter(Boolean).join(" "),
+      visible = unifiedVisible(first, last, nickname),
+      msg = $("tpfInlineMsg"),
+      btn = $("tpfInlineSave"),
+      selection = safe($("tpfInlineGoogle").value),
+      separate = !!$("tpfInlineSeparatePerson")?.checked,
+      deleteOthers =
+        !separate &&
+        available.length > 1 &&
+        !!$("tpfInlineDeleteDuplicates")?.checked,
+      mergeDuplicate = !!$("tpfInlineMergeCrmDuplicate")?.checked,
+      mergeId = safe($("tpfInlineCrmDuplicate")?.value),
+      mergeRow = correctionCrmDuplicates.find(
+        (item) => safe(item?.id) === mergeId,
+      ),
+      targetPhone = phone(finalPhone);
+    if (
+      mergeDuplicate &&
+      (!mergeRow || phone(contactData(mergeRow).phone) !== phone(c.phone))
+    ) {
+      msg.textContent =
+        "La ficha duplicada cambió. Cierra y vuelve a revisar antes de unificar.";
+      return;
+    }
+    if (!row || !first) {
+      msg.textContent = "Escribe al menos el nombre de la persona.";
+      return;
+    }
+    if (!targetPhone) {
+      msg.textContent = "Escribe un teléfono válido antes de guardar.";
+      return;
+    }
+    if (correctionChat?.id && targetPhone !== phone(correctionChat.id)) {
+      msg.textContent =
+        "Para cambiar el teléfono sin mezclar personas, abre primero la conversación de WhatsApp del número nuevo y vuelve a decidir.";
+      return;
+    }
+    if (correctionReturn === "whatsapp") {
+      const expected = waContext(correctionChat, row);
+      if (
+        !rowMatchesChat(row, correctionChat) ||
+        !waContextCurrent(expected, { requireRecord: true })
+      ) {
+        msg.textContent =
+          "No se guardará: la conversación cambió o esta ficha no corresponde a su teléfono. Cierra y vuelve a abrir el cliente.";
+        return;
+      }
+    }
+    if (separate && !correctionHolder) {
+      msg.textContent = "Elige el titular al que gestiona esta persona.";
+      return;
+    }
+    if (
+      typeof googleContactsConnected !== "function" ||
+      !googleContactsConnected()
+    ) {
+      msg.textContent =
+        "Conecta Google Contacts antes de guardar en los tres sitios.";
+      return;
+    }
+    if (!googleAccountEmail()) {
+      msg.textContent =
+        "Elige y confirma primero la cuenta correcta de Google.";
+      return;
+    }
+    if (correctionGoogleError) {
+      msg.textContent =
+        "No se guardará: vuelve a conectar Google y compruébalo otra vez.";
+      return;
+    }
+    const needsGoogleChoice =
+      available.length > 1 ||
+      (available.length === 1 &&
+        !googleAligned(available[0], c.first, c.last, c.nickname));
+    if (needsGoogleChoice && !selection) {
+      msg.textContent =
+        "El contacto de Google tiene otro nombre. Elige expresamente el contacto exacto; no se combinará automáticamente.";
+      return;
+    }
+    const person = available.length ? available[Number(selection)] : null;
+    if (
+      separate &&
+      !window.confirm(
+        `Se guardará una sola ficha para “${visible}” y quedará como persona que gestiona a ${correctionHolder.name}. No se creará ninguna segunda ficha. ¿Confirmas?`,
+      )
+    )
+      return;
+    if (
+      mergeDuplicate &&
+      !window.confirm(
+        `Se unirá la ficha “${crmDuplicateOption(mergeRow)}” con esta ficha. Se conservarán esta ficha, sus titulares y oportunidades; se trasladarán los datos vinculados de la otra y esta quedará archivada de forma recuperable. ¿Confirmas?`,
+      )
+    )
+      return;
+    if (
+      !person &&
+      !window.confirm(
+        `Google no tiene ningún contacto con el teléfono ${targetPhone}. Se creará uno nuevo como “${visible}”. ¿Confirmas?`,
+      )
+    )
+      return;
+    if (
+      person &&
+      !googleAligned(person, first, last, nickname) &&
+      !window.confirm(
+        `El contacto de Google elegido es “${googleChoice(person)}”. Se cambiará a “${visible}”. Confirma únicamente si es la misma persona.`,
+      )
+    )
+      return;
+    if (deleteOthers) {
+      const chosen = googleView(person).name || full,
+        count = available.length - 1;
+      if (
+        !window.confirm(
+          `Vas a conservar “${chosen}” y eliminar de Google los otros ${count} contactos con este teléfono. ¿Confirmas el borrado?`,
+        )
+      )
+        return;
+    }
+    const saveAccount = googleAccountEmail(),
+      saveChat = correctionChat,
+      saveReturn = correctionReturn,
+      saveContext =
+        saveReturn === "whatsapp" ? waContext(correctionChat, row) : null;
+    busy = true;
+    btn.disabled = true;
+    msg.textContent = "Guardando…";
+    try {
+      const savedGoogle = await writeGoogle(
+          person,
+          {
+            phone: targetPhone,
+            email: finalEmail,
+            dni: finalDni,
+            preserveExtra: false,
+            name: full,
+          },
+          first,
+          last,
+          nickname,
+        ),
+        verifiedGoogle = await verifyGoogleSaved(
+          savedGoogle,
+          targetPhone,
+          first,
+          last,
+          nickname,
+        );
+      if (!person) correctionMatches = [verifiedGoogle];
+      if (googleAccountEmail() !== saveAccount)
+        throw Error(
+          "La cuenta de Google cambió durante el guardado. Vuelve a revisar la vinculación.",
+        );
+      const savedRow = row;
+      await writeCrm(
+        row,
+        first,
+        last,
+        nickname,
+        correctionChat,
+        verifiedGoogle,
+        separate ? correctionHolder : null,
+        { phone: finalPhone, dni: finalDni, email: finalEmail },
+      );
+      if (mergeDuplicate) {
+        const merged = await sb.rpc("crm_merge_duplicate_contact", {
+          p_keep_id: savedRow.id,
+          p_duplicate_id: mergeRow.id,
+          p_expected_keep_data: savedRow.data,
+          p_expected_duplicate_data: mergeRow.data,
+        });
+        if (merged.error) throw merged.error;
+        if (safe(merged.data) !== safe(savedRow.id))
+          throw Error(
+            "No se confirmó la unificación de la ficha. No se eliminó ningún contacto.",
+          );
+        correctionCrmDuplicates = [];
+      }
+      rememberBinding(correctionChat, savedRow);
+      rememberUnifiedName(correctionChat, savedRow);
+      let removed = 0,
+        failed = 0;
+      if (deleteOthers) {
+        for (const duplicate of available) {
+          if (
+            safe(duplicate.resourceName) === safe(verifiedGoogle.resourceName)
+          )
+            continue;
+          try {
+            await googleApi(duplicate.resourceName + ":deleteContact", {
+              method: "DELETE",
+            });
+            removed++;
+          } catch (_) {
+            failed++;
+          }
+        }
+        await verifyGoogleSaved(
+          verifiedGoogle,
+          targetPhone,
+          first,
+          last,
+          nickname,
+        );
+      }
+      clearGoogleCache();
+      msg.textContent = failed
+        ? `La ficha se guardó, pero ${failed} duplicados no pudieron eliminarse.`
+        : separate
+          ? `Guardado “${visible}” y asociado como persona que gestiona a ${correctionHolder.name}.`
+          : mergeDuplicate
+            ? `Unificada correctamente la ficha duplicada de “${visible}”.`
+            : deleteOthers
+              ? `Guardado correctamente y eliminados ${removed} duplicados de Google.`
+              : `Guardado como “${visible}” en los tres sitios.`;
+      window.dispatchEvent(
+        new CustomEvent("tpf:contact-updated", { detail: { id: savedRow.id } }),
+      );
+      if (failed) return;
+      setTimeout(() => {
+        $("tpfInlineBack").classList.add("hidden");
+        if (saveReturn === "whatsapp") {
+          if (
+            !waContextCurrent(saveContext) ||
+            !rowMatchesChat(savedRow, saveChat)
+          )
+            return;
+          waLiveState.contact = savedRow;
+          waSignature = "";
+          refreshWhatsapp();
+        } else if (safe(current()?.id) === safe(row.id))
+          window.openContact?.(savedRow.id);
+      }, 550);
+    } catch (e) {
+      msg.textContent = e?.message || "No se pudo guardar.";
+    } finally {
+      busy = false;
+      btn.disabled = false;
+    }
+  }
+  function renderProfileIdentity(c) {
+    const input = $("contactName"),
+      identity = input?.closest(".cpIdentity");
+    if (!identity) return;
+    let box = $("cpProfileIdentityText");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "cpProfileIdentityText";
+      const name = document.createElement("strong"),
+        nickname = document.createElement("small");
+      name.id = "cpProfileDisplayName";
+      nickname.id = "cpProfileNickname";
+      box.append(name, nickname);
+      input.before(box);
+      identity.classList.add("cpSeparateIdentity");
+    }
+    const name = $("cpProfileDisplayName"),
+      nickname = $("cpProfileNickname");
+    if (name.textContent !== c.name) name.textContent = c.name;
+    if (nickname.textContent !== c.nickname) nickname.textContent = c.nickname;
+    nickname.hidden = !c.nickname;
+  }
+  async function refreshProfile() {
+    const row = current(),
+      root = document.querySelector("#contactModal .cpRight");
+    if (!row || !root || $("contactModal")?.classList.contains("hidden"))
+      return;
+    await normalizeStoredNickname(row);
+    if (safe(current()?.id) !== safe(row.id)) return;
+    activeId = String(row.id);
+    let card = $("tpfGoogleInlineCard");
+    if (!card) {
+      card = document.createElement("section");
+      card.id = "tpfGoogleInlineCard";
+      root.prepend(card);
+    }
+    const c = contactData(row),
+      visible = unifiedVisible(c.first, c.last, c.nickname),
+      wa = whatsappName(c),
+      connected =
+        typeof googleContactsConnected === "function" &&
+        googleContactsConnected();
+    if ($("contactName")) $("contactName").value = visible;
+    renderProfileIdentity(c);
+    if (connected && renderVerifiedCard(card, row, null)) return;
+    delete card.dataset.verification;
+    card.innerHTML = `<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Comprobando…</span><p>${wa ? `WhatsApp muestra: <b>${esc(wa)}</b>` : "Abre su conversación para detectar el nombre actual de WhatsApp."}</p>`;
+    if (!connected) {
+      matches = [];
+      const state = syncState(row, null, [], false, "", wa);
+      card.innerHTML = `<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">${esc(state.status)}</span><p>CRM: <b>${esc(visible)}</b></p>${googleAccountLine(false)}${googleLine([], false)}<p>WhatsApp dentro del CRM: <b>${esc(state.waDisplay)}</b></p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Corregir nombre y apodo</button><button id="tpfInlineConnect" class="secondary" type="button">Conectar Google</button></div>`;
+      $("tpfInlineEdit").onclick = reviewProfile;
+      $("tpfInlineConnect").onclick = () => connectGoogleContacts();
+      return;
+    }
+    try {
+      const account = fold(googleAccountEmail()),
+        identity = verificationSignature(row),
+        pending = googleCheckPending(row.id);
+      const checked = await cachedGoogle(c, pending);
+      if (
+        safe(row.id) !== safe(current()?.id) ||
+        account !== fold(googleAccountEmail()) ||
+        identity !== verificationSignature(current())
+      )
+        return;
+      matches = checked;
+      if (!checked.length && pending) {
+        card.innerHTML = `<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Verificando Google…</span><p>El contacto acaba de crearse. La comprobación continúa en segundo plano.</p>`;
+        return;
+      }
+      pendingGoogleChecks.delete(safe(row.id));
+      if (await persistMatchingVerification(row, null, checked)) {
+        if (safe(row.id) !== safe(current()?.id)) return;
+        renderVerifiedCard(card, row, null);
+        scheduleWhatsappRefresh(0, false);
+        return;
+      }
+      if (safe(row.id) !== safe(current()?.id)) return;
+      const state = syncState(row, null, matches, true, "", wa);
+      card.innerHTML = `<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus ${state.ok ? "ok" : "warn"}">${esc(state.status)}</span><p>CRM: <b>${esc(visible)}</b></p>${googleAccountLine(true)}${googleLine(matches, true)}<p>WhatsApp dentro del CRM: <b>${esc(state.waDisplay)}</b></p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="${state.ok ? "secondary" : "primary"}" type="button">${state.ok ? "Revisar o modificar" : "Corregir aquí"}</button><button id="tpfInlineSwitchGoogle" class="secondary" type="button">Cambiar cuenta de Google</button></div>`;
+      $("tpfInlineEdit").onclick = reviewProfile;
+      $("tpfInlineSwitchGoogle").onclick = chooseGoogleAccount;
+    } catch (e) {
+      if (safe(row.id) !== safe(current()?.id)) return;
+      card.innerHTML = `<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">No se pudo comprobar</span><p>CRM: <b>${esc(visible)}</b></p>${googleAccountLine(true)}${googleLine([], true, e?.message)}<p>WhatsApp dentro del CRM: <b>${esc(wa || "No Name")}</b></p><div class="tpfGoogleInlineActions"><button id="tpfInlineEdit" class="primary" type="button">Volver a comprobar</button><button id="tpfInlineSwitchGoogle" class="secondary" type="button">Cambiar cuenta de Google</button></div>`;
+      $("tpfInlineEdit").onclick = reviewProfile;
+      $("tpfInlineSwitchGoogle").onclick = chooseGoogleAccount;
+    }
+  }
+  async function boundContact(chat) {
+    const chatId = safe(chat?.id);
+    if (!chatId) return null;
+    const localId = safe(readBindings()[chatId]);
+    if (localId) {
+      const r = await sb
+        .from("records")
+        .select("id,data")
+        .eq("source_sheet", "BASE DE DATOS")
+        .eq("id", localId)
+        .maybeSingle();
+      if (r.error) throw r.error;
+      if (r.data && rowMatchesChat(r.data, chat)) return r.data;
+      forgetBinding(chat);
+    }
+    const r = await sb
+      .from("records")
+      .select("id,data")
+      .eq("source_sheet", "BASE DE DATOS")
+      .contains("data", { TPF_WHATSAPP_CHAT_ID: chatId })
+      .limit(3);
+    if (r.error) throw r.error;
+    const exact = (r.data || []).filter((row) => rowMatchesChat(row, chat));
+    if (exact.length !== 1) return null;
+    const row = exact[0];
+    rememberBinding(chat, row);
+    return row;
+  }
+  async function applyBoundWhatsappContact(expected) {
+    const chat = selectedWa();
+    if (!chat || String(chat.id || "").includes("@g.us")) return null;
+    const key = safe(chat.id);
+    let currentRow = matchedWa();
+    if (!waContextCurrent(expected)) return null;
+    if (currentRow && !rowMatchesChat(currentRow, chat)) {
+      waLiveState.contact = null;
+      currentRow = null;
+    }
+    if (currentRow?.data?.TPF_WHATSAPP_CHAT_ID === key) {
+      rememberBinding(chat, currentRow);
+      return currentRow;
+    }
+    const lookup = [key, safe(readBindings()[key]), safe(currentRow?.id)].join(
+      "|",
+    );
+    if (boundLookup === lookup && currentRow) return currentRow;
+    boundLookup = lookup;
+    try {
+      const row = await boundContact(chat);
+      if (!waContextCurrent(expected)) return null;
+      if (!row) return currentRow;
+      if (!rowMatchesChat(row, chat)) return null;
+      waLiveState.contact = row;
+      rememberUnifiedName(chat, row);
+      const c = contactData(row);
+      $("waContactState").innerHTML =
+        '<span class="pill green">Contacto encontrado</span>';
+      $("waOpenContactTop")?.classList.remove("hidden");
+      $("waSideOpenContact")?.classList.remove("hidden");
+      $("waSideCreateContact")?.classList.add("hidden");
+      $("waSideIdentity")?.classList.remove("hidden");
+      if ($("waSideDni")) $("waSideDni").textContent = c.dni || "—";
+      if ($("waSidePhoneDetail"))
+        $("waSidePhoneDetail").textContent = c.phone || phone(chat.id) || "—";
+      if ($("waSideNotes"))
+        $("waSideNotes").textContent =
+          field(row.data, "NOTAS", "NOTES", "OBSERVACIONES") || "—";
+      if (typeof loadWaContactSideData === "function")
+        await loadWaContactSideData(row, phone(chat.id));
+      return row;
+    } catch (error) {
+      console.warn("Vínculo de conversación", error);
+      return null;
+    }
+  }
+  function applyUnifiedWhatsappName() {
+    const chat = selectedWa(),
+      row = matchedWa();
+    if (!chat || !row || String(chat.id || "").includes("@g.us")) {
+      clearWhatsappNicknames();
+      return "";
+    }
+    if (!rowMatchesChat(row, chat) || !rowConfirmedForChat(row, chat)) {
+      clearWhatsappNicknames();
+      return "";
+    }
+    const c = contactData(row),
+      preferred = c.name || safe(chat.name) || "Contacto",
+      nickname = safe(c.nickname);
+    if (!preferred) return "";
+    rememberUnifiedName(chat, row);
+    for (const id of ["waChatName", "waSideName"]) {
+      const el = $(id);
+      if (el && el.textContent !== preferred) el.textContent = preferred;
+    }
+    for (const id of ["waChatNickname", "waSideNickname"]) {
+      const el = $(id);
+      if (!el) continue;
+      if (el.textContent !== nickname) el.textContent = nickname;
+      el.classList.toggle("hidden", !nickname);
+    }
+    const active = document.querySelector(".waChatRow.active .waChatRowTop b");
+    if (active && active.textContent !== preferred)
+      active.textContent = preferred;
+    const rowMain = active?.closest(".waChatRowMain");
+    if (rowMain) {
+      let alias = rowMain.querySelector(".tpfWaListNickname");
+      if (nickname && !alias) {
+        alias = document.createElement("small");
+        alias.className = "tpfWaListNickname";
+        active.insertAdjacentElement("afterend", alias);
+      }
+      if (alias) {
+        if (alias.textContent !== nickname) alias.textContent = nickname;
+        alias.classList.toggle("hidden", !nickname);
+      }
+    }
+    return preferred;
+  }
+  // Run after the current event, and do not observe the repair's own DOM writes.
+  // Rewriting identical text nodes from a MutationObserver can starve Chrome's UI.
+  function scheduleWhatsappNameRepair() {
+    if (waNameRepairQueued) return;
+    waNameRepairQueued = true;
+    setTimeout(() => {
+      waNameObserver?.disconnect();
+      try {
+        applyUnifiedWhatsappName();
+      } finally {
+        waNameRepairQueued = false;
+        observeWhatsappNameTargets();
+      }
+    }, 0);
+  }
+  function observeWhatsappNameTargets() {
+    if (!waNameObserver) return;
+    [
+      $("waChatName"),
+      $("waChatNickname"),
+      $("waSideName"),
+      $("waSideNickname"),
+      $("waLiveChats"),
+    ]
+      .filter(Boolean)
+      .forEach((target) =>
+        waNameObserver.observe(target, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        }),
+      );
+  }
+  function watchWhatsappNames() {
+    if (waNameObserver) return;
+    const targets = [
+      $("waChatName"),
+      $("waChatNickname"),
+      $("waSideName"),
+      $("waSideNickname"),
+      $("waLiveChats"),
+    ].filter(Boolean);
+    if (!targets.length) return;
+    waNameObserver = new MutationObserver(scheduleWhatsappNameRepair);
+    observeWhatsappNameTargets();
+  }
+  async function refreshWhatsapp({ checkGoogle = true } = {}) {
+    rememberWhatsapp();
+    const token = ++waRefreshToken,
+      chat = selectedWa(),
+      host = $("waContactCard"),
+      expected = waContext(chat);
+    if (!chat || !host || String(chat.id || "").includes("@g.us"))
+      return $("tpfWaAliasCard")?.remove();
+    await applyBoundWhatsappContact(expected);
+    if (token !== waRefreshToken || !waContextCurrent(expected)) return;
+    let row = matchedWa();
+    if (row && !rowMatchesChat(row, chat)) {
+      waLiveState.contact = null;
+      row = null;
+    }
+    if (row) {
+      await normalizeStoredNickname(row);
+      if (token !== waRefreshToken || !waContextCurrent(expected)) return;
+      row = matchedWa();
+    }
+    const c = contactData(row),
+      preferred = applyUnifiedWhatsappName();
+    const name = safe(chat.name);
+    let card = $("tpfWaAliasCard");
+    if (!card) {
+      card = document.createElement("section");
+      card.id = "tpfWaAliasCard";
+      const state = $("waContactState");
+      state?.insertAdjacentElement("afterend", card);
+    }
+    if (!card) return;
+    const ignored = ignoredNames()[phone(chat.id)] === name;
+    if (ignored) {
+      const signature = ["ignored", safe(chat.id), name].join("|");
+      if (signature === waSignature && card.innerHTML) return;
+      waSignature = signature;
+      card.innerHTML = `<h4>Nombre de WhatsApp ignorado</h4><p><b>${esc(name)}</b> no se aplicará.</p><div class="tpfGoogleInlineActions"><button id="tpfWaReviewAgain" class="secondary" type="button">Revisar de nuevo</button></div>`;
+      $("tpfWaReviewAgain").onclick = () => {
+        ignoreName(chat, name, false);
+        refreshWhatsapp();
+      };
+      return;
+    }
+    if (!row) {
+      const candidates = (waLiveState?.contactCandidates || []).filter((item) =>
+        rowMatchesChat(item, chat),
+      );
+      if (candidates.length > 1) {
+        const signature = [
+          "ambiguous",
+          safe(chat.id),
+          ...candidates.map((item) => safe(item.id)),
+        ].join("|");
+        if (signature === waSignature && card.innerHTML) return;
+        waSignature = signature;
+        card.innerHTML = `<h4>Elige la ficha correcta</h4><span class="tpfGoogleInlineStatus warn">${candidates.length} contactos del CRM comparten este teléfono</span><p>No se modificará ni creará nada hasta que elijas la persona exacta.</p><div class="tpfGoogleInlineActions">${candidates
+          .map((item, index) => {
+            const x = contactData(item);
+            return `<button type="button" class="secondary" data-tpf-wa-candidate="${index}">${esc(x.name)}${x.nickname ? ` · ${esc(x.nickname)}` : ""}</button>`;
+          })
+          .join("")}</div>`;
+        card.querySelectorAll("[data-tpf-wa-candidate]").forEach(
+          (button) =>
+            (button.onclick = () => {
+              const chosen = candidates[Number(button.dataset.tpfWaCandidate)];
+              if (!chosen || safe(selectedWa()?.id) !== safe(chat.id)) return;
+              waLiveState.contact = chosen;
+              waLiveState.contactCandidates = [chosen];
+              rememberBinding(chat, chosen);
+              waSignature = "";
+              refreshWhatsapp();
+            }),
+        );
+        return;
+      }
+      if (!validWaName(name)) return card.remove();
+      const signature = ["new", safe(chat.id), name].join("|");
+      if (signature === waSignature && card.innerHTML) return;
+      waSignature = signature;
+      card.innerHTML = `<h4>Nombre actual de WhatsApp</h4><p><b>${esc(name)}</b> · Todavía no existe una ficha vinculada.</p><div class="tpfGoogleInlineActions"><button id="tpfWaCreateReview" class="primary" type="button">Crear y unificar</button></div>`;
+      $("tpfWaCreateReview").onclick = () => window.createWaContact?.();
+      return;
+    }
+    const connected =
+      typeof googleContactsConnected === "function" &&
+      googleContactsConnected();
+    if (connected && renderVerifiedCard(card, row, chat)) return;
+    delete card.dataset.verification;
+    const checkedAccount = fold(googleAccountEmail());
+    let found = [],
+      googleError = "";
+    if (connected && checkGoogle) {
+      try {
+        found = await cachedGoogle(c);
+      } catch (error) {
+        googleError = error?.message || "No se pudo comprobar Google";
+      }
+    }
+    if (
+      checkedAccount !== fold(googleAccountEmail()) ||
+      token !== waRefreshToken ||
+      !waContextCurrent(
+        { ...expected, recordId: safe(row.id) },
+        { requireRecord: true },
+      )
+    )
+      return;
+    if (connected && checkGoogle && !googleError) {
+      try {
+        if (await persistMatchingVerification(row, chat, found)) {
+          if (
+            token !== waRefreshToken ||
+            !waContextCurrent(
+              { ...expected, recordId: safe(row.id) },
+              { requireRecord: true },
+            )
+          )
+            return;
+          renderVerifiedCard(card, row, chat);
+          return;
+        }
+      } catch (error) {
+        googleError = error?.message || "No se confirmó la verificación";
+      }
+      if (
+        token !== waRefreshToken ||
+        !waContextCurrent(
+          { ...expected, recordId: safe(row.id) },
+          { requireRecord: true },
+        )
+      )
+        return;
+    }
+    const state =
+        connected && !checkGoogle
+          ? {
+              ...syncState(row, chat, [], false, "", name),
+              status: "Google pendiente de comprobar",
+              ok: false,
+            }
+          : syncState(row, chat, found, connected, googleError, name),
+      googleStatus =
+        connected && !checkGoogle
+          ? "<p>Google: <b>Se comprobará al revisar o unificar</b></p>"
+          : googleLine(found, connected, googleError),
+      signature = [
+        "sync",
+        safe(chat.id),
+        safe(row.id),
+        name,
+        state.status,
+        ...found.map((p) => p.resourceName),
+      ].join("|");
+    if (signature === waSignature && card.innerHTML) return;
+    waSignature = signature;
+    card.innerHTML = `<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus ${state.ok ? "ok" : "warn"}">${esc(state.status)}</span><p>CRM: <b>${esc(state.visible)}</b></p>${googleAccountLine(connected)}${googleStatus}<p>WhatsApp dentro del CRM: <b>${esc(state.waDisplay)}</b></p><div class="tpfGoogleInlineActions"><button id="tpfWaUnifiedReview" class="${state.ok ? "secondary" : "primary"}" type="button">${state.ok ? "Revisar o modificar" : "Revisar y unificar"}</button>${connected ? '<button id="tpfWaSwitchGoogle" class="secondary" type="button">Cambiar cuenta de Google</button>' : ""}</div>`;
+    $("tpfWaUnifiedReview").onclick = () =>
+      openWhatsappCorrection(row, name, chat);
+    if (connected) $("tpfWaSwitchGoogle").onclick = chooseGoogleAccount;
+  }
+  function scheduleWhatsappRefresh(delay = 700, checkGoogle = false) {
+    clearTimeout(waRefreshTimer);
+    waRefreshTimer = setTimeout(async () => {
+      waRefreshTimer = 0;
+      if (waRefreshRunning) {
+        waRefreshPending = true;
+        return;
+      }
+      waRefreshRunning = true;
+      try {
+        await refreshWhatsapp({ checkGoogle });
+      } finally {
+        waRefreshRunning = false;
+        if (waRefreshPending) {
+          waRefreshPending = false;
+          scheduleWhatsappRefresh(500, false);
+        }
+      }
+    }, delay);
+  }
+  async function refreshEditedWhatsappContact(id) {
+    const chat = selectedWa(),
+      row = matchedWa();
+    if (!chat || !row || String(row.id) !== String(id || row.id)) return;
+    try {
+      const r = await sb
+        .from("records")
+        .select("id,data")
+        .eq("source_sheet", "BASE DE DATOS")
+        .eq("id", row.id)
+        .maybeSingle();
+      if (r.error) throw r.error;
+      if (!r.data) return;
+      waLiveState.contact = r.data;
+      waSignature = "";
+      clearGoogleCache();
+      await refreshWhatsapp();
+    } catch (error) {
+      console.warn("Actualizar contacto en WhatsApp", error);
+    }
+  }
+  async function settingEnabled(key, defaultValue = true) {
+    try {
+      const r = await sb
+        .from("app_settings")
+        .select("value")
+        .eq("key", key)
+        .maybeSingle();
+      if (r.error) return defaultValue;
+      return r.data?.value !== false;
+    } catch (_) {
+      return defaultValue;
+    }
+  }
+  async function syncEditedContact(detail = {}) {
+    if (
+      detail.googleSync ||
+      !detail.id ||
+      !detail.data ||
+      typeof googleContactsConnected !== "function" ||
+      !googleContactsConnected() ||
+      !(await settingEnabled("google_contacts_update", true))
+    )
+      return;
+    const row = { id: detail.id, data: detail.data },
+      c = contactData(row),
+      old = contactData({
+        id: detail.id,
+        data: detail.previous || detail.data,
+      });
+    try {
+      let found = await searchGoogle(old);
+      if (
+        found.length === 0 &&
+        (phone(old.phone) !== phone(c.phone) ||
+          fold(old.email) !== fold(c.email))
+      )
+        found = await searchGoogle(c);
+      if (found.length !== 1) return;
+      const saved = await writeGoogle(found[0], c, c.first, c.last, c.nickname);
+      await verifyGoogleSaved(saved, c.phone, c.first, c.last, c.nickname);
+      clearGoogleCache();
+      window.dispatchEvent(
+        new CustomEvent("tpf:google-contacts-changed", {
+          detail: { contactId: detail.id, automatic: true },
+        }),
+      );
+    } catch (error) {
+      console.warn("Sincronizar edición con Google Contacts", error);
+    }
+  }
+  function install() {
+    ensureStyles();
+    ensureModal();
+    watchWhatsappNames();
+    window.addEventListener("tpf:contact-open", () =>
+      setTimeout(refreshProfile, 0),
+    );
+    window.addEventListener("tpf:contact-created", (event) => {
+      if (event.detail?.googleSyncPending)
+        schedulePendingGoogleCheck(event.detail.id);
+    });
+    window.addEventListener("tpf:contact-updated", (event) => {
+      waSignature = "";
+      boundLookup = "";
+      setTimeout(() => {
+        refreshProfile();
+        refreshEditedWhatsappContact(event.detail?.id);
+      }, 80);
+      syncEditedContact(event.detail);
+    });
+    window.addEventListener("tpf:google-contacts-changed", () => {
+      clearGoogleCache();
+      waSignature = "";
+      setTimeout(() => {
+        refreshProfile();
+        scheduleWhatsappRefresh(100, true);
+      }, 100);
+    });
+    window.addEventListener("tpf:wa-chat-changing", () => {
+      waRefreshToken++;
+      waSignature = "";
+      boundLookup = "";
+      clearWhatsappNicknames();
+      $("tpfWaAliasCard")?.remove();
+      scheduleWhatsappRefresh(900, false);
+    });
+    setInterval(() => {
+      const view = $("view-whatsapplive");
+      if (!document.hidden && view && !view.classList.contains("hidden"))
+        scheduleWhatsappRefresh(0, false);
+    }, 60000);
+    window.tpfWhatsappDisplayIdentity = whatsappDisplayIdentity;
+    window.TPFContactGoogleInline = {
+      refreshProfile,
+      refreshWhatsapp,
+      syncEditedContact,
+      resolveBoundContact: boundContact,
+      openDecisionForRow,
+      applyPreparedDecision,
+      applyPreparedTrash,
+      batch: {
+        contactData,
+        googleView,
+        googlePhones,
+        strictText,
+        strictSame,
+        strictGoogleAligned,
+        strictWhatsappAligned,
+        savedVerification,
+        saveStrictVerification,
+      },
+    };
+  }
+  M.register("contact-google-inline", { install });
 })();
