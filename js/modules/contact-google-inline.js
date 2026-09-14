@@ -207,8 +207,14 @@ async function writeCrm(row,first,last,nickname,chat,verifiedGoogle,managedHolde
  if(managedHolder?.record_id&&safe(managedHolder.record_id)!==safe(row.id)){const old=Array.isArray(d.TPF_RELACIONES?.managed_contacts)?d.TPF_RELACIONES.managed_contacts:[],items=[...old.filter(item=>safe(item?.record_id)!==safe(managedHolder.record_id)),{...managedHolder}];d.TPF_RELACIONES={...(d.TPF_RELACIONES||{}),version:1,managed_contacts:items}}
  if(chatId){d.TPF_WHATSAPP_CHAT_ID=chatId;d.TPF_WHATSAPP_NAME_CONFIRMED={chat_id:chatId,confirmed_at:new Date().toISOString()}}
  if(verifiedGoogle){const binding=googleBinding(verifiedGoogle);if(binding)d.TPF_GOOGLE_CONTACT=binding;d.TPF_CONTACT_VERIFIED=makeVerification({id:row.id,data:d},chat,verifiedGoogle)}else delete d.TPF_CONTACT_VERIFIED;
- const r=await sb.from('records').update({data:d}).eq('id',row.id).eq('data',JSON.stringify(row.data||{})).select('id,data').single();
- if(r.error)throw r.error;if(!r.data||safe(r.data.id)!==safe(row.id)||verificationSignature(r.data)!==verificationSignature({id:row.id,data:d})||(verifiedGoogle&&!savedVerification(r.data,chat)))throw Error('No se confirmó el guardado del CRM. Vuelve a abrir la ficha antes de reintentar.');
+ let r=await sb.from('records').update({data:d}).eq('id',row.id).eq('data',JSON.stringify(row.data||{})).select('id,data').single();
+ if(!r.data){
+  const latest=await sb.from('records').select('id,data').eq('id',row.id).single();
+  if(latest.error||!latest.data)throw latest.error||Error('La ficha del CRM ya no existe.');
+  const changed=Object.fromEntries(Object.entries(d).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify((row.data||{})[key]))),retryData={...(latest.data.data||{}),...changed};
+  r=await sb.from('records').update({data:retryData}).eq('id',row.id).eq('data',JSON.stringify(latest.data.data||{})).select('id,data').single();
+ }
+ if(r.error)throw r.error;if(!r.data||safe(r.data.id)!==safe(row.id)||verificationSignature(r.data)!==verificationSignature({id:row.id,data:d})||(verifiedGoogle&&!savedVerification(r.data,chat)))throw Error('No se confirmó el guardado del CRM. No se ha eliminado ningún contacto.');
  row.data=r.data.data;return row.data;
 }
 async function trashCorrection(){
