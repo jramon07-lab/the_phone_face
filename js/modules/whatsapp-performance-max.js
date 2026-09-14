@@ -29,9 +29,10 @@ function waPerformanceUnanswered(chat){
 }
 function waPerformanceSearchEntry(chat){
   const id=String(chat?.id||''),meta=waPerformanceMeta(id),tags=Array.isArray(meta.tags)?meta.tags:[];
-  const signature=[chat?.name,chat?.chatName,chat?.contactName,id,...tags].map(String).join('\u0000');
+  const identity=typeof window.tpfWhatsappDisplayIdentity==='function'?window.tpfWhatsappDisplayIdentity(chat):null;
+  const signature=[chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,id,...tags].map(String).join('\u0000');
   const cached=waSearchIndex.get(id);if(cached?.signature===signature)return cached;
-  const entry={signature,text:[chat?.name,chat?.chatName,chat?.contactName,id,...tags].map(waPerformanceText).join(' '),phone:null};
+  const entry={signature,text:[chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,id,...tags].map(waPerformanceText).join(' '),phone:null};
   waSearchIndex.set(id,entry);return entry;
 }
 function waPerformanceMatches(chat,query){
@@ -196,7 +197,9 @@ function waPerformancePreviewTime(chat){
 function waPerformanceRenderRow(chat){
   const active=waLiveState.selected?.id===chat.id?' active':'';
   const meta=waPerformanceMeta(chat.id);
-  const name=chat.name||(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):'')||'WhatsApp';
+  const identity=typeof window.tpfWhatsappDisplayIdentity==='function'?window.tpfWhatsappDisplayIdentity(chat):null;
+  const name=identity?.name||chat.name||(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):'')||'WhatsApp';
+  const nickname=identity?.nickname||'';
   const initials=typeof waInitials==='function'?waInitials(name):String(name).slice(0,2).toUpperCase();
   const avatar=waLiveState.avatars?.[String(chat.id||'')]||'';
   const avStyle=avatar?` style="background-image:url('${esc(avatar)}')"`:'';
@@ -205,7 +208,7 @@ function waPerformanceRenderRow(chat){
   if(meta.pinned)extras.push('📌');
   if(meta.favorite)extras.push('★');
   if(waPerformanceUnanswered(chat))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
-  return `<div class="waChatRow${active}${unread?' waHasUnread':''}" data-wa-chat-id="${esc(chat.id)}" onclick="selectWhatsAppChat('${String(chat.id).replaceAll("'","\\'")}')"><div class="waAvatar${avatar?' hasPhoto':''}" data-wa-avatar-id="${esc(chat.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?'':esc(initials)}</div><div class="waChatRowMain"><div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(typeof waTime==='function'?waTime(waPerformancePreviewTime(chat)):'')}</span></div><div class="waChatPreviewLine"><div class="waChatPreview">${esc(waPerformancePreview(chat))}</div>${unread?`<span class="waUnreadBadge">${unread>99?'99+':unread}</span>`:''}</div>${extras.length?`<div class="waChatMeta">${extras.join(' ')}</div>`:''}</div></div>`;
+  return `<div class="waChatRow${active}${unread?' waHasUnread':''}" data-wa-chat-id="${esc(chat.id)}" onclick="selectWhatsAppChat('${String(chat.id).replaceAll("'","\\'")}')"><div class="waAvatar${avatar?' hasPhoto':''}" data-wa-avatar-id="${esc(chat.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?'':esc(initials)}</div><div class="waChatRowMain"><div class="waChatRowTop"><div><b>${esc(name)}</b>${nickname?`<small class="tpfWaListNickname">${esc(nickname)}</small>`:''}</div><span>${esc(typeof waTime==='function'?waTime(waPerformancePreviewTime(chat)):'')}</span></div><div class="waChatPreviewLine"><div class="waChatPreview">${esc(waPerformancePreview(chat))}</div>${unread?`<span class="waUnreadBadge">${unread>99?'99+':unread}</span>`:''}</div>${extras.length?`<div class="waChatMeta">${extras.join(' ')}</div>`:''}</div></div>`;
 }
 function waPerformanceLoadMore(){
   if(waPerformancePage.loadingMore||waPerformancePage.limit>=waPerformancePage.total)return;
@@ -312,6 +315,10 @@ function install(){
       if(typeof _waRenderChatsBase==='function')search.removeEventListener('input',_waRenderChatsBase);
       search.addEventListener('input',()=>{clearTimeout(waSearchTimer);waSearchTimer=setTimeout(()=>window.renderWhatsAppChats?.(),220)});
     }
+    window.addEventListener('tpf:wa-identity-updated',()=>{
+      waSearchIndex.clear();
+      window.renderWhatsAppChats?.();
+    });
 
     if(!window.fetch.__tpfWaAvatarSerialized){
       const originalFetch=window.fetch.bind(window);
