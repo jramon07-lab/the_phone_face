@@ -21,6 +21,13 @@
     applying: false,
   };
   const safe = (value) => String(value ?? "").trim();
+  // Solo reúne señales para revisar; nunca decide automáticamente que un
+  // apellido sea erróneo ni cambia ninguna ficha.
+  const POSSIBLE_NICKNAME_WORDS = [
+    "motril", "albolote", "granada", "armilla", "maracena", "ogijares",
+    "churriana", "phone house", "whatsapp", "vodafone", "movistar",
+    "orange", "yoigo", "masmovil", "iphone",
+  ];
   const esc = (value) =>
     safe(value).replace(
       /[&<>"']/g,
@@ -40,6 +47,19 @@
       digits = digits.slice(2);
     return digits.length >= 7 ? digits.slice(-9) : "";
   };
+  function possibleNicknameInSurname(row) {
+    const surname = safe(row?.c?.last);
+    if (!surname) return false;
+    const normalized = surname
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("es-ES");
+    return (
+      /[()\[\]{}]/.test(surname) ||
+      /[\d😀-🙏🌀-🫶]/u.test(surname) ||
+      POSSIBLE_NICKNAME_WORDS.some((word) => normalized.includes(word))
+    );
+  }
   const chatId = (value) => safe(value).toLowerCase(),
     batchApi = () => window.TPFContactGoogleInline?.batch || null;
   const connected = () =>
@@ -294,11 +314,13 @@
       greenWhatsappSame: 0,
       greenWhatsappDifferent: 0,
       greenWhatsappOther: 0,
+      possibleNicknameInSurname: 0,
       byStatus: {},
     };
     for (const row of rows) {
       out.byStatus[row.status] = (out.byStatus[row.status] || 0) + 1;
       if (row.verified) out.verified++;
+      if (possibleNicknameInSurname(row)) out.possibleNicknameInSurname++;
       if (row.status === "coincide") {
         out.coincide++;
         if (!row.verified) {
@@ -439,6 +461,8 @@
         !row.verified &&
         row.whatsappStatus === "different"
       );
+    if (filter === "possible_nickname_in_surname")
+      return possibleNicknameInSurname(row);
     return filter === "all" || row.status === filter;
   }
   function selectedRows(rows = state.results) {
@@ -1002,6 +1026,22 @@
         .join("") ||
       '<tr><td colspan="8" class="tpfBatchEmpty">No hay resultados con este filtro.</td></tr>'
     }</tbody></table></div><div class="tpfBatchPager"><button id="tpfBatchPrev" class="secondary" type="button" ${state.page <= 1 ? "disabled" : ""}>Anterior</button><span>Página ${state.page} de ${pages}</span><button id="tpfBatchNext" class="secondary" type="button" ${state.page >= pages ? "disabled" : ""}>Siguiente</button></div>`;
+    const surnameGroup = document.createElement("button");
+    surnameGroup.type = "button";
+    surnameGroup.className =
+      "tpfBatchGreenGroup different " +
+      (state.filter === "possible_nickname_in_surname" ? "is-active" : "");
+    surnameGroup.dataset.greenFilter = "possible_nickname_in_surname";
+    surnameGroup.innerHTML =
+      `<span><b>Apellidos con posible apodo</b><small>Solo para revisar; no modifica nada</small></span><strong>${data.possibleNicknameInSurname}</strong>`;
+    body.querySelector(".tpfBatchGreenGroups")?.appendChild(surnameGroup);
+    const surnameOption = document.createElement("option");
+    surnameOption.value = "possible_nickname_in_surname";
+    surnameOption.textContent =
+      "Apellidos con posible apodo (" + data.possibleNicknameInSurname + ")";
+    $("tpfBatchFilter")?.appendChild(surnameOption);
+    if (state.filter === "possible_nickname_in_surname")
+      $("tpfBatchFilter").value = state.filter;
     $("tpfBatchSearch").oninput = (event) => {
       state.query = event.target.value;
       state.page = 1;
