@@ -35,26 +35,15 @@
       #contactCustomFields{width:100%!important}.contactCustomFieldsBox{width:100%!important;box-sizing:border-box!important}
       #contactCustomFields label:has(.tpf-bank-field),#contactCustomFields .tpf-bank-field{width:100%!important;max-width:none!important;box-sizing:border-box!important}
       #contactCustomFields .tpf-bank-field{min-width:24ch!important;font-variant-numeric:tabular-nums;padding-left:12px!important;padding-right:12px!important}
-      #contactLabelsModal .waTemplateCard{width:min(720px,96vw)}
-      #tpfContactLabelsTools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 10px}
+      #tpfContactLabelsTools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 12px}
       #tpfContactLabelsTools input,#tpfContactLabelsTools select{width:100%;margin:0;box-sizing:border-box}
       #contactLabelsSearch{grid-column:1/-1}
-      #tpfContactLabelsSelected{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 0 2px;border-bottom:1px solid #edf0f4}
-      #tpfContactLabelsSelected:empty{display:none}
-      .tpfContactLabelSelectedTitle{font-size:11px;font-weight:800;color:#667085;margin-right:2px}
-      .tpfContactLabelSelected{display:inline-flex;align-items:center;gap:5px;max-width:100%;border:0;border-radius:999px;background:#eaf2ff;color:#175cd3;padding:5px 7px 5px 9px;font-size:11px;font-weight:750;cursor:pointer}
-      .tpfContactLabelSelected:hover{background:#dceaff}.tpfContactLabelSelected b{font-size:15px;line-height:11px;font-weight:500}
-      #contactLabelsChoices{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;max-height:40vh;margin:10px 0 14px;padding:2px;overflow:auto}
-      #contactLabelsChoices .contactLabelChoice{min-height:38px;gap:7px;padding:7px 9px;border-color:#e3e8ef;border-radius:9px;font-size:12px;line-height:1.2;cursor:pointer}
-      #contactLabelsChoices .contactLabelChoice:hover{background:#f6f9fd;border-color:#bdd2f4}
-      #contactLabelsChoices .contactLabelChoice:has(input:checked){background:#f0f6ff;border-color:#8db5ee;color:#175cd3;font-weight:700}
-      #contactLabelsChoices .contactLabelChoice input{accent-color:#1767d8}
       #contactLabelsChoices .tpfLabelSearchHidden{display:none!important}
       #contactLabelsFilterEmpty{grid-column:1/-1;padding:16px;text-align:center;color:#667085}
       #contactModal .tpfContactProtectedHint{font-size:11px;color:#667085;margin:-4px 0 10px}
       #tpfContactWhatsappMain{width:100%;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px;position:relative;z-index:2}
       #tpfQuickTemplateBtn{margin:8px 0 0;width:100%}
-      @media(max-width:700px){#tpfContactLabelsTools{grid-template-columns:1fr}#contactLabelsChoices{grid-template-columns:1fr}}
+      @media(max-width:700px){#tpfContactLabelsTools{grid-template-columns:1fr}}
     `;document.head.appendChild(s);
   }
 
@@ -287,25 +276,10 @@
     [input,category,assignment].forEach(el=>{if(el.parentElement!==tools)tools.appendChild(el);});
     if(choices.dataset.tpfLabelFiltersBound!=='1'){
       choices.dataset.tpfLabelFiltersBound='1';
-      choices.addEventListener('change',e=>{if(e.target.matches('input[type="checkbox"]')){syncContactLabelSelection();filterContactLabels();}});
+      choices.addEventListener('change',e=>{if(e.target.matches('input[type="checkbox"]'))filterContactLabels();});
     }
-    syncContactLabelSelection();refreshContactLabelCategories();filterContactLabels();
-    loadContactLabelCategories().then(()=>{syncContactLabelSelection();refreshContactLabelCategories();filterContactLabels();});
-  }
-  function syncContactLabelSelection(){
-    const choices=byId('contactLabelsChoices');if(!choices)return;
-    let selected=byId('tpfContactLabelsSelected');
-    if(!selected){selected=document.createElement('div');selected.id='tpfContactLabelsSelected';choices.insertAdjacentElement('beforebegin',selected);}
-    const picked=[...choices.querySelectorAll('input[type="checkbox"]:checked')];
-    selected.replaceChildren();
-    if(!picked.length)return;
-    const title=document.createElement('span');title.className='tpfContactLabelSelectedTitle';title.textContent='Seleccionadas ('+picked.length+')';selected.appendChild(title);
-    picked.forEach(input=>{
-      const name=String(input.closest('.contactLabelChoice')?.querySelector('span')?.textContent||'Etiqueta');
-      const pill=document.createElement('button');pill.type='button';pill.className='tpfContactLabelSelected';pill.title='Quitar '+name;pill.setAttribute('aria-label','Quitar '+name);pill.append(document.createTextNode(name+' '));
-      const cross=document.createElement('b');cross.textContent='×';pill.appendChild(cross);
-      pill.onclick=()=>{input.checked=false;input.dispatchEvent(new Event('change',{bubbles:true}));};selected.appendChild(pill);
-    });
+    refreshContactLabelCategories();filterContactLabels();
+    loadContactLabelCategories().then(()=>{refreshContactLabelCategories();filterContactLabels();});
   }
   function filterContactLabels(){
     const choices=byId('contactLabelsChoices'),input=byId('contactLabelsSearch');if(!choices||!input)return;
