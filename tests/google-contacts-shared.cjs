@@ -8,6 +8,8 @@ for(const path of ['https://evil.test','../token','people/me','people/c123:unkno
 const fs=require('fs'),path=require('path'),core=fs.readFileSync(path.join(__dirname,'../js/core/20-main.js'),'utf8'),inline=fs.readFileSync(path.join(__dirname,'../js/modules/contact-google-inline.js'),'utf8'),sales=fs.readFileSync(path.join(__dirname,'../js/modules/contacts-sales-core.js'),'utf8'),apiSource=fs.readFileSync(path.join(__dirname,'../api/google-contacts.js'),'utf8');
 for(const source of [core,inline,sales]){assert(!source.includes('tpf_google_contacts_token'));assert(!source.includes('googleContactsToken'))}
 assert(core.includes('/api/google-contacts?action='));assert(core.includes('Conectado en los dos PCs'));
+assert(core.includes('googleContactsStatusRetries<2'),'a second PC must retry a transient shared-connection check');
+assert(core.includes('No se pudo comprobar: '),'a failed shared-connection check must show its cause instead of looking disconnected');
 assert.equal((apiSource.match(/Path=\/api\/;/g)||[]).length,2,'both OAuth nonce cookies must reach /api/google-contacts-callback');
 assert(!apiSource.includes('Path=/api/google-contacts;'), 'the nonce cookie path must not exclude the callback route');
 console.log('PASS: Google Contacts uses a shared encrypted server connection and a restricted People API proxy.');

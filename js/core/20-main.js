@@ -784,16 +784,16 @@ function selectedAgendaReminderMinutes(){
 }
 
 
-let googleContactsState={connected:false,email:"",canManage:false,loading:true};
+let googleContactsState={connected:false,email:"",canManage:false,loading:true,error:""},googleContactsStatusRetries=0;
 function googleContactsConnected(){return !!googleContactsState.connected}
 function googleContactsEmail(){return String(googleContactsState.email||"").trim()}
 async function googleContactsHeaders(){const {data}=await sb.auth.getSession(),token=data?.session?.access_token;if(!token)throw new Error("Inicia sesión en el CRM.");return {"Authorization":"Bearer "+token,"Content-Type":"application/json"}}
 async function googleContactsServer(action,options={}){const res=await fetch("/api/google-contacts?action="+encodeURIComponent(action),{...options,headers:{...(await googleContactsHeaders()),...(options.headers||{})}}),body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"No se pudo conectar con Google Contacts.");return body}
-async function loadGoogleContactsStatus(){try{const status=await googleContactsServer("status");googleContactsState={connected:!!status.connected,email:status.email||"",canManage:!!status.canManage,loading:false}}catch(_){googleContactsState={connected:false,email:"",canManage:false,loading:false}}updateGoogleContactsUI();window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));return googleContactsState}
+async function loadGoogleContactsStatus(){try{const status=await googleContactsServer("status");googleContactsState={connected:!!status.connected,email:status.email||"",canManage:!!status.canManage,loading:false,error:""};googleContactsStatusRetries=0}catch(error){googleContactsState={connected:false,email:"",canManage:false,loading:false,error:String(error?.message||"No se pudo comprobar la conexión.")};if(googleContactsStatusRetries<2){googleContactsStatusRetries++;setTimeout(loadGoogleContactsStatus,1500)}}updateGoogleContactsUI();window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));return googleContactsState}
 
 function updateGoogleContactsUI(){
   const connected=googleContactsConnected();
-  if($("googleContactsStatus"))$("googleContactsStatus").textContent=googleContactsState.loading?"Comprobando…":connected?("Conectado en los dos PCs"+(googleContactsEmail()?" · "+googleContactsEmail():"")):"No conectado";
+  if($("googleContactsStatus"))$("googleContactsStatus").textContent=googleContactsState.loading?"Comprobando…":connected?("Conectado en los dos PCs"+(googleContactsEmail()?" · "+googleContactsEmail():"")):(googleContactsState.error?"No se pudo comprobar: "+googleContactsState.error:"No conectado");
   if($("connectGoogleContacts"))$("connectGoogleContacts").classList.toggle("hidden",connected);
   if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").classList.toggle("hidden",!connected||!googleContactsState.canManage);
 }
