@@ -417,6 +417,13 @@
       ['pointerdown','focusin','beforeinput','paste','drop'].forEach(type=>document.addEventListener(type,protectContactFieldEvent,true));
 
       document.addEventListener('click',e=>{
+        const manageLabels=e.target?.closest?.('#contactManageLabels');
+        if(manageLabels){
+          // Las etiquetas se editan dentro de "Editar contacto", con chips
+          // quitables, buscador y categorías; no abre el selector antiguo.
+          e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+          openCreateModalEdit();return;
+        }
         if(e.target?.closest?.('#contactCustomFieldsManage'))setTimeout(()=>normalizeCustomFields(),30);
         if(e.target?.closest?.('#contactManageLabels,#waAddTagSide,#waTagChat'))setTimeout(()=>{ensureLabelSearch();loadContactLabelCategories(true).then(()=>{refreshContactLabelCategories();filterContactLabels();});},20);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
