@@ -85,7 +85,7 @@ test('módulo Ficha de contacto: editor separado protegido, actividad y WhatsApp
   await page.locator('[data-cp-ref-tab="resumen"]').click();
   await page.locator('#contactManageLabels').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeVisible();
-  await expect(page.locator('#tpfCreateLabels')).toBeVisible();
+  await expect(page.locator('#tpfContactsCreateSave')).toHaveText('Guardar cambios');
   await page.locator('#tpfContactsCreateCancel').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
   await expect(page.locator('#contactWhatsapp')).toBeVisible();
