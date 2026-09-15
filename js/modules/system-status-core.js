@@ -3,7 +3,7 @@
   const KEY='tpf_system_errors_v1';
   // El historial es local al navegador. Esta limpieza única descarta avisos
   // heredados de versiones anteriores, sin afectar a datos ni a fallos nuevos.
-  const LEGACY_CLEANUP_KEY='tpf_system_errors_cleanup_20260915';
+  const LEGACY_CLEANUP_KEY='tpf_system_errors_cleanup_20260915_documents_1';
   const maxErrors=60;
   const transientNetworkFailures=new Map();
   function isExpectedAuthRejection(type,message,detail){const t=String(type||'').toLowerCase(),text=`${String(message||'')} ${String(detail||'')}`.toLowerCase();return t.includes('400')&&text.includes('/auth/v1/token')&&text.includes('grant_type=password');}
