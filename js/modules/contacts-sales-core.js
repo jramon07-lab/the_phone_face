@@ -646,6 +646,7 @@ function fmtDateOnly(v){
 }
 function renderSales(){
   const stages=salesCache.stages||[];
+  const selectedStage=String($("salesStageFilter")?.value||"");
   const opps=salesFilteredOpps();
   const all=salesCache.opportunities||[];
   const totalOpen=all.filter(o=>o.status!=="won"&&o.status!=="lost").length;
@@ -666,19 +667,20 @@ function renderSales(){
     if($("salesSummaryStages"))$("salesSummaryStages").innerHTML=stages.map(s=>{
       const rows=all.filter(o=>String(o.stage_id)===String(s.id));
       const amount=rows.reduce((sum,o)=>sum+Number(o.amount||0),0);
-      return `<span class="salesSummaryStageChip"><b>${esc(s.name)}</b> ${rows.length} · ${esc(fmtMoney(amount))}</span>`;
+      return `<button type="button" class="salesSummaryStageChip" data-stage-id="${esc(s.id)}" onclick="filterSalesByStage(${JSON.stringify(String(s.id))})"><b>${esc(s.name)}</b> ${rows.length} · ${esc(fmtMoney(amount))}</button>`;
     }).join("")||'<span class="small">Sin columnas.</span>';
   }catch(e){}
 
   $("salesStageFilter").innerHTML='<option value="">Todas las columnas</option>'+
     stages.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  if(selectedStage && stages.some(s=>String(s.id)===selectedStage))$("salesStageFilter").value=selectedStage;
 
   $("customFieldsStrip").innerHTML=(salesCache.fields||[]).length
     ? (salesCache.fields||[]).map(f=>`<span class="fieldChip">${esc(f.label)} · ${esc(f.field_type)}</span>`).join("")
     : '<span class="small">Aún no hay campos personalizados.</span>';
 
   $("salesBoard").innerHTML=stages.map(s=>{
-    const stageOpps=opps.filter(o=>o.stage_id===s.id);
+    const stageOpps=opps.filter(o=>String(o.stage_id)===String(s.id));
     const amount=stageOpps.reduce((sum,o)=>sum+Number(o.amount||0),0);
     return `<div class="stage" data-stage="${s.id}">
       <div class="stageHead">
@@ -721,6 +723,19 @@ function renderSales(){
   if(salesCurrentView==="list")renderSalesList();
 
 }
+
+window.filterSalesByStage=(stageId)=>{
+  const id=String(stageId||"");
+  const filter=$("salesStageFilter"),visible=$("salesVisibleStateFilter");
+  if(filter)filter.value=id;
+  if(visible)visible.value=id;
+  renderSales();
+  setTimeout(()=>{
+    const now=$("salesVisibleStateFilter");
+    if(now)now.value=id;
+    applyVisibleSalesStateFilter();
+  },0);
+};
 
 async function loadSales(){
  const {data,error}=await sb.rpc("sales_board");
