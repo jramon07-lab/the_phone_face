@@ -667,7 +667,7 @@ function renderSales(){
     if($("salesSummaryStages"))$("salesSummaryStages").innerHTML=stages.map(s=>{
       const rows=all.filter(o=>String(o.stage_id)===String(s.id));
       const amount=rows.reduce((sum,o)=>sum+Number(o.amount||0),0);
-      return `<button type="button" class="salesSummaryStageChip" data-stage-id="${esc(s.id)}" onclick="filterSalesByStage(${JSON.stringify(String(s.id))})"><b>${esc(s.name)}</b> ${rows.length} · ${esc(fmtMoney(amount))}</button>`;
+      return `<button type="button" class="salesSummaryStageChip" data-stage-id="${esc(s.id)}" onclick='filterSalesByStage(${JSON.stringify(String(s.id))})'><b>${esc(s.name)}</b> ${rows.length} · ${esc(fmtMoney(amount))}</button>`;
     }).join("")||'<span class="small">Sin columnas.</span>';
   }catch(e){}
 
