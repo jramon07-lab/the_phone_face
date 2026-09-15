@@ -50,17 +50,11 @@ function finishSalesTask(){if(!salesTaskOrigin)return;$('cpTaskPage')?.classList
 function watchSalesTaskSave(){let tries=0;const timer=setInterval(()=>{tries++;if(!salesTaskOrigin){clearInterval(timer);return}if($('cpTaskPage')?.classList.contains('hidden')){clearInterval(timer);finishSalesTask()}else if(tries>150)clearInterval(timer)},100)}
 async function openTaskForOpportunity(id){const o=getOpp(id);if(!o)return;try{const L=window.TPFRecordLinks,people=await L.load(sb),who=L.owner(o,L.index(people),'opportunity'),record=people.find(r=>String(r.id)===who);if(!record)throw Error('Vincula primero esta oportunidad con un contacto.');const d=record.data||{};window.openAgendaComposer({contactId:who,customerName:d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' '),phone:d['TELÉFONO']||d.TELEFONO||'',title:'Seguimiento · '+(o.title||'Oportunidad'),type:'Tarea'});}catch(e){alert(e?.message||'No se pudo abrir la tarea.')}}
 window.openSalesTaskForOpportunity=openTaskForOpportunity;
-async function openOfferForOpportunity(id){
+function openOfferForOpportunity(id){
  const o=getOpp(id),contactId=String(o?.record_id||'').trim();
  if(!contactId)return alert('Vincula primero esta oportunidad a un contacto.');
- try{
-   if(typeof window.openContact==='function')await window.openContact(contactId);
-   else await (0,eval)(`openContact(${JSON.stringify(contactId)})`);
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   const button=document.getElementById('cpNewOffer');
-   if(!button)throw new Error('El configurador de ofertas no está disponible.');
-   button.click();
- }catch(error){alert(error?.message||'No se pudo abrir el configurador de la oferta.')}
+ if(typeof window.openOfferComposerForOpportunity!=='function')return alert('El configurador de ofertas no está disponible.');
+ window.openOfferComposerForOpportunity({contactId,name:String(o?.client_name||''),phone:String(o?.phone||''),opportunityId:String(id)});
 }
 window.openSalesOfferForOpportunity=openOfferForOpportunity;
 function menu(ev,id){ev.preventDefault();ev.stopPropagation();closeMenus();const m=document.createElement('div');m.className='tpfOppMenu';const add=(l,f,c='')=>{const b=document.createElement('button');b.textContent=l;b.className=c;b.onclick=x=>{x.stopPropagation();closeMenus();f()};m.appendChild(b)};add('Ver oportunidad',()=>window.openOpportunityCard?.(id));add('Editar',()=>window.openOpportunityCard?.(id));add('Mover a…',()=>document.querySelector(`.opp[data-opp-id="${CSS.escape(String(id))}"] .oppFooter select`)?.focus());add('Duplicar',()=>typeof window.duplicateOpportunity==='function'?window.duplicateOpportunity(id):alert('Duplicar estará disponible cuando la oportunidad tenga identificador cargado.'));add('Crear tarea / recordatorio',()=>openTaskForOpportunity(id));add('Enviar oferta',()=>openOfferForOpportunity(id));add('Eliminar',()=>window.deleteOpp?.(id),'tpfDanger');document.body.appendChild(m);pos(m,ev.currentTarget)}
