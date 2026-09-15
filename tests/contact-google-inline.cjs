@@ -69,6 +69,10 @@ assert.match(inline,/Gestiona el titular:/,'the preview must show the selected m
 assert.match(inline,/const person=available\.length/,'the existing Google contact must remain selected explicitly');
 assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when the user actually confirms the final WhatsApp display name');
 assert.match(inline,/syncEditedContact\(event\.detail\)/,'CRM edits must automatically update an existing Google contact when enabled');
+assert.match(inline,/autoConfirmCreatedWhatsapp\(event\.detail\)/,'a newly created CRM contact must validate its unique WhatsApp chat automatically');
+assert.match(inline,/fetch\("\/api\/green\?action=chats"\)/,'WhatsApp validation must look up chats even when the WhatsApp view is closed');
+assert.match(inline,/if \(hits\.length !== 1\) return/,'automatic WhatsApp validation must refuse ambiguous numbers');
+assert.match(inline,/confirmThreeWayVerified\(row, people\[0\], hits\[0\]\)/,'automatic validation must still require an exact CRM/Google/WhatsApp match');
 assert.match(inline,/refreshEditedWhatsappContact\(event\.detail\?\.id\)/,'CRM edits must refresh the open WhatsApp contact immediately');
 assert.match(inline,/CRM, Google y WhatsApp/,'the same three-source summary must appear in the customer profile and WhatsApp panel');
 assert.match(inline,/WhatsApp dentro del CRM/,'the summary must distinguish the CRM display from the public WhatsApp name');

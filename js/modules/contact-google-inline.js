@@ -2596,6 +2596,55 @@
       console.warn("Sincronizar edición con Google Contacts", error);
     }
   }
+  // Al crear una ficha no hace falta abrir manualmente su conversación: se
+  // confirma solo si GREEN devuelve un único chat personal con el mismo
+  // teléfono y Google ya coincide de forma exacta. Nunca crea chats ni toca
+  // el nombre público de WhatsApp.
+  async function autoConfirmCreatedWhatsapp(detail = {}) {
+    if (!detail?.id || !detail?.data || !googleContactsConnected?.()) return;
+    const row = { id: detail.id, data: detail.data },
+      c = contactData(row),
+      wanted = phone(c.phone);
+    if (!wanted) return;
+    let chats = Array.isArray(
+      typeof waLiveState !== "undefined" ? waLiveState?.chats : [],
+    )
+      ? waLiveState.chats
+      : [];
+    let hits = chats.filter(
+      (chat) =>
+        safe(chat?.id).endsWith("@c.us") && phone(chat.id) === wanted,
+    );
+    if (!hits.length) {
+      try {
+        const response = await fetch("/api/green?action=chats"),
+          payload = await response.json();
+        if (!response.ok || payload?.ok === false) return;
+        chats = Array.isArray(payload?.chats) ? payload.chats : [];
+        hits = chats.filter(
+          (chat) =>
+            safe(chat?.id).endsWith("@c.us") && phone(chat.id) === wanted,
+        );
+      } catch (_) {
+        return;
+      }
+    }
+    if (hits.length !== 1) return;
+    try {
+      const people = await searchGoogle(c);
+      if (people.length !== 1) return;
+      const saved = await confirmThreeWayVerified(row, people[0], hits[0]);
+      rememberUnifiedName(hits[0], saved);
+      clearGoogleCache();
+      window.dispatchEvent(
+        new CustomEvent("tpf:google-contacts-changed", {
+          detail: { contactId: detail.id, automatic: true, whatsapp: true },
+        }),
+      );
+    } catch (error) {
+      console.warn("Validar WhatsApp del contacto recién creado", error);
+    }
+  }
   function install() {
     ensureStyles();
     ensureModal();
@@ -2606,6 +2655,7 @@
     window.addEventListener("tpf:contact-created", (event) => {
       if (event.detail?.googleSyncPending)
         schedulePendingGoogleCheck(event.detail.id);
+      autoConfirmCreatedWhatsapp(event.detail);
     });
     window.addEventListener("tpf:contact-updated", (event) => {
       waSignature = "";
