@@ -2605,7 +2605,7 @@
     const row = { id: detail.id, data: detail.data },
       c = contactData(row),
       wanted = phone(c.phone);
-    if (!wanted) return;
+    if (!wanted || hasStoredWhatsappBinding(row)) return;
     let chats = Array.isArray(
       typeof waLiveState !== "undefined" ? waLiveState?.chats : [],
     )
@@ -2649,9 +2649,11 @@
     ensureStyles();
     ensureModal();
     watchWhatsappNames();
-    window.addEventListener("tpf:contact-open", () =>
-      setTimeout(refreshProfile, 0),
-    );
+    window.addEventListener("tpf:contact-open", () => {
+      setTimeout(refreshProfile, 0);
+      const row = current();
+      if (row) autoConfirmCreatedWhatsapp(row);
+    });
     window.addEventListener("tpf:contact-created", (event) => {
       if (event.detail?.googleSyncPending)
         schedulePendingGoogleCheck(event.detail.id);

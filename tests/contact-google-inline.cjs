@@ -70,6 +70,7 @@ assert.match(inline,/const person=available\.length/,'the existing Google contac
 assert.match(inline,/TPF_WHATSAPP_NAME_CONFIRMED/,'the CRM must remember when the user actually confirms the final WhatsApp display name');
 assert.match(inline,/syncEditedContact\(event\.detail\)/,'CRM edits must automatically update an existing Google contact when enabled');
 assert.match(inline,/autoConfirmCreatedWhatsapp\(event\.detail\)/,'a newly created CRM contact must validate its unique WhatsApp chat automatically');
+assert.match(inline,/const row = current\(\);\s*if \(row\) autoConfirmCreatedWhatsapp\(row\)/,'opening an older contact must also complete its pending WhatsApp validation');
 assert.match(inline,/fetch\("\/api\/green\?action=chats"\)/,'WhatsApp validation must look up chats even when the WhatsApp view is closed');
 assert.match(inline,/if \(hits\.length !== 1\) return/,'automatic WhatsApp validation must refuse ambiguous numbers');
 assert.match(inline,/confirmThreeWayVerified\(row, people\[0\], hits\[0\]\)/,'automatic validation must still require an exact CRM/Google/WhatsApp match');
