@@ -9,9 +9,9 @@ function install(rows=[]){
  let root=$('tpfCompactLabels');
  if(!root){
   const old=box.parentElement;root=document.createElement('div');root.id='tpfCompactLabels';root.className='full';
-  root.innerHTML='<div class="tpfPickHead"><b>Etiquetas</b><span id="tpfPickedCount"></span></div><div id="tpfPickedLabels"></div><button type="button" id="tpfPickToggle" aria-expanded="false">＋ Añadir etiquetas</button><div id="tpfPickPanel" hidden><div class="tpfPickFilters"><input type="search" id="tpfPickSearch" placeholder="Buscar etiqueta…" aria-label="Buscar etiqueta"><select id="tpfPickCategory" aria-label="Categoría"></select></div><div id="tpfPickEmpty" hidden>No hay coincidencias.</div><button type="button" id="tpfPickDone">Listo</button></div>';
+  root.innerHTML='<div class="tpfPickHead"><b>Etiquetas</b><span id="tpfPickedCount"></span></div><div id="tpfPickedLabels" aria-live="polite"></div><button type="button" id="tpfPickToggle" aria-expanded="false">Abrir selector</button><div id="tpfPickPanel" hidden><div class="tpfPickFilters"><input type="search" id="tpfPickSearch" placeholder="Buscar etiqueta…" aria-label="Buscar etiqueta"><select id="tpfPickCategory" aria-label="Categoría"></select></div><div id="tpfPickEmpty" hidden>No hay coincidencias.</div><button type="button" id="tpfPickDone">Listo</button></div>';
   old.replaceWith(root);$('tpfPickPanel').insertBefore(box,$('tpfPickEmpty'));
-  $('tpfPickToggle').onclick=()=>{const open=$('tpfPickPanel').hidden;$('tpfPickPanel').hidden=!open;$('tpfPickToggle').setAttribute('aria-expanded',String(open));$('tpfPickToggle').textContent=open?'Cerrar selector':'＋ Añadir etiquetas';if(open)$('tpfPickSearch').focus();};
+  $('tpfPickToggle').onclick=()=>{const open=$('tpfPickPanel').hidden;$('tpfPickPanel').hidden=!open;$('tpfPickToggle').setAttribute('aria-expanded',String(open));$('tpfPickToggle').textContent=open?'Cerrar selector':'Abrir selector';if(open)$('tpfPickSearch').focus();};
   $('tpfPickDone').onclick=()=>{if(!$('tpfPickPanel').hidden)$('tpfPickToggle').click();};
   $('tpfPickSearch').oninput=filter;$('tpfPickCategory').onchange=filter;
   box.addEventListener('change',sync);
@@ -19,7 +19,7 @@ function install(rows=[]){
   #tpfCompactLabels{font-size:13px;color:#172033;text-transform:none}
   .tpfPickHead{display:flex;gap:12px;align-items:center;margin-bottom:10px}.tpfPickHead span{color:#64748b;font-size:12px}
   #tpfPickedLabels{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
-  #tpfPickedLabels button{display:flex;gap:8px;align-items:center;border:0;padding:5px 8px;border-radius:8px;background:#eef2ff;color:#243b73;max-width:100%;font-size:12px}
+  #tpfPickedLabels button{display:flex;gap:8px;align-items:center;border:0;padding:6px 9px;border-radius:8px;background:#eef2ff;color:#243b73;max-width:100%;font-size:12px;cursor:pointer}#tpfPickedLabels button:hover{filter:brightness(.97)}
   #tpfPickedLabels .tpfLabelChip{white-space:normal}
   #tpfPickToggle,#tpfPickDone{border:1px solid #1766df;border-radius:8px;color:#1260ce;background:white;padding:9px 13px}
   #tpfPickPanel{margin-top:10px;padding:12px;border:1px solid #cad8ef;border-radius:10px;background:#fbfcff}
@@ -45,6 +45,6 @@ function filter(){const root=$('tpfCompactLabels');if(!root)return;const q=norm(
 function sync(){const out=$('tpfPickedLabels'),box=$('tpfCreateLabels');if(!out||!box)return;out.replaceChildren();const inputs=[...box.querySelectorAll('input:checked')];$('tpfPickedCount').textContent=inputs.length+' seleccionadas';
  inputs.forEach(input=>{const button=document.createElement('button');button.type='button';const chip=input.parentElement.querySelector('span');if(chip)button.appendChild(chip.cloneNode(true));else button.append(input.parentElement.textContent);button.append(' ×');button.setAttribute('aria-label','Quitar '+input.parentElement.textContent.trim());button.onclick=()=>{input.checked=false;input.dispatchEvent(new Event('change',{bubbles:true}));};out.appendChild(button);});filter();
 }
-function reset(){if(!$('tpfCompactLabels'))return;$('tpfPickSearch').value='';$('tpfPickCategory').value='';$('tpfPickPanel').hidden=true;$('tpfPickToggle').textContent='＋ Añadir etiquetas';$('tpfPickToggle').setAttribute('aria-expanded','false');sync();}
+function reset(){if(!$('tpfCompactLabels'))return;$('tpfPickSearch').value='';$('tpfPickCategory').value='';$('tpfPickPanel').hidden=true;$('tpfPickToggle').textContent='Abrir selector';$('tpfPickToggle').setAttribute('aria-expanded','false');sync();}
 window.TPFContactLabelPicker={install,sync,reset};
 })();
