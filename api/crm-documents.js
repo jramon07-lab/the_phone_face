@@ -83,6 +83,8 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const q=new URLSearchParams({id:'eq.'+row.id,data:'eq.'+JSON.stringify(row.data)}),r=await request(SB+'/rest/v1/records?'+q,{method:'PATCH',headers:{...who.headers,Prefer:'return=representation'},body:JSON.stringify({data})});
   if(!r.ok)throw fail(403,'No se pudo guardar la fecha.');const updated=await r.json();if(updated.length!==1)throw fail(409,'La ficha cambió; vuelve a revisar la fecha.');return json(res,200,{ok:true,expiry});
  }
+ // Un contacto sin carpeta aún no es un error: la interfaz muestra Documentos vacío.
+ if(action==='list'&&(!link||link.version!==1||!adapters[link.provider]))return json(res,200,{ok:true,linked:false,folder:null,files:[],nextPageToken:null});
  const t=await token();
  if(action==='search'){
   if(!who.p.is_admin)throw fail(403,'Solo el administrador puede buscar y vincular carpetas.');
