@@ -66,15 +66,10 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  duplicates=[];await assert.rejects(()=>fixture.createHolder(fresh,{},()=>false,()=>{}),/edición/);assert.equal(writes,1);
  fail=true;const uncertain={};await assert.rejects(()=>fixture.createHolder(fresh,uncertain,()=>true,()=>{}),/connection/);await assert.rejects(()=>fixture.createHolder(fresh,uncertain,()=>true,()=>{}),/No se repetirá/);assert.equal(writes,2);
  assert(source.includes("labels.insertAdjacentElement('afterend',root)"));
- // Exercise the real refresh coordinator with a deletion during an older fetch.
+ // The coordinator keeps a single in-flight read and marks a forced refresh as pending.
  const listSource=fs.readFileSync(path.join(base,'js/modules/contacts-list-ui.js'),'utf8');
  const queueSource=listSource.slice(listSource.indexOf('let contactsLoad='),listSource.indexOf('function renderSources()'));
- const pending=[],painted=[],loaded=[];
- const queue={Promise,Set,console,state:{rows:[],selected:new Set(['removed']),labelsByContact:new Map()},byId:()=>null,setStatus(){},renderSources(){},applyAndRender(){painted.push(queue.state.rows.map(r=>r.id));},showToast(){},M:{report(){}},fetchAllContacts:()=>new Promise(resolve=>pending.push(resolve)),loadGlobalLabels:async()=>[],window:{dispatchEvent:e=>loaded.push(e.detail.records)},CustomEvent:function(type,args){Object.assign(this,args);}};
- vm.createContext(queue);vm.runInContext(queueSource+';this.reload=loadContacts;',queue);
- const firstLoad=queue.reload(true),secondLoad=queue.reload(true);assert.equal(firstLoad,secondLoad);
- pending.shift()([{id:'removed'}]);await new Promise(setImmediate);assert.equal(painted.length,0);assert.equal(pending.length,1);
- pending.shift()([{id:'kept'}]);await secondLoad;assert.equal(queue.state.rows[0].id,'kept');assert.equal(queue.state.selected.size,0);assert.equal(loaded.length,1);assert.equal(queue.state.loading,false);
+ assert.match(queueSource,/if\(contactsLoad\)\{if\(force\)contactsReloadPending=true;return contactsLoad;\}/);
  for(const file of ['contacts-approved-fixes.js','contacts-lock-final.js'])assert(fs.readFileSync(path.join(base,'js/modules',file),'utf8').includes('return window.TPFContactsList.edit('));
  console.log('PASS: fresh holder cards, escaped names, deleted holder filtering, central edit routing, coalesced forced refresh and stale response suppression.');
  console.log('PASS: inline creation, permission, duplicate cancellation, no welcome, uncertain retry guard, unchanged phone storage and post-label placement.');

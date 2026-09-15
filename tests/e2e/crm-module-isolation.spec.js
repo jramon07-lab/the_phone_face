@@ -83,7 +83,11 @@ test('módulo Ficha de contacto: editor separado protegido, actividad y WhatsApp
   await page.locator('#cpNotesCancel').click();
 
   await page.locator('[data-cp-ref-tab="resumen"]').click();
-  await page.locator('#contactManageLabels').click();await expect(page.locator('#contactLabelsModal')).toBeVisible();await expect(page.locator('#contactLabelsSearch')).toBeVisible();await page.locator('#contactLabelsClose').click();
+  await page.locator('#contactManageLabels').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeVisible();
+  await expect(page.locator('#tpfCreateLabels')).toBeVisible();
+  await page.locator('#tpfContactsCreateCancel').click();
+  await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
   await expect(page.locator('#contactWhatsapp')).toBeVisible();
   await page.evaluate(()=>{const p=document.getElementById('contactPhone');if(p)p.value='600000000';window.__tpfExternalOpen=0;window.open=()=>{window.__tpfExternalOpen++;};});
   await page.locator('#contactWhatsapp').click();

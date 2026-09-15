@@ -30,7 +30,7 @@ vm.createContext(createContext);vm.runInContext(createSlice,createContext);
  assert.equal(reused.duplicate,true,'Las rutas antiguas conservan su protección contra duplicados');
  assert.equal(calls.length,1);
 
- const inline=fs.readFileSync('js/modules/contact-google-inline.js','utf8').replace("M.register('contact-google-inline',{install});","window.testApi={contactData,searchGoogle,syncState,displayCase};");
+ const inline=fs.readFileSync('js/modules/contact-google-inline.js','utf8').replace(/M\.register\(["']contact-google-inline["'],\s*\{\s*install\s*\}\);/,"window.testApi={contactData,searchGoogle,syncState,displayCase};");
  const directCalls=[];
  const directPerson={resourceName:'people/new',names:[{givenName:'Prueba 25',familyName:'Ortiz'}],nicknames:[{value:'Cateto'}],phoneNumbers:[{value:'+34613446380'}]};
  const inlineContext={

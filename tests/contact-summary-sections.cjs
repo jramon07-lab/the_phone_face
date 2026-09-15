@@ -4,7 +4,7 @@ const js=fs.readFileSync('js/modules/contact-desktop-layout.js','utf8'),css=fs.r
 assert.match(js,/section\.id==='cpOffersSection'\?'ofertas'/);
 assert.match(js,/section\.id==='cpAutomationStatus'\?'automatizaciones'/);
 assert.match(js,/if\(!sections\.includes\(section\)\)sections\.push\(section\)/);
-assert.match(js,/if\(section\.parentElement!==target\)target\.appendChild\(section\)/);
+assert.match(js,/if\(section\.parentElement!==target&&!grouped\)target\.appendChild\(section\)/);
 assert.match(js,/sectionObserver\.observe\(panel,\{childList:true\}\)/);
 for(const key of ['ofertas','automatizaciones'])assert.ok(css.includes('[data-cp-ref-pane="'+key+'"]'));
 assert.match(css,/#cpAutomationStatus\{grid-column:1 \/ -1/);

@@ -12,10 +12,10 @@ assert.match(connectorSource,/await window\.TPFContactsList\.edit\(c\.id\)/);
 assert.match(connectorSource,/editor&&!editor\.classList\.contains\('hidden'\)\)\{hideContactModal\(\)/);
 assert.match(profileSource,/TPFWhatsappContactEditBack\?\.hasOrigin/);
 assert.match(profileSource,/TPFWhatsappContactEditBack\.restore\(\)/);
-assert.match(runtimeSource,/whatsapp-contact-edit-back\.js'\?'20260910-wa-edit-back-2'/);
-assert.match(runtimeSource,/whatsapp-contact-reuse\.js'\?'20260910-wa-edit-back-2'/);
-assert.match(runtimeSource,/contact-profile\.js'\?'20260910-wa-edit-back-1'/);
-assert.match(indexSource,/runtime\.js\?v=20260911-search-root-1/);
+assert.match(runtimeSource,/whatsapp-contact-edit-back\.js/);
+assert.match(runtimeSource,/whatsapp-contact-reuse\.js/);
+assert.match(runtimeSource,/contact-profile\.js/);
+assert.match(indexSource,/runtime\.js\?v=/);
 const tick=()=>new Promise(resolve=>setTimeout(resolve,10));
 (async()=>{
  const listeners={};

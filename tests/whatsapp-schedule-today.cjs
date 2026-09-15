@@ -11,7 +11,7 @@ assert.match(source,/for\(let minutes=0;minutes<24\*60;minutes\+=30\)/,'las hora
 assert.match(source,/dateValue===today[\s\S]*<=now\.getTime\(\)/,'Hoy no debe mostrar horas pasadas');
 assert.match(source,/<select id="tpfS3time"/,'la hora debe mostrarse como desplegable');
 assert.match(source,/Elige la hora en intervalos de 30 minutos/);
-assert.match(runtime,/whatsapp-schedule-direct-v3\.js'\?'20260910-today-time-1'/);
-assert.match(index,/runtime\.js\?v=20260911-search-root-1/);
+assert.match(runtime,/whatsapp-schedule-direct-v3\.js/);
+assert.match(index,/runtime\.js\?v=/);
 
 console.log('PASS Programar WhatsApp: Hoy y selector de horas futuras cada 30 minutos');

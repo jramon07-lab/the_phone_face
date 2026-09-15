@@ -38,11 +38,11 @@ function fixture({confirmed=true,nickname='Alias de prueba',wrongPhone=false}={}
     observe(target){if(!this.targets.includes(target))this.targets.push(target)}
     disconnect(){this.targets=[];this.pending=false}
   }
-  const sandbox={console,Map,Set,Date,MutationObserver:Observer,queueMicrotask:fn=>jobs.push(fn),setTimeout:fn=>jobs.push(fn),clearTimeout(){},setInterval(){},localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>{storageWrites++;storage.set(key,value)}},document:{getElementById:id=>nodes.get(id)||null,querySelector:selector=>selector==='.waChatRow.active .waChatRowTop b'?label:null,createElement:()=>new Element()},waLiveState:{selected:chat,contact:row,selectionVersion:1}};
-  sandbox.window={TPFModules:{register(){}}};
+  const sandbox={console,Map,Set,Date,Event:function Event(type){this.type=type;},MutationObserver:Observer,queueMicrotask:fn=>jobs.push(fn),setTimeout:fn=>jobs.push(fn),clearTimeout(){},setInterval(){},localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>{storageWrites++;storage.set(key,value)}},document:{getElementById:id=>nodes.get(id)||null,querySelector:selector=>selector==='.waChatRow.active .waChatRowTop b'?label:null,createElement:()=>new Element()},waLiveState:{selected:chat,contact:row,selectionVersion:1}};
+  sandbox.window={TPFModules:{register(){}},dispatchEvent(){}};
   vm.createContext(sandbox);
-  const marker="M.register('contact-google-inline',{install});";
-  assert.ok(source.includes(marker),'test must execute the actual module');
+  const marker=/M\.register\(["']contact-google-inline["'],\s*\{\s*install\s*\}\);/;
+  assert.ok(marker.test(source),'test must execute the actual module');
   vm.runInContext(source.replace(marker,"window.nameTest={applyUnifiedWhatsappName,scheduleWhatsappNameRepair,watchWhatsappNames};"),sandbox,{timeout:1000});
   const api=sandbox.window.nameTest;api.watchWhatsappNames();
   return{api,nodes,label,row,jobs,state:sandbox.waLiveState,stats:()=>({writes,storageWrites,callbacks}),flush(){let count=0;while(jobs.length&&count<100){jobs.shift()();count++}assert.equal(jobs.length,0,'Name observer must settle; self-generated mutations are starving the browser event loop');return count},repaint(){label.textContent='NOMBRE ORIGINAL'}};

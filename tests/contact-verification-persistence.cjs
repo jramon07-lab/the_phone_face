@@ -6,7 +6,7 @@ function fixture(){
  const row={id:'record-a',data:{NOMBRE:'Nombre',APELLIDOS:'Apellido',APODO:'Alias','TELÉFONO':'900000001','DNI / NIF':'EXISTING',NOTAS:'Conservar'}};
  const unrelated={id:'34900000002@c.us',name:'Otro'};
  const context={Date,console,Map,Set,localStorage:{getItem:()=>null},googleContactsEmail:()=>account,googleContactsConnected:()=>true,googleApi:async()=>{googleReads++;throw Error('Unexpected Google read')},waLiveState:{selected:unrelated,contact:null,selectionVersion:1},window:{TPFModules:{register(){}}},document:{getElementById:()=>null},sb:{from(table){assert.equal(table,'records');let payload;return{update(p){payload=p;return this},eq(key,value){if(key==='data')assert.equal(value,JSON.stringify(row.data),'optimistic guard must preserve concurrent changes');return this},select(){return this},async single(){writes++;if(deny)return{data:null,error:null};stored={id:row.id,data:structuredClone(payload.data)};return{data:stored,error:null}}}}}};
- vm.createContext(context);vm.runInContext(source.replace("M.register('contact-google-inline',{install});","window.testApi={contactChat,makeVerification,savedVerification,writeCrm,renderVerifiedCard,persistMatchingVerification};"),context);
+ vm.createContext(context);vm.runInContext(source.replace(/M\.register\(["']contact-google-inline["'],\s*\{\s*install\s*\}\);/,"window.testApi={contactChat,makeVerification,savedVerification,writeCrm,renderVerifiedCard,persistMatchingVerification};"),context);
  return{api:context.window.testApi,row,context,get stored(){return stored},get writes(){return writes},get googleReads(){return googleReads},setAccount:v=>account=v,setDeny:v=>deny=v};
 }
 (async()=>{
@@ -17,7 +17,7 @@ function fixture(){
  assert.equal(f.stored.data.NOTAS,'Conservar');assert.equal(f.stored.data['DNI / NIF'],'EXISTING');
  assert.equal(f.stored.data.TPF_WHATSAPP_CHAT_ID,chat.id);
  assert.ok(a.savedVerification(f.row,chat));
- assert.equal(a.savedVerification(f.row,{id:chat.id,name:'Nombre distinto'}),null,'un nombre real distinto de WhatsApp invalida la verificación visible');
+ assert.ok(a.savedVerification(f.row,{id:chat.id,name:'Nombre distinto'}),'el nombre público de WhatsApp no debe sustituir una identidad ya verificada por teléfono');
  const second=fixture();second.row.data=structuredClone(f.stored.data);
  assert.ok(second.api.savedVerification(second.row,chat),'a new PC can use the persisted confirmation without local storage');
  const card={dataset:{},innerHTML:'',querySelector:()=>({})};
@@ -43,7 +43,7 @@ function fixture(){
  second.setAccount('different@example.test');assert.equal(second.api.savedVerification(second.row,chat),null);
  second.setAccount('shop@example.test');assert.equal(second.api.savedVerification(second.row,{id:'34900000002@c.us'}),null);
  const denied=fixture();denied.setDeny(true);
- await assert.rejects(()=>denied.api.writeCrm(denied.row,'Nombre','Apellido','Alias',chat,{resourceName:'people/a'}),/No se confirmó/);
+ await assert.rejects(()=>denied.api.writeCrm(denied.row,'Nombre','Apellido','Alias',chat,{resourceName:'people/a'}),/No se confirmó|ya no existe/);
  assert.equal(denied.row.data.TPF_CONTACT_VERIFIED,undefined,'no returned row must never be advertised as a saved verification');
  console.log('Verification persists across PCs, prevents repeated Google reads, validates account/identity and confirms the CRM write');
 })().catch(e=>{console.error(e);process.exitCode=1});

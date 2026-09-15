@@ -29,7 +29,8 @@ for(const event of ['pre_send_blocked','verification_deferred','delivery_deferre
 assert.match(runner,/check=\(\)=>offer\?hasOfferDecision\(ctx,secret\):hasResponseSince\(ctx,secret\)/);
 assert.match(runner,/if\(a\.__flow_guard==="no_response"&&await check\(\)\)/);
 assert.match(runner,/await requeue\(job,msg,5,true\)/);
-assert.match(runner,/await requeue\(job,msg,2\)/);
+assert.match(runner,/const retryDelay=Number\(job\.attempts\|\|0\)<=1\?2/,'el primer reintento debe esperar dos minutos');
+assert.match(runner,/await requeue\(job,msg,retryDelay\)/,'los reintentos deben usar la espera calculada');
 
 assert.match(webhook,/async function recordFailure/);
 assert.match(webhook,/from\("crm_system_events"\)/);
