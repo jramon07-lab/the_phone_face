@@ -4,7 +4,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const GENERAL=[['app','Aplicación / Vercel'],['supabase','Supabase / sesión'],['green','GREEN-API / WhatsApp'],['frontend','Frontend / JavaScript'],['http','HTTP / API'],['ci','GitHub CI'],['e2e','Playwright / Chrome'],['auth','Autenticación / permisos'],['conflicts','Conflictos / handlers'],['integrity','Regresiones / integridad de datos']];
 const MODULES=['whatsapp','agenda','contacts-sales','automations-settings','system-status','contact-profile','contact-activity','contact-opportunities','contact-navigation','contact-edit','automations-auth','whatsapp-read','search','automations-flow','runtime-guard'];
 const MODULE_ALIASES={'contact-navigation':['contact-open','contact-actions'],'automations-auth':['auth-guard'],'runtime-guard':['runtime']};
-function errors(){try{return JSON.parse(localStorage.getItem('tpf_system_errors_v1')||'[]')}catch(_){return[]}}
+function errors(){try{const rows=JSON.parse(localStorage.getItem('tpf_system_errors_v1')||'[]');return(Array.isArray(rows)?rows:[]).filter(row=>!(/invalid phone number|chatid.*invalid|validation failed.*chatid/i.test(`${row?.message||''} ${row?.detail||''}`)))}catch(_){return[]}}
 function conflicts(){try{return typeof M.conflicts==='function'?M.conflicts()||[]:[]}catch(_){return[]}}
 function external(){try{return JSON.parse(localStorage.getItem('tpf_external_checks_v1')||'{}')}catch(_){return{}}}
 function saveExternal(x){try{localStorage.setItem('tpf_external_checks_v1',JSON.stringify(x||{}))}catch(_){}}
