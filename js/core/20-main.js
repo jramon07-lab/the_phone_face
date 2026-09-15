@@ -1640,7 +1640,7 @@ function renderSalesList(){
   $("salesListRows").innerHTML=rows.length?rows.map(o=>`
     <div class="salesListRow" onclick="openOpportunityCard('${o.id}')">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
-      <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityCard('\${o.id}')">\${esc(o.title||"Oportunidad")}</button>
+      <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title||"Oportunidad")}</button>
       <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
       <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
       <div>${esc(o.phone||"—")}</div>
