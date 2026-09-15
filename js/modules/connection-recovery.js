@@ -8,12 +8,20 @@
     try{
       const url=new URL(typeof input==='string'?input:input?.url||String(input),location.href);
       const method=String(init.method||input?.method||'GET').toUpperCase();
-      if(method!=='GET'||init.body||input?.bodyUsed)return false;
       if(url.origin===location.origin){
-        if(url.pathname==='/api/green-status')return true;
-        if(['/api/green','/api/mobile-green'].includes(url.pathname))return ['state','summary','chats'].includes(url.searchParams.get('action'));
+        if(method==='GET'&&url.pathname==='/api/green-status')return true;
+        if(method==='GET'&&url.pathname==='/api/green-health')return true;
+        if(['/api/green','/api/mobile-green'].includes(url.pathname)){
+          const action=String(url.searchParams.get('action')||'').toLowerCase();
+          // Estas acciones solo consultan WhatsApp. Se pueden recuperar tras un
+          // corte breve; enviar, responder, marcar leído o guardar nunca se repite.
+          const getReads=new Set(['state','summary','chats']);
+          const postReads=new Set(['history','previews','avatar','file']);
+          if(method==='GET')return getReads.has(action);
+          if(method==='POST'&&!input?.bodyUsed&&init.body)return postReads.has(action);
+        }
       }
-      return url.origin==='https://overfzbjtpjqxzbujezg.supabase.co'&&/^\/rest\/v1\/[a-zA-Z_][a-zA-Z0-9_]*$/.test(url.pathname);
+      return method==='GET'&&!init.body&&!input?.bodyUsed&&url.origin==='https://overfzbjtpjqxzbujezg.supabase.co'&&/^\/rest\/v1\/[a-zA-Z_][a-zA-Z0-9_]*$/.test(url.pathname);
     }catch(_){return false;}
   }
   function showOffline(){
