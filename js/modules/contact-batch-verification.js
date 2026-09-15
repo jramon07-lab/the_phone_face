@@ -20,6 +20,9 @@
     selected: new Set(),
     applying: false,
   };
+  // Evita que una acción de la tabla vuelva a entrar en un render activo.
+  // Esa reentrada era la causa del "Maximum call stack" de Chrome.
+  let rendering = false;
   const safe = (value) => String(value ?? "").trim();
   // Solo reúne señales para revisar; nunca decide automáticamente que un
   // apellido sea erróneo ni cambia ninguna ficha.
@@ -929,6 +932,9 @@
     }
   }
   function render(options = {}) {
+    if (rendering) return;
+    rendering = true;
+    try {
     const body = $("tpfBatchBody"),
       runButton = $("tpfBatchRun"),
       note = $("tpfBatchNote"),
@@ -1168,6 +1174,9 @@
       input?.focus();
       const at = input?.value?.length || 0;
       input?.setSelectionRange?.(at, at);
+    }
+    } finally {
+      rendering = false;
     }
   }
   async function run() {
