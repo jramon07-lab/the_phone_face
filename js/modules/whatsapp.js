@@ -294,6 +294,11 @@
                 greenStateCache={at:Date.now(),state:'starting'};
                 return {ok:true,available:false,degraded:true,state:'starting',reason:'provider_not_ready'};
               }
+              const status=Number(err?.status||err?.greenStatus||0);
+              const text=String(err?.message||err?.error||err||'').toLowerCase();
+              if(status===400&&(/invalid phone number|chatid.*invalid|validation failed/.test(text))){
+                return {ok:true,available:false,degraded:false,reason:'avatar_unavailable'};
+              }
               throw err;
             }
           }
