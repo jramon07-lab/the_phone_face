@@ -1822,6 +1822,7 @@ setTimeout(waSyncTemplatesFromSupabase,1200);
 /* ===== Etiquetas globales CRM ===== */
 let crmLabelsCache=[];
 let currentContactLabelIds=[];
+function crmLabelTone(value){let n=0;for(const c of String(value||''))n=(n*31+c.charCodeAt(0))>>>0;return ['blue','green','purple','orange','pink','teal'][n%6];}
 
 async function crmLoadLabels(){
   const {data,error}=await sb.rpc("crm_list_labels");
@@ -1881,9 +1882,9 @@ async function crmRefreshCurrentContactLabels(){
   try{
     const rows=await crmGetContactLabels(cid);
     currentContactLabelIds=rows.map(x=>x.id);
-    $("contactLabelsList").innerHTML=rows.map(x=>`<button type="button" class="contactLabelChip contactLabelChipRemove" data-label-id="${esc(x.id)}" title="Quitar etiqueta ${esc(x.name)}" aria-label="Quitar etiqueta ${esc(x.name)}"><span>${esc(x.name)}</span><b aria-hidden="true">×</b></button>`).join("")||'<span class="small">Sin etiquetas</span>';
+    $("contactLabelsList").innerHTML=rows.map(x=>`<button type="button" class="contactLabelChip ${crmLabelTone(x.id||x.name)} contactLabelChipRemove" data-label-id="${esc(x.id)}" title="Quitar etiqueta ${esc(x.name)}" aria-label="Quitar etiqueta ${esc(x.name)}"><span>${esc(x.name)}</span><b aria-hidden="true">×</b></button>`).join("")||'<span class="small">Sin etiquetas</span>';
     if(waLiveState?.contact&&String(waLiveState.contact.id)===String(cid)){
-      $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
+      $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip ${crmLabelTone(x.id||x.name)}">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
     }
   }catch(e){console.warn("Etiquetas contacto",e)}
 }
@@ -1929,7 +1930,7 @@ async function waRefreshGlobalContactTags(){
   if(!cid){$("waSideTags").innerHTML='<span class="small">Sin contacto vinculado</span>';return}
   try{
     const rows=await crmGetContactLabels(cid);
-    $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
+    $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip ${crmLabelTone(x.id||x.name)}">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
   }catch(e){}
 }
 const waAddTagSideEl=$("waAddTagSide");

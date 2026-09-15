@@ -107,7 +107,11 @@
     const back=byId('tpfContactsCreateBack');if(back)delete back.dataset.tpfProfileEditing;
     createEditState=null;
   }
-  async function returnFromCreateEdit(){restoreCreateModal(true);}
+  async function returnFromCreateEdit(){
+    // Nunca volver al selector antiguo: al cancelar se queda en la ficha.
+    byId('contactLabelsModal')?.classList.add('hidden');
+    restoreCreateModal(true);
+  }
   async function saveCreateModalEdit(){
     const s=createEditState;if(!s)return;
     const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg');
@@ -138,6 +142,8 @@
     if(createEditState)return;
     let c=null;try{c=(typeof currentContact!=='undefined'&&currentContact)||null;}catch(_){}
     const id=c?.id||currentRecordId;if(!id)return;
+    // El selector histórico puede haber quedado abierto por una versión anterior.
+    byId('contactLabelsModal')?.classList.add('hidden');
     const add=byId('tpfContactsAdd');if(!add)return;
     add.click();
     const back=await waitForCreateModal();if(!back)return;
@@ -168,6 +174,8 @@
     }catch(_){}
     if(createEditState!==openingState)return;
     window.TPFContactLabelPicker?.reset();
+    // El selector se crea de forma asíncrona; asegura los chips al abrir.
+    setTimeout(()=>window.TPFContactLabelPicker?.sync(),0);
     if(title)title.textContent='Editar contacto';
     if(subtitle)subtitle.textContent='Modifica los datos del contacto.';
     if(save){save.textContent='Guardar cambios';save.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();saveCreateModalEdit();};}
@@ -428,7 +436,8 @@
         if(e.target?.closest?.('#contactManageLabels,#waAddTagSide,#waTagChat'))setTimeout(()=>{ensureLabelSearch();loadContactLabelCategories(true).then(()=>{refreshContactLabelCategories();filterContactLabels();});},20);
         if(e.target?.closest?.('[id*="contactLabels"],#contactLabelsModal'))setTimeout(ensureLabelSearch,20);
         if(e.target?.closest?.('#waQuickModal'))setTimeout(()=>{ensureQuickTemplateButton();wrapTemplateUse();},20);
-      },false);
+      // Debe ejecutarse en captura, antes del onclick antiguo del módulo base.
+      },true);
       setTimeout(()=>{installObservers();queueSync();wrapTemplateUse();},350);
     }
   });

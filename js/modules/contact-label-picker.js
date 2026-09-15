@@ -19,7 +19,7 @@ function install(rows=[]){
   #tpfCompactLabels{font-size:13px;color:#172033;text-transform:none}
   .tpfPickHead{display:flex;gap:12px;align-items:center;margin-bottom:10px}.tpfPickHead span{color:#64748b;font-size:12px}
   #tpfPickedLabels{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
-  #tpfPickedLabels button{display:flex;gap:8px;align-items:center;border:0;padding:6px 9px;border-radius:8px;background:#eef2ff;color:#243b73;max-width:100%;font-size:12px;cursor:pointer}#tpfPickedLabels button:hover{filter:brightness(.97)}
+  #tpfPickedLabels button{display:flex;gap:8px;align-items:center;border:0;padding:6px 9px;border-radius:8px;max-width:100%;font-size:12px;cursor:pointer}#tpfPickedLabels button:hover{filter:brightness(.97)}#tpfPickedLabels button.blue{background:#e7f0ff;color:#2762ad}#tpfPickedLabels button.green{background:#e3f7ec;color:#18834c}#tpfPickedLabels button.purple{background:#f0e8ff;color:#7545b8}#tpfPickedLabels button.orange{background:#fff0df;color:#b66519}#tpfPickedLabels button.pink{background:#fde8f2;color:#b13d75}#tpfPickedLabels button.teal{background:#def5f2;color:#117b70}
   #tpfPickedLabels .tpfLabelChip{white-space:normal}
   #tpfPickToggle,#tpfPickDone{border:1px solid #1766df;border-radius:8px;color:#1260ce;background:white;padding:9px 13px}
   #tpfPickPanel{margin-top:10px;padding:12px;border:1px solid #cad8ef;border-radius:10px;background:#fbfcff}
@@ -43,7 +43,7 @@ function filter(){const root=$('tpfCompactLabels');if(!root)return;const q=norm(
  $('tpfCreateLabels').querySelectorAll('label').forEach(l=>{const input=l.querySelector('input');const r=(root._rows||[]).find(r=>String(r.id||r.label_id)===input?.value);const c=categories[input?.value]||inferred(r?.name||r?.label_name||l.textContent);l.hidden=!!((q&&!norm(l.textContent).includes(q))||(cat&&cat!==c));if(!l.hidden)count++;});$('tpfPickEmpty').hidden=count!==0;
 }
 function sync(){const out=$('tpfPickedLabels'),box=$('tpfCreateLabels');if(!out||!box)return;out.replaceChildren();const inputs=[...box.querySelectorAll('input:checked')];$('tpfPickedCount').textContent=inputs.length+' seleccionadas';
- inputs.forEach(input=>{const button=document.createElement('button');button.type='button';const chip=input.parentElement.querySelector('span');if(chip)button.appendChild(chip.cloneNode(true));else button.append(input.parentElement.textContent);button.append(' ×');button.setAttribute('aria-label','Quitar '+input.parentElement.textContent.trim());button.onclick=()=>{input.checked=false;input.dispatchEvent(new Event('change',{bubbles:true}));};out.appendChild(button);});filter();
+ inputs.forEach(input=>{const button=document.createElement('button');button.type='button';const chip=input.parentElement.querySelector('span');const tones=['blue','green','purple','orange','pink','teal'];button.className=tones[[...box.querySelectorAll('input')].indexOf(input)%tones.length];if(chip)button.appendChild(chip.cloneNode(true));else button.append(input.parentElement.textContent);button.append(' ×');button.setAttribute('aria-label','Quitar '+input.parentElement.textContent.trim());button.onclick=()=>{input.checked=false;input.dispatchEvent(new Event('change',{bubbles:true}));};out.appendChild(button);});filter();
 }
 function reset(){if(!$('tpfCompactLabels'))return;$('tpfPickSearch').value='';$('tpfPickCategory').value='';$('tpfPickPanel').hidden=true;$('tpfPickToggle').textContent='Abrir selector';$('tpfPickToggle').setAttribute('aria-expanded','false');sync();}
 window.TPFContactLabelPicker={install,sync,reset};
