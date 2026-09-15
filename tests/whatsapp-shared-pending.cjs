@@ -6,4 +6,5 @@ const one=device({lastIncomingAt:100,lastOutgoingAt:0}),two=device({lastIncoming
 for(const d of [one,two]){assert.equal(d.waIsUnanswered('A'),false);assert.equal(d.waIsUnanswered('B'),true);assert.equal(d.waIsUnanswered('missing'),false)}
 one.waLiveState.livePreview.B={timestamp:31,outgoing:true};assert.equal(one.waIsUnanswered('B'),false);
 one.waLiveState.chats[1]._lastMessage={timestamp:32,outgoing:false};assert.equal(one.waIsUnanswered('B'),true);
+const archived=device({archived:true,lastIncomingAt:0,lastOutgoingAt:0});assert.equal(archived.waIsUnanswered('B'),false,'Una conversación archivada no debe aparecer como pendiente ni en estadísticas');
 console.log('Different browser caches produce identical pending counts from shared messages');

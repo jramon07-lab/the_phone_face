@@ -1321,6 +1321,7 @@ function waPruneHistoryStore(all,limit=WA_HISTORY_LOCAL_CHATS){const entries=Obj
 function waCacheHistory(chatId,rows){try{let all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-WA_HISTORY_LIMIT);all=waPruneHistoryStore(all);localStorage.setItem(WA_HISTORY_KEY,JSON.stringify(all))}catch(e){}}
 function waCachedHistory(chatId){try{return JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}")[chatId]||[]}catch(e){return []}}
 function waIsUnanswered(chatId){
+  if(waMeta(chatId).archived)return false;
   const chat=(waLiveState.chats||[]).find(c=>String(c.id)===String(chatId));
   const shared=chat?._lastMessage||chat?.lastMessage;
   const live=waLiveState.livePreview?.[chatId];
