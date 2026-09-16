@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-  deployment_status:
   schedule:
     # 05:00 en España peninsular durante horario de verano.
     - cron: '0 3 * * *'
@@ -14,17 +13,17 @@ on:
 # Las validaciones usan la misma cuenta: una sesión de cierre de otra
 # ejecución no puede invalidar la prueba de dos dispositivos en curso.
 concurrency:
-  group: crm-browser-shared-test-account-v2
+  group: crm-browser-shared-test-account-v3
   cancel-in-progress: false
 
 jobs:
   e2e:
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'push' || github.event.deployment_status.state == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'deployment_status' && github.event.deployment.ref || github.ref_name }}
+          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -41,7 +40,7 @@ jobs:
           test -n "$CRM_TEST_PASSWORD" || (echo "Missing CRM_TEST_PASSWORD" && exit 1)
       - name: Run official Chrome validation
         env:
-          VERCEL_PREVIEW_URL: ${{ github.event_name == 'deployment_status' && github.event.deployment_status.target_url || '' }}
+          VERCEL_PREVIEW_URL: ''
           # La ronda nocturna debe revisar el CRM estable actual, no una preview antigua.
           PLAYWRIGHT_BASE_URL: https://the-phone-face-app-whatsapp-fotos-y.vercel.app
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
