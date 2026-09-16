@@ -14,7 +14,7 @@ on:
 # Las validaciones usan la misma cuenta: una sesión de cierre de otra
 # ejecución no puede invalidar la prueba de dos dispositivos en curso.
 concurrency:
-  group: crm-browser-shared-test-account
+  group: crm-browser-shared-test-account-v2
   cancel-in-progress: false
 
 jobs:
