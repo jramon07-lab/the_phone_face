@@ -194,9 +194,10 @@ export default async function handler(req, res) {
   function normalizeChatId(value) {
     const raw = String(value || "").trim();
     if (!raw) return "";
-    if (raw.includes("@")) return raw;
+    const matched = raw.match(/^(\d{10,15})@(c\.us|g\.us|lid)$/i);
+    if (matched) return `${matched[1]}@${matched[2].toLowerCase()}`;
     const digits = raw.replace(/\D/g, "");
-    return digits ? `${digits}@c.us` : raw;
+    return digits.length >= 10 && digits.length <= 15 ? `${digits}@c.us` : "";
   }
 
   const GREEN_RETRYABLE_METHODS = new Set([
@@ -549,7 +550,7 @@ export default async function handler(req, res) {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
       const count = Math.max(1, Math.min(200, Number(body.count || 100)));
-      if (!chatId) return res.status(400).json({ ok: false, error: "Falta chatId." });
+      if (!chatId) return res.status(200).json({ ok: true, messages: [], degraded: true, invalidChat: true });
 
       const result = await cachedGreenRead(`history:${chatId}:${count}`, { freshMs: 8000, staleMs: 300000 }, async () => {
         const data = await greenFetch("getChatHistory", {
