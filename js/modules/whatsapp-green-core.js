@@ -1597,10 +1597,17 @@ loadWaHistory=async function(scrollBottom=true){
   if(!waLiveState.selected)return;
   const chatId=waLiveState.selected.id;
   const selection=waLiveState.selectionVersion;
+  const cached=waCachedHistory(chatId),persisted=await waLoadRemoteHistory(chatId);
+  const provisional=[...persisted,...cached];
+  if(provisional.length&&waLiveState.selectionVersion===selection){
+    const provisionalMap=new Map();provisional.forEach(x=>provisionalMap.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
+    waLiveState.history=[...provisionalMap.values()].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0)).slice(-WA_HISTORY_LIMIT);
+    renderWaMessages(scrollBottom);
+  }
   try{
-    const [r,persisted]=await Promise.all([waApi("history",{chatId,count:200}),waLoadRemoteHistory(chatId)]);
+    const r=await waApi("history",{chatId,count:200});
     if(waLiveState.selectionVersion!==selection)return;
-    const remote=Array.isArray(r.messages)?r.messages:[],cached=waCachedHistory(chatId),map=new Map();
+    const remote=Array.isArray(r.messages)?r.messages:[],map=new Map();
     [...persisted,...cached,...remote].forEach(x=>map.set(String(x?.idMessage||("t"+waMessageTimestamp(x)+waMessageText(x))),x));
     const merged=[...map.values()].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0)).slice(-WA_HISTORY_LIMIT);
     const changed=waStableSig(merged)!==waStableSig(waLiveState.history||[]);
