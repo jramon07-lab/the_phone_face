@@ -1,17 +1,17 @@
 /* TPF physical module split · generated from app-core.js */
 (function(){
   const KEY='tpf_system_errors_v1';
+  const RECENT_BROWSER_ERROR_MS=15*60*1000;
   // El historial es local al navegador. Esta limpieza única descarta avisos
   // heredados de versiones anteriores, sin afectar a datos ni a fallos nuevos.
-  const LEGACY_CLEANUP_KEY='tpf_system_errors_cleanup_20260915_documents_1';
+  const LEGACY_CLEANUP_KEY='tpf_system_errors_cleanup_20260915';
   const maxErrors=60;
   const transientNetworkFailures=new Map();
   function isExpectedAuthRejection(type,message,detail){const t=String(type||'').toLowerCase(),text=`${String(message||'')} ${String(detail||'')}`.toLowerCase();return t.includes('400')&&text.includes('/auth/v1/token')&&text.includes('grant_type=password');}
   function isExpectedWhatsappTransient(type,message,detail){const t=String(type||'').toLowerCase(),m=String(message||'').toLowerCase(),d=String(detail||'').toLowerCase(),text=`${m} ${d}`;if(text.includes('/api/green?action=notifications')&&(t.includes('408')||text.includes('request timeout')))return true;if(text.includes('/api/green?action=notification')&&(t.includes('408')||text.includes('request timeout')))return true;if(text.includes('/api/green?action=avatar')&&(t==='red'||t==='network'||text.includes('load failed')||text.includes('failed to fetch')||text.includes('abort')))return true;if(text.includes('/api/green-status')&&(t==='red'||t==='network')&&(text.includes('abort')||text.includes('signal is aborted')))return true;if(text.includes('/rest/v1/agenda_items')&&text.includes('whatsapp_enabled=eq.true')&&(t==='red'||t==='network')&&(text.includes('load failed')||text.includes('failed to fetch')||text.includes('networkerror')||text.includes('abort')))return true;return false;}
-  function isExpectedWhatsappValidation(type,message,detail){const text=`${String(type||'')} ${String(message||'')} ${String(detail||'')}`.toLowerCase();return text.includes('validation failed')&&text.includes('chatid')&&text.includes('invalid phone number');}
   function isExpectedSystemProbe(type,message,detail){const t=String(type||'').toLowerCase(),text=`${String(message||'')} ${String(detail||'')}`.toLowerCase();return (t==='red'||t==='network')&&text.includes('api.github.com/repos/jramon07-lab/the_phone_face/actions/runs')&&(text.includes('failed to fetch')||text.includes('load failed')||text.includes('networkerror'));}
-  function isExpected(type,message,detail){return isExpectedAuthRejection(type,message,detail)||isExpectedWhatsappTransient(type,message,detail)||isExpectedWhatsappValidation(type,message,detail)||isExpectedSystemProbe(type,message,detail);}
-  function readErrors(){try{if(!localStorage.getItem(LEGACY_CLEANUP_KEY)){localStorage.removeItem(KEY);localStorage.setItem(LEGACY_CLEANUP_KEY,'1');return[]}const rows=JSON.parse(localStorage.getItem(KEY)||'[]');const clean=(Array.isArray(rows)?rows:[]).filter(x=>!isExpected(x?.type,x?.message,x?.detail));if(clean.length!==(Array.isArray(rows)?rows.length:0))writeErrors(clean);return clean;}catch(_){return[]}}
+  function isExpected(type,message,detail){return isExpectedAuthRejection(type,message,detail)||isExpectedWhatsappTransient(type,message,detail)||isExpectedSystemProbe(type,message,detail);}
+  function readErrors(){try{if(!localStorage.getItem(LEGACY_CLEANUP_KEY)){localStorage.removeItem(KEY);localStorage.setItem(LEGACY_CLEANUP_KEY,'1');return[]}const now=Date.now(),rows=JSON.parse(localStorage.getItem(KEY)||'[]');const clean=(Array.isArray(rows)?rows:[]).filter(x=>{if(isExpected(x?.type,x?.message,x?.detail))return false;const at=new Date(x?.at||x?.created_at||0).getTime();return !Number.isFinite(at)||now-at<=RECENT_BROWSER_ERROR_MS});if(clean.length!==(Array.isArray(rows)?rows.length:0))writeErrors(clean);return clean;}catch(_){return[]}}
   function writeErrors(items){try{localStorage.setItem(KEY,JSON.stringify(items.slice(0,maxErrors)))}catch(_){}}
   function isNotificationStream(url){return /\/api\/green\?action=notifications?\b/i.test(String(url||''));}
   function isTransientNetworkFailure(detail){return /load failed|failed to fetch|networkerror|abort/i.test(String(detail||''));}
