@@ -14,7 +14,7 @@ on:
 # ejecución no puede invalidar la prueba de dos dispositivos en curso.
 concurrency:
   group: crm-browser-shared-test-account-v3
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   e2e:
