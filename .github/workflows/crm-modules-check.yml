@@ -3,6 +3,7 @@ name: CRM modules check
 on:
   push:
     branches:
+      - main
       - work/crm-modular-20260826
       - tmp/contact-profile-recover-20260901
   pull_request:
