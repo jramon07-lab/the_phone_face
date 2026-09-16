@@ -70,3 +70,20 @@ test('Estado del sistema: genera diagnóstico exportable y redacta secretos', as
   expect(serialized).not.toContain('abcdefghijklmnopqrstuvwxyz.1234567890.secret');
   expect(serialized).toContain('[REDACTADO]');
 });
+
+test('Estado del sistema: un aviso HTTP antiguo no deja el control en rojo', async ({ page }) => {
+  await login(page);
+  const isAdmin = await page.evaluate(() => {
+    try { return typeof perms !== 'undefined' && !!perms?.is_admin; } catch (_) { return false; }
+  });
+  test.skip(!isAdmin, 'La cuenta demo no tiene acceso al diagnóstico de administrador.');
+
+  await page.evaluate(() => {
+    localStorage.setItem('tpf_system_errors_v1', JSON.stringify([{
+      type: 'HTTP 409', message: '/api/crm-documents?action=list', detail: '',
+      at: new Date(Date.now() - 16 * 60 * 1000).toISOString()
+    }]));
+  });
+  await page.locator('.nav[data-view="system"]').click();
+  await expect(page.locator('#tpf25General')).toContainText('HTTP / API\nCorrecto', { timeout: 15000 });
+});
