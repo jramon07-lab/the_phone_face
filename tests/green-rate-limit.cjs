@@ -227,6 +227,19 @@ async function run() {
     assert.doesNotMatch(JSON.stringify(res.body),new RegExp(secret));
   }
 
+  {
+    const handler = loadHandler(async (url) => {
+      assert.match(String(url), /\/getAvatar\//);
+      return response(400, { message: "Validation failed. Details: 'chatId': invalid phone number" });
+    });
+    const avatar = await call(handler, 'POST', 'avatar', { chatId: '34600000000@c.us' });
+    assert.equal(avatar.statusCode, 200, 'un avatar inválido no debe romper WhatsApp');
+    assert.equal(avatar.body.ok, true);
+    assert.equal(avatar.body.available, false);
+    assert.equal(avatar.body.skipped, true);
+    assert.equal(avatar.body.reason, 'invalid_chat');
+  }
+
   console.log('GREEN-API rate limit guard OK');
 }
 
