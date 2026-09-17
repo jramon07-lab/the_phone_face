@@ -11,9 +11,11 @@ function addStyle(){
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{display:block!important;padding:14px!important}
  #contactModal.tpfContactReference #tpfGoogleInlineCard{margin:0 0 12px!important}
  #contactModal.tpfContactReference:not(.tpf-contact-editing) .cpSeparateIdentity #contactName{display:none!important}
- #contactModal.tpfContactReference #tpfContactEditToggle{display:none!important}
+ #contactModal.tpfContactReference .cpRefEdit{display:none!important}
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>.cpSideSection,
- #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection{display:none!important}
+ #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection,
+ #contactModal.tpfContactReference #cpRefPanel>.cpSideSection,
+ #contactModal.tpfContactReference #cpRefPanel>#cpOffersSection{display:none!important}
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
  #contactModal.tpfContactReference .tpfSummaryGroup{border:1px solid #e1e7f0;border-radius:8px;background:#fff;overflow:hidden}
  #contactModal.tpfContactReference .tpfSummaryTrigger{width:100%;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) 24px;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:0;color:#1d3557;text-align:left;cursor:pointer}
@@ -29,7 +31,7 @@ function addStyle(){
  `;document.head.appendChild(s);
 }
 function directSection(predicate){
- return [...modal.querySelectorAll('.cpRight>.cpSideSection,#cpOffersSection')].find(el=>predicate(el))||null;
+ return [...modal.querySelectorAll('.cpRight>.cpSideSection,#cpRefPanel>.cpSideSection,#cpOffersSection')].find(el=>predicate(el))||null;
 }
 function metric(key){
  if(key==='work'){
