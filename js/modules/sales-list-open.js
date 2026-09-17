@@ -1,7 +1,6 @@
 /* Apertura fiable de oportunidades desde la vista Lista.
    Se usa delegación de eventos porque las filas se generan dinámicamente. */
 (function(){
-  document.documentElement.dataset.tpfSalesListOpenReady="1";
   function byId(id){return document.getElementById(id);}
   function setValue(id,value){
     const el=byId(id);
@@ -41,7 +40,6 @@
     if(!(target instanceof Element))return;
     const row=target.closest("#salesListRows .salesListRow");
     if(!row)return;
-    document.documentElement.dataset.tpfSalesListLastClick=row.dataset.oppId||"yes";
     if(target.closest("input,select,button,a,label"))return;
     event.preventDefault();
     event.stopPropagation();
