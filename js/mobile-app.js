@@ -69,6 +69,7 @@
     return {
       id:String(row?.id||''),source:row?.source_sheet||CONTACT_SOURCE,data,
       first,last,fullName:[first,last].filter(Boolean).join(' ')||legacy||'Contacto',
+      nickname:clean(field(data,'APODO','Apodo','ALIAS')),
       phone:clean(field(data,'TELÉFONO','TELEFONO','PHONE','MOVIL')),
       dni:clean(field(data,'DNI / NIF','DNI','NIF')),
       email:clean(field(data,'EMAIL','Email','email')),
@@ -434,7 +435,7 @@
   }
   function contactMatchesSearch(contact,query=''){
     const term=foldText(query);if(!term)return true;
-    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.dni,contact?.phone,contact?.email,window.TPFContactParty?.search?.(contact),...mobileHolders(contact).map(c=>[c.fullName,c.dni,c.phone].join(' ')),...mobileManagers(contact?.id).map(c=>c.fullName)].filter(Boolean).join(' '));
+    const termDigits=digits(query),text=foldText([contact?.fullName,contact?.nickname,contact?.dni,contact?.phone,contact?.email,window.TPFContactParty?.search?.(contact),...mobileHolders(contact).map(c=>[c.fullName,c.dni,c.phone].join(' ')),...mobileManagers(contact?.id).map(c=>c.fullName)].filter(Boolean).join(' '));
     const numericMatch=termDigits.length>=3&&[contact?.dni,contact?.data?.TPF_TITULAR?.holder_dni,contact?.data?.TPF_TITULAR?.holder_phone,...contactPhones(contact).map(p=>p.number)].some(value=>digits(value).includes(termDigits));
     return text.includes(term)||numericMatch;
   }
@@ -703,23 +704,49 @@
   }
   function relatedOpportunities(id){return mobileOpportunityIndex().get(String(id))||[];}
   function relatedTasks(id){return window.TPFRecordLinks.related(state.tasks,state.contacts,id,'task');}
+  function contactMobileOverview(opps,tasks){
+    const stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage]));
+    const open=opps.filter(opp=>!opportunityIsClosed(opp,stages.get(String(opp.stage_id))));
+    const last=[...opps].sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')))[0];
+    const next=[...tasks].filter(task=>taskIsPending(task)).sort((a,b)=>String(a.starts_at||'').localeCompare(String(b.starts_at||'')))[0];
+    const completed=tasks.filter(task=>String(task.status||'').toLowerCase()==='completed').length;
+    return {open,last,next,completed};
+  }
+  function contactMobileWhatsApp(contact){
+    const phoneSet=new Set(contactPhones(contact).map(phone=>contactPhoneNumber(phone.number)).filter(Boolean));
+    const chat=(state.whatsapp.chats||[]).filter(row=>phoneSet.has(contactPhoneNumber(mobileWaNormalizePhone(row?.id)))).sort((a,b)=>Number(mobileWaChatTimestamp(b)||0)-Number(mobileWaChatTimestamp(a)||0))[0];
+    return chat?{chat,when:mobileWaTime(mobileWaChatTimestamp(chat)),text:mobileWaPreview(chat)}:null;
+  }
+  function contactMobileSnapshot(overview,contact){
+    const opportunity=overview.last,stage=opportunity&&state.board.stages.find(row=>String(row.id)===String(opportunity.stage_id));
+    const whatsapp=contactMobileWhatsApp(contact);
+    return `<section class="m-contact-snapshot" aria-label="Resumen comercial">
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="opportunities" type="button"><small>Última oportunidad</small><b>${esc(opportunity?.title||'Sin oportunidades')}</b><span>${esc(opportunity?`${stage?.name||'Sin estado'} · ${opportunity.amount!=null?money(opportunity.amount):'Sin importe'}`:'Crear oportunidad')}</span></button>
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Próxima tarea</small><b>${esc(overview.next?dateTime(overview.next.starts_at):'Sin tarea pendiente')}</b><span>${esc(overview.next?.title||'Programar tarea')}</span></button>
+      <button class="m-contact-snapshot-card" data-action="contact-whatsapp" data-id="${esc(contact.id)}" type="button"><small>Último WhatsApp</small><b>${esc(whatsapp?.when||'Sin conversación')}</b><span>${esc(whatsapp?.text||'Abrir conversación')}</span></button>
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Trabajo pendiente</small><b>${overview.open.length+Math.max(0,(relatedTasks(contact.id)||[]).filter(task=>taskIsPending(task)).length)}</b><span>${esc(`${overview.open.length} oportunidades · ${overview.completed} tareas completadas`)}</span></button>
+    </section>`;
+  }
   function renderContact(id){
     const contact=state.contacts.find(row=>String(row.id)===String(id));
     if(!contact)return `<div class="m-page">${pageHead('Ficha del contacto','contacts')}${empty('Contacto no encontrado','Actualiza los datos e inténtalo de nuevo.')}</div>`;
-    const opps=relatedOpportunities(id),tasks=relatedTasks(id);const tab=state.profileTab;
+    const opps=relatedOpportunities(id),tasks=relatedTasks(id),overview=contactMobileOverview(opps,tasks);const tab=state.profileTab;
     let body='';
     if(tab==='summary')body=`<div class="m-info-card">
       ${infoRow('Teléfonos',contactPhones(contact).map(p=>p.label).join('\n'))}${infoRow('DNI / NIF',contact.dni)}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
     </div>${mobileRelationsSummary(contact)}`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
+    if(tab==='offers')body=opps.length?`<div class="m-contact-offers-note">Abre una oportunidad para ver y actualizar su oferta y seguimiento.</div><div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin ofertas ni seguimiento','Crea una oportunidad o abre WhatsApp para preparar una oferta.');
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
     if(tab==='documents')body='<div id="mobileContactDocuments"></div>';
     if(tab==='history')body=renderContactHistory(id);
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
-    return `<div class="m-page">${pageHead('Ficha del contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar">✎</button>`:'')}
-      <div class="m-profile-hero"><div class="m-avatar">${esc(initials(contact))}</div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.dni||'Sin DNI')}</p><p>${esc(contact.phone||'Sin teléfono')}</p></div>
-      ${contactPhoneActions(contact)}<div class="m-profile-actions">${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-primary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Nueva oportunidad</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" type="button">Gestionar etiquetas</button>`:''}</div>
-      <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='documents'?'active':''}" data-action="profile-tab" data-tab="documents">Documentos</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
+    return `<div class="m-page m-contact-profile">${pageHead('Contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar contacto">✎</button>`:'')}
+      <section class="m-contact-identity"><div class="m-avatar">${esc(initials(contact))}</div><div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.phone||'Sin teléfono')} · ${esc(contact.dni||'Sin DNI')}</p></div></section>
+      ${contactPhoneActions(contact)}
+      <div class="m-contact-action-grid">${has('can_use_whatsapp')?`<button class="m-primary" data-action="contact-whatsapp" data-id="${esc(id)}" type="button">WhatsApp</button><button class="m-secondary" data-action="contact-offer" data-id="${esc(id)}" type="button">Enviar oferta</button>`:''}${has('can_manage_agenda')?`<button class="m-secondary" data-action="contact-schedule-whatsapp" data-id="${esc(id)}" type="button">Programar WhatsApp</button>`:''}${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-secondary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Oportunidad</button>`:''}${has('can_manage_agenda')?`<button class="m-secondary" data-action="route" data-route="new-task/${esc(id)}" type="button">＋ Tarea</button>`:''}</div>
+      ${contactMobileSnapshot(overview,contact)}
+      <div class="m-tabs m-contact-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades</button><button class="${tab==='offers'?'active':''}" data-action="profile-tab" data-tab="offers">Ofertas y seguimiento</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas</button><button class="${tab==='documents'?'active':''}" data-action="profile-tab" data-tab="documents">Archivos</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button></div>${body}
     </div>`;
   }
   function mountContactDocuments(id){
@@ -732,10 +759,20 @@
   let contactHistory={id:'',rows:[],loading:false,error:'',limit:50},contactTextSaving=false;
   function contactPhoneActions(contact){
     const phones=contactPhones(contact);if(!phones.length)return '';
-    return `<div class="m-contact-phone-actions">${phones.length>1?`<label class="m-field"><span>Elegir teléfono</span><select id="mobileContactPhone" class="m-select" data-contact-phone="${esc(contact.id)}">${phones.map(p=>`<option value="${p.number}">${esc(p.label)}</option>`).join('')}</select></label>`:''}<div class="m-inline-actions"><a id="mobileContactCall" class="m-secondary" href="tel:+${phones[0].number}">☎ Llamar</a>${has('can_use_whatsapp')?`<button class="m-secondary" data-action="contact-whatsapp" data-id="${esc(contact.id)}">WhatsApp</button>`:''}</div></div>`;
+    return phones.length>1?`<div class="m-contact-phone-actions"><label class="m-field"><span>Teléfono para WhatsApp</span><select id="mobileContactPhone" class="m-select" data-contact-phone="${esc(contact.id)}">${phones.map(p=>`<option value="${p.number}">${esc(p.label)}</option>`).join('')}</select></label></div>`:'';
   }
   function selectedContactPhone(id){const contact=state.contacts.find(c=>String(c.id)===String(id));const phones=contactPhones(contact);return phones.find(p=>p.number===byId('mobileContactPhone')?.value)||phones[0];}
   function openContactWhatsApp(id){if(!has('can_use_whatsapp')||!has('can_view_database'))return;const phone=selectedContactPhone(id);if(phone)go(mobileWaChatPath(phone.number+'@c.us')+'?fromContact='+encodeURIComponent(id));}
+  function openContactOffer(id){
+    if(!has('can_use_whatsapp')||!has('can_view_database'))return;
+    const phone=selectedContactPhone(id);if(!phone){toast('Este contacto no tiene teléfono para WhatsApp.','error');return;}
+    go(mobileWaChatPath(phone.number+'@c.us')+'?fromContact='+encodeURIComponent(id)+'&offer=1');
+  }
+  function scheduleContactWhatsApp(id){
+    if(!has('can_manage_agenda'))return;
+    const contact=state.contacts.find(row=>String(row.id)===String(id));if(!contact)return;
+    go('new-task/'+encodeURIComponent(id)+'?whatsapp=1');
+  }
   function mobileWaBackTarget(){
     const id=route().query.get('fromContact');
     return id&&has('can_view_database')&&state.contacts.some(contact=>String(contact.id)===id)?'contact/'+encodeURIComponent(id):'whatsapp';
@@ -1131,7 +1168,8 @@
   function renderNewTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
     const back=mobileWaReturnPath(contactId,'task');
-    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskFields('newTask',{title:'Llamar a '+contact.fullName,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
+    const isWhatsApp=route().query.get('whatsapp')==='1',title=isWhatsApp?'Programar WhatsApp para '+contact.fullName:'Llamar a '+contact.fullName;
+    return `<div class="m-page">${pageHead(isWhatsApp?'Programar WhatsApp':'Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">${isWhatsApp?'Recordatorio para enviar un WhatsApp':'Tarea'} · ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskFields('newTask',{title,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">${isWhatsApp?'Programar recordatorio':'Crear tarea'}</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
   }
   function ensureTaskDetail(id){if(!has('can_view_agenda')&&!has('can_manage_agenda'))return;if(taskDetail.id!==String(id))loadTaskDetail(id);}
   async function loadTaskDetail(id){
@@ -1569,7 +1607,7 @@ function crmInteractiveText(message){
     return `<div class="m-page m-wa-page">${head}<div id="mobileWaStatus">${renderMobileWaStatus()}</div><div class="m-search m-wa-search"><input id="mobileWaSearch" class="m-input" value="${esc(state.whatsapp.query)}" placeholder="Buscar nombre o teléfono" autocomplete="off"></div><div id="mobileWaFilters" class="m-wa-filters" role="group" aria-label="Filtrar conversaciones">${renderMobileWaFilters()}</div><div id="mobileWaList">${renderMobileWaListBody()}</div></div>`;
   }
   async function mobileWaApi(action,payload={}){
-    const getActions=new Set(['state','summary','chats']);if(!getActions.has(action)&&!['file','history','send','read','sendfile'].includes(action))throw new Error('Acción móvil no permitida.');
+    const getActions=new Set(['state','summary','chats']);if(!getActions.has(action)&&!['file','history','send','sendbuttons','read','sendfile'].includes(action))throw new Error('Acción móvil no permitida.');
     const {data,error}=await client.auth.getSession();if(error)throw error;
     const token=data?.session?.access_token;if(!token)throw new Error('La sesión ha caducado. Vuelve a entrar.');
     const method=getActions.has(action)?'GET':'POST',controller=typeof AbortController==='function'?new AbortController():null;
@@ -1694,6 +1732,15 @@ function crmInteractiveText(message){
   function mobileWaFilterText(value){return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es').replace(/\s+/g,' ');}
   function mobileWaMatchesFilter(values,query){const needle=mobileWaFilterText(query);if(!needle)return true;const haystack=mobileWaFilterText(values.filter(Boolean).join(' '));return haystack.includes(needle)||haystack.replace(/\s/g,'').includes(needle.replace(/\s/g,''));}
   function mobileWaTemplateCategory(template){return clean(template?.category)||'Sin categoría';}
+  const MOBILE_OFFER_OPERATORS=['Vodafone','MásMóvil','Yoigo','O2'];
+  function mobileWaOfferOperator(template){
+    const value=mobileWaFilterText([template?.category,template?.name,template?.shortcut,template?.text].filter(Boolean).join(' '));
+    if(value.includes('vodafone'))return 'Vodafone';
+    if(value.includes('masmovil')||value.includes('mas movil')||value.includes('mas-movil'))return 'MásMóvil';
+    if(value.includes('yoigo'))return 'Yoigo';
+    if(/(^|[^a-z0-9])o2([^a-z0-9]|$)/.test(value))return 'O2';
+    return '';
+  }
   function mobileWaTemplateCategories(){return [...new Set(state.whatsapp.templates.map(mobileWaTemplateCategory))].sort((a,b)=>a.localeCompare(b,'es'));}
   function mobileWaFilteredTemplates(){const query=state.whatsapp.templateQuery,category=state.whatsapp.templateCategory;return state.whatsapp.templates.map((template,index)=>({template,index})).filter(({template})=>{const current=mobileWaTemplateCategory(template);return (!category||current===category)&&mobileWaMatchesFilter([template.name,template.text,template.shortcut,current],query);});}
   function mobileWaInferLabelCategory(name){const value=mobileWaFilterText(name);if(value.includes('vodafone'))return 'Vodafone';if(value.includes('orange'))return 'Orange';if(value.includes('masmovil')||value.includes('mas movil'))return 'MásMóvil';if(value.includes('yoigo'))return 'Yoigo';return 'Otras';}
@@ -1709,7 +1756,7 @@ function crmInteractiveText(message){
       const visible=new Set(mobileWaFilteredLabels().map(label=>String(label.id)));root.querySelectorAll('[data-wa-label-id]').forEach(row=>row.classList.toggle('hidden',!visible.has(String(row.dataset.waLabelId))));const count=root.querySelector('[data-wa-result-count="labels"]');if(count)count.textContent=`Mostrando ${visible.size} ${visible.size===1?'etiqueta':'etiquetas'}`;root.querySelector('[data-wa-filter-empty="labels"]')?.classList?.toggle('hidden',visible.size>0);
     }
   }
-  function handleMobileWaSheetFilter(event){const filter=event.target?.dataset?.waFilter;if(!filter)return;const value=String(event.target.value||'');if(filter==='template-query')state.whatsapp.templateQuery=value;if(filter==='template-category')state.whatsapp.templateCategory=value;if(filter==='label-query')state.whatsapp.labelQuery=value;if(filter==='label-category')state.whatsapp.labelCategory=value;applyMobileWaSheetFilters();}
+  function handleMobileWaSheetFilter(event){const target=event.target,filter=target?.dataset?.waFilter;if(target?.dataset?.offerPermanenceAmount!==undefined){mobileOfferDraft.permanenceAmount=String(target.value||'').replace(',','.');return;}if(target?.dataset?.offerExtra!==undefined){mobileOfferDraft.extraText=String(target.value||'');return;}if(!filter)return;const value=String(target.value||'');if(filter==='template-query')state.whatsapp.templateQuery=value;if(filter==='template-category')state.whatsapp.templateCategory=value;if(filter==='label-query')state.whatsapp.labelQuery=value;if(filter==='label-category')state.whatsapp.labelCategory=value;applyMobileWaSheetFilters();}
   function renderMobileWaTemplatesSheet(){
     if(state.whatsapp.templatesLoading)return '<div class="m-wa-sheet-loading">Cargando plantillas…</div>';
     if(state.whatsapp.templatesError)return `<div class="m-duplicate warn">${esc(state.whatsapp.templatesError)}</div><button class="m-secondary m-wa-sheet-full" data-action="wa-show-templates" type="button">Reintentar</button>`;
@@ -1723,6 +1770,56 @@ function crmInteractiveText(message){
     catch(error){state.whatsapp.templates=[];state.whatsapp.templatesError=error?.message||'No se pudieron cargar las plantillas.';}
     finally{state.whatsapp.templatesLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='templates'&&root.dataset.chatId===chatId)setMobileWaSheet('templates','Usar plantilla',renderMobileWaTemplatesSheet(),chatId);}
   }
+  let mobileOfferCatalog=[];
+  let mobileOfferDraft={offerId:'',quantities:{},visibility:{},shopGift:false,permanenceRefund:false,permanenceAmount:'',extraText:''};
+  let mobileOfferBundle=[];
+  let mobileOfferPendingBatch=null;
+  function mobileOfferMoney(value){return `${Number(value||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €`;}
+  function mobileOfferCurrent(){return mobileOfferCatalog.find(offer=>String(offer.id)===String(mobileOfferDraft.offerId));}
+  function mobileOfferReset(offer){mobileOfferDraft={offerId:String(offer?.id||''),quantities:{},visibility:{},shopGift:false,permanenceRefund:false,permanenceAmount:'',extraText:''};(offer?.line_options||[]).filter(line=>line.active!==false&&line.default_selected).forEach(line=>mobileOfferDraft.quantities[line.id]=1);}
+  function mobileOfferClone(draft=mobileOfferDraft){return {offerId:String(draft?.offerId||''),quantities:{...(draft?.quantities||{})},visibility:{...(draft?.visibility||{})},shopGift:!!draft?.shopGift,permanenceRefund:!!draft?.permanenceRefund,permanenceAmount:String(draft?.permanenceAmount||''),extraText:String(draft?.extraText||'')};}
+  function mobileOfferTotal(offer,draft=mobileOfferDraft){return Number(offer?.base_price||0)+(offer?.line_options||[]).filter(line=>line.active!==false).reduce((sum,line)=>sum+(Number(draft.quantities[line.id]||0)*Number(line.price_delta||0)),0);}
+  function mobileOfferMessage(offer,draft=mobileOfferDraft){
+    const contact=mobileWaFindContact(state.whatsapp.selectedId),name=clean(contact?.fullName||'Cliente').split(/\s+/)[0]||'Cliente';let features=Array.isArray(offer?.base_features)?offer.base_features.filter(Boolean):[];
+    (offer?.line_options||[]).filter(line=>line.active!==false&&Number(draft.quantities[line.id]||0)>0&&draft.visibility[line.id]!==false).forEach(line=>{if(line.replaces_text)features=features.filter(feature=>String(feature)!==String(line.replaces_text));const text=line.message_text||line.name;if(text)features.push(`${text}${line.option_type==='quantity'&&Number(draft.quantities[line.id])>1?` × ${draft.quantities[line.id]}`:''}`);});
+    if(draft.shopGift)features.push('50 € de regalo para gastar en tienda');if(draft.permanenceRefund)features.push(`Abono de permanencia${draft.permanenceAmount?`: ${mobileOfferMoney(draft.permanenceAmount)}`:''}`);
+    return [`Hola ${name}, te envío la oferta que hemos comentado:`,...features.map(item=>`• ${item}`),`Precio final: ${mobileOfferMoney(mobileOfferTotal(offer,draft))}/mes`,clean(draft.extraText)].filter(Boolean).join('\n');
+  }
+  function renderMobileOfferOperators(){
+    return `<p class="m-wa-sheet-note">Elige el operador. Aquí solo aparecen tarifas activas del catálogo; los seguimientos y demos no se muestran.</p><div class="m-wa-sheet-options">${MOBILE_OFFER_OPERATORS.map(operator=>{const count=mobileOfferCatalog.filter(offer=>offer.active&&offer.operator===operator).length;return `<button class="m-wa-sheet-option" data-action="wa-offer-operator" data-operator="${esc(operator)}" type="button"${count?'':' disabled'}><span class="m-wa-sheet-icon" aria-hidden="true">◇</span><span><b>${esc(operator)}</b><small>${count?`${count} ${count===1?'oferta disponible':'ofertas disponibles'}`:'Sin ofertas activas'}</small></span><i aria-hidden="true">›</i></button>`;}).join('')}</div>`;
+  }
+  async function openMobileOfferOperators(){
+    const chatId=state.whatsapp.selectedId;if(!chatId||!has('can_use_whatsapp'))return;
+    mobileOfferBundle=[];
+    state.whatsapp.templatesLoading=true;state.whatsapp.templatesError='';setMobileWaSheet('offer-operators','Enviar oferta','<div class="m-wa-sheet-loading">Cargando ofertas…</div>',chatId);
+    try{const [offers,lines]=await Promise.all([client.from('crm_offer_catalog').select('*').order('position').order('name'),client.from('crm_offer_line_options').select('*').order('position').order('name')]);if(offers.error)throw offers.error;if(lines.error)throw lines.error;mobileOfferCatalog=(offers.data||[]).map(offer=>({...offer,line_options:(lines.data||[]).filter(line=>String(line.offer_id)===String(offer.id))}));}
+    catch(error){mobileOfferCatalog=[];state.whatsapp.templatesError=error?.message||'No se pudieron cargar las ofertas.';}
+    finally{state.whatsapp.templatesLoading=false;const root=byId('mobileWaActionSheet');if(root?.dataset?.kind==='offer-operators'&&root.dataset.chatId===chatId)setMobileWaSheet('offer-operators','Enviar oferta',state.whatsapp.templatesError?`<div class="m-duplicate warn">${esc(state.whatsapp.templatesError)}</div><button class="m-secondary m-wa-sheet-full" data-action="contact-offer-retry" type="button">Reintentar</button>`:renderMobileOfferOperators(),chatId);}
+  }
+  function openMobileOfferTemplates(operator){
+    const chatId=mobileWaSheetChatId(),rows=mobileOfferCatalog.filter(offer=>offer.active&&offer.operator===operator);
+    if(!chatId)return;
+    const body=`<div class="m-offer-config-head"><button class="m-link-button" type="button" data-action="wa-offer-back-operators">← Elegir otro operador</button></div>${rows.length?`<p class="m-wa-sheet-note">${esc(operator)} · selecciona una tarifa y después podrás personalizarla. No se enviará nada todavía.</p><div class="m-wa-template-list">${rows.map(offer=>`<button class="m-wa-template-row" data-action="wa-configure-catalog-offer" data-offer-id="${esc(offer.id)}" type="button"><span><b>${esc(offer.name||'Oferta')}</b><small>Desde ${esc(mobileOfferMoney(offer.base_price))}/mes</small><em>${esc((offer.base_features||[]).slice(0,4).join(' · ')||'Ver condiciones de la tarifa')}</em></span><i aria-hidden="true">›</i></button>`).join('')}</div>`:`<div class="m-wa-sheet-empty">No hay ofertas activas para ${esc(operator)}.</div>`}`;
+    setMobileWaSheet('offer-templates',`Ofertas · ${operator}`,body,chatId);
+  }
+  function renderMobileOfferConfigurator(){
+    const chatId=mobileWaSheetChatId(),offer=mobileOfferCurrent();if(!chatId||!offer)return;
+    const options=(offer.line_options||[]).filter(line=>line.active!==false).map(line=>{const quantity=Number(mobileOfferDraft.quantities[line.id]||0),delta=Number(line.price_delta||0),price=`${delta>0?'+':''}${mobileOfferMoney(delta)}/mes`,eye=quantity?`<button type="button" class="m-offer-eye ${mobileOfferDraft.visibility[line.id]===false?'is-hidden':''}" data-action="wa-offer-visibility" data-line-id="${esc(line.id)}" title="${mobileOfferDraft.visibility[line.id]===false?'Mostrar en el mensaje':'Ocultar del mensaje'}">${mobileOfferDraft.visibility[line.id]===false?'⊘':'👁'}</button>`:'',copy=`<span class="m-offer-option-copy"><b>${esc(line.name)}</b><small>${esc(price)}${line.data_gb!=null?` · ${esc(line.data_gb)} GB`:''}</small></span>`;if(line.option_type==='quantity')return `<div class="m-offer-option">${copy}<div class="m-offer-option-actions">${eye}<div class="m-offer-stepper"><button type="button" data-action="wa-offer-step" data-line-id="${esc(line.id)}" data-step="-1" aria-label="Quitar">−</button><b>${quantity}</b><button type="button" data-action="wa-offer-step" data-line-id="${esc(line.id)}" data-step="1" aria-label="Añadir">＋</button></div></div></div>`;return `<div class="m-offer-option m-offer-choice"><input type="checkbox" data-action="wa-offer-choice" data-line-id="${esc(line.id)}" ${quantity?'checked':''}>${copy}${eye}</div>`;}).join('');
+    const benefits=`<section class="m-offer-benefits"><h3 class="m-offer-section-title">Ventajas para el cliente</h3><label class="m-offer-benefit"><input type="checkbox" data-action="wa-offer-benefit" data-benefit="shopGift" ${mobileOfferDraft.shopGift?'checked':''}><span><b>50 € de regalo en tienda</b><small>Se añade al mensaje; no cambia la cuota.</small></span></label><label class="m-offer-benefit"><input type="checkbox" data-action="wa-offer-benefit" data-benefit="permanenceRefund" ${mobileOfferDraft.permanenceRefund?'checked':''}><span><b>Abono de permanencia</b><small>Se añade al mensaje; no cambia la cuota.</small></span></label>${mobileOfferDraft.permanenceRefund?`<label class="m-offer-amount">Importe del abono<input class="m-input" inputmode="decimal" data-offer-permanence-amount value="${esc(mobileOfferDraft.permanenceAmount)}" placeholder="Ej. 50"></label>`:''}</section>`;
+    const body=`<div class="m-offer-config-head"><button class="m-link-button" type="button" data-action="wa-offer-back">← Cambiar tarifa</button><p class="m-wa-sheet-note"><b>${esc(offer.operator)} · ${esc(offer.name)}</b><br>Marca lo que llevará el cliente. El precio se actualiza antes de preparar el mensaje.</p></div><div class="m-offer-base">${(offer.base_features||[]).map(feature=>`<span>${esc(feature)}</span>`).join('')}</div><h3 class="m-offer-section-title">Personaliza la oferta</h3><div class="m-offer-options">${options||'<div class="m-wa-sheet-empty">Esta tarifa no tiene opciones adicionales.</div>'}</div>${benefits}<div class="m-offer-total"><span>Precio final mensual</span><b>${esc(mobileOfferMoney(mobileOfferTotal(offer)))}/mes</b></div><button class="m-primary m-wa-sheet-full" type="button" data-action="wa-offer-preview">Vista previa antes de enviar</button>`;
+    setMobileWaSheet('offer-configurator',`Configurar oferta`,body,chatId);
+  }
+  function configureMobileCatalogOffer(id){const offer=mobileOfferCatalog.find(row=>String(row.id)===String(id));if(!offer)return;mobileOfferReset(offer);renderMobileOfferConfigurator();}
+  function changeMobileOfferQuantity(lineId,step){const offer=mobileOfferCurrent(),line=(offer?.line_options||[]).find(row=>String(row.id)===String(lineId));if(!line)return;mobileOfferDraft.quantities[line.id]=Math.max(0,Math.min(20,Number(mobileOfferDraft.quantities[line.id]||0)+Number(step||0)));renderMobileOfferConfigurator();}
+  function changeMobileOfferChoice(lineId,checked){const offer=mobileOfferCurrent(),line=(offer?.line_options||[]).find(row=>String(row.id)===String(lineId));if(!line)return;if(checked&&line.option_type==='radio'&&line.group_name)(offer.line_options||[]).filter(other=>other.option_type==='radio'&&other.group_name===line.group_name).forEach(other=>mobileOfferDraft.quantities[other.id]=0);mobileOfferDraft.quantities[line.id]=checked?1:0;renderMobileOfferConfigurator();}
+  function toggleMobileOfferVisibility(lineId){if(!mobileOfferDraft.quantities[lineId])return;mobileOfferDraft.visibility[lineId]=mobileOfferDraft.visibility[lineId]===false;renderMobileOfferConfigurator();}
+  function toggleMobileOfferBenefit(name,checked){if(!['shopGift','permanenceRefund'].includes(name))return;mobileOfferDraft[name]=!!checked;if(name==='permanenceRefund'&&!checked)mobileOfferDraft.permanenceAmount='';renderMobileOfferConfigurator();}
+  function mobileOfferBundleRows(){return [...mobileOfferBundle,{offerId:mobileOfferDraft.offerId,draft:mobileOfferClone()}].map(row=>({offer:mobileOfferCatalog.find(item=>String(item.id)===String(row.offerId)),draft:row.draft})).filter(row=>row.offer);}
+  function renderMobileOfferPreview(){const chatId=mobileWaSheetChatId(),offer=mobileOfferCurrent();if(!chatId||!offer)return;const rows=mobileOfferBundleRows(),count=rows.length,prior=rows.slice(0,-1).map((row,index)=>`<section class="m-offer-preview-card"><b>Oferta ${index+1} · ${esc(row.offer.operator)} · ${esc(row.offer.name)}</b><div class="m-offer-preview-message">${esc(mobileOfferMessage(row.offer,row.draft))}</div></section>`).join(''),body=`<div class="m-offer-config-head"><button class="m-link-button" type="button" data-action="wa-offer-preview-back">← Volver a configurar</button><p class="m-wa-sheet-note">Revisa exactamente lo que recibirá el cliente. Puedes añadir un texto antes de prepararlo.</p></div>${prior}<section class="m-offer-preview-card"><b>Oferta ${count} · ${esc(offer.operator)} · ${esc(offer.name)}</b><div class="m-offer-preview-message">${esc(mobileOfferMessage(offer))}</div><label class="m-offer-extra">Texto adicional para el cliente<textarea class="m-textarea" rows="4" data-offer-extra placeholder="Ej. Te llamamos esta tarde para resolver cualquier duda.">${esc(mobileOfferDraft.extraText)}</textarea></label><button class="m-secondary m-wa-sheet-full" type="button" data-action="wa-offer-preview-refresh">Actualizar vista previa</button></section><div class="m-offer-button-preview"><b>Cada oferta se enviará en un mensaje distinto con botones</b><span>Me interesa</span><span>No me interesa</span><span>Quiero otra oferta</span></div>${count<2?'<button class="m-secondary m-wa-sheet-full" type="button" data-action="wa-offer-add-second">＋ Añadir segunda oferta</button>':''}<button class="m-primary m-wa-sheet-full" type="button" data-action="wa-offer-prepare">Preparar ${count===1?'oferta':'2 ofertas'} en WhatsApp</button>`;setMobileWaSheet('offer-preview',count===1?'Vista previa de la oferta':'Vista previa de 2 ofertas',body,chatId);}
+  function closeMobileOfferToContact(){const root=byId('mobileWaActionSheet'),kind=String(root?.dataset?.kind||''),contactId=route().query.get('fromContact');closeMobileWaSheet(false);if(kind.startsWith('offer-')&&contactId&&has('can_view_database'))go('contact/'+encodeURIComponent(contactId),true);}
+  function addSecondMobileOffer(){const chatId=mobileWaSheetChatId(),offer=mobileOfferCurrent();if(!chatId||!offer||mobileOfferBundle.length)return;mobileOfferBundle=[{offerId:mobileOfferDraft.offerId,draft:mobileOfferClone()}];setMobileWaSheet('offer-operators','Añadir segunda oferta',renderMobileOfferOperators(),chatId);}
+  function mobileOfferButtons(index){return [{buttonId:`offer-${index}-interest`,buttonText:'Me interesa'},{buttonId:`offer-${index}-no-interest`,buttonText:'No me interesa'},{buttonId:`offer-${index}-another`,buttonText:'Quiero otra oferta'}];}
+  function prepareMobileCatalogOffer(){const chatId=mobileWaSheetChatId(),input=byId('mobileWaComposer'),rows=mobileOfferBundleRows();if(!chatId||!rows.length||!input)return;mobileOfferPendingBatch={chatId:String(chatId),messages:rows.map((row,index)=>({message:mobileOfferMessage(row.offer,row.draft).slice(0,4096),buttons:mobileOfferButtons(index+1)}))};input.value=mobileOfferPendingBatch.messages[0].message;closeMobileWaSheet(false);input.focus?.();input.setSelectionRange?.(input.value.length,input.value.length);toast(`${rows.length===1?'Oferta preparada':'Las 2 ofertas están preparadas'}. Pulsa Enviar una vez.`, 'success');}
   function resolveMobileWaTemplate(text,chatId){
     const chat=mobileWaSelectedChat(chatId),contact=mobileWaFindContact(chatId),fullName=clean(contact?.fullName||chat?.name),first=clean(contact?.first||fullName.split(/\s+/)[0]),dni=clean(contact?.dni),phone=clean(contactPhones(contact).find(p=>p.number===contactPhoneNumber(mobileWaNormalizePhone(chatId)))?.label||contact?.phone||mobileWaNormalizePhone(chatId));
     return String(text||'').replace(/\{\{contacto\.nombre_completo\}\}/gi,fullName).replace(/\{\{contacto\.nombre\}\}/gi,first).replace(/\{\{contacto\.telefono\}\}/gi,phone).replace(/\{\{contacto\.(?:dni|dni \/ nif|nif)\}\}/gi,dni).replace(/\{nombre_completo\}/gi,fullName).replace(/\{nombre\}/gi,first).replace(/\{dni\}/gi,dni).replace(/\{telefono\}/gi,phone);
@@ -1790,6 +1887,7 @@ function crmInteractiveText(message){
     const composer=byId('mobileWaComposer');if(composer)composer.onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMobileWaMessage();}};
     if(changed||!state.whatsapp.messages.length)loadMobileWaHistory(chatId,{scrollBottom:true});else{scrollMobileWaBottom();scheduleMobileWaRefresh();}
     markMobileWaRead(chatId);
+    if(route().query.get('offer')==='1'&&has('can_use_whatsapp'))setTimeout(()=>{if(route().parts[0]==='whatsapp-chat'&&safeDecode(route().parts[1])===String(chatId)&&byId('mobileWaActionSheet')?.classList.contains('hidden'))openMobileOfferOperators();},0);
   }
   function setMobileWaSending(value,message='',chatId=''){
     state.whatsapp.sending=value;state.whatsapp.sendingChatId=value?(chatId||state.whatsapp.sendingChatId):'';const send=byId('mobileWaSend'),attach=document.querySelector('[data-action="wa-attach"]'),composer=byId('mobileWaComposer'),status=byId('mobileWaComposerMsg');
@@ -1799,10 +1897,10 @@ function crmInteractiveText(message){
     if(state.whatsapp.sending)return;const chatId=state.whatsapp.selectedId,input=byId('mobileWaComposer'),message=clean(input?.value);if(!chatId||!message)return;
     setMobileWaSending(true,'Enviando…',chatId);
     try{
-      const result=await mobileWaApi('send',{chatId,message});if(input)input.value='';
-      const local={type:'outgoing',outgoing:true,__mobilePending:true,idMessage:result?.idMessage||`local-${Date.now()}`,timestamp:Math.floor(Date.now()/1000),messageData:{typeMessage:'textMessage',textMessageData:{textMessage:message}}};
-      if(String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.messages.push(local);updateMobileWaMessagesDom({scrollBottom:true});}const chat=state.whatsapp.chats.find(row=>String(row.id)===String(chatId));if(chat)chat._lastMessage=local;toast('Mensaje enviado.','success');
-    }catch(error){const ambiguous=!error?.status;toast(ambiguous?'No se pudo confirmar el envío. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar.'),'error');}
+      const bundle=mobileOfferPendingBatch&&String(mobileOfferPendingBatch.chatId)===String(chatId)?mobileOfferPendingBatch:null,items=bundle?.messages?.length?bundle.messages:[{message,buttons:null}],total=items.length;let sent=0,lastLocal=null;if(bundle)bundle.messages[0].message=message;
+      while(items.length){const item=items[0],result=item.buttons?await mobileWaApi('sendbuttons',{chatId,message:item.message,buttons:item.buttons}):await mobileWaApi('send',{chatId,message:item.message});const local={type:'outgoing',outgoing:true,__mobilePending:true,idMessage:result?.idMessage||`local-${Date.now()}-${sent}`,timestamp:Math.floor(Date.now()/1000),messageData:item.buttons?{typeMessage:'interactiveButtons',interactiveButtons:{contentText:item.message,buttons:item.buttons}}:{typeMessage:'textMessage',textMessageData:{textMessage:item.message}}};if(String(state.whatsapp.selectedId)===String(chatId))state.whatsapp.messages.push(local);lastLocal=local;sent++;if(bundle)bundle.messages.shift();else items.shift();}
+      if(input)input.value='';mobileOfferPendingBatch=null;if(lastLocal&&String(state.whatsapp.selectedId)===String(chatId)){updateMobileWaMessagesDom({scrollBottom:true});const chat=state.whatsapp.chats.find(row=>String(row.id)===String(chatId));if(chat)chat._lastMessage=lastLocal;}toast(items[0]?.buttons||(total&&bundle)?(total>1?'Las 2 ofertas con botones se han enviado.':'Oferta con botones enviada.'):'Mensaje enviado.','success');
+    }catch(error){const remaining=mobileOfferPendingBatch&&String(mobileOfferPendingBatch.chatId)===String(chatId)?mobileOfferPendingBatch.messages[0]:null;if(remaining&&input)input.value=remaining.message;const ambiguous=!error?.status;toast(remaining?'Se envió la anterior; queda una oferta pendiente. Revisa el texto y vuelve a pulsar Enviar.':(ambiguous?'No se pudo confirmar el envío. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar.')),'error');}
     finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
   }
   const mobileWaFileDataUrl=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||''));reader.onerror=()=>reject(new Error('No se pudo leer el archivo.'));reader.readAsDataURL(file);});
@@ -1932,6 +2030,8 @@ function crmInteractiveText(message){
     if(action==='finish-flow'){resetDraft();go('home');}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;if(state.profileTab==='history')contactHistory={id:'',rows:[],loading:false,error:'',limit:50};render();}
     if(action==='contact-whatsapp')openContactWhatsApp(target.dataset.id);
+    if(action==='contact-offer')openContactOffer(target.dataset.id);
+    if(action==='contact-schedule-whatsapp')scheduleContactWhatsApp(target.dataset.id);
     if(action==='contact-text-save')saveContactText(target.dataset.id,target.dataset.kind,target);
     if(action==='contact-history-reload')loadContactHistory(target.dataset.id);
     if(action==='contact-history-more')loadContactHistory(target.dataset.id,contactHistory.limit+50);
@@ -1960,9 +2060,23 @@ function crmInteractiveText(message){
     if(action==='wa-send')sendMobileWaMessage();
     if(action==='wa-attach')openMobileWaActions(target);
     if(action==='wa-toggle-archive')toggleMobileWaArchive();
-    if(action==='wa-close-sheet')closeMobileWaSheet();
+    if(action==='wa-close-sheet')closeMobileOfferToContact();
     if(action==='wa-choose-file'){const chatId=mobileWaSheetChatId();if(!chatId)return;state.whatsapp.pendingFileChatId=chatId;closeMobileWaSheet(false);byId('mobileWhatsAppFileInput').click();}
     if(action==='wa-show-templates')openMobileWaTemplates();
+    if(action==='wa-offer-operator')openMobileOfferTemplates(target.dataset.operator||'');
+    if(action==='wa-configure-catalog-offer')configureMobileCatalogOffer(target.dataset.offerId);
+    if(action==='wa-offer-back-operators'){const chatId=mobileWaSheetChatId();if(chatId)setMobileWaSheet('offer-operators',mobileOfferBundle.length?'Añadir segunda oferta':'Enviar oferta',renderMobileOfferOperators(),chatId);}
+    if(action==='wa-offer-back'){const offer=mobileOfferCurrent();if(offer)openMobileOfferTemplates(offer.operator);}
+    if(action==='wa-offer-step')changeMobileOfferQuantity(target.dataset.lineId,target.dataset.step);
+    if(action==='wa-offer-choice')changeMobileOfferChoice(target.dataset.lineId,!!target.checked);
+    if(action==='wa-offer-visibility')toggleMobileOfferVisibility(target.dataset.lineId);
+    if(action==='wa-offer-benefit')toggleMobileOfferBenefit(target.dataset.benefit,!!target.checked);
+    if(action==='wa-offer-preview')renderMobileOfferPreview();
+    if(action==='wa-offer-preview-back')renderMobileOfferConfigurator();
+    if(action==='wa-offer-preview-refresh')renderMobileOfferPreview();
+    if(action==='wa-offer-add-second')addSecondMobileOffer();
+    if(action==='wa-offer-prepare')prepareMobileCatalogOffer();
+    if(action==='contact-offer-retry')openMobileOfferOperators();
     if(action==='wa-use-template')useMobileWaTemplate(target.dataset.index);
     if(action==='wa-create-task')openMobileWaLinkedAction('task');
     if(action==='wa-create-opportunity')openMobileWaLinkedAction('opportunity');
