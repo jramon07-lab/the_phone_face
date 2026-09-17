@@ -11,7 +11,7 @@ function addStyle(){
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{display:block!important;padding:14px!important}
  #contactModal.tpfContactReference #tpfGoogleInlineCard{margin:0 0 12px!important}
  #contactModal.tpfContactReference:not(.tpf-contact-editing) .cpSeparateIdentity #contactName{display:none!important}
- #contactModal.tpfContactReference .cpRefEdit{display:none!important}
+ #contactModal.tpfContactReference .cpLeft>.cpRefEdit{display:inline-flex!important;align-items:center;justify-content:center;margin:0 0 12px!important;padding:9px 12px!important;border:1px solid #9eb1ca!important;border-radius:8px!important;background:#fff!important;color:#173d74!important;font-weight:700!important}
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>.cpSideSection,
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection,
  #contactModal.tpfContactReference #cpRefPanel>.cpSideSection,
@@ -65,7 +65,10 @@ function group(root,key,title,nodes){
 function ensure(){
  if(window.innerWidth<1024||modal.classList.contains('hidden'))return;
  const panel=$('cpRefPanel');if(!panel)return;
- modal.querySelectorAll('.cpRefCall').forEach(node=>node.remove());
+ const header=modal.querySelector('.cpTop'),left=modal.querySelector('.cpLeft');
+ const call=modal.querySelector('.cpRefCall'),edit=modal.querySelector('.cpRefEdit');
+ if(header&&call&&call.parentElement!==header)header.prepend(call);
+ if(left&&edit&&edit.parentElement!==left)left.insertBefore(edit,left.firstElementChild||null);
  const verification=$('tpfGoogleInlineCard'),right=modal.querySelector('.cpRight');
  if(verification&&right){delete verification.dataset.cpRefPane;if(right.firstChild!==verification)right.prepend(verification);}
  addStyle();
