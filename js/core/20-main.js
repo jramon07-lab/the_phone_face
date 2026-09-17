@@ -1580,6 +1580,21 @@ async function deleteSelectedSalesOpportunities(){
 if($("salesBulkMove"))$("salesBulkMove").onclick=moveSelectedSalesOpportunities;
 if($("salesBulkDelete"))$("salesBulkDelete").onclick=deleteSelectedSalesOpportunities;
 
+function salesClientDisplay(value){
+  const raw=String(value||"").trim();
+  if(!raw)return "";
+  const letters=raw.replace(/[^\p{L}]/gu,"");
+  if(!letters || letters!==letters.toLocaleUpperCase("es-ES"))return raw;
+  const small=new Set(["de","del","la","las","los","y","e"]);
+  return raw.toLocaleLowerCase("es-ES").split(/(\s+)/).map((part,index)=>{
+    if(/^\s+$/.test(part))return part;
+    return part.replace(/^([^\p{L}]*)([\p{L}À-ÿÑñ]+)(.*)$/u,(_,prefix,core,suffix)=>{
+      const normalized=small.has(core)&&index>0?core:core.charAt(0).toLocaleUpperCase("es-ES")+core.slice(1);
+      return prefix+normalized+suffix;
+    });
+  }).join("");
+}
+
 function renderSalesList(){
   if(!$("salesListRows"))return;
   const stages=salesCache.stages||[];
@@ -1590,7 +1605,7 @@ function renderSalesList(){
     <div class="salesListRow" onclick="openOpportunityCard('${o.id}')">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
       <div class="salesListTitle">${esc(o.title||"Oportunidad")}</div>
-      <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
+      <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(salesClientDisplay(o.client_name))}</button>`:"—"}</div>
       <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
       <div>${esc(o.phone||"—")}</div>
       <div>${esc(fmtMoney(o.amount||0))}</div>
