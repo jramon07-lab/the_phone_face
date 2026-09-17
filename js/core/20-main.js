@@ -480,46 +480,63 @@ async function deleteOpportunityVerified(id){
 }
 
 window.openOpportunityCard=(id)=>{
-  if(!__oppKeepPreparedOrigin)captureOpportunityModalOrigin();
-  __oppKeepPreparedOrigin=false;
-  pendingOpportunityRecordId=null;
-  const o=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
-  if(!o)return;
-  $("oppModalSave").textContent="Guardar cambios";
-  $("oppModalDelete").classList.remove("hidden");
-  $("oppModalId").value=o.id||"";
-  window.TPFContactParty?.mountOpportunity(o.contract_party);
-  $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
-  $("oppModalTitle").value=o.title||"";
-  $("oppModalClient").value=o.client_name||"";
-  $("oppModalPhone").value=o.phone||"";
-  $("oppModalDni").value="";
-  $("oppModalOpenContact").dataset.recordId=o.record_id||"";
-  pendingOpportunityRecordId=o.record_id||null;
-  $("oppModalAmount").value=o.amount??"";
-  $("oppModalDate").value=o.expected_date||"";
-  $("oppModalNotes").value=o.notes||"";
+  // Abrir la ficha debe funcionar aunque fallen datos auxiliares o el historial de navegación.
+  try{
+    try{
+      if(!__oppKeepPreparedOrigin)captureOpportunityModalOrigin();
+    }catch(originError){
+      console.warn("No se pudo guardar el origen de la oportunidad",originError);
+      opportunityModalOrigin={type:"sales",view:(typeof salesCurrentView!=="undefined"?salesCurrentView:"list"),left:$("salesScroll")?.scrollLeft||0};
+    }
+    __oppKeepPreparedOrigin=false;
+    pendingOpportunityRecordId=null;
+    const o=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
+    if(!o)return;
 
-  $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
-    `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
-  ).join("");
+    $("oppModalSave").textContent="Guardar cambios";
+    $("oppModalDelete").classList.remove("hidden");
+    $("oppModalId").value=o.id||"";
+    try{window.TPFContactParty?.mountOpportunity(o.contract_party);}catch(e){console.warn("Titular de oportunidad",e)}
+    $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
+    $("oppModalTitle").value=o.title||"";
+    $("oppModalClient").value=o.client_name||"";
+    $("oppModalPhone").value=o.phone||"";
+    $("oppModalDni").value="";
+    $("oppModalOpenContact").dataset.recordId=o.record_id||"";
+    pendingOpportunityRecordId=o.record_id||null;
+    $("oppModalAmount").value=o.amount??"";
+    $("oppModalDate").value=o.expected_date||"";
+    $("oppModalNotes").value=o.notes||"";
+    $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
+      `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
+    ).join("");
 
-  renderOpportunityCustomFields();
-  loadOpportunityCustomFields(o.id).catch(e=>console.warn("Campos de oportunidad",e));
-  if(o.record_id){
-    sb.from("records").select("id,data").eq("id",o.record_id).maybeSingle().then(({data})=>{
-      if(data && String($("oppModalId")?.value)===String(o.id))$("oppModalDni").value=mapSalesContact(data).dni;
-    });
+    const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
+    const meta=[];
+    if(stage?.name)meta.push(`Columna actual: ${stage.name}`);
+    if(o.created_at)meta.push(`Creada: ${new Date(o.created_at).toLocaleString("es-ES")}`);
+    if(o.updated_at)meta.push(`Actualizada: ${new Date(o.updated_at).toLocaleString("es-ES")}`);
+    $("oppMetaInfo").textContent=meta.join(" · ");
+
+    // Mostrar primero la ficha: los campos extra no pueden impedir abrirla.
+    $("oppDetailModal").classList.remove("hidden");
+
+    try{
+      renderOpportunityCustomFields();
+      loadOpportunityCustomFields(o.id).catch(e=>console.warn("Campos de oportunidad",e));
+      if(o.record_id){
+        sb.from("records").select("id,data").eq("id",o.record_id).maybeSingle().then(({data})=>{
+          if(data && String($("oppModalId")?.value)===String(o.id))$("oppModalDni").value=mapSalesContact(data).dni;
+        });
+      }
+    }catch(extraError){
+      console.warn("Datos adicionales de oportunidad",extraError);
+    }
+  }catch(error){
+    console.error("No se pudo abrir la oportunidad",error);
+    // Último resguardo: nunca dejar un clic sin respuesta visible.
+    $("oppDetailModal")?.classList.remove("hidden");
   }
-
-  const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
-  const meta=[];
-  if(stage?.name)meta.push(`Columna actual: ${stage.name}`);
-  if(o.created_at)meta.push(`Creada: ${new Date(o.created_at).toLocaleString("es-ES")}`);
-  if(o.updated_at)meta.push(`Actualizada: ${new Date(o.updated_at).toLocaleString("es-ES")}`);
-  $("oppMetaInfo").textContent=meta.join(" · ");
-
-  $("oppDetailModal").classList.remove("hidden");
 };
 
 
