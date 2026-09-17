@@ -16,10 +16,11 @@ const MOBILE_ACTION_METHODS = new Map([
   ['file', 'POST'],
   ['history', 'POST'],
   ['send', 'POST'],
+  ['sendbuttons', 'POST'],
   ['read', 'POST'],
   ['sendfile', 'POST']
 ]);
-const CHAT_ACTIONS = new Set(['file', 'history', 'send', 'read', 'sendfile']);
+const CHAT_ACTIONS = new Set(['file', 'history', 'send', 'sendbuttons', 'read', 'sendfile']);
 const MAX_HISTORY_COUNT = 200;
 const MAX_ID_MESSAGE_LENGTH = 256;
 const MAX_FILE_NAME_LENGTH = 180;
@@ -174,6 +175,19 @@ export default async function handler(req, res) {
 
       if (action === 'send' && String(body.message || '').trim().length > 4096) {
         return res.status(400).json({ ok: false, error: 'El mensaje supera los 4.096 caracteres.' });
+      }
+
+      if (action === 'sendbuttons') {
+        const message = normalizedBoundedString(body.message, 4096, true);
+        const buttons = Array.isArray(body.buttons) ? body.buttons : [];
+        const validButtons = buttons.length > 0 && buttons.length <= 3 && buttons.every((button) => {
+          const buttonId = normalizedBoundedString(String(button?.buttonId || ''), 80);
+          const buttonText = normalizedBoundedString(String(button?.buttonText || ''), 25);
+          return buttonId && buttonText;
+        });
+        if (!message || !validButtons) return res.status(400).json({ ok: false, error: 'Oferta interactiva no válida.' });
+        nextBody.message = message;
+        nextBody.buttons = buttons.map((button) => ({ buttonId: String(button.buttonId).trim(), buttonText: String(button.buttonText).trim() }));
       }
 
       if (action === 'sendfile') {
