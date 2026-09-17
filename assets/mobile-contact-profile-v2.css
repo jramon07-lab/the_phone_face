@@ -1,0 +1,29 @@
+/* Ficha comercial de la aplicación móvil: versión clara, compacta y propia. */
+:root{--cp-bg:#f4f6fa;--cp-card:#fff;--cp-line:#dce3ed;--cp-text:#192236;--cp-muted:#6b7788;--cp-blue:#1769e8;--cp-blue-soft:#eaf2ff;--cp-green:#159b61}
+html:has(.m-contact-profile-v2),body:has(.m-contact-profile-v2){background:var(--cp-bg);color:var(--cp-text)}
+.m-contact-profile-v2{padding-bottom:30px;color:var(--cp-text)}
+.m-contact-profile-v2 .m-page-head,.m-contact-profile-v2 .m-page-head h1,.m-contact-profile-v2 .m-page-head button{color:var(--cp-text)}
+.m-contact-profile-v2 .m-back{border-color:var(--cp-line);background:#fff;color:var(--cp-text)}
+.m-cp2-identity{display:flex;align-items:center;gap:12px;margin:2px 0 14px;padding:14px;border:1px solid var(--cp-line);border-radius:16px;background:var(--cp-card);box-shadow:0 5px 16px #1720330a}
+.m-cp2-identity .m-avatar{width:52px;height:52px;flex:none;margin:0;background:linear-gradient(135deg,#dfeaff,#cddaff);color:#215db7;font-size:1rem}
+.m-cp2-identity h1{margin:0;font-size:1.06rem;line-height:1.2;color:var(--cp-text)}
+.m-cp2-identity p{margin:5px 0 0;color:var(--cp-muted);font-size:.7rem;overflow-wrap:anywhere}
+.m-cp2-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 13px}
+.m-cp2-action{min-width:0;min-height:44px;border:1px solid var(--cp-line);border-radius:10px;background:#fff;color:#304057;padding:8px;font-weight:780;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 6px #17203308}
+.m-cp2-action:first-child{border-color:var(--cp-green);background:#edfbf4;color:#147a50}
+.m-cp2-snapshot{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 14px}
+.m-cp2-tab{min-width:0;min-height:88px;border:1px solid var(--cp-line);border-radius:13px;background:var(--cp-card);color:var(--cp-text);padding:11px;text-align:left;display:grid;align-content:start;gap:4px;box-shadow:0 3px 12px #17203308}
+.m-cp2-tab:active{transform:scale(.99);background:#f8fbff}
+.m-cp2-tab small{color:var(--cp-muted);font-size:.61rem;text-transform:uppercase;letter-spacing:.045em}
+.m-cp2-tab b{font-size:.82rem;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--cp-text)}
+.m-cp2-tab span{color:var(--cp-muted);font-size:.64rem;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-cp2-tab:first-child{grid-column:1/-1;min-height:74px;border-color:#c6dbff;background:var(--cp-blue-soft)}
+.m-cp2-tab:first-child b{color:#155bbf}
+.m-contact-profile-v2 .m-tabs{position:sticky;top:0;z-index:4;margin-top:0;background:var(--cp-bg);border-bottom-color:var(--cp-line)}
+.m-contact-profile-v2 .m-tabs button{color:#66758a}
+.m-contact-profile-v2 .m-tabs button.active{color:var(--cp-blue);border-color:var(--cp-blue);font-weight:800}
+.m-contact-profile-v2 .m-info-card,.m-contact-profile-v2 .m-list-card{border-color:var(--cp-line);background:var(--cp-card);color:var(--cp-text);box-shadow:0 3px 12px #17203308}
+.m-contact-profile-v2 .m-info-row{border-bottom-color:#edf0f5}.m-contact-profile-v2 .m-info-row span,.m-contact-profile-v2 .m-info-card small,.m-contact-profile-v2 .m-subtitle{color:var(--cp-muted)}.m-contact-profile-v2 .m-info-row b,.m-contact-profile-v2 .m-list-main strong{color:var(--cp-text)}
+.m-contact-profile-v2 .m-secondary{border-color:#cbd8eb;background:#fff;color:#31527e}.m-contact-profile-v2 .m-primary{background:var(--cp-blue);color:#fff}.m-contact-profile-v2 .m-empty{border-color:#cfd9e8;color:var(--cp-muted);background:#fff}
+@media(max-width:360px){.m-cp2-actions{gap:6px}.m-cp2-action{font-size:.67rem}.m-cp2-tab{padding:9px}}
+.m-app:has(.m-contact-profile-v2) .m-header,.m-app:has(.m-contact-profile-v2) .m-bottom-nav{background:#fff;border-color:var(--cp-line);color:var(--cp-text)}.m-app:has(.m-contact-profile-v2) .m-header button,.m-app:has(.m-contact-profile-v2) .m-bottom-nav button{color:var(--cp-text)}.m-app:has(.m-contact-profile-v2) .m-header-brand strong{color:var(--cp-text)}.m-view:has(.m-contact-profile-v2){background:var(--cp-bg)}.m-app:has(.m-contact-profile-v2) .m-bottom-nav .m-nav-add{background:var(--cp-blue);color:#fff;box-shadow:0 5px 18px #1769e844}
