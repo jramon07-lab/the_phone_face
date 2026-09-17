@@ -1701,6 +1701,11 @@ window.filterSalesByStage=(stageId)=>{
   select.value=String(select.value||"")===id?"":id;
   applyVisibleSalesStateFilter();
   applyListStageRows();
+  // El render de Ventas puede reconstruir las filas justo después del clic.
+  // Reaplicamos el filtro cuando ese render termine.
+  requestAnimationFrame(applyListStageRows);
+  setTimeout(applyListStageRows,180);
+  setTimeout(applyListStageRows,500);
 };
 
 document.addEventListener("click",e=>{
