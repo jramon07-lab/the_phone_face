@@ -456,6 +456,15 @@ async function loadWhatsAppLive(){
   }finally{waLiveState.loading=false}
 }
 
+/* Apodos en lista: solo lectura y solo coincidencia exacta de teléfono. */
+function waVisibleNickname(chatId){return String(waLiveState.nicknameByChat?.[String(chatId||"")]||"").trim()}
+async function waResolveVisibleNicknames(rows=[]){
+  waLiveState.nicknameByChat=waLiveState.nicknameByChat||{};waLiveState.nicknameResolved=waLiveState.nicknameResolved||{};waLiveState.nicknamePending=waLiveState.nicknamePending||{};
+  const wanted=(rows||[]).filter(c=>String(c?.id||"").includes("@c.us")).slice(0,80);let changed=false;
+  await Promise.all(wanted.map(async chat=>{const id=String(chat.id||"");if(!id||waLiveState.nicknameResolved[id]||waLiveState.nicknamePending[id])return;waLiveState.nicknamePending[id]=true;
+    try{const phone=waNormalizePhone(id),matches=new Map();for(const q of waPhoneVariants(phone)){const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:10});(Array.isArray(data)?data:[]).forEach(row=>{const d=row?.data||{},p=waNormalizePhone(contactField(d,"TELÉFONO","TELEFONO","TEL","MÓVIL","MOVIL","PHONE"));if(p&&p.slice(-9)===phone.slice(-9))matches.set(String(row.id),row)})}const row=matches.size===1?[...matches.values()][0]:null,nickname=row?String(contactField(row.data||{},"APODO","APODO DEFINITIVO","ALIAS")||"").trim():"";if(waLiveState.nicknameByChat[id]!==nickname){waLiveState.nicknameByChat[id]=nickname;changed=true}}catch(_){}finally{waLiveState.nicknameResolved[id]=true;delete waLiveState.nicknamePending[id]}}));
+  if(changed&&!$("view-whatsapplive")?.classList.contains("hidden"))renderWhatsAppChats();
+}
 function renderWhatsAppChats(){
   const q=String($("waLiveSearch")?.value||"").toLowerCase().trim();
   let rows=waLiveState.chats||[];
@@ -477,15 +486,17 @@ function renderWhatsAppChats(){
     const preview=(live?.text||hybridPreview||serverPreview||(String(c.id||"").includes("@g.us")?"Grupo":""));
     const previewTime=live?.timestamp||waMessageTimestamp(hybridLast)||c.lastMessageTime||c.lastMessageTimestamp||c.timestamp||c.lastActivityTime;
     const unread=Math.max(waUnreadCount(c.id),waChatServerUnread(c));
+    const nickname=waVisibleNickname(c.id);
     return `<div class="waChatRow${active}${unread?" waHasUnread":""}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
       <div class="waChatRowMain">
-        <div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(waTime(previewTime))}</span></div>
+        <div class="waChatRowTop"><div><b>${esc(name)}</b>${nickname?`<small class="tpfWaListNickname">${esc(nickname)}</small>`:""}</div><span>${esc(waTime(previewTime))}</span></div>
         <div class="waChatPreviewLine"><div class="waChatPreview">${esc(preview)}</div>${unread?`<span class="waUnreadBadge">${unread>99?"99+":unread}</span>`:""}</div>
       </div>
     </div>`;
   }).join("")||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
   setTimeout(()=>hydrateWaAvatars(rows.map(c=>c.id)),20);
+  setTimeout(()=>waResolveVisibleNicknames(rows),0);
 }
 
 window.selectWhatsAppChat=async(chatId)=>{
@@ -601,13 +612,6 @@ async function matchWaContact(){
 
   waLiveState.contact=found;
   const d=found.data||{};
-  const nickname=String(contactField(d,"APODO","Apodo","ALIAS")||"").trim();
-  const activeName=document.querySelector(".waChatRow.active .waChatRowTop b");
-  if(activeName){
-    let alias=activeName.parentElement?.querySelector(".tpfWaListNickname");
-    if(nickname&&!alias){alias=document.createElement("small");alias.className="tpfWaListNickname";activeName.insertAdjacentElement("afterend",alias)}
-    if(alias){alias.textContent=nickname;alias.hidden=!nickname}
-  }
   const nm=contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||chat.name||"Contacto";
   $("waSideName").textContent=nm;
   const dni=contactField(d,"DNI / NIF","DNI","NIF","CIF","DOCUMENTO","DOCUMENTO IDENTIDAD")||"—";
