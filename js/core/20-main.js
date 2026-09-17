@@ -1665,11 +1665,36 @@ function applyVisibleSalesStateFilter(){
     const opp=getSalesOpportunityById(id);
     row.style.display=(!selected || String(opp?.stage_id)===selected)?"":"none";
   });
+  syncSalesSummaryStageChips();
 }
 
 if($("salesVisibleStateFilter"))$("salesVisibleStateFilter").onchange=()=>{
   applyVisibleSalesStateFilter();
 };
+
+function syncSalesSummaryStageChips(){
+  const selected=String($("salesVisibleStateFilter")?.value||"");
+  document.querySelectorAll("#salesSummaryStages .salesSummaryStageChip[data-stage-id]").forEach(chip=>{
+    const active=String(chip.dataset.stageId)===selected;
+    chip.classList.toggle("active",active);
+    chip.setAttribute("aria-pressed",String(active));
+  });
+}
+
+window.filterSalesByStage=(stageId)=>{
+  const select=$("salesVisibleStateFilter");
+  if(!select)return;
+  const id=String(stageId||"");
+  select.value=String(select.value||"")===id?"":id;
+  applyVisibleSalesStateFilter();
+};
+
+document.addEventListener("click",e=>{
+  const chip=e.target.closest("#salesSummaryStages .salesSummaryStageChip[data-stage-id]");
+  if(!chip)return;
+  e.preventDefault();
+  window.filterSalesByStage(chip.dataset.stageId);
+});
 
 const salesFilterObserver=new MutationObserver(()=>requestAnimationFrame(applyVisibleSalesStateFilter));
 if($("salesBoard"))salesFilterObserver.observe($("salesBoard"),{childList:true,subtree:true});
@@ -1681,6 +1706,37 @@ setTimeout(()=>{
 },150);
 
 
+
+/* Vista Lista: el panel es un contenedor propio. Interceptamos la rueda aquí
+   para que ratón y trackpad desplacen la tabla sin afectar al tablero. */
+function installSalesListScroll(){
+  const box=$("salesListView");
+  if(!box || box.dataset.tpfListScroll==="1")return;
+  box.dataset.tpfListScroll="1";
+  box.addEventListener("wheel",e=>{
+    if(box.classList.contains("hidden") || e.target.closest("select"))return;
+    const dx=Number(e.deltaX||0),dy=Number(e.deltaY||0);
+    const maxY=Math.max(0,box.scrollHeight-box.clientHeight);
+    const maxX=Math.max(0,box.scrollWidth-box.clientWidth);
+    let moved=false;
+    if(Math.abs(dx)>0.5 && maxX>0){
+      const before=box.scrollLeft;
+      box.scrollLeft=Math.max(0,Math.min(maxX,before+dx));
+      moved=moved || box.scrollLeft!==before;
+    }
+    if(Math.abs(dy)>0.5 && maxY>0){
+      const before=box.scrollTop;
+      box.scrollTop=Math.max(0,Math.min(maxY,before+dy));
+      moved=moved || box.scrollTop!==before;
+    }
+    if(moved){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },{passive:false,capture:true});
+}
+setTimeout(installSalesListScroll,50);
+setTimeout(installSalesListScroll,500);
 
 /* No capturar la rueda del ratón en el tablero: el navegador debe hacer
    scroll vertical normal aunque el puntero esté encima de una oportunidad. */
