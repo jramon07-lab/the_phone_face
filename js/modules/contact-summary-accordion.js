@@ -13,6 +13,16 @@ function addStyle(){
  #contactModal.tpfContactReference:not(.tpf-contact-editing) .cpSeparateIdentity #contactName{display:none!important}
  #contactModal.tpfContactReference .cpRefEdit{display:none!important}
  #contactModal.tpfContactReference .tpfInlineEditData{float:right;margin:-3px 0 0!important;padding:5px 8px!important;border:1px solid #9eb1ca!important;border-radius:6px!important;background:#fff!important;color:#173d74!important;font-size:12px!important;font-weight:700!important}
+ #contactModal.tpfContactReference .cpSeparateIdentity #cpProfileIdentityText{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:3px!important}
+ #contactModal.tpfContactReference .cpSeparateIdentity #cpProfileDisplayName{display:block!important;line-height:1.22!important}
+ #contactModal.tpfContactReference .cpSeparateIdentity #cpProfileNickname{display:block!important;margin:0!important;line-height:1.25!important}
+ #contactModal.tpfContactReference #contactLabelsList{display:flex!important;flex-wrap:wrap!important;gap:7px!important}
+ #contactModal.tpfContactReference #contactLabelsList .contactLabelChip{display:inline-flex!important;align-items:center!important;gap:6px!important;padding:5px 9px!important;border-radius:999px!important;font-size:12px!important;font-weight:750!important;letter-spacing:.02em!important;line-height:1.1!important}
+ #contactModal.tpfContactReference #contactLabelsList .contactLabelChip[data-tpf-label-tone="contra"]{background:#dff4e3!important;color:#2c6c46!important}
+ #contactModal.tpfContactReference #contactLabelsList .contactLabelChip[data-tpf-label-tone="offer"]{background:#fff0df!important;color:#a46019!important}
+ #contactModal.tpfContactReference #contactLabelsList .contactLabelChip[data-tpf-label-tone="sales"]{background:#fff4c7!important;color:#8d6714!important}
+ #contactModal.tpfContactReference #contactLabelsList .contactLabelChip[data-tpf-label-tone="other"]{background:#eaf0fb!important;color:#2f5d9c!important}
+ #contactModal.tpfContactReference #contactLabelsList .tpfLabelRemove{appearance:none!important;border:0!important;background:transparent!important;color:inherit!important;padding:0!important;margin:0!important;font:inherit!important;font-size:17px!important;font-weight:800!important;line-height:1!important;cursor:pointer!important}
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>.cpSideSection,
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection,
  #contactModal.tpfContactReference #cpRefPanel>.cpSideSection,
@@ -72,6 +82,22 @@ function ensure(){
  if(window.innerWidth<1024||modal.classList.contains('hidden'))return;
  const panel=$('cpRefPanel');if(!panel)return;
  modal.querySelectorAll('.cpRefCall').forEach(node=>node.remove());
+ const expiry=[...modal.querySelectorAll('.cpRefExpiry')];expiry.slice(1).forEach(node=>node.remove());
+ const labels=[...modal.querySelectorAll('#contactLabelsList .contactLabelChip')];
+ labels.forEach(chip=>{
+   const label=(chip.dataset.tpfLabelText||chip.textContent||'').replace(/×/g,'').trim();
+   chip.dataset.tpfLabelText=label;
+   const normalized=label.toUpperCase();
+   chip.dataset.tpfLabelTone=normalized.includes('CONTRAOFERTA')?'contra':normalized.startsWith('OFERTA')?'offer':normalized.startsWith('VENTA')?'sales':'other';
+   if(!chip.querySelector('.tpfLabelRemove')){
+     const remove=document.createElement('button');
+     remove.type='button';remove.className='tpfLabelRemove';remove.textContent='×';
+     remove.setAttribute('aria-label','Quitar etiqueta '+label);
+     remove.title='Quitar etiqueta';
+     remove.onclick=()=>{const edit=$('tpfContactEditToggle');if(edit)edit.click();setTimeout(()=>{$('contactManageLabels')?.click();},0);};
+     chip.appendChild(remove);
+   }
+ });
  const phone=$('contactPhone'),dataCard=phone?.closest('.cpSideSection,.cpDataCard,.cpFieldGroup')||phone?.parentElement?.parentElement;
  if(dataCard&&!dataCard.querySelector('.tpfInlineEditData')){
    const b=document.createElement('button');b.type='button';b.className='tpfInlineEditData';b.textContent='Editar datos';
