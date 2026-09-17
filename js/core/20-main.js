@@ -1674,6 +1674,7 @@ function applyVisibleSalesStateFilter(){
 
 if($("salesVisibleStateFilter"))$("salesVisibleStateFilter").onchange=()=>{
   applyVisibleSalesStateFilter();
+  applyListStageRows();
 };
 
 function syncSalesSummaryStageChips(){
@@ -1685,12 +1686,21 @@ function syncSalesSummaryStageChips(){
   });
 }
 
+function applyListStageRows(){
+  const selected=String($("salesVisibleStateFilter")?.value||"");
+  document.querySelectorAll("#salesListRows .salesListRow").forEach(row=>{
+    const show=!selected || String(row.querySelector("select")?.value||"")===selected;
+    row.style.setProperty("display",show?"grid":"none","important");
+  });
+}
+
 window.filterSalesByStage=(stageId)=>{
   const select=$("salesVisibleStateFilter");
   if(!select)return;
   const id=String(stageId||"");
   select.value=String(select.value||"")===id?"":id;
   applyVisibleSalesStateFilter();
+  applyListStageRows();
 };
 
 document.addEventListener("click",e=>{
