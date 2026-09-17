@@ -40,9 +40,58 @@
     if(!(target instanceof Element))return;
     const row=target.closest("#salesListRows .salesListRow");
     if(!row)return;
-    if(target.closest("input,select,button,a,label"))return;
+    if(target.closest(".salesListDate,input,select,button,a,label"))return;
     event.preventDefault();
     event.stopPropagation();
     openFromRow(row);
+  },true);
+
+  function formatDate(value){
+    const parts=String(value||"").split("-");
+    return parts.length===3?`${parts[2]}/${parts[1]}/${parts[0]}`:"—";
+  }
+  function restoreDate(cell,value){
+    cell.dataset.date=value||"";
+    cell.textContent=formatDate(value);
+  }
+  function editDate(cell){
+    if(cell.querySelector("input"))return;
+    const oldValue=cell.dataset.date||"";
+    const input=document.createElement("input");
+    input.type="date";
+    input.value=oldValue;
+    input.className="salesListDateInput";
+    input.setAttribute("aria-label","Cambiar fecha de oportunidad");
+    cell.replaceChildren(input);
+    input.focus({preventScroll:true});
+    try{input.showPicker?.();}catch(_){}
+
+    input.addEventListener("keydown",event=>{
+      if(event.key==="Escape"){event.preventDefault();restoreDate(cell,oldValue);}
+    });
+    input.addEventListener("change",async()=>{
+      const nextValue=input.value||"";
+      if(nextValue===oldValue){restoreDate(cell,oldValue);return;}
+      input.disabled=true;
+      try{
+        const {error}=await sb.from("sales_opportunities").update({expected_date:nextValue||null}).eq("id",cell.dataset.oppId);
+        if(error)throw error;
+        const row=cell.closest(".salesListRow");
+        if(row)row.dataset.oppDate=nextValue;
+        restoreDate(cell,nextValue);
+      }catch(error){
+        restoreDate(cell,oldValue);
+        alert("No se pudo guardar la fecha: "+(error?.message||"error desconocido"));
+      }
+    });
+  }
+  document.addEventListener("pointerdown",function(event){
+    const target=event.target;
+    if(!(target instanceof Element)||target.closest("input"))return;
+    const cell=target.closest("#salesListRows .salesListDate");
+    if(!cell)return;
+    event.preventDefault();
+    event.stopPropagation();
+    editDate(cell);
   },true);
 })();
