@@ -768,19 +768,6 @@ function openSalesListOpportunity(id){
 }
 // Mantiene la compatibilidad con las filas ya renderizadas con onclick.
 window.openOpportunityCard=openSalesListOpportunity;
-// Captura los clics de la lista antes de los atributos inline heredados.
-document.addEventListener("click",(event)=>{
-  const target=event.target;
-  if(!(target instanceof Element))return;
-  const row=target.closest("#salesListRows .salesListRow");
-  if(!row||target.closest("input,select,button,a,label"))return;
-  const id=row.dataset.oppId;
-  if(!id)return;
-  event.preventDefault();
-  event.stopPropagation();
-  openSalesListOpportunity(id);
-},true);
-
 window.moveOpp=async(id,stage)=>{const {error}=await sb.from("sales_opportunities").update({stage_id:stage,position:0}).eq("id",id);if(error)alert(error.message);else loadSales()};
 
 window.deleteOpp=async(id)=>{
