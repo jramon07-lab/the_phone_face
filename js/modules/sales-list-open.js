@@ -98,4 +98,12 @@
     event.stopPropagation();
     editDate(cell);
   },true);
+  // El clic que sigue al selector no debe propagarse a la fila ni abrir su ficha.
+  document.addEventListener("click",function(event){
+    const target=event.target;
+    if(!(target instanceof Element))return;
+    if(!target.closest("#salesListRows .salesListDate"))return;
+    event.preventDefault();
+    event.stopPropagation();
+  },true);
 })();
