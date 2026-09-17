@@ -1661,9 +1661,10 @@ function applyVisibleSalesStateFilter(){
 
   // Lista: ocultar filas cuyo estado no corresponda.
   document.querySelectorAll("#salesListRows .salesListRow").forEach(row=>{
-    const id=row.querySelector(".salesListCheck")?.dataset.oppId;
-    const opp=getSalesOpportunityById(id);
-    row.style.display=(!selected || String(opp?.stage_id)===selected)?"":"none";
+    // En Lista el estado mostrado por su selector es la fuente de verdad:
+    // evita depender de una caché que puede ser sustituida por otro módulo.
+    const rowStage=String(row.querySelector("select")?.value||"");
+    row.style.display=(!selected || rowStage===selected)?"":"none";
   });
   syncSalesSummaryStageChips();
 }
