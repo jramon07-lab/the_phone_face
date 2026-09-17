@@ -61,6 +61,10 @@
     input.type="date";
     input.value=oldValue;
     input.className="salesListDateInput";
+    input.style.setProperty("width","140px","important");
+    input.style.setProperty("min-width","140px","important");
+    input.style.setProperty("height","34px","important");
+    input.style.setProperty("box-sizing","border-box","important");
     input.setAttribute("aria-label","Cambiar fecha de oportunidad");
     cell.replaceChildren(input);
     input.focus({preventScroll:true});
