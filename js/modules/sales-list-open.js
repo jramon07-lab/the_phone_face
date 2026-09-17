@@ -36,7 +36,7 @@
     modal.classList.remove("hidden");
   }
 
-  document.addEventListener("click",function(event){
+  document.addEventListener("pointerdown",function(event){
     const target=event.target;
     if(!(target instanceof Element))return;
     const row=target.closest("#salesListRows .salesListRow");
