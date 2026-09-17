@@ -1633,7 +1633,7 @@ function renderSalesList(){
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
         </select>
       </div>
-      <div>${o.expected_date?esc(fmtDateOnly(o.expected_date)):"—"}</div>
+      <div class="salesListDate" data-opp-id="${esc(o.id||'')}" data-date="${esc(o.expected_date||'')}" title="Pulsa para cambiar la fecha">${o.expected_date?esc(fmtDateOnly(o.expected_date)):"—"}</div>
     </div>`).join("")
     : '<div class="cpEmpty" style="padding:20px">No hay oportunidades.</div>';
 
