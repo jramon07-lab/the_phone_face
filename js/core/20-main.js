@@ -1688,10 +1688,18 @@ function syncSalesSummaryStageChips(){
 
 function applyListStageRows(){
   const selected=String($("salesVisibleStateFilter")?.value||"");
-  document.querySelectorAll("#salesListRows .salesListRow").forEach(row=>{
-    const show=!selected || String(row.querySelector("select")?.value||"")===selected;
-    row.style.setProperty("display",show?"grid":"none","important");
-  });
+  let style=$("tpfSalesListStageFilter");
+  if(!style){
+    style=document.createElement("style");
+    style.id="tpfSalesListStageFilter";
+    document.head.appendChild(style);
+  }
+  // Regla persistente: se aplica inmediatamente y también a filas
+  // que el panel reconstruya después del clic.
+  const value=selected.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+  style.textContent=selected
+    ? `#salesListRows .salesListRow:not(:has(select option:checked[value="${value}"])){display:none!important}`
+    : "";
 }
 
 window.filterSalesByStage=(stageId)=>{
