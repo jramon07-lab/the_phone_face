@@ -17,9 +17,10 @@ function addStyle(){
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection,
  #contactModal.tpfContactReference #cpRefPanel>.cpSideSection,
  #contactModal.tpfContactReference #cpRefPanel>#cpOffersSection{display:none!important}
- #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .contactProfile>.cpQuick{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;width:100%!important;gap:7px!important;margin:0 0 14px!important}
- #contactModal.tpfContactReference .contactProfile>.cpQuick button,#contactModal.tpfContactReference .contactProfile>.cpQuick a{white-space:nowrap!important;flex:0 0 auto!important;padding:9px 11px!important;font-size:13px!important}
- #contactModal.tpfContactReference .contactProfile>.cpQuick #cpDirectSale{order:10!important;margin:0!important}
+ #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .cpTop{display:flex!important;align-items:center!important;flex-wrap:nowrap!important;gap:7px!important}
+ #contactModal.tpfContactReference .cpTop>.cpQuick{display:flex!important;flex:0 0 auto!important;flex-wrap:nowrap!important;align-items:center!important;width:auto!important;gap:6px!important;margin:0 0 0 auto!important}
+ #contactModal.tpfContactReference .cpTop>.cpQuick button,#contactModal.tpfContactReference .cpTop>.cpQuick a{white-space:nowrap!important;flex:0 0 auto!important;padding:7px 9px!important;font-size:12px!important}
+ #contactModal.tpfContactReference .cpTop>.cpQuick #cpDirectSale{order:10!important;margin:0!important}
  #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
  #contactModal.tpfContactReference .tpfSummaryGroup{border:1px solid #e1e7f0;border-radius:8px;background:#fff;overflow:hidden}
  #contactModal.tpfContactReference .tpfSummaryTrigger{width:100%;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) 24px;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:0;color:#1d3557;text-align:left;cursor:pointer}
@@ -78,7 +79,7 @@ function ensure(){
    if(title)title.appendChild(b);else dataCard.prepend(b);
  }
  const top=modal.querySelector('.cpTop'),quick=modal.querySelector('.cpQuick');
- if(top&&quick&&top.nextElementSibling!==quick)top.after(quick);
+ if(top&&quick&&quick.parentElement!==top)top.appendChild(quick);
  const verification=$('tpfGoogleInlineCard'),right=modal.querySelector('.cpRight');
  if(verification&&right){delete verification.dataset.cpRefPane;if(right.firstChild!==verification)right.prepend(verification);}
  addStyle();
