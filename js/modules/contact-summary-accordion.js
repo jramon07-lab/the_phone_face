@@ -10,7 +10,11 @@ function addStyle(){
  @media(min-width:1024px){
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{display:block!important;padding:14px!important}
  #contactModal.tpfContactReference #tpfGoogleInlineCard{margin:0 0 12px!important}
- #contactModal.tpfContactReference:not(.tpf-contact-editing) .cpSeparateIdentity #contactName{display:none!important}\n #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
+ #contactModal.tpfContactReference:not(.tpf-contact-editing) .cpSeparateIdentity #contactName{display:none!important}
+ #contactModal.tpfContactReference #tpfContactEditToggle{display:none!important}
+ #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>.cpSideSection,
+ #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection{display:none!important}
+ #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
  #contactModal.tpfContactReference .tpfSummaryGroup{border:1px solid #e1e7f0;border-radius:8px;background:#fff;overflow:hidden}
  #contactModal.tpfContactReference .tpfSummaryTrigger{width:100%;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) 24px;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:0;color:#1d3557;text-align:left;cursor:pointer}
  #contactModal.tpfContactReference .tpfSummaryTitle{font-size:16px;font-weight:750}
@@ -59,6 +63,7 @@ function group(root,key,title,nodes){
 function ensure(){
  if(window.innerWidth<1024||modal.classList.contains('hidden'))return;
  const panel=$('cpRefPanel');if(!panel)return;
+ modal.querySelectorAll('.cpRefCall').forEach(node=>node.remove());
  const verification=$('tpfGoogleInlineCard'),right=modal.querySelector('.cpRight');
  if(verification&&right){delete verification.dataset.cpRefPane;if(right.firstChild!==verification)right.prepend(verification);}
  addStyle();
