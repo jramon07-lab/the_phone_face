@@ -1664,7 +1664,10 @@ function applyVisibleSalesStateFilter(){
     // En Lista el estado mostrado por su selector es la fuente de verdad:
     // evita depender de una caché que puede ser sustituida por otro módulo.
     const rowStage=String(row.querySelector("select")?.value||"");
-    row.style.display=(!selected || rowStage===selected)?"":"none";
+    const show=!selected || rowStage===selected;
+    // Las reglas de diseño de la tabla usan display:grid !important.
+    // Aplicamos la misma prioridad para que el filtro se respete.
+    row.style.setProperty("display",show?"grid":"none","important");
   });
   syncSalesSummaryStageChips();
 }
