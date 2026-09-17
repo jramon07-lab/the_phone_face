@@ -17,7 +17,10 @@ function addStyle(){
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#cpOffersSection,
  #contactModal.tpfContactReference #cpRefPanel>.cpSideSection,
  #contactModal.tpfContactReference #cpRefPanel>#cpOffersSection{display:none!important}
- #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
+ #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .cpTop{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important}
+ #contactModal.tpfContactReference .cpTop button,#contactModal.tpfContactReference .cpTop a{white-space:nowrap!important}
+ #contactModal.tpfContactReference #cpDirectSale{order:10!important;margin:0!important}
+ #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
  #contactModal.tpfContactReference .tpfSummaryGroup{border:1px solid #e1e7f0;border-radius:8px;background:#fff;overflow:hidden}
  #contactModal.tpfContactReference .tpfSummaryTrigger{width:100%;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr) 24px;align-items:center;gap:12px;padding:13px 14px;background:#fff;border:0;color:#1d3557;text-align:left;cursor:pointer}
  #contactModal.tpfContactReference .tpfSummaryTitle{font-size:16px;font-weight:750}
