@@ -12,19 +12,9 @@ let waLiveState={
   avatars:{},
   avatarPending:{},
   livePreview:{},
-  contactIdentity:{},
   notifiedIds:new Set(),
   unread:(()=>{try{return JSON.parse(localStorage.getItem("tpf_wa_unread")||"{}")||{}}catch(e){return {}}})()
 };
-
-// Solo se muestra la identidad de la ficha CRM ya confirmada para este chat.
-function waChatIdentity(chat){return waLiveState.contactIdentity?.[String(chat?.id||"")]||null}
-function waRememberChatIdentity(chat,record){
-  const d=record?.data||{};
-  const name=String(contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||"").trim();
-  const nickname=String(contactField(d,"APODO","Apodo","ALIAS")||"").trim();
-  if(chat?.id&&name)waLiveState.contactIdentity[String(chat.id)]={name,nickname};
-}
 
 const waRuntimeOwnerId=(()=>{
   try{return globalThis.crypto?.randomUUID?.()||("wa-"+Date.now()+"-"+Math.random().toString(36).slice(2))}
@@ -476,7 +466,7 @@ function renderWhatsAppChats(){
 
   $("waLiveChats").innerHTML=rows.map(c=>{
     const active=waLiveState.selected?.id===c.id?" active":"";
-    const identity=waChatIdentity(c);\n    const name=identity?.name||c.name||waNormalizePhone(c.id)||"WhatsApp";
+    const name=c.name||waNormalizePhone(c.id)||"WhatsApp";
     const initials=waInitials(name);
     const avatar=waLiveState.avatars[String(c.id||"")]||"";
     const avStyle=avatar?` style="background-image:url('${esc(avatar)}')"`:"";
@@ -490,7 +480,7 @@ function renderWhatsAppChats(){
     return `<div class="waChatRow${active}${unread?" waHasUnread":""}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
       <div class="waChatRowMain">
-        <div class="waChatRowTop"><div><b>${esc(name)}</b>${identity?.nickname?`<small class="tpfWaListNickname">${esc(identity.nickname)}</small>`:""}</div><span>${esc(waTime(previewTime))}</span></div>
+        <div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(waTime(previewTime))}</span></div>
         <div class="waChatPreviewLine"><div class="waChatPreview">${esc(preview)}</div>${unread?`<span class="waUnreadBadge">${unread>99?"99+":unread}</span>`:""}</div>
       </div>
     </div>`;
@@ -611,7 +601,6 @@ async function matchWaContact(){
 
   waLiveState.contact=found;
   const d=found.data||{};
-  waRememberChatIdentity(chat,found);
   const nm=contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||chat.name||"Contacto";
   $("waSideName").textContent=nm;
   const dni=contactField(d,"DNI / NIF","DNI","NIF","CIF","DOCUMENTO","DOCUMENTO IDENTIDAD")||"—";
@@ -623,7 +612,6 @@ async function matchWaContact(){
   $("waOpenContactTop").classList.remove("hidden");
   $("waSideOpenContact").classList.remove("hidden");
   $("waSideNotes").textContent=contactField(d,"NOTAS","NOTES","OBSERVACIONES")||"—";
-  renderWhatsAppChats();
 
   await loadWaContactSideData(found,phone);
 }
