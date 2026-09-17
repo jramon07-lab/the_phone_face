@@ -601,6 +601,13 @@ async function matchWaContact(){
 
   waLiveState.contact=found;
   const d=found.data||{};
+  const nickname=String(contactField(d,"APODO","Apodo","ALIAS")||"").trim();
+  const activeName=document.querySelector(".waChatRow.active .waChatRowTop b");
+  if(activeName){
+    let alias=activeName.parentElement?.querySelector(".tpfWaListNickname");
+    if(nickname&&!alias){alias=document.createElement("small");alias.className="tpfWaListNickname";activeName.insertAdjacentElement("afterend",alias)}
+    if(alias){alias.textContent=nickname;alias.hidden=!nickname}
+  }
   const nm=contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||chat.name||"Contacto";
   $("waSideName").textContent=nm;
   const dni=contactField(d,"DNI / NIF","DNI","NIF","CIF","DOCUMENTO","DOCUMENTO IDENTIDAD")||"—";
