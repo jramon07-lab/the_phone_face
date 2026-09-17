@@ -18,7 +18,8 @@ function addStyle(){
  #contactModal.tpfContactReference #cpRefPanel>.cpSideSection,
  #contactModal.tpfContactReference #cpRefPanel>#cpOffersSection{display:none!important}
  #contactModal.tpfContactReference .cpRight[data-cp-ref-selected="resumen"]>#tpfGoogleInlineCard{display:block!important}\n #contactModal.tpfContactReference .cpTop{display:flex!important;align-items:center!important;flex-wrap:nowrap!important;gap:7px!important}
- #contactModal.tpfContactReference .cpTop>.cpQuick{display:flex!important;flex:0 0 auto!important;flex-wrap:nowrap!important;align-items:center!important;width:auto!important;gap:6px!important;margin:0 0 0 auto!important}
+ #contactModal.tpfContactReference .cpTop>.cpNav{order:1!important;margin:0!important}
+ #contactModal.tpfContactReference .cpTop>.cpQuick{order:2!important;display:flex!important;flex:0 0 auto!important;flex-wrap:nowrap!important;align-items:center!important;width:auto!important;gap:6px!important;margin:0 0 0 auto!important}
  #contactModal.tpfContactReference .cpTop>.cpQuick button,#contactModal.tpfContactReference .cpTop>.cpQuick a{white-space:nowrap!important;flex:0 0 auto!important;padding:7px 9px!important;font-size:12px!important}
  #contactModal.tpfContactReference .cpTop>.cpQuick #cpDirectSale{order:10!important;margin:0!important}
  #contactModal.tpfContactReference .tpfSummaryAccordion{display:grid;gap:12px}
