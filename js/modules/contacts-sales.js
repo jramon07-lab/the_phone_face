@@ -34,6 +34,73 @@ body #view-sales .salesListHeader,body #view-sales .salesListRow{min-width:1005p
 @media(max-width:900px){#view-sales .salesSummaryExtra{grid-template-columns:minmax(135px,160px) minmax(150px,175px) minmax(0,1fr)!important}#view-sales #salesBoard>.stage{flex-basis:230px!important;min-width:230px!important}#view-sales .salesOptionsPanel{right:10px!important;top:58px!important}}
 `;document.head.appendChild(s)}
 function getOpp(id){try{return(salesCache?.opportunities||[]).find(x=>String(x.id)===String(id))||null}catch(_){return null}}
+function displaySalesPhone(value){
+  const raw=String(value||'').trim();
+  const digits=raw.replace(/\D/g,'');
+  // Los teléfonos españoles se muestran de forma homogénea: 9 dígitos, sin +34.
+  if((digits.length===11&&digits.startsWith('34'))||(raw.startsWith('+34')&&digits.length>=9))return digits.slice(-9);
+  return raw||'—';
+}
+function normalizeSalesListPhones(){
+  document.querySelectorAll('#salesListRows .salesListRow').forEach(row=>{
+    const id=row.dataset.oppId||row.querySelector('.salesListCheck')?.dataset.oppId;
+    const phoneCell=row.children[4],opp=getOpp(id);
+    if(phoneCell&&opp)phoneCell.textContent=displaySalesPhone(opp.phone);
+  });
+}
+function installOpportunityFallback(){
+  if(typeof window.openOpportunityCard!=='function'){
+    window.openOpportunityCard=(id)=>{
+      const o=getOpp(id),modal=$('oppDetailModal');
+      if(!o||!modal)return;
+      $('oppModalId').value=o.id||'';
+      $('oppModalHeading').textContent=o.title||'Ficha de oportunidad';
+      $('oppModalTitle').value=o.title||'';
+      $('oppModalClient').value=o.client_name||'';
+      $('oppModalPhone').value=displaySalesPhone(o.phone);
+      $('oppModalDni').value='';
+      $('oppModalAmount').value=o.amount??'';
+      $('oppModalDate').value=o.expected_date||'';
+      $('oppModalNotes').value=o.notes||'';
+      const select=$('oppModalStage');
+      if(select)select.innerHTML=(stages()||[]).map(s=>'<option value="'+String(s.id).replace(/"/g,'&quot;')+'" '+(String(s.id)===String(o.stage_id)?'selected':'')+'>'+String(s.name||'').replace(/</g,'&lt;')+'</option>').join('');
+      $('oppModalDelete')?.classList.add('hidden');
+      $('oppMetaInfo').textContent='Ficha de oportunidad';
+      modal.classList.remove('hidden');
+    };
+  }
+  const close=()=>$('oppDetailModal')?.classList.add('hidden');
+  ['oppModalClose','oppModalCloseX'].forEach(id=>{const b=$(id);if(b&&!b.dataset.salesFallback){b.dataset.salesFallback='1';b.onclick=close;}});
+  const save=$('oppModalSave');
+  if(save&&!save.dataset.salesFallback){
+    save.dataset.salesFallback='1';
+    save.onclick=async()=>{
+      const id=$('oppModalId')?.value;if(!id)return;
+      save.disabled=true;
+      try{
+        const {error}=await sb.from('sales_opportunities').update({
+          title:$('oppModalTitle')?.value.trim()||null,
+          client_name:$('oppModalClient')?.value.trim()||null,
+          phone:$('oppModalPhone')?.value.trim()||null,
+          amount:$('oppModalAmount')?.value===''?null:Number(String($('oppModalAmount').value).replace(',','.')),
+          expected_date:$('oppModalDate')?.value||null,
+          notes:$('oppModalNotes')?.value||null,
+          stage_id:$('oppModalStage')?.value||null
+        }).eq('id',id);
+        if(error)throw error;
+        location.reload();
+      }catch(e){alert(e?.message||'No se pudo guardar la oportunidad.');}
+      finally{save.disabled=false;}
+    };
+  }
+  if(typeof window.moveOpp!=='function'){
+    window.moveOpp=async(id,stage)=>{
+      const {error}=await sb.from('sales_opportunities').update({stage_id:stage,position:0}).eq('id',id);
+      if(error){alert(error.message);return;}
+      location.reload();
+    };
+  }
+}
 function stages(){try{return salesCache?.stages||[]}catch(_){return[]}}
 function parseDate(v){const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return null;const d=new Date(+m[1],+m[2]-1,+m[3]);d.setHours(0,0,0,0);return d}
 function matchDate(o){if(!dateMode&&!dateFrom&&!dateTo)return true;const d=parseDate(o?.expected_date);if(!d)return false;if(dateFrom||dateTo){const from=parseDate(dateFrom),to=parseDate(dateTo);return(!from||d>=from)&&(!to||d<=to)}const n=new Date();n.setHours(0,0,0,0);const t=new Date(n);t.setDate(n.getDate()+1);const w=new Date(n);w.setDate(n.getDate()+((7-n.getDay())%7));const m=new Date(n.getFullYear(),n.getMonth()+1,0);return dateMode==='today'?+d===+n:dateMode==='tomorrow'?+d===+t:dateMode==='week'?d>=n&&d<=w:dateMode==='month'?d>=n&&d<=m:dateMode==='expired'?d<n:true}
