@@ -23,12 +23,12 @@ async function call(s,action,body={}){const res={setHeader(){},status(){return t
   const first=await call(a,'summary');const second=await call(b,'summary');
   assert.equal(first.degraded,undefined);assert.equal(second.degraded,undefined,'Un servidor sin caché debe recuperarse del límite de un segundo');
   assert.equal(JSON.stringify(first.chats),JSON.stringify(second.chats));assert.ok(b.waits.some(ms=>ms>=1100));
-  used.set('getChatHistory',clock.now);const history=await call(b,'history',{chatId:'chat'});assert.equal(history.messages[0].idMessage,'one');
+  used.set('getChatHistory',clock.now);const history=await call(b,'history',{chatId:'34695661409@c.us'});assert.equal(history.messages[0].idMessage,'one');
   let count=0;const failed=server(async()=>{count++;return {status:429,body:{message:'limited'},retryAfter:'60'};},clock);
-  const result=await call(failed,'history',{chatId:'chat'});assert.equal(result.degraded,true);assert.equal(count,1,'Respeta un Retry-After largo sin repetir antes de plazo');
+  const result=await call(failed,'history',{chatId:'34695661409@c.us'});assert.equal(result.degraded,true);assert.equal(count,1,'Respeta un Retry-After largo sin repetir antes de plazo');
   count=0;const persistent=server(async()=>{count++;return {status:429,body:{message:'limited'}};},clock);
   assert.equal((await call(persistent,'chats')).degraded,true);assert.equal(count,3,'Un límite persistente se detiene tras tres intentos');
   count=0;const sending=server(async()=>{count++;return {status:429,body:{message:'limited'}};},clock);
-  await call(sending,'send',{chatId:'chat',message:'No se envía realmente'});assert.equal(count,1,'Nunca reintenta un envío');
+  await call(sending,'send',{chatId:'34695661409@c.us',message:'No se envía realmente'});assert.equal(count,1,'Nunca reintenta un envío');
   console.log('Dos servidores independientes recuperan resumen e historial tras 429; Retry-After y envío único respetados');
 })().catch(error=>{console.error(error);process.exitCode=1;});
