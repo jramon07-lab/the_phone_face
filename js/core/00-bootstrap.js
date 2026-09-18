@@ -86,7 +86,7 @@ document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{
  closeOpenDetailScreensForNavigation();
  document.querySelectorAll('.referenceWorkspace main > section[id^="view-"]').forEach(section=>section.classList.add("hidden"));
  document.querySelectorAll("dialog[open]").forEach(dialog=>{try{dialog.close()}catch(_){dialog.removeAttribute("open")}});
- if(!n.dataset.tpfBackNavigation)tpfPushView(n.dataset.view);
+ if(!n.dataset.tpfBackNavigation && typeof window.tpfPushView==="function")tpfPushView(n.dataset.view);
  else window.__tpfCurrentView=n.dataset.view;
  if($("waQuickModal"))$("waQuickModal").classList.add("hidden");
  if($("waQuickScheduleBox"))$("waQuickScheduleBox").classList.add("hidden");
