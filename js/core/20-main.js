@@ -1135,7 +1135,7 @@ function telegramDeliveryStatus(type,id){
 
 let currentFullOpportunity=null;
 
-if($("salesFullBackBtn"))tpfSetBackButton($("salesFullBackBtn"),()=>document.querySelector('[data-view="search"]')?.click());
+if($("salesFullBackBtn"))$("salesFullBackBtn").onclick=()=>document.querySelector('[data-view="search"]')?.click();
 
 function oppVal(v){return (v===null||v===undefined||v==="")?"—":esc(String(v))}
 
