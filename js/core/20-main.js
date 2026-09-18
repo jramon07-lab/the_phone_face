@@ -1548,6 +1548,16 @@ let salesCurrentView="board";
 function getSalesOpportunityById(id){
   return (salesCache.opportunities||[]).find(o=>String(o.id)===String(id));
 }
+function updateStageSelectAllUi(){
+  document.querySelectorAll(".stageSelectAll").forEach(cb=>{
+    const ids=(salesCache.opportunities||[])
+      .filter(o=>String(o.stage_id)===String(cb.dataset.stageId))
+      .map(o=>String(o.id));
+    const selected=ids.filter(id=>selectedSalesOpportunityIds.has(id)).length;
+    cb.checked=ids.length>0&&selected===ids.length;
+    cb.indeterminate=selected>0&&selected<ids.length;
+  });
+}
 function updateSalesBulkUi(){
   const count=selectedSalesOpportunityIds.size;
   if($("salesSelectedCount"))$("salesSelectedCount").textContent=count+" seleccionada"+(count===1?"":"s");
