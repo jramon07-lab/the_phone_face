@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const offers=fs.readFileSync('js/modules/offers-pro.js','utf8');
+const summary=fs.readFileSync('js/modules/contact-summary-accordion.js','utf8');
+assert.match(offers,/instanceLoadVersion/,'Las cargas antiguas de ofertas no deben sobrescribir la ficha actual.');
+assert.match(offers,/tpf:offers-rendered/,'La ficha debe actualizarse cuando terminan de cargar las ofertas.');
+assert.match(offers,/tpf:summary-offers-open/,'Abrir Ofertas y seguimiento debe refrescar su contenido.');
+assert.match(summary,/tpf:summary-offers-open/,'El acordeón debe pedir datos al abrir Ofertas y seguimiento.');
+assert.match(summary,/dataset\.offerStatus/,'El resumen debe contar estados reales de las ofertas.');
+console.log('PASS contact-offers-summary.cjs');

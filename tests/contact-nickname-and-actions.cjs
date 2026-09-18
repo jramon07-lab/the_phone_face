@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const contacts=fs.readFileSync('js/modules/contacts-list-ui.js','utf8');
+const menu=fs.readFileSync('js/modules/contacts-more-menu.js','utf8');
+const labels=fs.readFileSync('js/modules/contact-label-manager-pro.js','utf8');
+const wa=fs.readFileSync('js/modules/contact-google-inline.js','utf8');
+assert.match(contacts,/Buscar por nombre, apodo, DNI o teléfono/);
+assert.match(contacts,/r\.fullName,r\.nickname,r\.dni/,'La búsqueda de contactos debe incluir el apodo.');
+assert.match(menu,/Gestionar etiquetas/,'Los tres puntos deben incluir etiquetas.');
+assert.match(menu,/data-contact-more="open"/,'Los tres puntos deben conservar Abrir ficha.');
+assert.match(labels,/TPFContactLabelManager=\{open,openFor:openForContact\}/,'El gestor profesional debe abrirse desde Contactos.');
+assert.match(wa,/top\.insertAdjacentElement\('afterend',alias\)/,'El apodo de WhatsApp debe ir debajo del nombre.');
+assert.doesNotMatch(wa,/active\.insertAdjacentElement\('afterend',alias\)/,'El apodo no puede ir junto a la hora.');
+console.log('PASS contact-nickname-and-actions.cjs');

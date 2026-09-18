@@ -8,6 +8,9 @@
   function openFromRow(row){
     if(!row)return;
     const d=row.dataset||{};
+    if(typeof window.openOpportunityCard==='function'){
+      return window.openOpportunityCard(d.oppId);
+    }
     const modal=byId("oppDetailModal");
     if(!modal)return;
     setValue("oppModalId",d.oppId);

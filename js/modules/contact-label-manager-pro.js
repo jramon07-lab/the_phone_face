@@ -3,10 +3,11 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const SETTINGS_KEY='crm_label_categories_v1';
-const state={contactId:'',labels:[],selected:new Set(),categories:{},query:'',category:'Todas',opening:false};
+const state={contactId:'',contactName:'',labels:[],selected:new Set(),categories:{},query:'',category:'Todas',opening:false};
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 const contact=()=>{try{return currentContact||null}catch(_){return null}};
+function contactName(row){const data=row?.data||{};return String(data['NOMBRE Y APELLIDOS']||[data.NOMBRE,data.APELLIDOS].filter(Boolean).join(' ')||data.CLIENTE||data.NOMBRE||'este contacto').trim();}
 function inferred(name){const n=norm(name);if(n.includes('vodafone'))return'Vodafone';if(n.includes('orange'))return'Orange';if(n.includes('masmovil'))return'MásMóvil';if(n.includes('yoigo'))return'Yoigo';return'Otras';}
 function categoryFor(label){return state.categories[String(label.id)]||inferred(label.name);}
 function ensureStyle(){
@@ -53,7 +54,7 @@ function ensure(){
 function categories(){return [...new Set(state.labels.map(categoryFor))].sort((a,b)=>a.localeCompare(b,'es'));}
 function render(){
  const root=ensure(),cats=categories(),q=norm(state.query);if(state.category!=='Todas'&&!cats.includes(state.category))state.category='Todas';
- $('tlpSub').textContent=state.contactId?('Etiquetas para '+($('contactName')?.value||'este contacto')):'Selecciona las etiquetas.';
+ $('tlpSub').textContent=state.contactId?('Etiquetas para '+(state.contactName||$('contactName')?.value||'este contacto')):'Selecciona las etiquetas.';
  $('tlpCategory').innerHTML='<option value="Todas">Todas las categorías</option>'+cats.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join('');$('tlpCategory').value=state.category;
  $('tlpCats').innerHTML=['Todas',...cats].map(c=>'<button type="button" class="'+(state.category===c?'on':'')+'" data-tlp-cat="'+esc(c)+'">'+esc(c)+'</button>').join('');
  $('tlpCats').querySelectorAll('[data-tlp-cat]').forEach(button=>button.onclick=()=>{state.category=button.dataset.tlpCat;render();});
@@ -64,18 +65,23 @@ function render(){
  $('tlpNewCategory').value=$('tlpNewCategory').value||((state.category!=='Todas'&&state.category)||'');
  $('tlpCategoryOptions').innerHTML=['Vodafone','Orange','MásMóvil','Yoigo','Otras',...cats].filter((x,i,a)=>a.indexOf(x)===i).map(c=>'<option value="'+esc(c)+'"></option>').join('');
 }
-async function load(){
- const row=contact();if(!row?.id)throw new Error('Abre primero una ficha de contacto.');
- state.contactId=String(row.id);state.query='';state.category='Todas';
+async function load(rowOverride){
+ const row=rowOverride||contact();if(!row?.id)throw new Error('Abre primero una ficha de contacto.');
+ state.contactId=String(row.id);state.contactName=contactName(row);state.query='';state.category='Todas';
  const [labels,assigned,settings]=await Promise.all([
   sb.rpc('crm_list_labels'),sb.rpc('crm_get_contact_labels',{p_contact_id:row.id}),sb.from('app_settings').select('value').eq('key',SETTINGS_KEY).maybeSingle()
  ]);
  if(labels.error)throw labels.error;if(assigned.error)throw assigned.error;
  state.labels=Array.isArray(labels.data)?labels.data:[];state.selected=new Set((assigned.data||[]).map(x=>String(x.id)));state.categories=(settings.data?.value&&typeof settings.data.value==='object'&&!Array.isArray(settings.data.value))?settings.data.value:{};
 }
-async function open(){
+async function open(rowOverride){
  if(state.opening)return;state.opening=true;
- try{await load();const root=ensure();$('contactLabelsModal')?.classList.add('hidden');render();root.classList.remove('hidden');setTimeout(()=>$('tlpSearch')?.focus(),0);}catch(error){alert(error?.message||'No se pudieron cargar las etiquetas.');}finally{state.opening=false;}
+ try{await load(rowOverride);const root=ensure();$('contactLabelsModal')?.classList.add('hidden');render();root.classList.remove('hidden');setTimeout(()=>$('tlpSearch')?.focus(),0);}catch(error){alert(error?.message||'No se pudieron cargar las etiquetas.');}finally{state.opening=false;}
+}
+async function openForContact(id){
+ const contactId=String(id||'').trim();if(!contactId)throw new Error('No se ha encontrado el contacto.');
+ const result=await sb.from('records').select('id,data').eq('id',contactId).maybeSingle();if(result.error)throw result.error;if(!result.data)throw new Error('El contacto ya no existe.');
+ return open(result.data);
 }
 async function create(){
  const name=$('tlpNewName').value.trim(),category=$('tlpNewCategory').value.trim()||'Otras';if(!name)return $('tlpNewName').focus();
@@ -88,17 +94,18 @@ async function create(){
  }catch(error){alert(error?.message||'No se pudo crear la etiqueta.');}finally{button.disabled=false;}
 }
 async function save(){
- const row=contact();if(!row?.id||String(row.id)!==state.contactId)return alert('La ficha ha cambiado. Vuelve a abrir las etiquetas.');
+ if(!state.contactId)return alert('No se ha encontrado el contacto.');
  const button=$('tlpSave');button.disabled=true;
  try{
-  const r=await sb.rpc('crm_set_contact_labels',{p_contact_id:row.id,p_label_ids:[...state.selected]});if(r.error)throw r.error;
-  await window.crmRefreshCurrentContactLabels?.();try{window.renderWhatsAppChats?.();}catch(_){}
-  window.dispatchEvent(new CustomEvent('tpf:contact-labels-saved',{detail:{id:row.id,labelIds:[...state.selected]}}));
+  const r=await sb.rpc('crm_set_contact_labels',{p_contact_id:state.contactId,p_label_ids:[...state.selected]});if(r.error)throw r.error;
+  if(String(contact()?.id||'')===state.contactId)await window.crmRefreshCurrentContactLabels?.();try{window.renderWhatsAppChats?.();}catch(_){}
+  window.dispatchEvent(new CustomEvent('tpf:contact-labels-saved',{detail:{id:state.contactId,labelIds:[...state.selected]}}));
   ensure().classList.add('hidden');
  }catch(error){alert(error?.message||'No se pudieron guardar las etiquetas.');}finally{button.disabled=false;}
 }
 function bind(){
  ensure();
+ window.TPFContactLabelManager={open,openFor:openForContact};
  document.addEventListener('click',event=>{
   const trigger=event.target?.closest?.('#contactManageLabels,#waAddTagSide,#waTagChat');
   if(!trigger)return;

@@ -137,10 +137,10 @@ async function run(){
   assert.match(list.innerHTML,/Cliente 125/);
 
   const makeAvatar=(id,top)=>({dataset:{waAvatarId:id,waInitials:'CL'},getBoundingClientRect(){return{top,bottom:top+40}}});
-  for(let index=0;index<20;index++)avatarNodes.push(makeAvatar(`avatar-${index}`,index*50));
+  for(let index=0;index<20;index++)avatarNodes.push(makeAvatar(`346700${String(index).padStart(4,'0')}@c.us`,index*50));
   list.avatarNodes=avatarNodes;
   const visible=api.waPerformanceVisibleAvatarIds(avatarNodes.map(x=>x.dataset.waAvatarId));
-  assert.deepEqual(Array.from(visible),['avatar-0','avatar-1','avatar-2','avatar-3','avatar-4','avatar-5']);
+  assert.deepEqual(Array.from(visible),['3467000000@c.us','3467000001@c.us','3467000002@c.us','3467000003@c.us','3467000004@c.us','3467000005@c.us']);
 
   let avatarCalls=0;
   context.waApi=async()=>{
@@ -148,11 +148,12 @@ async function run(){
     if(avatarCalls===1)throw new Error('fallo temporal');
     return{urlAvatar:'https://cdn.test/avatar.jpg'};
   };
-  await api.waPerformanceLoadAvatar('avatar-0');
-  assert.equal(api.waAvatarRetry.get('avatar-0').attempts,1);
-  await api.waPerformanceLoadAvatar('avatar-0');
+  const avatarId='3467000000@c.us';
+  await api.waPerformanceLoadAvatar(avatarId);
+  assert.equal(api.waAvatarRetry.get(avatarId).attempts,1);
+  await api.waPerformanceLoadAvatar(avatarId);
   assert.equal(avatarCalls,2,'un fallo temporal debe poder reintentarse');
-  assert.equal(state.avatars['avatar-0'],'https://cdn.test/avatar.jpg');
+  assert.equal(state.avatars[avatarId],'https://cdn.test/avatar.jpg');
   assert.equal(avatarNodes[0].applied,'https://cdn.test/avatar.jpg');
 
   console.log('WhatsApp performance max OK');

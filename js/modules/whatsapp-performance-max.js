@@ -15,6 +15,7 @@ function waPerformanceText(value){
   return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
 function waPerformanceDigits(value){return String(value??'').replace(/\D/g,'')}
+function waPerformanceValidChatId(value){const id=String(value||'').trim();return /@(?:c|g)\.us$/i.test(id)?id:'';}
 function waPerformanceMeta(chatId){return typeof waMeta==='function'?(waMeta(chatId)||{}):{}}
 function waPerformanceUnread(chat){
   const local=typeof waUnreadCount==='function'?Number(waUnreadCount(chat?.id)||0):0;
@@ -109,7 +110,7 @@ function waPerformanceScheduleAvatarRetry(chatId,state){
   state.cooldownUntil=Date.now()+60000;
 }
 async function waPerformanceLoadAvatar(chatId){
-  const id=String(chatId||'');if(!id)return;
+  const id=waPerformanceValidChatId(chatId);if(!id)return;
   const state=waAvatarRetry.get(id)||{attempts:0,cooldownUntil:0,timer:0,loading:false,resolvedEmpty:false};
   waAvatarRetry.set(id,state);
   if(state.loading||state.resolvedEmpty||Date.now()<Number(state.cooldownUntil||0))return;
@@ -233,16 +234,23 @@ function install(){
       const selection=waLiveState.selectionVersion;
       const request=waLiveState.historyRequest=(waLiveState.historyRequest||0)+1;
       const current=()=>waLiveState.selected?.id===chatId&&waLiveState.selectionVersion===selection&&waLiveState.historyRequest===request;
+      const historyCooldown=window.__tpfWaHistoryCooldown||(window.__tpfWaHistoryCooldown=new Map());
+      const pausedUntil=Number(historyCooldown.get(chatId)||0);
+      if(pausedUntil>Date.now()){
+        const box=document.getElementById('waMessages');
+        if(box&&!waLiveState.history.length)box.innerHTML='<div class="waLiveEmpty">WhatsApp está limitando temporalmente la carga. Pulsa “Reintentar carga” dentro de un minuto.</div>';
+        return false;
+      }
       try{
         const r=await waApi('history',{chatId,count:40});
         if(!current())return;
         if(r?.degraded){
+          historyCooldown.set(chatId,Date.now()+60000);
           const box=document.getElementById('waMessages');
           if(box&&!waLiveState.history.length){
-            box.innerHTML='<div class="waLiveEmpty">WhatsApp está limitando temporalmente la carga. '+(retry<3?'Reintentando…':'<button type="button">Reintentar carga</button>')+'</div>';
-            const button=box.querySelector?.('button');if(button)button.onclick=()=>window.loadWaHistory(true);
+            box.innerHTML='<div class="waLiveEmpty">WhatsApp está limitando temporalmente la carga. <button type="button">Reintentar carga</button></div>';
+            const button=box.querySelector?.('button');if(button)button.onclick=()=>{historyCooldown.delete(chatId);window.loadWaHistory(true);};
           }
-          if(retry<3)setTimeout(()=>{if(current())window.loadWaHistory(scrollBottom,retry+1)},10000);
           return false;
         }
         const nextHistory=Array.isArray(r.messages)?r.messages:[];
@@ -254,6 +262,7 @@ function install(){
           const box=document.getElementById('waMessages');if(box)box.scrollTop=box.scrollHeight;
         }
         if(box)delete box.dataset.historyLoadFailed;
+        historyCooldown.delete(chatId);
         return true;
       }catch(e){
         if(!current())return;
