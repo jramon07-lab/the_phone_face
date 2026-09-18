@@ -40,6 +40,22 @@ const current=()=>{try{return currentContact||null}catch(_){return null}};
 const offerContact=()=>offerContext||current();
 const offerName=()=>{const c=offerContact()||{},d=c.data||{};return String(offerContext?.name||$('contactName')?.value||c.fullName||d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||'Cliente').trim()};
 const offerPhone=()=>{const c=offerContact()||{},d=c.data||{};return String(offerContext?.phone||$('contactPhone')?.value||d['TELÉFONO']||d.TELEFONO||d.PHONE||'').trim()};
+const contactValue=(contact,...keys)=>{const data=contact?.data||{};for(const key of keys){const value=data[key];if(value!=null&&String(value).trim())return String(value).trim()}return''};
+const contactDisplayName=contact=>String(contact?.fullName||contactValue(contact,'NOMBRE Y APELLIDOS','CLIENTE')||[contactValue(contact,'NOMBRE'),contactValue(contact,'APELLIDOS','APELLIDO')].filter(Boolean).join(' ')||'Cliente').trim();
+const contactPhone=contact=>contactValue(contact,'TELÉFONO','TELEFONO','PHONE','MOVIL');
+async function directOfferContext(contact){
+  const id=String(contact?.id||'').trim();
+  if(!id)return null;
+  const ownName=contactDisplayName(contact),ownPhone=contactPhone(contact);
+  const result=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_RELACIONES:{managed_contacts:[{record_id:id}]}}).limit(2);
+  if(result.error)throw result.error;
+  const managers=result.data||[];
+  if(!managers.length)return {id,name:ownName,phone:ownPhone,ownerName:ownName};
+  if(managers.length>1)throw new Error('Esta ficha tiene más de una persona gestora. Revisa la relación antes de enviar una oferta para no mandarla al teléfono equivocado.');
+  const manager=managers[0],managerName=contactDisplayName(manager),managerPhone=contactPhone(manager);
+  if(!managerPhone)return {id,name:ownName,phone:ownPhone,ownerName:ownName};
+  return {id,name:managerName,phone:managerPhone,ownerName:ownName,managedRecipient:true};
+}
 const isAdmin=()=>{try{return !!perms?.is_admin}catch(_){return false}};
 
 function css(){if($('tpfOffersCss'))return;const style=document.createElement('style');style.id='tpfOffersCss';style.textContent=`
@@ -151,7 +167,11 @@ function renderInstances(){const root=$('cpOfferInstances');if(!root)return;root
 async function control(id,action){if(busy)return;const label={pause:'pausar',resume:'reanudar',accept:'marcar como aceptada',cancel:'finalizar'}[action];if(!confirm(`¿Quieres ${label} esta oferta?`))return;busy=true;try{const {error}=await sb.rpc('crm_control_offer',{p_offer_id:id,p_action:action});if(error)throw error;await loadInstances(current()?.id);if(typeof renderContactProfile==='function')renderContactProfile()}catch(e){alert(e?.message||'No se pudo actualizar la oferta')}finally{busy=false}}
 function operatorList(){const custom=catalog.map(o=>o.operator).filter(Boolean);return [...new Set([...OPERATORS,...custom])]}
 async function openConfigurator(){
-  const c=offerContact();if(!c?.id)return alert('No se ha encontrado el contacto de esta oportunidad.');ensureUi();previewCustomer=offerName();$('opOfferModal').classList.remove('hidden');$('opCustomer').textContent=`Cliente: ${previewCustomer||'Contacto'}`;$('opContent').innerHTML='<div class="opEmpty">Cargando ofertas…</div>';
+  if(!offerContext){
+    const activeContact=current();
+    if(activeContact?.id)offerContext=await directOfferContext(activeContact);
+  }
+  const c=offerContact();if(!c?.id)return alert('No se ha encontrado el contacto de esta oportunidad.');ensureUi();previewCustomer=offerName();$('opOfferModal').classList.remove('hidden');$('opCustomer').textContent=offerContext?.managedRecipient?`Cliente: ${offerContext.ownerName} · WhatsApp: ${previewCustomer||'Contacto'}`:`Cliente: ${previewCustomer||'Contacto'}`;$('opContent').innerHTML='<div class="opEmpty">Cargando ofertas…</div>';
   try{await loadCatalog();activeOperator=operatorList().find(op=>catalog.some(o=>o.active&&o.operator===op))||operatorList()[0];selected=null;quantities={};finalPriceManual=false;shopGift=false;permanenceRefund=false;permanenceAmount='';welcomeOffer=false;secondOfferAfterCurrent=false;offerMode='followup';offerSendTiming='now';offerScheduledLocal=nextHalfHourLocal();offerRequestKey=crypto.randomUUID();renderTabs();renderConfigurator()}catch(e){$('opContent').innerHTML=`<div class="opEmpty">No se pudo cargar el catálogo.<br>${esc(e?.message||e)}</div>`}
 }
 function openOfferForOpportunity(context){
