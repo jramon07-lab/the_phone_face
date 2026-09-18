@@ -76,7 +76,8 @@ function group(root,key,title,nodes){
   let wrap=body.querySelector('.tpfSummaryWork');if(!wrap){wrap=document.createElement('div');wrap.className='tpfSummaryWork';body.appendChild(wrap)}
   nodes.filter(Boolean).forEach(n=>{if(n.parentElement!==wrap)wrap.appendChild(n)});
  }else nodes.filter(Boolean).forEach(n=>{if(n.parentElement!==body)body.appendChild(n)});
- block.querySelector('.tpfSummaryMetric').textContent=metric(key);
+ const metricNode=block.querySelector('.tpfSummaryMetric'),metricText=metric(key);
+ if(metricNode&&metricNode.textContent!==metricText)metricNode.textContent=metricText;
 }
 function ensure(){
  if(window.innerWidth<1024||modal.classList.contains('hidden'))return;
