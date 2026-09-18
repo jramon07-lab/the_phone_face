@@ -8,7 +8,8 @@ const marker="M.register('whatsapp-performance-max',{install});";
 assert.ok(source.includes(marker),'No se encontró el registro del módulo');
 const testSource=source.replace(marker,`window.__waPerformanceTest={
   waPerformanceMatches,waPerformanceFilterRows,waPerformanceVisibleAvatarIds,
-  waPerformanceLoadAvatar,waPerformancePage,waAvatarRetry
+  waPerformanceLoadAvatar,waPerformancePage,waAvatarRetry,
+  waPerformanceContact,waPerformanceIndexPut,waPerformanceIdentity,waContactIndex
 };${marker}`);
 
 function eventTarget(){
@@ -101,6 +102,11 @@ async function run(){
   assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'Ramón'},'zzzzz'),false);
   context.waNormalizePhone=normalize;
   assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'Ramón'},'566140'),true);
+  const aliased=api.waPerformanceContact({id:'contact-1',data:{'NOMBRE Y APELLIDOS':'José Ramón','APODO':'Ramon de tienda','TELÉFONO':'695 661 409'}});
+  api.waPerformanceIndexPut(api.waContactIndex.byPhone,aliased.phone,aliased);
+  assert.equal(api.waPerformanceIdentity({id:'34695661409@c.us'}).nickname,'Ramon de tienda');
+  assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'José'},'ramon de tienda'),true,'la búsqueda de WhatsApp debe incluir el apodo CRM');
+  assert.match(source,/tpfWaListNickname/,'Cada conversación debe pintar el apodo debajo del nombre.');
 
   const filters=[
     {id:'regular',name:'Normal'},

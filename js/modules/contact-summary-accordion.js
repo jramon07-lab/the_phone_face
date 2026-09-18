@@ -59,6 +59,10 @@ function metric(key){
   const n=[...($('cpWhatsappPrograms')?.children||[])].filter(x=>!x.classList.contains('cpEmpty')).length;
   return n+' WhatsApp programado'+(n===1?'':'s');
  }
+ if(key==='automation'){
+  const metrics=[...modal.querySelectorAll('#cpAutomationStatus .casMetrics span')].map(node=>String(node.textContent||'').trim()).filter(Boolean);
+  return metrics.join(' · ')||'Sin automatizaciones';
+ }
  const items=[...modal.querySelectorAll('#cpOfferInstances .cpOfferCard,#cpOfferInstances .cpOfferItem')];
  const statuses=items.map(item=>String(item.dataset.offerStatus||item.querySelector('.cpOfferStatus')?.className||'').toLowerCase());
  const active=statuses.filter(status=>status.includes('queued')||status.includes('following')).length;
@@ -122,10 +126,12 @@ function ensure(){
  const offers=$('cpOffersSection'),automation=$('cpAutomationStatus');
  group(root,'work','Oportunidades y tareas pendientes',[opp,tasks]);
  group(root,'programs','WhatsApp programados',[programs]);
- group(root,'offers','Ofertas y seguimiento',[offers,automation]);
+ // Cada bloque conserva su propio desplegable y todos empiezan cerrados.
+ group(root,'automation','Automatizaciones',[automation]);
+ group(root,'offers','Ofertas y seguimiento',[offers]);
 }
 new MutationObserver(()=>requestAnimationFrame(ensure)).observe(modal,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
-window.addEventListener('tpf:contact-open',()=>setTimeout(ensure,100));
+window.addEventListener('tpf:contact-open',()=>setTimeout(()=>{const root=$('tpfSummaryAccordion');root?.querySelectorAll('.tpfSummaryGroup').forEach(block=>{block.dataset.open='false';block.querySelector('.tpfSummaryTrigger')?.setAttribute('aria-expanded','false');});ensure();},100));
 window.addEventListener('tpf:offers-rendered',()=>setTimeout(ensure,0));
 window.addEventListener('resize',ensure);setTimeout(ensure,200);
 })();

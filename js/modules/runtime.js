@@ -15,20 +15,21 @@ window.TPFModules=api;emit('runtime','ready');
 // Mantener una única fuente de carga evita que ventas, ofertas, etiquetas y fichas
 // se inicialicen dos veces y se pisen entre sí.
 const files=[
- 'automations-stability-guard.js','contacts-active-only.js','contacts-list-ui.js','contacts-list-layout-fix.js','contacts-filter-layout.js','contacts-final-fix.js','contacts-approved-fixes.js','contacts-four-fixes.js','contact-profile.js','contact-bank-native.js','contact-activity-tabs.js','contact-opportunity-actions.js','contact-open-nonblocking.js','contact-actions-bridge.js','automations-auth-guard.js','automations-flow-status.js','dashboard-performance-guard.js','email-m365-lazy.js','whatsapp-read-guard.js','whatsapp-ui-fixes.js','whatsapp-status-throttle.js','whatsapp-performance-max.js','whatsapp-archive-sync.js','whatsapp-templates-persistence-bridge.js','whatsapp-templates-library-v3.js','whatsapp-template-first-name.js','whatsapp-template-picker-direct.js','whatsapp-schedule-direct-v3.js','search-fallback.js','contacts-lock-final.js','whatsapp-large-screen.js','sidebar-fixed-safe.js','sidebar-clean-compact.js','whatsapp-five-fixes.js','whatsapp-reply-isolated.js','whatsapp-composer-autogrow.js','whatsapp-contact-reuse.js','whatsapp-contact-edit-back.js','automations-flow-builder.js','automations-pro-v2.js','automations-pro-v2-fix.js','automations-builder-pro-ui.js','automations-final-polish.js','automations-execution-controls.js','automations-edit-flow-fix.js','contact-automation-consistency.js','whatsapp-automation-inbox.js'
+ 'automations-stability-guard.js','contacts-active-only.js','contacts-list-ui.js','contacts-list-layout-fix.js','contacts-filter-layout.js','contacts-final-fix.js','contacts-approved-fixes.js','contacts-four-fixes.js','contact-profile.js','contact-bank-native.js','contact-activity-tabs.js','contact-opportunity-actions.js','contact-open-nonblocking.js','contact-actions-bridge.js','contact-automation-status.js','automations-auth-guard.js','automations-flow-status.js','dashboard-performance-guard.js','email-m365-lazy.js','whatsapp-read-guard.js','whatsapp-ui-fixes.js','whatsapp-status-throttle.js','whatsapp-performance-max.js','whatsapp-archive-sync.js','whatsapp-templates-persistence-bridge.js','whatsapp-templates-library-v3.js','whatsapp-template-first-name.js','whatsapp-template-picker-direct.js','whatsapp-schedule-direct-v3.js','search-fallback.js','contacts-lock-final.js','whatsapp-large-screen.js','sidebar-fixed-safe.js','sidebar-clean-compact.js','whatsapp-five-fixes.js','whatsapp-reply-isolated.js','whatsapp-composer-autogrow.js','whatsapp-contact-reuse.js','whatsapp-contact-edit-back.js','automations-flow-builder.js','automations-pro-v2.js','automations-pro-v2-fix.js','automations-builder-pro-ui.js','automations-final-polish.js','automations-execution-controls.js','automations-edit-flow-fix.js','contact-automation-consistency.js','whatsapp-automation-inbox.js'
 ];
 function version(file){
  const idleStable=file==='automations-pro-v2.js'||file==='automations-pro-v2-fix.js'?'20260907-idle-stable-1':'';if(idleStable)return idleStable;
  if(file==='dashboard-performance-guard.js')return'20260911-dashboard-owner-1';
  if(file==='whatsapp-contact-edit-back.js')return'20260909-draft-close-1';
  if(file==='whatsapp-ui-fixes.js')return'20260911-status-fair-1';
- if(file==='whatsapp-performance-max.js')return'20260918-rate-limit-guard-1';
+ if(file==='whatsapp-performance-max.js')return'20260918-nickname-index-1';
+ if(file==='contact-automation-status.js')return'20260918-summary-restore-1';
  if(file==='contact-activity-tabs.js')return'20260908-activity-2';
  if(file==='automations-execution-controls.js')return'20260908-customer-groups-1';
  if(file==='whatsapp-archive-sync.js')return'20260908-archive-reliability-1';
  if(file==='whatsapp-composer-autogrow.js')return'20260907-autogrow-2';
  if(file==='whatsapp-automation-inbox.js')return'20260907-auto-inbox-3';
- if(file==='contacts-list-ui.js')return'20260918-integrity-apodo-1';
+ if(file==='contacts-list-ui.js')return'20260918-integrity-apodo-visible-1';
  if(file==='contact-open-nonblocking.js')return'20260906-fresh-contact-1';
  if(file==='whatsapp-status-throttle.js')return'20260907-stability-1';
  if(file==='whatsapp-five-fixes.js')return'20260906-contact-create-stable-1';

@@ -10,11 +10,48 @@ const waAvatarQueue=[];
 const waAvatarQueued=new Set();
 const waAvatarRetry=new Map();
 let waAvatarDraining=false;
+// Un único índice CRM para toda la bandeja. Así no se depende del chat que esté abierto
+// para mostrar o encontrar un apodo.
+const waContactIndex={byPhone:new Map(),byChatId:new Map(),loading:null,loaded:false,refreshTimer:0};
 
 function waPerformanceText(value){
   return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
 }
 function waPerformanceDigits(value){return String(value??'').replace(/\D/g,'')}
+function waPerformancePhone(value){let digits=waPerformanceDigits(value);if(digits.startsWith('00'))digits=digits.slice(2);if(digits.startsWith('34')&&digits.length===11)digits=digits.slice(2);return digits.slice(-9)}
+function waPerformanceSafe(value){return String(value??'').trim()}
+function waPerformanceField(data,...keys){for(const key of keys){const value=waPerformanceSafe(data?.[key]);if(value)return value}return''}
+function waPerformanceContact(row){const data=row?.data||{},full=waPerformanceField(data,'NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL')||[waPerformanceField(data,'NOMBRE'),waPerformanceField(data,'APELLIDOS','APELLIDO')].filter(Boolean).join(' ').trim();return{id:waPerformanceSafe(row?.id),chatId:waPerformanceSafe(data.TPF_WHATSAPP_CHAT_ID),phone:waPerformancePhone(waPerformanceField(data,'TELÉFONO','TELEFONO','PHONE','MOVIL')),name:full,nickname:waPerformanceField(data,'APODO','Apodo','ALIAS')};}
+function waPerformanceIndexPut(map,key,contact){if(!key)return;const rows=map.get(key)||[];if(!rows.some(row=>row.id===contact.id))rows.push(contact);map.set(key,rows)}
+function waPerformanceIdentity(chat){
+ if(String(chat?.id||'').includes('@g.us'))return null;
+ const id=waPerformanceSafe(chat?.id),direct=waContactIndex.byChatId.get(id)||[],byPhone=waContactIndex.byPhone.get(waPerformancePhone(id))||[];
+ const candidates=direct.length?direct:byPhone;
+ if(candidates.length!==1)return null;
+ const contact=candidates[0];return contact.name?contact:null;
+}
+async function waPerformanceLoadContactIndex(force=false){
+ if(waContactIndex.loading)return waContactIndex.loading;
+ if(waContactIndex.loaded&&!force)return;
+ if(typeof sb==='undefined'||!sb?.from)return;
+ waContactIndex.loading=(async()=>{
+  const byPhone=new Map(),byChatId=new Map();
+  for(let start=0;;start+=500){
+   const result=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').range(start,start+499);
+   if(result.error)throw result.error;
+   const rows=Array.isArray(result.data)?result.data:[];
+   rows.forEach(row=>{const contact=waPerformanceContact(row);if(!contact.id)return;waPerformanceIndexPut(byPhone,contact.phone,contact);waPerformanceIndexPut(byChatId,contact.chatId,contact);});
+   if(rows.length<500)break;
+  }
+  waContactIndex.byPhone=byPhone;waContactIndex.byChatId=byChatId;waContactIndex.loaded=true;
+  window.renderWhatsAppChats?.();
+ })().catch(error=>{console.warn('Índice de apodos WhatsApp',error);}).finally(()=>{waContactIndex.loading=null});
+ return waContactIndex.loading;
+}
+function waPerformanceRefreshContactIndex(){
+ waContactIndex.loaded=false;clearTimeout(waContactIndex.refreshTimer);
+ waContactIndex.refreshTimer=setTimeout(()=>{void waPerformanceLoadContactIndex(true)},120);
+}
 function waPerformanceValidChatId(value){const id=String(value||'').trim();return /@(?:c|g)\.us$/i.test(id)?id:'';}
 function waPerformanceMeta(chatId){return typeof waMeta==='function'?(waMeta(chatId)||{}):{}}
 function waPerformanceUnread(chat){
@@ -30,7 +67,8 @@ function waPerformanceMatches(chat,query){
   const textQuery=waPerformanceText(query);
   if(!textQuery)return true;
   const meta=waPerformanceMeta(chat?.id);
-  const text=[chat?.name,chat?.chatName,chat?.contactName,chat?.id,...(Array.isArray(meta.tags)?meta.tags:[])].map(waPerformanceText).join(' ');
+  const identity=waPerformanceIdentity(chat);
+  const text=[chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,chat?.id,...(Array.isArray(meta.tags)?meta.tags:[])].map(waPerformanceText).join(' ');
   if(text.includes(textQuery))return true;
   const phoneQuery=waPerformanceDigits(query);
   // Un término alfabético produce ""; nunca debe convertir includes("") en una coincidencia universal.
@@ -187,7 +225,9 @@ function waPerformancePreviewTime(chat){
 function waPerformanceRenderRow(chat){
   const active=waLiveState.selected?.id===chat.id?' active':'';
   const meta=waPerformanceMeta(chat.id);
-  const name=chat.name||(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):'')||'WhatsApp';
+  const identity=waPerformanceIdentity(chat);
+  const name=identity?.name||chat.name||(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):'')||'WhatsApp';
+  const nickname=identity?.nickname||'';
   const initials=typeof waInitials==='function'?waInitials(name):String(name).slice(0,2).toUpperCase();
   const avatar=waLiveState.avatars?.[String(chat.id||'')]||'';
   const avStyle=avatar?` style="background-image:url('${esc(avatar)}')"`:'';
@@ -196,7 +236,7 @@ function waPerformanceRenderRow(chat){
   if(meta.pinned)extras.push('📌');
   if(meta.favorite)extras.push('★');
   if(waPerformanceUnanswered(chat))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
-  return `<div class="waChatRow${active}${unread?' waHasUnread':''}" onclick="selectWhatsAppChat('${String(chat.id).replaceAll("'","\\'")}')"><div class="waAvatar${avatar?' hasPhoto':''}" data-wa-avatar-id="${esc(chat.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?'':esc(initials)}</div><div class="waChatRowMain"><div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(typeof waTime==='function'?waTime(waPerformancePreviewTime(chat)):'')}</span></div><div class="waChatPreviewLine"><div class="waChatPreview">${esc(waPerformancePreview(chat))}</div>${unread?`<span class="waUnreadBadge">${unread>99?'99+':unread}</span>`:''}</div>${extras.length?`<div class="waChatMeta">${extras.join(' ')}</div>`:''}</div></div>`;
+  return `<div class="waChatRow${active}${unread?' waHasUnread':''}" onclick="selectWhatsAppChat('${String(chat.id).replaceAll("'","\\'")}')"><div class="waAvatar${avatar?' hasPhoto':''}" data-wa-avatar-id="${esc(chat.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?'':esc(initials)}</div><div class="waChatRowMain"><div class="waChatRowTop"><b>${esc(name)}</b><span>${esc(typeof waTime==='function'?waTime(waPerformancePreviewTime(chat)):'' )}</span></div>${nickname?`<small class="tpfWaListNickname">${esc(nickname)}</small>`:''}<div class="waChatPreviewLine"><div class="waChatPreview">${esc(waPerformancePreview(chat))}</div>${unread?`<span class="waUnreadBadge">${unread>99?'99+':unread}</span>`:''}</div>${extras.length?`<div class="waChatMeta">${extras.join(' ')}</div>`:''}</div></div>`;
 }
 function waPerformanceLoadMore(){
   if(waPerformancePage.loadingMore||waPerformancePage.limit>=waPerformancePage.total)return;
@@ -226,6 +266,13 @@ function waPerformanceBindList(box){
 
 function install(){
   try{
+    // La carga es única y se actualiza solo después de guardar un contacto.
+    void waPerformanceLoadContactIndex();
+    window.addEventListener?.('tpf:contact-updated',waPerformanceRefreshContactIndex);
+    window.addEventListener?.('tpf:contact-created',waPerformanceRefreshContactIndex);
+    window.addEventListener?.('tpf:contacts-loaded',event=>{
+      if(!waContactIndex.loaded&&event?.detail?.records?.length)void waPerformanceLoadContactIndex();
+    });
     if(typeof hydrateWaAvatars==='function')window.hydrateWaAvatars=async function(chatIds=[]){waPerformanceHydrateVisible(chatIds)};
 
     if(typeof loadWaHistory==='function')window.loadWaHistory=async function(scrollBottom=true,retry=0){

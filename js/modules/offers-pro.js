@@ -164,6 +164,12 @@ function openOfferForOpportunity(context){
  return openConfigurator();
 }
 window.openOfferComposerForOpportunity=openOfferForOpportunity;
+window.openOfferComposerForContact=context=>{
+ const id=String(context?.id||'').trim();
+ if(!id)return alert('No se ha encontrado el contacto para enviar la oferta.');
+ offerContext={id,name:String(context?.name||'').trim(),phone:String(context?.phone||'').trim()};
+ return openConfigurator();
+};
 function closeModal(){if(busy)return;$('opOfferModal')?.classList.add('hidden');offerContext=null;previewCustomer=''}
 function renderTabs(){const root=$('opTabs');root.innerHTML=operatorList().map(op=>`<button type="button" data-op="${esc(op)}" class="${op===activeOperator?'active':''}">${esc(op)}</button>`).join('')+(isAdmin()?'<button type="button" id="opManageCatalog">⚙ Catálogo</button>':'');root.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{activeOperator=b.dataset.op;selected=null;quantities={};finalPriceManual=false;renderTabs();renderConfigurator()});$('opManageCatalog')?.addEventListener('click',openCatalog)}
 function resetSelections(offer){quantities={};visibility={};for(const line of offer?.line_options||[]){visibility[line.id]=true;if(line.active&&line.default_selected)quantities[line.id]=1}finalPriceManual=false}
