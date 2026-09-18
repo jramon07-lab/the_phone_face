@@ -115,12 +115,6 @@
  const expiry=document.createElement('section');expiry.className='cpRefExpiry';expiry.innerHTML='<h3>Caducidad del DNI</h3><span class="cpPendingBadge">Pendiente</span><p>Lectura y confirmación de la fecha todavía no disponibles.</p>';
  const edit=document.createElement('button');edit.type='button';edit.className='cpRefEdit';edit.textContent='Editar datos';
  edit.addEventListener('click',()=>{$('tpfContactEditToggle')?.click();});
- const call=document.createElement('a');call.className='cpRefCall';call.textContent='Llamar';
- function updateCall(){
-  const number=String($('contactPhone')?.value||'').trim().replace(/[^\d+]/g,'');
-  if(number&&/\d{6}/.test(number)){call.href='tel:'+number;call.removeAttribute('aria-disabled');}
-  else{call.removeAttribute('href');call.setAttribute('aria-disabled','true');}
- }
  function select(key,focus=false){
   if(!panels.some(([k])=>k===key))return;
   selected=key;right.dataset.cpRefSelected=key;
@@ -149,13 +143,12 @@
    mounted=true;if(heading)heading.textContent='Ficha del cliente';
    columns.before(identity);
    sections.forEach(s=>panel.appendChild(s));panel.appendChild(center);right.append(tabs,panel);
-   left.appendChild(expiry);identity.querySelector('.cpQuick')?.prepend(call);
-   modal.querySelector('.cpTop')?.appendChild(edit);
-   modal.classList.add('tpfContactReference');select(selected);updateCall();
+   left.prepend(edit);left.appendChild(expiry);
+   modal.classList.add('tpfContactReference');select(selected);
   }else if(!on&&mounted){
    mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
-   sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();call.remove();
+   sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();
   }
   syncSummarySections();applySummaryGroups();refreshSummaryMetrics();
  }
