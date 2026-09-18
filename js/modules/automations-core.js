@@ -360,6 +360,6 @@ async function enrichContactHistory(){
 }
 const _renderContactProfileCommercial=renderContactProfile;
 renderContactProfile=async function(){const r=await _renderContactProfileCommercial();setTimeout(()=>enrichContactHistory(),50);return r};
-const _loadDashboardCommercialBase=loadDashboard;
-loadDashboard=async function(){const r=await _loadDashboardCommercialBase();try{if(!(salesCache?.stages||[]).length)await loadSales()}catch(e){}await loadCommercialDashboard();return r};
+const _loadDashboardCommercialBase=typeof loadDashboard==="function"?loadDashboard:async()=>{};
+window.loadDashboard=async function(){const r=await _loadDashboardCommercialBase();try{if(!(salesCache?.stages||[]).length)await loadSales()}catch(e){}await loadCommercialDashboard();return r};
 setTimeout(()=>{if(!$("view-dashboard")?.classList.contains("hidden"))loadCommercialDashboard()},1600);
