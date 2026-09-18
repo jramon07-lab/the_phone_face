@@ -182,7 +182,6 @@
  sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
  window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;restoreSummaryGroups();sync();select(selected);updateCall();refreshPhoto();});
  modal.addEventListener('input',e=>{if(e.target.id==='contactPhone')updateCall();});
- call.addEventListener('click',updateCall);
 
  // Summary limits only the number of cards, never the fields inside each card.
  const summaryLists=[['cpOpportunities','oportunidades','.oppUnifiedCard'],['cpTasks','tareas','.cpTaskWrap'],['cpWhatsappPrograms','programados','.cpWaWrap']];
