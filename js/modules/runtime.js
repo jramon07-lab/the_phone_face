@@ -34,3 +34,12 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
   s.async=false;
   document.head.appendChild(s);
 })();
+
+
+// Última capa: un único router para el menú lateral, después de los módulos históricos.
+(() => {
+  const s=document.createElement('script');
+  s.src='/js/modules/navigation-recovery.js?v=20260918-stable-nav-recovery-1';
+  s.async=false;
+  document.head.appendChild(s);
+})();
