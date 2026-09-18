@@ -1795,6 +1795,3 @@ function installDefinitiveSalesScroll(){
     }
   },{passive:false,capture:true});
 }
-
-function normalizeSalesStages(){
-  const board=$("salesBoard");
