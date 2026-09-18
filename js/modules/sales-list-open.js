@@ -1,5 +1,4 @@
-/* Apertura fiable de oportunidades desde la vista Lista.
-   Se usa delegación de eventos porque las filas se generan dinámicamente. */
+/* Acciones fiables de la vista Lista de oportunidades. */
 (function(){
   function byId(id){return document.getElementById(id);}
   function setValue(id,value){
@@ -11,7 +10,6 @@
     const d=row.dataset||{};
     const modal=byId("oppDetailModal");
     if(!modal)return;
-
     setValue("oppModalId",d.oppId);
     setValue("oppModalTitle",d.oppTitle);
     setValue("oppModalClient",d.oppClient);
@@ -19,7 +17,6 @@
     setValue("oppModalAmount",d.oppAmount);
     setValue("oppModalDate",d.oppDate);
     setValue("oppModalNotes",d.oppNotes);
-
     const heading=byId("oppModalHeading");
     if(heading)heading.textContent=d.oppTitle||"Ficha de oportunidad";
     const contact=byId("oppModalOpenContact");
@@ -35,75 +32,66 @@
     modal.classList.remove("hidden");
   }
 
+  // Solo el título abre la ficha. Los controles de la fila no la abren.
   document.addEventListener("pointerdown",function(event){
     const target=event.target;
     if(!(target instanceof Element))return;
-    const row=target.closest("#salesListRows .salesListRow");
-    if(!row)return;
-    if(target.closest(".salesListDate,input,select,button,a,label"))return;
+    const title=target.closest("#salesListRows .salesListTitle");
+    if(!title)return;
     event.preventDefault();
     event.stopPropagation();
-    openFromRow(row);
+    openFromRow(title.closest(".salesListRow"));
   },true);
 
-  function formatDate(value){
-    const parts=String(value||"").split("-");
-    return parts.length===3?`${parts[2]}/${parts[1]}/${parts[0]}`:"—";
+  function toIsoDate(text){
+    const m=String(text||"").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m)return null;
+    const day=Number(m[1]),month=Number(m[2]),year=Number(m[3]);
+    const d=new Date(year,month-1,day);
+    if(d.getFullYear()!==year||d.getMonth()!==month-1||d.getDate()!==day)return null;
+    return `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
   }
-  function restoreDate(cell,value){
-    cell.dataset.date=value||"";
-    cell.textContent=formatDate(value);
+  function displayDate(iso){
+    const p=String(iso||"").split("-");
+    return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:"";
   }
-  function editDate(cell){
-    if(cell.querySelector("input"))return;
-    const oldValue=cell.dataset.date||"";
-    const input=document.createElement("input");
-    input.type="date";
-    input.value=oldValue;
-    input.className="salesListDateInput";
-    input.style.setProperty("width","140px","important");
-    input.style.setProperty("min-width","140px","important");
-    input.style.setProperty("height","34px","important");
-    input.style.setProperty("box-sizing","border-box","important");
-    input.setAttribute("aria-label","Cambiar fecha de oportunidad");
-    cell.replaceChildren(input);
-    input.focus({preventScroll:true});
-    try{input.showPicker?.();}catch(_){}
-
-    input.addEventListener("keydown",event=>{
-      if(event.key==="Escape"){event.preventDefault();restoreDate(cell,oldValue);}
-    });
-    input.addEventListener("change",async()=>{
-      const nextValue=input.value||"";
-      if(nextValue===oldValue){restoreDate(cell,oldValue);return;}
-      input.disabled=true;
-      try{
-        const {error}=await sb.from("sales_opportunities").update({expected_date:nextValue||null}).eq("id",cell.dataset.oppId);
-        if(error)throw error;
-        const row=cell.closest(".salesListRow");
-        if(row)row.dataset.oppDate=nextValue;
-        restoreDate(cell,nextValue);
-      }catch(error){
-        restoreDate(cell,oldValue);
-        alert("No se pudo guardar la fecha: "+(error?.message||"error desconocido"));
-      }
-    });
+  async function saveDate(input){
+    if(input.dataset.saving==="1")return;
+    const previous=input.dataset.originalDate||"";
+    const next=toIsoDate(input.value);
+    if(!next){
+      input.value=displayDate(previous);
+      alert("Escribe la fecha como día/mes/año, por ejemplo 01/09/2026.");
+      return;
+    }
+    if(next===previous){input.value=displayDate(previous);return;}
+    input.dataset.saving="1";
+    input.disabled=true;
+    try{
+      const {error}=await sb.from("sales_opportunities").update({expected_date:next}).eq("id",input.dataset.oppId);
+      if(error)throw error;
+      input.dataset.originalDate=next;
+      input.value=displayDate(next);
+      const row=input.closest(".salesListRow");
+      if(row)row.dataset.oppDate=next;
+    }catch(error){
+      input.value=displayDate(previous);
+      alert("No se pudo guardar la fecha: "+(error?.message||"error desconocido"));
+    }finally{
+      input.disabled=false;
+      input.dataset.saving="";
+    }
   }
-  document.addEventListener("pointerdown",function(event){
-    const target=event.target;
-    if(!(target instanceof Element)||target.closest("input"))return;
-    const cell=target.closest("#salesListRows .salesListDate");
-    if(!cell)return;
-    event.preventDefault();
+  document.addEventListener("change",function(event){
+    const input=event.target;
+    if(!(input instanceof HTMLInputElement)||!input.matches("#salesListRows .salesListDateInput"))return;
     event.stopPropagation();
-    editDate(cell);
+    saveDate(input);
   },true);
-  // El clic que sigue al selector no debe propagarse a la fila ni abrir su ficha.
-  document.addEventListener("click",function(event){
-    const target=event.target;
-    if(!(target instanceof Element))return;
-    if(!target.closest("#salesListRows .salesListDate"))return;
-    event.preventDefault();
-    event.stopPropagation();
+  document.addEventListener("keydown",function(event){
+    const input=event.target;
+    if(!(input instanceof HTMLInputElement)||!input.matches("#salesListRows .salesListDateInput"))return;
+    if(event.key==="Enter"){event.preventDefault();event.stopPropagation();saveDate(input);}
+    if(event.key==="Escape"){event.preventDefault();input.value=displayDate(input.dataset.originalDate||"");input.blur();}
   },true);
 })();
