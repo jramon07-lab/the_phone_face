@@ -15,6 +15,6 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
 
 /* Ficha PC: conservar el diseño de referencia y el resumen plegable. */
 (() => {
-  const load=file=>{const s=document.createElement('script');s.src='/js/modules/'+file+'?v=20260917-summary-accordion-4';s.async=false;document.head.appendChild(s)};
+  const load=file=>{const s=document.createElement('script');s.src='/js/modules/'+file+'?v=20260918-summary-loop-fix-1';s.async=false;document.head.appendChild(s)};
   setTimeout(()=>{load('contact-desktop-layout.js');setTimeout(()=>load('contact-summary-accordion.js'),80)},80);
 })();
