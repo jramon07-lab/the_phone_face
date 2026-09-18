@@ -212,6 +212,10 @@ const welcomeOfferSql=fs.readFileSync(path.join(root,'supabase/migrations/202609
 assert.match(welcomeOfferSql,/crm_create_offer_execution_v8/);
 assert.match(welcomeOfferSql,/security invoker/);
 assert.match(welcomeOfferSql,/grant execute on function public\.crm_create_offer_execution_v8/);
+const skipVodafoneCounterofferLabelSql=fs.readFileSync(path.join(root,'supabase/migrations/20260918121000_skip_vodafone_counteroffer_label.sql'),'utf8');
+assert.match(skipVodafoneCounterofferLabelSql,/CONTRAOFERTA VODAFONE/);
+assert.match(skipVodafoneCounterofferLabelSql,/return;/);
+assert.match(skipVodafoneCounterofferLabelSql,/Existing historical tags are intentionally preserved/);
 const counterNetflixSql=fs.readFileSync(path.join(root,'supabase/migrations/20260909123000_vodafone_counteroffer_netflix_7.sql'),'utf8');
 assert.match(counterNetflixSql,/offer\.name='VDF · CONTRAOFERTA 1 GB \+ 2 ILIMITADAS'/);
 assert.match(counterNetflixSql,/offer\.is_counteroffer=true/);
