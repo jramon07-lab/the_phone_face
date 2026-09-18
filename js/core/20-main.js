@@ -1621,7 +1621,7 @@ function renderSalesList(){
   const inlineListOpen="(function(r){var q=function(i){return document.getElementById(i)},x;q('oppModalId')&&(q('oppModalId').value=r.dataset.oppId||'');q('oppModalHeading')&&(q('oppModalHeading').textContent=r.dataset.oppTitle||'Ficha de oportunidad');q('oppModalTitle')&&(q('oppModalTitle').value=r.dataset.oppTitle||'');q('oppModalClient')&&(q('oppModalClient').value=r.dataset.oppClient||'');q('oppModalPhone')&&(q('oppModalPhone').value=r.dataset.oppPhone||'');q('oppModalAmount')&&(q('oppModalAmount').value=r.dataset.oppAmount||'');q('oppModalDate')&&(q('oppModalDate').value=r.dataset.oppDate||'');q('oppModalNotes')&&(q('oppModalNotes').value=r.dataset.oppNotes||'');q('oppModalOpenContact')&&(q('oppModalOpenContact').dataset.recordId=r.dataset.oppRecordId||'');x=q('oppModalStage');if(x){for(var i=0;i<x.options.length;i++){if(x.options[i].value===r.dataset.oppStage){x.value=r.dataset.oppStage;break}}}q('oppMetaInfo')&&(q('oppMetaInfo').textContent=r.dataset.oppStageName?'Columna actual: '+r.dataset.oppStageName:'');q('oppDetailModal')&&q('oppDetailModal').classList.remove('hidden')})(this)";
 
   $("salesListRows").innerHTML=rows.length?rows.map(o=>`
-    <div class="salesListRow" data-opp-id="${esc(o.id||'')}" data-opp-title="${esc(o.title||'Oportunidad')}" data-opp-client="${esc(o.client_name||'')}" data-opp-phone="${esc(o.phone||'')}" data-opp-amount="${esc(o.amount??'')}" data-opp-date="${esc(o.expected_date||'')}" data-opp-notes="${esc(o.notes||'')}" data-opp-record-id="${esc(o.record_id||'')}" data-opp-stage="${esc(o.stage_id||'')}" data-opp-stage-name="${esc(stageName(o.stage_id))}" onclick="${inlineListOpen}">
+    <div class="salesListRow" data-opp-id="${esc(o.id||'')}" data-opp-title="${esc(o.title||'Oportunidad')}" data-opp-client="${esc(o.client_name||'')}" data-opp-phone="${esc(o.phone||'')}" data-opp-amount="${esc(o.amount??'')}" data-opp-date="${esc(o.expected_date||'')}" data-opp-notes="${esc(o.notes||'')}" data-opp-record-id="${esc(o.record_id||'')}" data-opp-stage="${esc(o.stage_id||'')}" data-opp-stage-name="${esc(stageName(o.stage_id))}">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
       <div class="salesListTitle">${esc(o.title||"Oportunidad")}</div>
       <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(salesClientDisplay(o.client_name))}</button>`:"—"}</div>
@@ -1633,7 +1633,7 @@ function renderSalesList(){
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
         </select>
       </div>
-      <div class="salesListDate" data-opp-id="${esc(o.id||'')}" data-date="${esc(o.expected_date||'')}" title="Pulsa para cambiar la fecha">${o.expected_date?esc(fmtDateOnly(o.expected_date)):"—"}</div>
+      <div class="salesListDate"><input type="text" class="salesListDateInput" data-opp-id="${esc(o.id||'')}" data-original-date="${esc(o.expected_date||'')}" value="${esc(o.expected_date?fmtDateOnly(o.expected_date):'')}" placeholder="dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de oportunidad"></div>
     </div>`).join("")
     : '<div class="cpEmpty" style="padding:20px">No hay oportunidades.</div>';
 
