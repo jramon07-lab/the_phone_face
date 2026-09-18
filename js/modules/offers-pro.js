@@ -1,5 +1,7 @@
 (function(){
 'use strict';
+if(window.__tpfOffersProLoaded)return;
+window.__tpfOffersProLoaded=true;
 const OPERATORS=['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange'];
 const CRM_TEST_MODE=typeof document==='undefined'||document.querySelector?.('meta[name="tpf-crm-mode"]')?.content!=='stable';
 const CRM_TEST_PHONE='695661409';

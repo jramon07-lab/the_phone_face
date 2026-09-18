@@ -1634,6 +1634,7 @@ function renderSalesList(){
         </select>
       </div>
       <div class="salesListDate"><input type="text" class="salesListDateInput" data-opp-id="${esc(o.id||'')}" data-original-date="${esc(o.expected_date||'')}" value="${esc(o.expected_date?fmtDateOnly(o.expected_date):'')}" placeholder="dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de oportunidad" style="width:140px;min-width:140px;height:34px;box-sizing:border-box"></div>
+      <div class="salesListAction"><button type="button" class="tpfListMenuBtn" aria-label="Acciones de ${esc(o.title||'Oportunidad')}" title="Acciones">•••</button></div>
     </div>`).join("")
     : '<div class="cpEmpty" style="padding:20px">No hay oportunidades.</div>';
 

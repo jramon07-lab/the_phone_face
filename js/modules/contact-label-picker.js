@@ -1,5 +1,7 @@
 (function(){
 'use strict';
+if(window.__tpfContactLabelPickerLoaded)return;
+window.__tpfContactLabelPickerLoaded=true;
 const $=id=>document.getElementById(id);
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 let categories={};
