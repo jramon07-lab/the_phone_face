@@ -1638,7 +1638,7 @@ function renderSalesList(){
   const rows=salesCache.opportunities||[];
 
   $("salesListRows").innerHTML=rows.length?rows.map(o=>`
-    <div class="salesListRow" onclick="openOpportunityCard('${o.id}')">
+    <div class="salesListRow" data-opp-id="${esc(o.id||'')}">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
       <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title||"Oportunidad")}</button>
       <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
@@ -1650,7 +1650,8 @@ function renderSalesList(){
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
         </select>
       </div>
-      <div>${o.expected_date?esc(fmtDateOnly(o.expected_date)):"—"}</div>
+      <div class="salesListDate"><input type="text" class="salesListDateInput" data-opp-id="${esc(o.id||'')}" data-original-date="${esc(o.expected_date||'')}" value="${esc(o.expected_date?fmtDateOnly(o.expected_date):'')}" placeholder="dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de oportunidad"></div>
+      <div class="salesListAction"><button type="button" class="tpfListMenuBtn" aria-label="Acciones de ${esc(o.title||'Oportunidad')}" title="Acciones">•••</button></div>
     </div>`).join("")
     : '<div class="cpEmpty" style="padding:20px">No hay oportunidades.</div>';
 
