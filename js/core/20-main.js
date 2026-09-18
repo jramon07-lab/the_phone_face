@@ -480,46 +480,63 @@ async function deleteOpportunityVerified(id){
 }
 
 window.openOpportunityCard=(id)=>{
-  if(!__oppKeepPreparedOrigin)captureOpportunityModalOrigin();
-  __oppKeepPreparedOrigin=false;
-  pendingOpportunityRecordId=null;
-  const o=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
-  if(!o)return;
-  $("oppModalSave").textContent="Guardar cambios";
-  $("oppModalDelete").classList.remove("hidden");
-  $("oppModalId").value=o.id||"";
-  window.TPFContactParty?.mountOpportunity(o.contract_party);
-  $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
-  $("oppModalTitle").value=o.title||"";
-  $("oppModalClient").value=o.client_name||"";
-  $("oppModalPhone").value=o.phone||"";
-  $("oppModalDni").value="";
-  $("oppModalOpenContact").dataset.recordId=o.record_id||"";
-  pendingOpportunityRecordId=o.record_id||null;
-  $("oppModalAmount").value=o.amount??"";
-  $("oppModalDate").value=o.expected_date||"";
-  $("oppModalNotes").value=o.notes||"";
+  // Abrir la ficha debe funcionar aunque fallen datos auxiliares o el historial de navegación.
+  try{
+    try{
+      if(!__oppKeepPreparedOrigin)captureOpportunityModalOrigin();
+    }catch(originError){
+      console.warn("No se pudo guardar el origen de la oportunidad",originError);
+      opportunityModalOrigin={type:"sales",view:(typeof salesCurrentView!=="undefined"?salesCurrentView:"list"),left:$("salesScroll")?.scrollLeft||0};
+    }
+    __oppKeepPreparedOrigin=false;
+    pendingOpportunityRecordId=null;
+    const o=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
+    if(!o)return;
 
-  $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
-    `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
-  ).join("");
+    $("oppModalSave").textContent="Guardar cambios";
+    $("oppModalDelete").classList.remove("hidden");
+    $("oppModalId").value=o.id||"";
+    try{window.TPFContactParty?.mountOpportunity(o.contract_party);}catch(e){console.warn("Titular de oportunidad",e)}
+    $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
+    $("oppModalTitle").value=o.title||"";
+    $("oppModalClient").value=o.client_name||"";
+    $("oppModalPhone").value=o.phone||"";
+    $("oppModalDni").value="";
+    $("oppModalOpenContact").dataset.recordId=o.record_id||"";
+    pendingOpportunityRecordId=o.record_id||null;
+    $("oppModalAmount").value=o.amount??"";
+    $("oppModalDate").value=o.expected_date||"";
+    $("oppModalNotes").value=o.notes||"";
+    $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
+      `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
+    ).join("");
 
-  renderOpportunityCustomFields();
-  loadOpportunityCustomFields(o.id).catch(e=>console.warn("Campos de oportunidad",e));
-  if(o.record_id){
-    sb.from("records").select("id,data").eq("id",o.record_id).maybeSingle().then(({data})=>{
-      if(data && String($("oppModalId")?.value)===String(o.id))$("oppModalDni").value=mapSalesContact(data).dni;
-    });
+    const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
+    const meta=[];
+    if(stage?.name)meta.push(`Columna actual: ${stage.name}`);
+    if(o.created_at)meta.push(`Creada: ${new Date(o.created_at).toLocaleString("es-ES")}`);
+    if(o.updated_at)meta.push(`Actualizada: ${new Date(o.updated_at).toLocaleString("es-ES")}`);
+    $("oppMetaInfo").textContent=meta.join(" · ");
+
+    // Mostrar primero la ficha: los campos extra no pueden impedir abrirla.
+    $("oppDetailModal").classList.remove("hidden");
+
+    try{
+      renderOpportunityCustomFields();
+      loadOpportunityCustomFields(o.id).catch(e=>console.warn("Campos de oportunidad",e));
+      if(o.record_id){
+        sb.from("records").select("id,data").eq("id",o.record_id).maybeSingle().then(({data})=>{
+          if(data && String($("oppModalId")?.value)===String(o.id))$("oppModalDni").value=mapSalesContact(data).dni;
+        });
+      }
+    }catch(extraError){
+      console.warn("Datos adicionales de oportunidad",extraError);
+    }
+  }catch(error){
+    console.error("No se pudo abrir la oportunidad",error);
+    // Último resguardo: nunca dejar un clic sin respuesta visible.
+    $("oppDetailModal")?.classList.remove("hidden");
   }
-
-  const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
-  const meta=[];
-  if(stage?.name)meta.push(`Columna actual: ${stage.name}`);
-  if(o.created_at)meta.push(`Creada: ${new Date(o.created_at).toLocaleString("es-ES")}`);
-  if(o.updated_at)meta.push(`Actualizada: ${new Date(o.updated_at).toLocaleString("es-ES")}`);
-  $("oppMetaInfo").textContent=meta.join(" · ");
-
-  $("oppDetailModal").classList.remove("hidden");
 };
 
 
@@ -1580,17 +1597,34 @@ async function deleteSelectedSalesOpportunities(){
 if($("salesBulkMove"))$("salesBulkMove").onclick=moveSelectedSalesOpportunities;
 if($("salesBulkDelete"))$("salesBulkDelete").onclick=deleteSelectedSalesOpportunities;
 
+function salesClientDisplay(value){
+  const raw=String(value||"").trim();
+  if(!raw)return "";
+  const letters=raw.replace(/[^\p{L}]/gu,"");
+  if(!letters || letters!==letters.toLocaleUpperCase("es-ES"))return raw;
+  const small=new Set(["de","del","la","las","los","y","e"]);
+  return raw.toLocaleLowerCase("es-ES").split(/(\s+)/).map((part,index)=>{
+    if(/^\s+$/.test(part))return part;
+    return part.replace(/^([^\p{L}]*)([\p{L}À-ÿÑñ]+)(.*)$/u,(_,prefix,core,suffix)=>{
+      const normalized=small.has(core)&&index>0?core:core.charAt(0).toLocaleUpperCase("es-ES")+core.slice(1);
+      return prefix+normalized+suffix;
+    });
+  }).join("");
+}
+
 function renderSalesList(){
   if(!$("salesListRows"))return;
   const stages=salesCache.stages||[];
   const stageName=id=>stages.find(s=>String(s.id)===String(id))?.name||"";
   const rows=salesCache.opportunities||[];
+  // Apertura autosuficiente: la fila funciona aunque otro inicializador falle.
+  const inlineListOpen="(function(r){var q=function(i){return document.getElementById(i)},x;q('oppModalId')&&(q('oppModalId').value=r.dataset.oppId||'');q('oppModalHeading')&&(q('oppModalHeading').textContent=r.dataset.oppTitle||'Ficha de oportunidad');q('oppModalTitle')&&(q('oppModalTitle').value=r.dataset.oppTitle||'');q('oppModalClient')&&(q('oppModalClient').value=r.dataset.oppClient||'');q('oppModalPhone')&&(q('oppModalPhone').value=r.dataset.oppPhone||'');q('oppModalAmount')&&(q('oppModalAmount').value=r.dataset.oppAmount||'');q('oppModalDate')&&(q('oppModalDate').value=r.dataset.oppDate||'');q('oppModalNotes')&&(q('oppModalNotes').value=r.dataset.oppNotes||'');q('oppModalOpenContact')&&(q('oppModalOpenContact').dataset.recordId=r.dataset.oppRecordId||'');x=q('oppModalStage');if(x){for(var i=0;i<x.options.length;i++){if(x.options[i].value===r.dataset.oppStage){x.value=r.dataset.oppStage;break}}}q('oppMetaInfo')&&(q('oppMetaInfo').textContent=r.dataset.oppStageName?'Columna actual: '+r.dataset.oppStageName:'');q('oppDetailModal')&&q('oppDetailModal').classList.remove('hidden')})(this)";
 
   $("salesListRows").innerHTML=rows.length?rows.map(o=>`
-    <div class="salesListRow" onclick="openOpportunityCard('${o.id}')">
+    <div class="salesListRow" data-opp-id="${esc(o.id||'')}" data-opp-title="${esc(o.title||'Oportunidad')}" data-opp-client="${esc(o.client_name||'')}" data-opp-phone="${esc(o.phone||'')}" data-opp-amount="${esc(o.amount??'')}" data-opp-date="${esc(o.expected_date||'')}" data-opp-notes="${esc(o.notes||'')}" data-opp-record-id="${esc(o.record_id||'')}" data-opp-stage="${esc(o.stage_id||'')}" data-opp-stage-name="${esc(stageName(o.stage_id))}">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
       <div class="salesListTitle">${esc(o.title||"Oportunidad")}</div>
-      <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
+      <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(salesClientDisplay(o.client_name))}</button>`:"—"}</div>
       <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
       <div>${esc(o.phone||"—")}</div>
       <div>${esc(fmtMoney(o.amount||0))}</div>
@@ -1599,7 +1633,8 @@ function renderSalesList(){
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
         </select>
       </div>
-      <div>${o.expected_date?esc(fmtDateOnly(o.expected_date)):"—"}</div>
+      <div class="salesListDate"><input type="text" class="salesListDateInput" data-opp-id="${esc(o.id||'')}" data-original-date="${esc(o.expected_date||'')}" value="${esc(o.expected_date?fmtDateOnly(o.expected_date):'')}" placeholder="dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de oportunidad" style="width:140px;min-width:140px;height:34px;box-sizing:border-box"></div>
+      <div class="salesListAction"><button type="button" class="tpfListMenuBtn" aria-label="Acciones de ${esc(o.title||'Oportunidad')}" title="Acciones">•••</button></div>
     </div>`).join("")
     : '<div class="cpEmpty" style="padding:20px">No hay oportunidades.</div>';
 
@@ -1661,15 +1696,67 @@ function applyVisibleSalesStateFilter(){
 
   // Lista: ocultar filas cuyo estado no corresponda.
   document.querySelectorAll("#salesListRows .salesListRow").forEach(row=>{
-    const id=row.querySelector(".salesListCheck")?.dataset.oppId;
-    const opp=getSalesOpportunityById(id);
-    row.style.display=(!selected || String(opp?.stage_id)===selected)?"":"none";
+    // En Lista el estado mostrado por su selector es la fuente de verdad:
+    // evita depender de una caché que puede ser sustituida por otro módulo.
+    const rowStage=String(row.querySelector("select")?.value||"");
+    const show=!selected || rowStage===selected;
+    // Las reglas de diseño de la tabla usan display:grid !important.
+    // Aplicamos la misma prioridad para que el filtro se respete.
+    row.style.setProperty("display",show?"grid":"none","important");
   });
+  syncSalesSummaryStageChips();
 }
 
 if($("salesVisibleStateFilter"))$("salesVisibleStateFilter").onchange=()=>{
   applyVisibleSalesStateFilter();
+  applyListStageRows();
 };
+
+function syncSalesSummaryStageChips(){
+  const selected=String($("salesVisibleStateFilter")?.value||"");
+  document.querySelectorAll("#salesSummaryStages .salesSummaryStageChip[data-stage-id]").forEach(chip=>{
+    const active=String(chip.dataset.stageId)===selected;
+    chip.classList.toggle("active",active);
+    chip.setAttribute("aria-pressed",String(active));
+  });
+}
+
+function applyListStageRows(){
+  const selected=String($("salesVisibleStateFilter")?.value||"");
+  let style=$("tpfSalesListStageFilter");
+  if(!style){
+    style=document.createElement("style");
+    style.id="tpfSalesListStageFilter";
+    document.head.appendChild(style);
+  }
+  // Regla persistente: se aplica inmediatamente y también a filas
+  // que el panel reconstruya después del clic.
+  const value=selected.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+  style.textContent=selected
+    ? `#salesListRows .salesListRow:not(:has(select option:checked[value="${value}"])){display:none!important}`
+    : "";
+}
+
+window.filterSalesByStage=(stageId)=>{
+  const select=$("salesVisibleStateFilter");
+  if(!select)return;
+  const id=String(stageId||"");
+  select.value=String(select.value||"")===id?"":id;
+  applyVisibleSalesStateFilter();
+  applyListStageRows();
+  // El render de Ventas puede reconstruir las filas justo después del clic.
+  // Reaplicamos el filtro cuando ese render termine.
+  requestAnimationFrame(applyListStageRows);
+  setTimeout(applyListStageRows,180);
+  setTimeout(applyListStageRows,500);
+};
+
+document.addEventListener("click",e=>{
+  const chip=e.target.closest("#salesSummaryStages .salesSummaryStageChip[data-stage-id]");
+  if(!chip)return;
+  e.preventDefault();
+  window.filterSalesByStage(chip.dataset.stageId);
+});
 
 const salesFilterObserver=new MutationObserver(()=>requestAnimationFrame(applyVisibleSalesStateFilter));
 if($("salesBoard"))salesFilterObserver.observe($("salesBoard"),{childList:true,subtree:true});
@@ -1681,6 +1768,37 @@ setTimeout(()=>{
 },150);
 
 
+
+/* Vista Lista: el panel es un contenedor propio. Interceptamos la rueda aquí
+   para que ratón y trackpad desplacen la tabla sin afectar al tablero. */
+function installSalesListScroll(){
+  const box=$("salesListView");
+  if(!box || box.dataset.tpfListScroll==="1")return;
+  box.dataset.tpfListScroll="1";
+  box.addEventListener("wheel",e=>{
+    if(box.classList.contains("hidden") || e.target.closest("select"))return;
+    const dx=Number(e.deltaX||0),dy=Number(e.deltaY||0);
+    const maxY=Math.max(0,box.scrollHeight-box.clientHeight);
+    const maxX=Math.max(0,box.scrollWidth-box.clientWidth);
+    let moved=false;
+    if(Math.abs(dx)>0.5 && maxX>0){
+      const before=box.scrollLeft;
+      box.scrollLeft=Math.max(0,Math.min(maxX,before+dx));
+      moved=moved || box.scrollLeft!==before;
+    }
+    if(Math.abs(dy)>0.5 && maxY>0){
+      const before=box.scrollTop;
+      box.scrollTop=Math.max(0,Math.min(maxY,before+dy));
+      moved=moved || box.scrollTop!==before;
+    }
+    if(moved){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },{passive:false,capture:true});
+}
+setTimeout(installSalesListScroll,50);
+setTimeout(installSalesListScroll,500);
 
 /* No capturar la rueda del ratón en el tablero: el navegador debe hacer
    scroll vertical normal aunque el puntero esté encima de una oportunidad. */

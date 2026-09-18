@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const ui=fs.readFileSync('js/modules/sales-list-ui.js','utf8');
+const open=fs.readFileSync('js/modules/sales-list-open.js','utf8');
+const main=fs.readFileSync('js/core/20-main.js','utf8');
+assert.doesNotMatch(ui,/row\.onclick=/,'La fila entera no debe abrir una oportunidad.');
+assert.match(open,/window\.openOpportunityCard\(d\.oppId\)/,'El título debe abrir la ficha completa.');
+assert.match(open,/salesListDateInput/,'La fecha debe mantener su guardado independiente.');
+assert.match(open,/día\/mes\/año/,'La fecha debe poder escribirse manualmente.');
+assert.match(main,/class="salesListAction"><button type="button" class="tpfListMenuBtn"/,'Cada fila debe conservar los tres puntos.');
+console.log('PASS sales-list-safe-interactions.cjs');

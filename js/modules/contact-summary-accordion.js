@@ -59,8 +59,16 @@ function metric(key){
   const n=[...($('cpWhatsappPrograms')?.children||[])].filter(x=>!x.classList.contains('cpEmpty')).length;
   return n+' WhatsApp programado'+(n===1?'':'s');
  }
+ if(key==='automation'){
+  const metrics=[...modal.querySelectorAll('#cpAutomationStatus .casMetrics span')].map(node=>String(node.textContent||'').trim()).filter(Boolean);
+  return metrics.join(' · ')||'Sin automatizaciones';
+ }
  const items=[...modal.querySelectorAll('#cpOfferInstances .cpOfferCard,#cpOfferInstances .cpOfferItem')];
- return items.length+' oferta'+(items.length===1?'':'s')+' · 0 activas · 0 pausadas · 0 tramitadas';
+ const statuses=items.map(item=>String(item.dataset.offerStatus||item.querySelector('.cpOfferStatus')?.className||'').toLowerCase());
+ const active=statuses.filter(status=>status.includes('queued')||status.includes('following')).length;
+ const paused=statuses.filter(status=>status.includes('paused')).length;
+ const processed=statuses.filter(status=>status.includes('accepted')||status.includes('processed')||status.includes('won')).length;
+ return items.length+' oferta'+(items.length===1?'':'s')+' · '+active+' activas · '+paused+' pausadas · '+processed+' tramitadas';
 }
 function group(root,key,title,nodes){
  let block=root.querySelector('[data-summary-key="'+key+'"]');
@@ -68,7 +76,7 @@ function group(root,key,title,nodes){
   block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.summaryKey=key;block.dataset.open='false';
   block.innerHTML='<button type="button" class="tpfSummaryTrigger" aria-expanded="false"><span class="tpfSummaryTitle"></span><small class="tpfSummaryMetric"></small><span class="tpfSummaryChevron" aria-hidden="true">⌄</span></button><div class="tpfSummaryBody"></div>';
   block.querySelector('.tpfSummaryTitle').textContent=title;
-  block.querySelector('.tpfSummaryTrigger').onclick=()=>{const open=block.dataset.open!=='true';block.dataset.open=String(open);block.querySelector('button').setAttribute('aria-expanded',String(open));};
+  block.querySelector('.tpfSummaryTrigger').onclick=()=>{const open=block.dataset.open!=='true';block.dataset.open=String(open);block.querySelector('button').setAttribute('aria-expanded',String(open));if(open&&key==='offers')window.dispatchEvent(new CustomEvent('tpf:summary-offers-open'));};
   root.appendChild(block);
  }
  const body=block.querySelector('.tpfSummaryBody');
@@ -76,7 +84,8 @@ function group(root,key,title,nodes){
   let wrap=body.querySelector('.tpfSummaryWork');if(!wrap){wrap=document.createElement('div');wrap.className='tpfSummaryWork';body.appendChild(wrap)}
   nodes.filter(Boolean).forEach(n=>{if(n.parentElement!==wrap)wrap.appendChild(n)});
  }else nodes.filter(Boolean).forEach(n=>{if(n.parentElement!==body)body.appendChild(n)});
- block.querySelector('.tpfSummaryMetric').textContent=metric(key);
+ const metricNode=block.querySelector('.tpfSummaryMetric'),metricText=metric(key);
+ if(metricNode&&metricNode.textContent!==metricText)metricNode.textContent=metricText;
 }
 function ensure(){
  if(window.innerWidth<1024||modal.classList.contains('hidden'))return;
@@ -117,9 +126,12 @@ function ensure(){
  const offers=$('cpOffersSection'),automation=$('cpAutomationStatus');
  group(root,'work','Oportunidades y tareas pendientes',[opp,tasks]);
  group(root,'programs','WhatsApp programados',[programs]);
- group(root,'offers','Ofertas y seguimiento',[offers,automation]);
+ // Cada bloque conserva su propio desplegable y todos empiezan cerrados.
+ group(root,'automation','Automatizaciones',[automation]);
+ group(root,'offers','Ofertas y seguimiento',[offers]);
 }
 new MutationObserver(()=>requestAnimationFrame(ensure)).observe(modal,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
-window.addEventListener('tpf:contact-open',()=>setTimeout(ensure,100));
+window.addEventListener('tpf:contact-open',()=>setTimeout(()=>{const root=$('tpfSummaryAccordion');root?.querySelectorAll('.tpfSummaryGroup').forEach(block=>{block.dataset.open='false';block.querySelector('.tpfSummaryTrigger')?.setAttribute('aria-expanded','false');});ensure();},100));
+window.addEventListener('tpf:offers-rendered',()=>setTimeout(ensure,0));
 window.addEventListener('resize',ensure);setTimeout(ensure,200);
 })();

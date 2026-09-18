@@ -229,6 +229,7 @@ window.openContact=async(id)=>{
  $("contactMsg").textContent="";
  $("contactModal").classList.remove("hidden");
  await renderContactProfile();
+ window.dispatchEvent(new CustomEvent('tpf:contact-open',{detail:{id:currentContact.id}}));
 };
 $("contactClose").onclick=async()=>{if(!await tpfBackExactly())$("contactModal").classList.add("hidden")};
 function openWaQuick(prefill={}){
@@ -673,7 +674,7 @@ function renderSales(){
     if($("salesSummaryStages"))$("salesSummaryStages").innerHTML=stages.map(s=>{
       const rows=all.filter(o=>String(o.stage_id)===String(s.id));
       const amount=rows.reduce((sum,o)=>sum+Number(o.amount||0),0);
-      return `<span class="salesSummaryStageChip"><b>${esc(s.name)}</b> ${rows.length} · ${esc(fmtMoney(amount))}</span>`;
+      return `<button type="button" class="salesSummaryStageChip" data-stage-id="${esc(s.id)}" aria-pressed="false" title="Filtrar por ${esc(s.name)}"><b>${esc(s.name)}</b> ${rows.length} · ${esc(fmtMoney(amount))}</button>`;
     }).join("")||'<span class="small">Sin columnas.</span>';
   }catch(e){}
 
@@ -736,6 +737,38 @@ async function loadSales(){
  window.dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:salesCache.opportunities}}));
  renderSales();
 }
+
+// La lista no depende del inicializador principal para abrir una oportunidad.
+function openSalesListOpportunity(id){
+  const o=(salesCache.opportunities||[]).find(x=>String(x.id)===String(id));
+  if(!o)return;
+  const modal=$("oppDetailModal");
+  if(!modal)return;
+  $("oppModalSave").textContent="Guardar cambios";
+  $("oppModalDelete").classList.remove("hidden");
+  $("oppModalId").value=o.id||"";
+  $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
+  $("oppModalTitle").value=o.title||"";
+  $("oppModalClient").value=o.client_name||"";
+  $("oppModalPhone").value=o.phone||"";
+  $("oppModalDni").value="";
+  $("oppModalOpenContact").dataset.recordId=o.record_id||"";
+  $("oppModalAmount").value=o.amount??"";
+  $("oppModalDate").value=o.expected_date||"";
+  $("oppModalNotes").value=o.notes||"";
+  $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
+    `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
+  ).join("");
+  const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
+  $("oppMetaInfo").textContent=stage?.name?`Columna actual: ${stage.name}`:"";
+  modal.classList.remove("hidden");
+  try{
+    if(typeof renderOpportunityCustomFields==="function")renderOpportunityCustomFields();
+    if(typeof loadOpportunityCustomFields==="function")loadOpportunityCustomFields(o.id).catch(e=>console.warn("Campos de oportunidad",e));
+  }catch(e){console.warn("Campos auxiliares de oportunidad",e);}
+}
+// Mantiene la compatibilidad con las filas ya renderizadas con onclick.
+window.openOpportunityCard=openSalesListOpportunity;
 window.moveOpp=async(id,stage)=>{const {error}=await sb.from("sales_opportunities").update({stage_id:stage,position:0}).eq("id",id);if(error)alert(error.message);else loadSales()};
 
 window.deleteOpp=async(id)=>{

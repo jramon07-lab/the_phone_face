@@ -8,7 +8,8 @@ const marker="M.register('whatsapp-performance-max',{install});";
 assert.ok(source.includes(marker),'No se encontró el registro del módulo');
 const testSource=source.replace(marker,`window.__waPerformanceTest={
   waPerformanceMatches,waPerformanceFilterRows,waPerformanceVisibleAvatarIds,
-  waPerformanceLoadAvatar,waPerformancePage,waAvatarRetry
+  waPerformanceLoadAvatar,waPerformancePage,waAvatarRetry,
+  waPerformanceContact,waPerformanceIndexPut,waPerformanceIdentity,waContactIndex
 };${marker}`);
 
 function eventTarget(){
@@ -101,6 +102,11 @@ async function run(){
   assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'Ramón'},'zzzzz'),false);
   context.waNormalizePhone=normalize;
   assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'Ramón'},'566140'),true);
+  const aliased=api.waPerformanceContact({id:'contact-1',data:{'NOMBRE Y APELLIDOS':'José Ramón','APODO':'Ramon de tienda','TELÉFONO':'695 661 409'}});
+  api.waPerformanceIndexPut(api.waContactIndex.byPhone,aliased.phone,aliased);
+  assert.equal(api.waPerformanceIdentity({id:'34695661409@c.us'}).nickname,'Ramon de tienda');
+  assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'José'},'ramon de tienda'),true,'la búsqueda de WhatsApp debe incluir el apodo CRM');
+  assert.match(source,/tpfWaListNickname/,'Cada conversación debe pintar el apodo debajo del nombre.');
 
   const filters=[
     {id:'regular',name:'Normal'},
@@ -137,10 +143,10 @@ async function run(){
   assert.match(list.innerHTML,/Cliente 125/);
 
   const makeAvatar=(id,top)=>({dataset:{waAvatarId:id,waInitials:'CL'},getBoundingClientRect(){return{top,bottom:top+40}}});
-  for(let index=0;index<20;index++)avatarNodes.push(makeAvatar(`avatar-${index}`,index*50));
+  for(let index=0;index<20;index++)avatarNodes.push(makeAvatar(`346700${String(index).padStart(4,'0')}@c.us`,index*50));
   list.avatarNodes=avatarNodes;
   const visible=api.waPerformanceVisibleAvatarIds(avatarNodes.map(x=>x.dataset.waAvatarId));
-  assert.deepEqual(Array.from(visible),['avatar-0','avatar-1','avatar-2','avatar-3','avatar-4','avatar-5']);
+  assert.deepEqual(Array.from(visible),['3467000000@c.us','3467000001@c.us','3467000002@c.us','3467000003@c.us','3467000004@c.us','3467000005@c.us']);
 
   let avatarCalls=0;
   context.waApi=async()=>{
@@ -148,11 +154,12 @@ async function run(){
     if(avatarCalls===1)throw new Error('fallo temporal');
     return{urlAvatar:'https://cdn.test/avatar.jpg'};
   };
-  await api.waPerformanceLoadAvatar('avatar-0');
-  assert.equal(api.waAvatarRetry.get('avatar-0').attempts,1);
-  await api.waPerformanceLoadAvatar('avatar-0');
+  const avatarId='3467000000@c.us';
+  await api.waPerformanceLoadAvatar(avatarId);
+  assert.equal(api.waAvatarRetry.get(avatarId).attempts,1);
+  await api.waPerformanceLoadAvatar(avatarId);
   assert.equal(avatarCalls,2,'un fallo temporal debe poder reintentarse');
-  assert.equal(state.avatars['avatar-0'],'https://cdn.test/avatar.jpg');
+  assert.equal(state.avatars[avatarId],'https://cdn.test/avatar.jpg');
   assert.equal(avatarNodes[0].applied,'https://cdn.test/avatar.jpg');
 
   console.log('WhatsApp performance max OK');
