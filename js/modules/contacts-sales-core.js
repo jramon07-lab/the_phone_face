@@ -229,6 +229,7 @@ window.openContact=async(id)=>{
  $("contactMsg").textContent="";
  $("contactModal").classList.remove("hidden");
  await renderContactProfile();
+ window.dispatchEvent(new CustomEvent('tpf:contact-open',{detail:{id:currentContact.id}}));
 };
 $("contactClose").onclick=async()=>{if(!await tpfBackExactly())$("contactModal").classList.add("hidden")};
 function openWaQuick(prefill={}){
