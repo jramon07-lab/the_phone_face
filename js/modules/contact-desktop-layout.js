@@ -40,7 +40,7 @@
  function summaryCount(selector,root){return root?root.querySelectorAll(selector).length:0;}
  function summaryText(node){return String(node?.textContent||'').toLowerCase();}
  function summaryMetrics(key){
-  const opp=$('cpOpportunities'),tasks=$('cpTasks'),programs=$('cpWhatsappPrograms'),offers=$('cpOffersSection'),automation=$('cpAutomationStatus');
+  const opp=$('cpOpportunities'),tasks=$('cpTasks'),programs=$('cpWhatsappPrograms'),offers=$('cpOffersSection');
   if(key==='work'){
    const total=Number($('cpOppTotal')?.textContent||summaryCount(':scope > .oppUnifiedCard',opp))||0;
    const open=Number($('cpOppOpen')?.textContent||0)||0,expired=Number($('cpOppExpired')?.textContent||0)||0;
@@ -50,12 +50,8 @@
    return 'Oportunidades: '+total+' total · '+open+' abiertas · '+expired+' vencidas  |  Tareas: '+cards.length+' total · '+Math.max(0,cards.length-completed)+' pendientes · '+overdue+' vencidas · '+completed+' completadas';
   }
   if(key==='programs'){
-    const total=summaryCount(':scope > .cpWaWrap',programs);
-    return total+' WhatsApp programado'+(total===1?'':'s');
-  }
-  if(key==='automation'){
-   const metrics=[...automation?.querySelectorAll('.casMetrics span')||[]].map(node=>String(node.textContent||'').trim()).filter(Boolean);
-   return metrics.join(' · ')||'Sin automatizaciones';
+   const total=summaryCount(':scope > .cpWaWrap',programs);
+   return total+' WhatsApp programado'+(total===1?'':'s');
   }
   const cards=[...offers?.querySelectorAll('.cpOfferCard,.cpOfferItem')||[]];
   const rows=cards.length?cards:[...offers?.querySelectorAll('.cpOfferList > *')||[]];
@@ -95,8 +91,7 @@
   const offers=sections.find(s=>s.dataset.cpRefPane==='ofertas'),automation=sections.find(s=>s.dataset.cpRefPane==='automatizaciones');
   makeSummaryGroup(root,'work','Oportunidades y tareas pendientes',[opp,tasks]);
   makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
-  makeSummaryGroup(root,'automation','Automatizaciones',[automation]);
-  makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers]);
+  makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers,automation]);
  }
  function refreshSummaryMetrics(){
   panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));

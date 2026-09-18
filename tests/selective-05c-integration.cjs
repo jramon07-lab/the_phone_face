@@ -10,6 +10,7 @@ const salesUi=read('js/modules/sales-list-ui.js');
 const dateEditor=read('js/modules/sales-list-inline-date.js');
 const contacts=read('js/modules/contacts-list-ui.js');
 const actions=read('js/modules/contacts-actions-plus.js');
+const preservedMenu=read('js/modules/contacts-menu-preserve.js');
 const summary=read('js/modules/contact-desktop-layout.js');
 
 for(const file of [
@@ -28,10 +29,11 @@ assert.match(dateEditor,/sales_opportunities/,'La fecha debe guardarse en la opo
 assert.match(dateEditor,/event\.stopPropagation\(\)/,'Editar la fecha no puede abrir la oportunidad.');
 assert.match(contacts,/r\.nickname\?`<span class="tpfContactNickname"/,'El contacto muestra el apodo antes que el correo.');
 assert.match(actions,/Enviar oferta/,'El menú de tres puntos de contactos debe permitir enviar oferta.');
-assert.match(actions,/Gestionar etiquetas/,'El menú de tres puntos de contactos debe abrir etiquetas.');
-assert.match(actions,/Crear oportunidad/,'El menú de tres puntos de contactos debe crear oportunidades.');
-assert.match(summary,/makeSummaryGroup\(root,'automation','Automatizaciones'/,'Automatizaciones debe tener su desplegable propio.');
-assert.match(summary,/makeSummaryGroup\(root,'offers','Ofertas y seguimiento',\[offers\]\)/,'Ofertas y seguimiento debe quedar separado y cerrado al inicio.');
+assert.match(preservedMenu,/more-final/,'Los tres puntos de Contactos deben conservar el menú estable.');
+assert.match(preservedMenu,/tpfMoreMenu/,'La oferta se añade al menú existente, sin reemplazarlo.');
+assert.match(preservedMenu,/\[data-more="delete"\]/,'Enviar oferta debe colocarse antes de Eliminar contacto.');
+assert.match(summary,/makeSummaryGroup\(root,'offers','Ofertas y seguimiento',\[offers,automation\]\)/,'Ofertas y automatizaciones conservan su estructura dentro del desplegable existente.');
+assert.doesNotMatch(summary,/makeSummaryGroup\(root,'automation','Automatizaciones'/,'No se debe crear un bloque nuevo que oculte las automatizaciones existentes.');
 assert.match(runtime,/contacts-actions-plus\.js/,'El menú ampliado debe cargarse después de los módulos de contactos.');
 assert.match(runtime,/sales-list-inline-date\.js/,'El editor de fechas debe cargar en Ventas.');
 
