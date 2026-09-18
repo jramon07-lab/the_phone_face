@@ -11,7 +11,7 @@ vm.runInContext(source,context);
 const api=context.window.TPFOffersPro;
 assert(api,'the offer configurator exposes its deterministic helpers');
 assert.deepEqual([...api.OPERATORS],['Vodafone','Yoigo','MásMóvil','O2','Lowi','Orange']);
-assert.equal(api.directSaleMessage('Vodafone',52,'Ana García'),'Hola Ana, te envío lo que hemos comentado:\n• Operador: Vodafone\nPrecio final: 52,00 €/mes');
+assert.equal(api.directSaleMessage('Vodafone',52,'Ana García'),'Hola Ana García, te envío lo que hemos comentado:\n• Operador: Vodafone\nPrecio final: 52,00 €/mes');
 assert.equal(api.scheduledSendIso('now',''),null,'send now never creates a schedule');
 assert.match(api.nextHalfHourLocal(Date.parse('2026-09-10T10:10:00Z')),/:30$/,'the default slot advances to a half-hour boundary');
 assert.match(api.nextHalfHourLocal(Date.parse('2026-09-10T10:31:00Z')),/:00$/,'the default slot never keeps arbitrary minutes');
@@ -27,6 +27,8 @@ const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base
 assert.equal(api.calculateTotal(offer,{gb:1,netflix:1,extra:2}),78,'options update the calculated total');
 const message=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','Precio válido este mes.',75);
 assert.match(message,/Hola Ana/);
+const welcomeBusinessMessage=api.buildMessage(offer,{},'The Phone Face Phone Face','',52,{},true);
+assert.match(welcomeBusinessMessage,/Hola The Phone Face Phone Face, soy /,'the offer greeting keeps the complete client name, including business names');
 assert.match(message,/Fibra 1 Gb/);
 assert.ok(message.indexOf('Fibra 1 Gb')<message.indexOf('2 líneas de 160 GB'),'replacement keeps Fiber before mobile data');
 assert.match(message,/Netflix incluido/);

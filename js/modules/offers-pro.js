@@ -7,11 +7,13 @@ const phoneDigits=value=>String(value||'').replace(/\D/g,'').slice(-9);
 const money=value=>`${Number(value||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})} €`;
 const calculateTotal=(offer,quantities={})=>Number(offer?.base_price||0)+(offer?.line_options||[]).reduce((sum,line)=>sum+Number(line.price_delta||0)*Math.max(0,Number(quantities[line.id]||0)),0);
 const firstName=value=>{const text=(typeof value==='string'||typeof value==='number')?String(value).trim():'';return text?text.split(/\s+/)[0]:'Cliente';};
+const customerName=value=>{const text=(typeof value==='string'||typeof value==='number')?String(value).replace(/\s+/g,' ').trim():'';return text||'Cliente';};
+const offerSenderName=()=>{try{return String(perms?.display_name||'').trim()||'el equipo de Phone House Albolote'}catch(_){return'el equipo de Phone House Albolote'}};
 const madridDateKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const localDateTimeValue=(value=new Date())=>{const date=value instanceof Date?value:new Date(value);if(!Number.isFinite(date.getTime()))return'';const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)};
 const nextHalfHourLocal=(now=Date.now())=>localDateTimeValue(new Date(Math.ceil((Number(now)+60000)/1800000)*1800000));
 const scheduledSendIso=(timing,value,now=Date.now())=>{if(timing!=='scheduled')return null;const date=new Date(String(value||'')),stamp=date.getTime();if(!Number.isFinite(stamp))throw new Error('Elige una fecha y hora válidas para el envío.');if(stamp<now+60000)throw new Error('La hora programada debe dejar al menos un minuto de margen.');if(stamp>now+90*86400000)throw new Error('La oferta no puede programarse con más de 90 días de antelación.');return date.toISOString()};
-const directSaleMessage=(operator,total,customer='Cliente')=>`Hola ${firstName(customer)}, te envío lo que hemos comentado:\n• Operador: ${operator}\nPrecio final: ${money(total)}/mes`;
+const directSaleMessage=(operator,total,customer='Cliente')=>`Hola ${customerName(customer)}, te envío lo que hemos comentado:\n• Operador: ${operator}\nPrecio final: ${money(total)}/mes`;
 const offerGroupLabel=offer=>offer?.operator==='O2'?(Array.isArray(offer.base_features)&&offer.base_features.some(x=>/movistar plus/i.test(String(x)))?'Con TV':'Sin TV'):'';
 const sharedFeature=/^(\d+)\s+l[ií]neas?\s+con\s+(\d+)\s*GB(?:\s+compartidos)?$/i;
 const buildMessage=(offer,quantities={},customer='Cliente',extra='',finalPrice=null,visibility={},welcome=false)=>{
@@ -23,7 +25,7 @@ const buildMessage=(offer,quantities={},customer='Cliente',extra='',finalPrice=n
   let sharedLines=sharedBase?Number(sharedBase[1]):0,sharedGb=sharedBase?Number(sharedBase[2]):0,sharedChanged=false;
   for(const line of offer.line_options||[]){const qty=Math.max(0,Number(quantities[line.id]||0));if(!qty)continue;const replaceIndex=line.replaces_text?features.indexOf(line.replaces_text):-1;const visible=visibility[line.id]!==false;const label=line.message_text||line.name;const group=String(line.group_name||'').toLowerCase();if(group==='discount')continue;if(group==='shared_gb'){if(visible&&sharedBase){sharedLines+=qty;sharedGb+=Number(line.data_gb||0)*qty;sharedChanged=true}continue}if(replaceIndex>=0){if(visible)features.splice(replaceIndex,1,label);else features.splice(replaceIndex,1);continue}if(!visible)continue;if(line.option_type==='quantity'){const join=/^con\s/i.test(label)?' ':' de ';lineFeatures.push(`${qty} ${qty===1?'línea':'líneas'}${join}${label}`)}else serviceFeatures.push(label)}
   if(sharedChanged)features[sharedIndex]=`${sharedLines} líneas con ${sharedGb} GB compartidos`;
-  const greeting=welcome?`Hola ${firstName(customer)}, soy ${offerSenderName()} de Phone House Albolote. Te envío una oferta que puede interesarte:`:`Hola ${firstName(customer)}, te envío la oferta que hemos comentado:`;
+  const greeting=welcome?`Hola ${customerName(customer)}, soy ${offerSenderName()} de Phone House Albolote. Te envío una oferta que puede interesarte:`:`Hola ${customerName(customer)}, te envío la oferta que hemos comentado:`;
   const rows=[greeting,...features.concat(lineFeatures,serviceFeatures).map(x=>`• ${x}`)];
   rows.push(`Precio final: ${money(finalPrice==null?calculateTotal(offer,quantities):finalPrice)}/mes`);
   if(String(extra||'').trim())rows.push('',String(extra).trim());
@@ -38,7 +40,6 @@ const current=()=>{try{return currentContact||null}catch(_){return null}};
 const offerContact=()=>offerContext||current();
 const offerName=()=>{const c=offerContact()||{},d=c.data||{};return String(offerContext?.name||$('contactName')?.value||c.fullName||d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||'Cliente').trim()};
 const offerPhone=()=>{const c=offerContact()||{},d=c.data||{};return String(offerContext?.phone||$('contactPhone')?.value||d['TELÉFONO']||d.TELEFONO||d.PHONE||'').trim()};
-const offerSenderName=()=>{try{return String(perms?.display_name||'').trim()||'el equipo de Phone House Albolote'}catch(_){return'el equipo de Phone House Albolote'}};
 const isAdmin=()=>{try{return !!perms?.is_admin}catch(_){return false}};
 
 function css(){if($('tpfOffersCss'))return;const style=document.createElement('style');style.id='tpfOffersCss';style.textContent=`
