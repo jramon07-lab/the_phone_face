@@ -54,7 +54,7 @@ async function directOfferContext(contact){
   if(managers.length>1)throw new Error('Esta ficha tiene más de una persona gestora. Revisa la relación antes de enviar una oferta para no mandarla al teléfono equivocado.');
   const manager=managers[0],managerName=contactDisplayName(manager),managerPhone=contactPhone(manager);
   if(!managerPhone)return {id,name:ownName,phone:ownPhone,ownerName:ownName};
-  return {id,name:managerName,phone:managerPhone,ownerName:ownName,managedRecipient:true};
+  return {id,name:firstName(managerName),phone:managerPhone,ownerName:ownName,managedRecipient:true};
 }
 const isAdmin=()=>{try{return !!perms?.is_admin}catch(_){return false}};
 
