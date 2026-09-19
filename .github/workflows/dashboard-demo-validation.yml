@@ -1,0 +1,44 @@
+name: Validar Inicio con cuenta demo
+
+on:
+  push:
+    branches:
+      - test/estable-clon-20260919-v2
+    paths:
+      - 'assets/dashboard-home.css'
+      - 'js/modules/dashboard-performance-guard.js'
+      - 'tests/e2e/dashboard-sales-cockpit.spec.js'
+      - '.github/workflows/dashboard-demo-validation.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: crm-dashboard-demo-validation
+  cancel-in-progress: true
+
+jobs:
+  dashboard-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Probar Inicio de pruebas con la cuenta demo
+        env:
+          # Este es el despliegue de pruebas ya publicado para este cambio.
+          VERCEL_PREVIEW_URL: https://the-phone-face-app-whatsapp-fotos-y-multimedia-ftm8abd89.vercel.app
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/dashboard-sales-cockpit.spec.js --workers=1 --retries=0
+      - name: Guardar evidencia si falla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inicio-demo-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
