@@ -1,5 +1,5 @@
-/* Inicio v7: one complete worklist. Shared navigation stays unchanged. */
-#view-dashboard.tpfDashPro{--td-blue:#1666db;--td-ink:#182d49;--td-muted:#61728a;--td-border:#dfe6ef;box-sizing:border-box;min-width:0;padding:24px!important;background:#f3f6fa!important;color:var(--td-ink);font:14px/1.5 "Segoe UI",Arial,sans-serif}
+/* Inicio v10: full-width workbench, compact summary, complete secondary panels. */
+#view-dashboard.tpfDashPro{--td-blue:#1666db;--td-ink:#182d49;--td-muted:#61728a;--td-border:#dfe6ef;box-sizing:border-box;min-width:0;padding:24px!important;background:#f3f6fa!important;color:var(--td-ink);font:14px/1.5 "Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
 #view-dashboard.tpfDashPro *{box-sizing:border-box}
 #view-dashboard.tpfDashPro :is(button,input,select){font:inherit}
 #view-dashboard.tpfDashPro button{cursor:pointer}
@@ -9,47 +9,47 @@
 #view-dashboard.tpfDashPro .tdIcon{width:20px;height:20px;flex:0 0 auto}
 #view-dashboard.tpfDashPro .tdSrOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 /* Override the legacy global hide-header rule, only inside visible Inicio. */
-#view-dashboard.tpfDashPro:not(.hidden)>.tdCommandBar{display:flex!important;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-#view-dashboard.tpfDashPro .tdDate{display:flex;align-items:center;gap:8px;color:var(--td-muted);font-size:13px}
+#view-dashboard.tpfDashPro:not(.hidden)>.tdCommandBar{display:flex!important;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+#view-dashboard.tpfDashPro .tdPageIntro{min-width:0}
+#view-dashboard.tpfDashPro .tdPageEyebrow{display:block;margin-bottom:5px;color:#567497;font-size:10px;font-weight:750;letter-spacing:.12em}
+#view-dashboard.tpfDashPro .tdPageIntro h1{margin:0 0 5px;color:var(--td-ink);font-size:30px;font-weight:750;line-height:1.2;letter-spacing:-.04em}
+#view-dashboard.tpfDashPro .tdDate{display:flex;align-items:center;flex-wrap:wrap;gap:6px;color:var(--td-muted);font-size:12px}
 #view-dashboard.tpfDashPro #tdToday{text-transform:capitalize}
-#view-dashboard.tpfDashPro .tdCommandActions{display:flex;align-items:center;gap:7px}
-#view-dashboard.tpfDashPro .tdIconButton{display:grid;place-items:center;width:36px;height:36px;padding:7px;border:1px solid var(--td-border);border-radius:9px;background:#fff;color:#456180}
+#view-dashboard.tpfDashPro .tdCommandActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:100%}
+#view-dashboard.tpfDashPro .tdIconButton{display:grid;place-items:center;width:39px;height:39px;padding:7px;border:1px solid var(--td-border);border-radius:9px;background:#fff;color:#456180}
 #view-dashboard.tpfDashPro .tdIconButton:hover{background:#eaf2ff;border-color:#b6cff4;color:var(--td-blue)}
 #view-dashboard.tpfDashPro .tdMore{position:relative}
 #view-dashboard.tpfDashPro .tdMoreMenu{position:absolute;top:43px;right:0;width:275px;padding:6px;border:1px solid var(--td-border);border-radius:10px;background:#fff;box-shadow:0 10px 30px #172e4924;z-index:100}
 #view-dashboard.tpfDashPro .tdMoreMenu button{display:block;width:100%;padding:12px;border:0;border-radius:6px;background:#fff;color:var(--td-ink);text-align:left;font-size:13px}
 #view-dashboard.tpfDashPro .tdMoreMenu button:hover{background:#edf4ff}
 #view-dashboard.tpfDashPro .tdDataStatus{padding:12px 16px;margin-bottom:14px;border:1px solid #eccb92;border-radius:9px;background:#fff6e5;color:#76521c}
-/* Compact header, calm typography, one primary action. */
-#view-dashboard.tpfDashPro .tdSalesHero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:26px;align-items:center;padding:24px 28px;margin-bottom:18px;border:1px solid #214f8c;border-radius:16px;background:linear-gradient(115deg,#142f54,#174988 75%,#1c589c);color:#fff;box-shadow:0 5px 16px #18375812}
-#view-dashboard.tpfDashPro .tdSalesHeroCopy{min-width:0}
-#view-dashboard.tpfDashPro .tdHeroEyebrow{display:block;margin-bottom:3px;color:#c1d8f3;font-size:13px;font-weight:600}
-#view-dashboard.tpfDashPro .tdSalesHero h1{margin:0;color:#fff;font-size:32px;font-weight:750;line-height:1.2;letter-spacing:-.035em}
-#view-dashboard.tpfDashPro .tdSalesHeroCopy>p{margin:7px 0 18px;color:#d2e2f4;font-size:13px}
+/* Four comparable summary blocks, with no decorative empty space. */
+#view-dashboard.tpfDashPro .tdSalesHero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.6fr);align-items:center;padding:18px 22px;margin-bottom:14px;border:1px solid #1e416a;border-radius:14px;background:linear-gradient(110deg,#132e50,#1b426f);color:#fff;box-shadow:0 5px 16px #18375812}
+#view-dashboard.tpfDashPro .tdSalesHero>div{min-width:0}
+#view-dashboard.tpfDashPro .tdSalesHero>div+div{border-left:1px solid #ffffff24;padding-left:20px;margin-left:18px}
 #view-dashboard.tpfDashPro .tdHeroQuick{display:flex;flex-wrap:wrap;gap:8px}
-#view-dashboard.tpfDashPro :is(.tdHeroNew,.tdHeroGhost){display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:39px;padding:9px 12px;border:1px solid #ffffff42;border-radius:8px;font-size:12px;font-weight:650;line-height:1.35}
-#view-dashboard.tpfDashPro .tdHeroNew{background:#fff;color:#174b87;border-color:#fff}
-#view-dashboard.tpfDashPro .tdHeroGhost{background:#ffffff0c;color:#fff}
-#view-dashboard.tpfDashPro .tdHeroNew:hover{background:#e4f0ff}
-#view-dashboard.tpfDashPro .tdHeroGhost:hover{background:#ffffff20}
+#view-dashboard.tpfDashPro :is(.tdHeroNew,.tdHeroGhost){display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:39px;padding:9px 12px;border:1px solid #d5deeb;border-radius:8px;font-size:12px;font-weight:650;line-height:1.35}
+#view-dashboard.tpfDashPro .tdHeroNew{background:var(--td-blue);color:#fff;border-color:var(--td-blue);box-shadow:0 3px 7px #1666db18}
+#view-dashboard.tpfDashPro .tdHeroGhost{background:#fff;color:#345982}
+#view-dashboard.tpfDashPro .tdHeroNew:hover{background:#124fb0}
+#view-dashboard.tpfDashPro .tdHeroGhost:hover{background:#edf4ff;border-color:#a9c5ea}
 #view-dashboard.tpfDashPro .tdHeroQuick .tdIcon{width:16px;height:16px}
-#view-dashboard.tpfDashPro .tdHeroFigures{display:grid;grid-template-columns:minmax(0,.8fr) 90px minmax(0,1.2fr);align-items:center;gap:18px;border-left:1px solid #ffffff26;padding-left:24px}
-#view-dashboard.tpfDashPro .tdHeroFigures span{display:block;color:#c8ddf5;font-size:12px}
-#view-dashboard.tpfDashPro .tdHeroNumber>b{display:block;margin:3px 0;font-size:36px;line-height:1.2;letter-spacing:-.04em}
-#view-dashboard.tpfDashPro .tdHeroNumber small{display:block;color:#bbd0eb;font-size:12px}
-#view-dashboard.tpfDashPro .tdGoalRing{--td-goal-progress:0%;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;width:90px;height:90px;border-radius:50%;background:conic-gradient(#83ccff var(--td-goal-progress),#ffffff26 0);isolation:isolate}
-#view-dashboard.tpfDashPro .tdGoalRing:before{content:"";position:absolute;inset:6px;border-radius:50%;background:#1a4378;z-index:-1}
-#view-dashboard.tpfDashPro .tdGoalRing b{font-size:22px;line-height:1.25}
-#view-dashboard.tpfDashPro .tdGoalRing span{font-size:11px}
-#view-dashboard.tpfDashPro .tdHeroGoal>b{display:block;margin:3px 0 4px;font-size:25px;letter-spacing:-.025em;white-space:nowrap}
-#view-dashboard.tpfDashPro .tdHeroGoal small{display:block;color:#c2d8f1;font-size:11px}
-#view-dashboard.tpfDashPro .tdHeroGoal small strong{font-weight:600}
-#view-dashboard.tpfDashPro .tdGoalRail{height:4px;margin:9px 0;border-radius:5px;background:#ffffff26;overflow:hidden}
+#view-dashboard.tpfDashPro :is(.tdHeroNumber,.tdHeroGoal)>span{display:block;color:#c8ddf5;font-size:12px}
+#view-dashboard.tpfDashPro .tdHeroNumber>b{display:block;margin:4px 0;font-size:clamp(23px,2vw,30px);line-height:1.2;letter-spacing:-.04em;overflow-wrap:anywhere}
+#view-dashboard.tpfDashPro .tdHeroNumber small{display:block;color:#b7cde5;font-size:11px}
+#view-dashboard.tpfDashPro .tdHeroTarget{display:flex;align-items:center;gap:14px}
+#view-dashboard.tpfDashPro .tdHeroGoal{flex:1;min-width:0}
+#view-dashboard.tpfDashPro .tdGoalRing{--td-goal-progress:0%;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;flex:0 0 62px;width:62px;height:62px;border-radius:50%;background:conic-gradient(#83ccff var(--td-goal-progress),#ffffff26 0);isolation:isolate}
+#view-dashboard.tpfDashPro .tdGoalRing:before{content:"";position:absolute;inset:4px;border-radius:50%;background:#1b426f;z-index:-1}
+#view-dashboard.tpfDashPro .tdGoalRing b{font-size:16px;line-height:1.25}
+#view-dashboard.tpfDashPro .tdGoalRing span{font-size:10px;color:#c8ddf5}
+#view-dashboard.tpfDashPro .tdHeroGoal>strong{display:block;font-size:17px;letter-spacing:-.025em;overflow-wrap:anywhere}
+#view-dashboard.tpfDashPro .tdGoalRail{height:4px;margin:7px 0;border-radius:5px;background:#ffffff26;overflow:hidden}
 #view-dashboard.tpfDashPro #tdGoalRailFill{display:block;height:100%;background:#85cdff}
 #view-dashboard.tpfDashPro .tdHeroGoal em{display:block;color:#c8dcf3;font-size:11px;font-style:normal;line-height:1.4}
 #view-dashboard.tpfDashPro .tdHeroLink{padding:0;margin-top:7px;background:transparent;border:0;color:#fff;font-size:12px;text-decoration:underline;text-underline-offset:3px}
 #view-dashboard.tpfDashPro .tdPulseGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
-#view-dashboard.tpfDashPro .tdPulse{display:flex;align-items:center;gap:12px;min-width:0;padding:16px;border:1px solid var(--td-border);border-radius:12px;background:#fff;color:var(--td-ink);text-align:left}
+#view-dashboard.tpfDashPro .tdPulse{display:flex;align-items:center;gap:12px;min-width:0;padding:12px 16px;border:1px solid var(--td-border);border-radius:12px;background:#fff;color:var(--td-ink);text-align:left;box-shadow:0 2px 6px #152e4903}
 #view-dashboard.tpfDashPro .tdPulse:hover{border-color:#a4c3ef;background:#fafcff}
 #view-dashboard.tpfDashPro .tdPulse[aria-pressed=true]{border-color:#77a8ec;box-shadow:0 0 0 2px #1666db15;background:#f3f8ff}
 #view-dashboard.tpfDashPro .tdPulseIcon{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:11px;background:#eaf2ff;color:#2267bf}
@@ -61,7 +61,7 @@
 #view-dashboard.tpfDashPro .tdPulse b{display:block;font-size:28px;font-weight:750;line-height:1.3;letter-spacing:-.035em}
 #view-dashboard.tpfDashPro .tdPulse em{display:block;color:var(--td-muted);font-size:12px;font-style:normal}
 #view-dashboard.tpfDashPro .tdPulse>.tdIcon{width:16px;height:16px;color:#90a2b9}
-#view-dashboard.tpfDashPro .tdFocusZone{display:flex;align-items:center;gap:20px;padding:12px 18px;margin-bottom:18px;border:1px solid #d8e4f5;border-radius:12px;background:#eaf1fc}
+#view-dashboard.tpfDashPro .tdFocusZone{display:flex;align-items:center;gap:20px;padding:14px 18px;border:1px solid #d8e4f5;border-radius:12px;background:#eaf1fc}
 #view-dashboard.tpfDashPro .tdFocusTitle{display:flex;align-items:center;gap:10px;flex:0 0 195px}
 #view-dashboard.tpfDashPro .tdFocusTitle>span{display:grid;place-items:center;color:var(--td-blue)}
 #view-dashboard.tpfDashPro .tdFocusTitle small{display:block;color:#526c91;font-size:10px;font-weight:700;letter-spacing:.07em}
@@ -90,25 +90,28 @@
 #view-dashboard.tpfDashPro .tdBtn.primary:hover{background:#124fb0}
 #view-dashboard.tpfDashPro .tdLink{display:inline-flex;align-items:center;gap:5px;padding:4px 0;border:0;background:transparent;color:var(--td-blue);font-size:12px;font-weight:650;line-height:1.4}
 #view-dashboard.tpfDashPro .tdLink .tdIcon{width:15px;height:15px}
-#view-dashboard.tpfDashPro .tdFilterBar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:15px;border-bottom:1px solid var(--td-border);padding:0 0 12px}
+#view-dashboard.tpfDashPro .tdWorkspaceControls{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px 18px;margin-bottom:16px}
+#view-dashboard.tpfDashPro .tdFilterBar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-height:38px;flex:1 1 480px}
 #view-dashboard.tpfDashPro .tdWorkTab{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:7px 10px;border:1px solid transparent;border-radius:7px;background:#f3f6fa;color:#566b85;font-size:12px;font-weight:600}
 #view-dashboard.tpfDashPro .tdWorkTab[aria-pressed=true]{background:#eaf2ff;border-color:#b9d2f6;color:#155bbd}
 #view-dashboard.tpfDashPro .tdWorkTab:hover{background:#eaf2ff}
 #view-dashboard.tpfDashPro .tdWorkTabCount{display:inline-block;padding:1px 6px;border-radius:5px;background:#00000006;font-size:11px;font-weight:700}
-#view-dashboard.tpfDashPro .tdWorkToolbar{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:15px}
-#view-dashboard.tpfDashPro .tdWorkSearchField{min-width:180px;flex:1}
+#view-dashboard.tpfDashPro .tdWorkToolbar{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;flex:1 1 350px}
+#view-dashboard.tpfDashPro .tdWorkSearchField{min-width:160px;flex:1}
 #view-dashboard.tpfDashPro .tdWorkToolbar label{display:block;margin-bottom:5px;color:#526880;font-size:11px;font-weight:650}
 #view-dashboard.tpfDashPro .tdWorkToolbar :is(input,select){height:38px;padding:8px 10px;border:1px solid #cfdae9;border-radius:7px;background:#fff;color:var(--td-ink);font-size:13px;font-weight:400;max-width:100%}
 #view-dashboard.tpfDashPro #tdWorkSearch{width:100%}
 #view-dashboard.tpfDashPro #tdClearSearch{min-height:38px}
+#view-dashboard.tpfDashPro #tdClearSearch:disabled{display:none}
+#view-dashboard.tpfDashPro .tdPageSizeField select{min-width:74px}
 #view-dashboard.tpfDashPro .tdTableWrap{overflow:auto;scrollbar-width:auto;scrollbar-color:#a5b8d3 #edf2f8;min-width:0;overscroll-behavior-x:contain}
-#view-dashboard.tpfDashPro .tdPriorityTable{width:100%;min-width:715px;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px;color:#38506e}
+#view-dashboard.tpfDashPro .tdPriorityTable{width:100%;min-width:760px;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px;color:#38506e}
 #view-dashboard.tpfDashPro .tdPriorityTable th{padding:11px 8px;border-top:1px solid #e7edf4;border-bottom:1px solid #e2e9f2;background:#f6f8fb;text-align:left;font-size:10px;line-height:1.5;font-weight:700;text-transform:uppercase;letter-spacing:.035em;color:#63768e}
 #view-dashboard.tpfDashPro .tdPriorityTable th:first-child{width:26%;border-radius:6px 0 0 0}
-#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(2){width:21%}
-#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(3){width:18%}
-#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(4){width:16%}
-#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(5){width:15%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(2){width:27%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(3){width:17%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(4){width:14%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(5){width:12%}
 #view-dashboard.tpfDashPro .tdPriorityTable th:last-child{width:4%;border-radius:0 6px 0 0;padding:0}
 #view-dashboard.tpfDashPro .tdPriorityTable td{padding:13px 8px;border-bottom:1px solid #edf1f6;vertical-align:middle}
 #view-dashboard.tpfDashPro .tdPriorityTable tbody tr:hover{background:#f8fbff}
@@ -123,11 +126,15 @@
 #view-dashboard.tpfDashPro .tdStatusPill.blue{background:#ebf3ff;color:#2868b7}
 #view-dashboard.tpfDashPro .tdStatusPill.amber{background:#fff4e4;color:#977023}
 #view-dashboard.tpfDashPro .tdStatusPill.green{background:#e9f5ee;color:#3b7b55}
-#view-dashboard.tpfDashPro :is(.tdLastActivity,.tdNextAction){font-size:11px;color:#58708e}
-#view-dashboard.tpfDashPro .tdLastActivity small{display:block;margin-top:3px;font-size:10px;color:#8493a7}
+#view-dashboard.tpfDashPro .tdLastActivity{display:block;margin-top:5px;font-size:11px;line-height:1.4;color:#6f7f93}
+#view-dashboard.tpfDashPro .tdNextAction{font-size:13px;color:#58708e}
 #view-dashboard.tpfDashPro .tdNextAction{display:flex;align-items:center;gap:5px}
 #view-dashboard.tpfDashPro .tdNextAction .tdIcon{width:14px;height:14px}
 #view-dashboard.tpfDashPro .tdNextAction small{display:block;margin-top:2px;color:#b65647;font-size:10px}
+#view-dashboard.tpfDashPro .tdNextAction small.tdScheduledTime{color:#58708e;font-size:11px}
+#view-dashboard.tpfDashPro .tdAmount,#view-dashboard.tpfDashPro .tdPriorityTable th.tdAmountHeading{text-align:right;padding-right:16px;white-space:nowrap}
+#view-dashboard.tpfDashPro .tdAmount{font-size:14px;font-weight:700;color:#234c77}
+#view-dashboard.tpfDashPro .tdNoAmount{font-weight:400;color:#8795a6}
 #view-dashboard.tpfDashPro .tdMenuCell{position:relative;padding-left:0!important;padding-right:0!important}
 #view-dashboard.tpfDashPro .tdDots{display:grid;place-items:center;width:28px;height:34px;padding:0;border:0;border-radius:6px;background:transparent;color:#7287a1}
 #view-dashboard.tpfDashPro .tdDots:hover{background:#e9f1fc;color:var(--td-blue)}
@@ -140,9 +147,9 @@
 #view-dashboard.tpfDashPro .tdTableFooter>div{display:flex;align-items:center;gap:8px}
 #view-dashboard.tpfDashPro .tdPageButton{display:grid;place-items:center;width:33px;height:33px;border:1px solid #d4dfec;border-radius:6px;background:#fff;color:#416894;font-size:20px;line-height:1}
 #view-dashboard.tpfDashPro .tdPageButton:hover:not(:disabled){background:#eaf2ff}
-#view-dashboard.tpfDashPro .tdSideRail{display:grid;gap:18px;min-width:0;align-content:start}
+#view-dashboard.tpfDashPro .tdSideRail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0;align-items:start}
 #view-dashboard.tpfDashPro .tdSideRail .tdCard{padding:18px}
-#view-dashboard.tpfDashPro .tdSideRail .tdHead h2{font-size:15px}
+#view-dashboard.tpfDashPro .tdSideRail .tdHead h2{font-size:17px}
 #view-dashboard.tpfDashPro .tdSideRail .tdHead{margin-bottom:12px}
 #view-dashboard.tpfDashPro #dashPriorityFollowups{display:grid;gap:0}
 #view-dashboard.tpfDashPro .tdUpcoming{display:flex;gap:9px;align-items:flex-start;width:100%;padding:12px 0;border:0;border-bottom:1px solid #edf1f6;background:#fff;color:var(--td-ink);text-align:left}
@@ -150,21 +157,24 @@
 #view-dashboard.tpfDashPro .tdUpcomingIcon{display:grid;place-items:center;flex:0 0 27px;width:27px;height:27px;border-radius:7px;background:#edf3fb;color:#527cac}
 #view-dashboard.tpfDashPro .tdUpcomingIcon .tdIcon{width:15px;height:15px}
 #view-dashboard.tpfDashPro .tdUpcomingText{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
-#view-dashboard.tpfDashPro .tdUpcomingTop{display:flex;flex-direction:column;gap:3px}
-#view-dashboard.tpfDashPro .tdUpcomingTop b{font-size:12px;font-weight:650;overflow-wrap:anywhere}
-#view-dashboard.tpfDashPro .tdUpcomingTop time{font-size:11px;color:#426c9b}
-#view-dashboard.tpfDashPro .tdUpcomingText>strong{font-size:12px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
-#view-dashboard.tpfDashPro .tdUpcomingText>small{font-size:11px;color:#718298;overflow-wrap:anywhere}
+#view-dashboard.tpfDashPro .tdUpcomingTop{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#view-dashboard.tpfDashPro .tdUpcomingTop b{font-size:14px;font-weight:650;overflow-wrap:anywhere}
+#view-dashboard.tpfDashPro .tdUpcomingTop time{font-size:12px;color:#426c9b}
+#view-dashboard.tpfDashPro .tdUpcomingText>strong{font-size:13px;font-weight:500;line-height:1.5;overflow-wrap:anywhere}
+#view-dashboard.tpfDashPro .tdUpcomingText>small{font-size:12px;color:#718298;overflow-wrap:anywhere}
 #view-dashboard.tpfDashPro .tdAgendaButton{display:flex;justify-content:space-between;width:100%;margin-top:12px;font-size:12px}
-#view-dashboard.tpfDashPro :is(#tdUpcomingMore,#tdActivityMore){font-size:11px}
+#view-dashboard.tpfDashPro :is(#tdUpcomingMore,#tdActivityMore){font-size:13px}
 #view-dashboard.tpfDashPro #tdUpcomingMore{margin-top:12px}
-#view-dashboard.tpfDashPro .tdActivityRow{display:grid;grid-template-columns:25px minmax(0,1fr);column-gap:9px;row-gap:3px;padding:12px 0;border-top:1px solid #edf1f6;font-size:11px}
+#view-dashboard.tpfDashPro .tdActivityFilters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+#view-dashboard.tpfDashPro .tdActivityFilters .tdWorkTab{font-size:12px}
+#view-dashboard.tpfDashPro .tdActivityRow{display:grid;grid-template-columns:30px minmax(0,1fr);width:100%;column-gap:10px;row-gap:3px;padding:12px 0;border:0;border-top:1px solid #edf1f6;border-radius:0;background:transparent;color:var(--td-ink);text-align:left;font-size:13px}
 #view-dashboard.tpfDashPro .tdActivityRow[data-open]{cursor:pointer}
 #view-dashboard.tpfDashPro .tdActivityRow[data-open]:hover{background:#f8fbff}
-#view-dashboard.tpfDashPro .tdActIcon{grid-row:1/4;display:grid;place-items:center;width:25px;height:25px;border-radius:7px;background:#edf3fa;color:#5278a4;font-size:12px}
-#view-dashboard.tpfDashPro .tdActivityRow strong{font-size:12px;font-weight:600;line-height:1.4}
+#view-dashboard.tpfDashPro .tdActIcon{grid-row:1/4;display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:#edf3fa;color:#5278a4}
+#view-dashboard.tpfDashPro .tdActIcon .tdIcon{width:16px;height:16px}
+#view-dashboard.tpfDashPro .tdActivityRow strong{font-size:13px;font-weight:600;line-height:1.4}
 #view-dashboard.tpfDashPro .tdActText{grid-column:2;color:#63778f;overflow-wrap:anywhere}
-#view-dashboard.tpfDashPro .tdActTime{grid-column:2;color:#8290a3;font-size:10px}
+#view-dashboard.tpfDashPro .tdActTime{grid-column:2;color:#73849a;font-size:11px}
 #view-dashboard.tpfDashPro .tdEmpty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:30px 15px;min-height:130px;text-align:center;color:var(--td-muted);font-size:12px}
 #view-dashboard.tpfDashPro .tdEmpty>.tdIcon{width:28px;height:28px;color:#84a5ce}
 #view-dashboard.tpfDashPro .tdEmpty strong{color:#4c698b;font-size:14px;font-weight:600}
@@ -220,12 +230,8 @@
 #view-dashboard.tpfDashPro .tdModalCard input{width:100%;height:42px;padding:8px 10px;border:1px solid #c4d4e8;border-radius:7px}
 #view-dashboard.tpfDashPro .tdModalActions{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
 @media(max-width:1390px){
-#view-dashboard.tpfDashPro .tdCockpitGrid{grid-template-columns:1fr}
-#view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:1fr 1fr;align-items:start}
-#view-dashboard.tpfDashPro .tdSalesHero{gap:18px;padding:22px}
-#view-dashboard.tpfDashPro .tdHeroFigures{gap:12px;padding-left:18px;grid-template-columns:minmax(0,.7fr) 76px minmax(0,1.1fr)}
-#view-dashboard.tpfDashPro .tdGoalRing{width:76px;height:76px}
-#view-dashboard.tpfDashPro .tdHeroGoal>b{font-size:22px}
+#view-dashboard.tpfDashPro .tdSalesHero>div+div{padding-left:14px;margin-left:14px}
+#view-dashboard.tpfDashPro .tdHeroTarget{gap:10px}
 #view-dashboard.tpfDashPro .tdPulse{padding:13px;gap:9px}
 #view-dashboard.tpfDashPro .tdPulseIcon{width:34px;height:34px;flex-basis:34px}
 #view-dashboard.tpfDashPro .tdPulse small{font-size:10px}
@@ -235,8 +241,8 @@
 }
 @media(max-width:1050px){
 #view-dashboard.tpfDashPro{padding:18px!important}
-#view-dashboard.tpfDashPro .tdSalesHero{grid-template-columns:1fr}
-#view-dashboard.tpfDashPro .tdHeroFigures{grid-template-columns:1fr 76px 1fr;padding:17px 0 0;border-left:0;border-top:1px solid #ffffff26}
+#view-dashboard.tpfDashPro .tdSalesHero{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 0}
+#view-dashboard.tpfDashPro .tdSalesHero>div:nth-child(3){padding-left:0;margin-left:0;border-left:0}
 #view-dashboard.tpfDashPro .tdPulseGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 #view-dashboard.tpfDashPro .tdFocusZone{align-items:flex-start;gap:12px}
 #view-dashboard.tpfDashPro .tdFocusTitle{flex-basis:165px}
@@ -244,14 +250,15 @@
 }
 @media(max-width:700px){
 #view-dashboard.tpfDashPro{padding:12px!important}
-#view-dashboard.tpfDashPro .tdSalesHero{padding:20px;border-radius:12px}
-#view-dashboard.tpfDashPro .tdSalesHero h1{font-size:28px}
+#view-dashboard.tpfDashPro .tdSalesHero{padding:16px;border-radius:12px}
+#view-dashboard.tpfDashPro .tdPageIntro h1{font-size:28px}
+#view-dashboard.tpfDashPro .tdCommandActions{gap:6px}
 #view-dashboard.tpfDashPro .tdHeroQuick{gap:6px}
 #view-dashboard.tpfDashPro :is(.tdHeroNew,.tdHeroGhost){font-size:11px;padding:8px 10px}
-#view-dashboard.tpfDashPro .tdHeroFigures{gap:12px}
-#view-dashboard.tpfDashPro .tdHeroNumber>b{font-size:29px}
-#view-dashboard.tpfDashPro .tdHeroFigures span{font-size:11px}
-#view-dashboard.tpfDashPro .tdHeroGoal>b{font-size:19px}
+#view-dashboard.tpfDashPro .tdHeroNumber>b{font-size:23px}
+#view-dashboard.tpfDashPro .tdHeroTarget{flex-wrap:wrap}
+#view-dashboard.tpfDashPro .tdGoalRing{flex-basis:50px;width:50px;height:50px}
+#view-dashboard.tpfDashPro .tdHeroGoal{flex-basis:100%}
 #view-dashboard.tpfDashPro .tdPulseGrid{gap:8px}
 #view-dashboard.tpfDashPro .tdPulse{padding:12px;gap:8px}
 #view-dashboard.tpfDashPro .tdPulse>.tdIcon{display:none}
@@ -265,7 +272,10 @@
 #view-dashboard.tpfDashPro .tdCard{padding:15px}
 #view-dashboard.tpfDashPro .tdHead{align-items:flex-start;flex-wrap:wrap}
 #view-dashboard.tpfDashPro .tdWorkTab{font-size:11px;padding:7px}
+#view-dashboard.tpfDashPro .tdWorkspaceControls{display:block}
+#view-dashboard.tpfDashPro .tdFilterBar{margin-bottom:14px}
 #view-dashboard.tpfDashPro .tdWorkSearchField{flex-basis:100%}
+#view-dashboard.tpfDashPro .tdWorkToolbar{align-items:flex-end}
 #view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:1fr}
 #view-dashboard.tpfDashPro .tdBusinessDetails>summary{padding:16px;font-size:14px}
 #view-dashboard.tpfDashPro .tdBusinessDetails>summary small{font-size:0}
@@ -278,7 +288,6 @@
 }
 @media(prefers-reduced-motion:reduce){#view-dashboard.tpfDashPro *{scroll-behavior:auto!important;transition:none!important}}
 /* Full-width work area, readable data, and secondary panels below the table. */
-#view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
 #view-dashboard.tpfDashPro .tdPriorityTable{font-size:14px}
 #view-dashboard.tpfDashPro .tdPriorityTable th{font-size:12px;text-transform:none;letter-spacing:0;padding-top:14px;padding-bottom:14px}
 #view-dashboard.tpfDashPro .tdClientButton b{font-size:15px}
@@ -286,20 +295,12 @@
 #view-dashboard.tpfDashPro .tdInterestButton{font-size:14px;color:#195ebc}
 #view-dashboard.tpfDashPro :is(.tdClientButton,.tdInterestButton):hover{color:#124fb0}
 #view-dashboard.tpfDashPro button.tdClientButton:hover b{text-decoration:underline;text-underline-offset:3px}
-#view-dashboard.tpfDashPro :is(.tdStatusPill,.tdNextAction,.tdLastActivity){font-size:13px}
+#view-dashboard.tpfDashPro :is(.tdStatusPill,.tdNextAction){font-size:13px}
 #view-dashboard.tpfDashPro :is(.tdHead p,.tdWorkTab,.tdBtn,.tdLink,.tdFunnelRow,.tdListRow){font-size:14px}
 #view-dashboard.tpfDashPro :is(.tdWorkToolbar label,.tdMiniStat span){font-size:13px}
 #view-dashboard.tpfDashPro .tdFunnelRow{grid-template-columns:minmax(120px,1.2fr) 1fr 28px;gap:12px}
 #view-dashboard.tpfDashPro .tdTrack{height:10px}
 #view-dashboard.tpfDashPro .tdMiniStat b{font-size:20px}
-@media(min-width:1051px){
-  #view-dashboard.tpfDashPro .tdSalesHero{padding:18px 24px;gap:20px}
-  #view-dashboard.tpfDashPro .tdSalesHero h1{font-size:28px}
-  #view-dashboard.tpfDashPro .tdSalesHeroCopy>p{margin:5px 0 12px}
-  #view-dashboard.tpfDashPro .tdHeroNumber>b{font-size:30px}
-  #view-dashboard.tpfDashPro .tdHeroGoal>b{font-size:23px}
-}
 @media(max-width:700px){
-  #view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:1fr}
   #view-dashboard.tpfDashPro .tdFunnelRow{grid-template-columns:minmax(110px,1.2fr) 1fr 24px;gap:8px}
 }

@@ -3,7 +3,7 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const D={built:false,busy:false,actionBusy:false,lastLoad:0,data:null,activityAll:false,upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0};
+const D={built:false,busy:false,actionBusy:false,lastLoad:0,data:null,activityAll:false,activityFilter:'commercial',upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0};
 const WORK_STATE_KEY='tpf.home.worklist.v1';
 function restoreWorkState(){try{const saved=JSON.parse(window.sessionStorage.getItem(WORK_STATE_KEY)||'null');if(!saved)return;if(['priority','calls','followup','processing'].includes(saved.filter))D.filter=saved.filter;if(typeof saved.query==='string')D.query=saved.query;if(['10','25','50','all'].includes(saved.pageSize))D.pageSize=saved.pageSize;if(Number.isInteger(saved.page)&&saved.page>=0)D.page=saved.page}catch(_){}}
 function saveWorkState(){try{window.sessionStorage.setItem(WORK_STATE_KEY,JSON.stringify({filter:D.filter,query:D.query,pageSize:D.pageSize,page:D.page}))}catch(_){}}
@@ -85,28 +85,28 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260920-sales-cockpit-9';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260920-sales-cockpit-10';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-sales-cockpit-9';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-sales-cockpit-10';
   v.innerHTML=`
-  <header class="tdCommandBar"><div class="tdDate">${icon('calendar')}<span id="tdToday"></span></div><div class="tdCommandActions"><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
+  <header class="tdCommandBar"><div class="tdPageIntro"><span class="tdPageEyebrow">THE PHONE FACE · INICIO</span><h1>Hoy comercial</h1><div class="tdDate"><span id="tdGreeting">Tu centro de ventas</span><span aria-hidden="true">·</span><span id="tdToday"></span></div></div><div class="tdCommandActions"><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
-  <section class="tdSalesHero tdSalesHeroCompact"><div class="tdSalesHeroCopy"><span id="tdGreeting" class="tdHeroEyebrow">Tu centro de ventas</span><h1>Hoy comercial</h1><p>Tus gestiones, en un solo lugar.</p><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div></div><div class="tdHeroFigures"><div class="tdHeroNumber"><span>Oportunidades activas</span><b id="mOppTotal">—</b><small id="mOppAmount">—</small></div><div id="tdGoalRing" class="tdGoalRing"><b id="dashGoalProgress">—</b><span>objetivo</span></div><div class="tdHeroGoal"><span>Vendido este mes</span><b id="dashWonAmount">—</b><small>objetivo: <strong id="dashGoalAmount">—</strong></small><div class="tdGoalRail"><span id="tdGoalRailFill"></span></div><em id="tdGoalForecastLine">Calculando previsión…</em><button id="dashGoalEdit" class="tdHeroLink">Editar objetivo</button></div><span id="dashForecastAmount" hidden></span></div></section>
+  <section class="tdSalesHero" aria-label="Resumen comercial"><div class="tdHeroNumber"><span>Oportunidades abiertas</span><b id="mOppTotal">—</b><small>Con fecha vigente</small></div><div class="tdHeroNumber"><span>Importe total</span><b id="mOppAmount">—</b><small>Todas las oportunidades</small></div><div class="tdHeroNumber"><span>Vendido este mes</span><b id="dashWonAmount">—</b><small>Oportunidades ganadas</small></div><div class="tdHeroTarget"><div id="tdGoalRing" class="tdGoalRing"><b id="dashGoalProgress">—</b><span>objetivo</span></div><div class="tdHeroGoal"><span>Objetivo del mes</span><strong id="dashGoalAmount">—</strong><div class="tdGoalRail"><span id="tdGoalRailFill"></span></div><em id="tdGoalForecastLine">Calculando previsión…</em><button id="dashGoalEdit" class="tdHeroLink">Editar objetivo</button></div></div><span id="dashForecastAmount" hidden></span></section>
   <section class="tdPulseGrid" aria-label="Indicadores de actividad"><button class="tdPulse blue" data-home-filter="calls"><span class="tdPulseIcon">${icon('phone')}</span><span><small>LLAMADAS</small><b id="tdPulseCalls">—</b><em>Para atender</em></span>${icon('arrow')}</button><button class="tdPulse violet" data-home-filter="followup"><span class="tdPulseIcon">${icon('message')}</span><span><small>OFERTAS A SEGUIR</small><b id="tdPulseFollowup">—</b><em>Clientes esperando</em></span>${icon('arrow')}</button><button class="tdPulse amber" data-home-filter="processing"><span class="tdPulseIcon">${icon('file')}</span><span><small>TRAMITACIONES</small><b id="tdPulseProcessing">—</b><em>Pendientes de gestionar</em></span>${icon('arrow')}</button><button class="tdPulse coral" data-route="alerts-expired"><span class="tdPulseIcon">${icon('alert')}</span><span><small>VENCIDAS</small><b id="tdPulseExpired">—</b><em id="tdPulseExpiredText">Revisar ahora</em></span>${icon('arrow')}</button></section>
-  <section class="tdFocusZone"><div class="tdFocusTitle"><span>${icon('target')}</span><div><small>EMPIEZA POR AQUÍ</small><h2>Tu siguiente mejor acción</h2></div></div><div id="tdFocusContent" class="tdFocusContent"></div></section>
   <div class="tdCockpitGrid">
     <section class="tdCard tdPriorityCard">
       <div class="tdHead"><div class="tdTitleBlock">${icon('list')}<div><h2>Tu mesa de trabajo</h2><p id="tdPrioritySub">Clientes y oportunidades que requieren tu atención.</p></div></div><button id="tdAddContact" class="tdBtn outline" data-home-action="new-contact">＋ Añadir contacto</button></div>
-      <div class="tdFilterBar" id="tdFilterBar" role="group" aria-label="Filtrar tu mesa de trabajo"><button class="tdWorkTab" data-home-filter="priority" aria-pressed="false">Prioridades <span class="tdWorkTabCount" id="tdTabCountPriority">0</span></button><button class="tdWorkTab" data-home-filter="calls" aria-pressed="false">Llamadas <span class="tdWorkTabCount" id="tdTabCountCalls">0</span></button><button class="tdWorkTab" data-home-filter="followup" aria-pressed="false">Seguimientos <span class="tdWorkTabCount" id="tdTabCountFollowup">0</span></button><button class="tdWorkTab" data-home-filter="processing" aria-pressed="false">Tramitaciones <span class="tdWorkTabCount" id="tdTabCountProcessing">0</span></button></div>
-      <div class="tdWorkToolbar"><div class="tdWorkSearchField"><label for="tdWorkSearch">Buscar en este grupo</label><input id="tdWorkSearch" type="search" placeholder="Nombre, interés o teléfono" autocomplete="off"></div><button id="tdClearSearch" class="tdBtn outline" type="button" disabled>Limpiar búsqueda</button><div class="tdPageSizeField"><label for="tdPageSize">Gestiones por página</label><select id="tdPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="all">Todas</option></select></div></div>
+      <div class="tdWorkspaceControls"><div class="tdFilterBar" id="tdFilterBar" role="group" aria-label="Filtrar tu mesa de trabajo"><button class="tdWorkTab" data-home-filter="priority" aria-pressed="false">Prioridades <span class="tdWorkTabCount" id="tdTabCountPriority">0</span></button><button class="tdWorkTab" data-home-filter="calls" aria-pressed="false">Llamadas <span class="tdWorkTabCount" id="tdTabCountCalls">0</span></button><button class="tdWorkTab" data-home-filter="followup" aria-pressed="false">Seguimientos <span class="tdWorkTabCount" id="tdTabCountFollowup">0</span></button><button class="tdWorkTab" data-home-filter="processing" aria-pressed="false">Tramitaciones <span class="tdWorkTabCount" id="tdTabCountProcessing">0</span></button></div>
+      <div class="tdWorkToolbar"><div class="tdWorkSearchField"><label for="tdWorkSearch">Buscar en este grupo</label><input id="tdWorkSearch" type="search" placeholder="Nombre, interés o teléfono" autocomplete="off"></div><button id="tdClearSearch" class="tdBtn outline" type="button" disabled>Limpiar</button><div class="tdPageSizeField"><label for="tdPageSize">Por página</label><select id="tdPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="all">Todas</option></select></div></div></div>
       <div id="dashAlerts" class="tdTableWrap" aria-live="polite"></div>
       <div class="tdTableFooter"><span id="tdPageInfo"></span><div><button id="tdPrevPage" class="tdPageButton" aria-label="Página anterior">‹</button><button id="tdNextPage" class="tdPageButton" aria-label="Página siguiente">›</button><button class="tdLink" data-route="alerts">Ver avisos ${icon('arrow')}</button></div></div>
     </section>
-    <aside class="tdSideRail"><section class="tdCard tdUpcomingCard"><div class="tdHead"><div class="tdTitleBlock">${icon('calendar')}<div><h2>Próximos seguimientos <span id="tdUpcomingCount" class="tdWorkTabCount">0</span></h2><p>Tareas y oportunidades, por fecha.</p></div></div></div><div id="dashPriorityFollowups"></div><button id="tdUpcomingMore" class="tdLink tdUpcomingMore" aria-expanded="false" hidden>Ver próximos</button><button class="tdBtn tdAgendaButton" data-route="agenda">Ver todas las tareas ${icon('arrow')}</button></section><section class="tdCard tdActivityCard"><div class="tdHead"><h2>Actividad reciente</h2><button id="tdActivityMore" class="tdLink" aria-expanded="false">Ver toda</button></div><div id="dashActivity"></div></section></aside>
+    <section class="tdFocusZone"><div class="tdFocusTitle"><span>${icon('target')}</span><div><small>GESTIÓN PRIORITARIA</small><h2>Tu siguiente acción</h2></div></div><div id="tdFocusContent" class="tdFocusContent"></div></section>
+    <aside class="tdSideRail"><section class="tdCard tdUpcomingCard"><div class="tdHead"><div class="tdTitleBlock">${icon('calendar')}<div><h2>Próximos seguimientos <span id="tdUpcomingCount" class="tdWorkTabCount">0</span></h2><p>Tareas y oportunidades, por fecha.</p></div></div></div><div id="dashPriorityFollowups"></div><button id="tdUpcomingMore" class="tdLink tdUpcomingMore" aria-expanded="false" hidden>Ver próximos</button><button class="tdBtn tdAgendaButton" data-route="agenda">Ver todas las tareas ${icon('arrow')}</button></section><section class="tdCard tdActivityCard"><div class="tdHead"><div class="tdTitleBlock">${icon('clock')}<div><h2>Actividad reciente</h2><p>Últimos 40 eventos registrados en el CRM.</p></div></div><button id="tdActivityMore" class="tdLink" aria-expanded="false">Ver toda</button></div><div class="tdActivityFilters" role="group" aria-label="Tipo de actividad"><button id="tdActivityCommercial" class="tdWorkTab" data-activity-filter="commercial" aria-pressed="true">Comercial <span id="tdActivityCommercialCount" class="tdWorkTabCount">0</span></button><button id="tdActivityTechnical" class="tdWorkTab" data-activity-filter="technical" aria-pressed="false">Técnica / pruebas <span id="tdActivityTechnicalCount" class="tdWorkTabCount">0</span></button></div><div id="dashActivity"></div></section></aside>
   </div>
   <details class="tdBusinessDetails"><summary><span>${icon('chart')} Analítica y previsión</span><small>Embudo, objetivo y todos los indicadores ${icon('down')}</small></summary>
     <div class="tdBusinessContent"><section class="tdAnalysisHero"><div><span class="tdAnalysisEyebrow">CONTROL COMERCIAL</span><h2>Embudo, previsión e indicadores</h2><p>La foto completa del negocio, actualizada con tus oportunidades reales.</p></div><div class="tdAnalysisHeroStats"><div><span>Abiertas</span><b id="tdAnalysisOpen">—</b></div><div><span>Previsión</span><b id="tdAnalysisForecast">—</b></div><div><span>Conversión</span><b id="tdAnalysisConversion">—</b></div></div><button id="dashNewOppDetail" class="tdBtn primary">＋ Nueva oportunidad</button></section><div class="tdBusinessHead"><div><h2>Indicadores principales</h2><p>Accesos al panel de ventas, los avisos, la agenda y los contactos.</p></div></div>
@@ -170,6 +170,8 @@ function handleClick(e){
   if(el.closest('[data-home-action="new-contact"]')){runAction(openNewContact);return}
   const filter=el.closest('[data-home-filter]');
   if(filter&&D.data){if(D.filter!==filter.dataset.homeFilter){D.filter=filter.dataset.homeFilter;D.page=0}renderHomePanels();return}
+  const activityFilter=el.closest('[data-activity-filter]');
+  if(activityFilter&&D.data){D.activityFilter=activityFilter.dataset.activityFilter==='technical'?'technical':'commercial';D.activityAll=false;renderActivity();return}
   const r=el.closest('[data-route]')?.dataset.route;
   if(r){runAction(()=>navigate(r));return}
   const dots=el.closest('[data-dots]');
@@ -278,12 +280,12 @@ function renderPriority(d,map,pending){
   $('tdPageInfo').textContent=rows.length?`${start+1}–${Math.min(start+pageSize,rows.length)} de ${rows.length} gestiones`:(D.query.trim()?'Sin coincidencias en este grupo':'Sin gestiones en este grupo');
   $('tdPrevPage').disabled=D.page===0;$('tdNextPage').disabled=start+pageSize>=rows.length;
   saveWorkState();
-  $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th>Cliente</th><th>Interés</th><th>Estado</th><th>Última actividad</th><th>Próxima acción</th><th><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
+  $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th scope="col">Cliente</th><th scope="col">Oportunidad / tarea</th><th scope="col">Estado</th><th scope="col">Fecha prevista</th><th scope="col" class="tdAmountHeading">Importe</th><th scope="col"><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
     <td>${x.contactId?`<button class="tdClientButton" data-open="1" data-type="contact" data-id="${esc(x.contactId)}" aria-label="Abrir contacto: ${esc(x.name)}">`:'<div class="tdClientButton" title="Sin contacto vinculado">'}<span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}${x.contactId?'':' · Sin vincular'}</small></span>${x.contactId?'</button>':'</div>'}</td>
-    <td><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button></td>
+    <td><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button><small class="tdLastActivity">${x.updated?'Actualizada: '+esc(localDate(localDay(x.updated)))+' · '+esc(localTime(x.updated)):'Sin fecha de actualización'}</small></td>
     <td><span class="tdStatusPill ${x.tone}">${icon(x.stage==='Llamar'?'phone':x.tone==='green'?'checkCircle':x.tone==='amber'?'file':'refresh')}<span>${esc(x.stage)}</span></span></td>
-    <td class="tdLastActivity">${x.updated?esc(localDate(localDay(x.updated)))+'<small>'+esc(localTime(x.updated))+'</small>':'—'}</td>
-    <td><span class="tdNextAction ${x.expired?'isLate':''}">${icon('clock')}<span>${x.dateTime&&x.date===d.today?esc(localTime(x.when)):esc(localDate(x.date))}${x.expired?'<small>Vencida</small>':''}</span></span></td>
+    <td><span class="tdNextAction ${x.expired?'isLate':''}">${icon('calendar')}<span>${esc(localDate(x.date))}${x.dateTime?'<small class="tdScheduledTime">'+(x.date===d.today?'Hoy · ':'')+esc(localTime(x.when))+'</small>':''}${x.expired?'<small>Vencida</small>':''}</span></span></td>
+    <td class="tdAmount">${x.type==='opportunity'?esc(money(x.amount)):'<span class="tdNoAmount" aria-label="Sin importe">—</span>'}</td>
     <td class="tdMenuCell"><button class="tdDots" data-dots="1" aria-label="Acciones de ${esc(x.name)}">${icon('moreVertical')}</button><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
   </tr>`).join('')}</tbody></table>`:`<div class="tdEmpty">${icon(D.query.trim()?'list':'checkCircle')}<strong>${D.query.trim()?'No hay coincidencias.':group?'No hay '+esc(group.title)+'.':'Todo al día.'}</strong><span>${D.query.trim()?'Prueba otro nombre, interés o teléfono, o limpia la búsqueda.':group?'Puedes consultar los otros grupos de tu mesa de trabajo.':'No hay gestiones vencidas ni pendientes para hoy.'}</span></div>`;
 }
@@ -304,19 +306,54 @@ function renderFunnel(d){const rows=d.stages.map(s=>({name:s.name,count:d.opps.f
 
 function renderGoal(d,won,open){const target=Number(d.goal?.target_amount||0),wonAmount=won.filter(o=>localDay(o.updated_at||o.expected_date||o.created_at).startsWith(d.month)).reduce((n,o)=>n+Number(o.amount||0),0),forecast=open.reduce((n,o)=>n+Number(o.amount||0),0),pct=target?Math.min(100,Math.round(wonAmount/target*100)):0;$('dashGoalAmount').textContent=money(target);$('dashWonAmount').textContent=money(wonAmount);$('tdGoalDetailAmount').textContent=money(wonAmount);$('dashGoalProgress').textContent=`${pct}%`;$('dashForecastAmount').textContent=money(forecast);$('tdGoalRing').style.setProperty('--td-goal-progress',`${pct}%`);$('tdGoalRailFill').style.width=`${pct}%`;$('tdGoalForecastLine').textContent=target?`Previsión abierta: ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.';$('tdGoalNote').textContent=target?`Previsión abierta: ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.'}
 function renderForecast(d,map){const rows=d.stages.map(s=>({name:s.name,amount:d.opps.filter(o=>String(o.stage_id)===String(s.id)&&!isLost(o,map)).reduce((n,o)=>n+Number(o.amount||0),0)}));$('dashForecastBreakdown').innerHTML=rows.length?rows.map(x=>`<div class="tdListRow"><b>${esc(x.name)}</b><span>${money(x.amount)}</span></div>`).join(''):'<div class="tdEmpty">No hay previsión comercial.</div>'}
-function activityInfo(a){const type=status(a.entity_type),txt=status(`${a.action||''} ${a.summary||''}`);if(type==='agenda'||type==='task'){if(/delete|papelera/.test(txt))return['🗑','Tarea eliminada'];if(/complete|complet/.test(txt))return['✓','Tarea completada'];return['▣','Tarea actualizada']}if(type==='opportunity'){if(/delete|papelera/.test(txt))return['🗑','Oportunidad eliminada'];if(/move|movid/.test(txt))return['↔','Oportunidad movida'];return['▣','Oportunidad actualizada']}if(type==='contact')return['♙','Contacto actualizado'];if(type.includes('whatsapp'))return['◉','WhatsApp enviado'];return['•','Actividad del CRM']}
+function activityKind(a){
+  for(const value of [a.action,a.summary]){
+    const text=status(value);
+    if(/restor|restaur/.test(text))return 'restored';
+    if(/delet|remov|purg|eliminad|borrad|papelera/.test(text))return 'deleted';
+    if(/creat|cread|alta de/.test(text))return 'created';
+    if(/complet/.test(text))return 'completed';
+    if(/mov(?:e|id)|cambio de (?:estado|columna)/.test(text))return 'moved';
+    if(/updat|edit|actualiz|modific/.test(text))return 'updated';
+    if(/sent|enviad/.test(text))return 'sent';
+  }
+  return '';
+}
+function isTechnicalActivity(a){
+  const details=a.details||{},type=status(a.entity_type),source=status(details.source);
+  if(['system','validation','test'].includes(type)||details.is_test===true||['e2e','automated_test','validation'].includes(source))return true;
+  const names=[details.label,details.title].map(value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim());
+  // Only known generated test names: ordinary names containing "Demo" stay visible.
+  return names.some(name=>/^(?:Validacion(?: Excel)? \d{13} (?:Demo|Contacto|Editado|Movil)|Integral \d{13} (?:Gestor|Titular) Demo)$/i.test(name));
+}
+function activityInfo(a){
+  const type=status(a.entity_type),kind=activityKind(a),entity=type==='agenda'||type==='task'?'Tarea':type==='opportunity'?'Oportunidad':type==='contact'?'Contacto':'';
+  if(entity){
+    const endings=entity==='Contacto'?{created:'creado',updated:'actualizado',deleted:'eliminado',restored:'restaurado',moved:'movido',completed:'completado'}:{created:'creada',updated:'actualizada',deleted:'eliminada',restored:'restaurada',moved:'movida',completed:'completada'};
+    const icons={created:'plus',updated:'file',deleted:'alert',restored:'refresh',moved:'arrow',completed:'checkCircle'};
+    return[icons[kind]||'clock',endings[kind]?`${entity} ${endings[kind]}`:`Actividad ${entity==='Contacto'?'del contacto':entity==='Tarea'?'de la tarea':'de la oportunidad'}`];
+  }
+  if(type.includes('whatsapp'))return['message',kind==='sent'?'WhatsApp enviado':'Actividad de WhatsApp'];
+  return['clock','Actividad del CRM'];
+}
 function renderActivity(){
   if(!D.data)return;
-  const rows=D.activityAll?D.data.activity:D.data.activity.slice(0,5);
+  const all=D.data.activity||[],technical=all.filter(isTechnicalActivity),commercial=all.filter(a=>!isTechnicalActivity(a)),group=D.activityFilter==='technical'?technical:commercial,rows=D.activityAll?group:group.slice(0,5),lifecycle=new Map();
+  for(const a of [...all].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')))){
+    const key=`${status(a.entity_type)}:${a.entity_id}`,kind=activityKind(a);
+    if(a.entity_id&&!lifecycle.has(key)&&['deleted','restored','created'].includes(kind))lifecycle.set(key,kind);
+  }
+  $('tdActivityCommercialCount').textContent=commercial.length;$('tdActivityTechnicalCount').textContent=technical.length;
+  $('tdActivityCommercial').setAttribute('aria-pressed',String(D.activityFilter!=='technical'));$('tdActivityTechnical').setAttribute('aria-pressed',String(D.activityFilter==='technical'));
   $('dashActivity').innerHTML=rows.length?rows.map(a=>{
-    const [icon,label]=activityInfo(a),type=status(a.entity_type),deleted=/delete|eliminad|papelera/i.test([a.action,a.summary,a.details?.label,a.details?.title].join(' '));
+    const [iconName,label]=activityInfo(a),type=status(a.entity_type),deleted=activityKind(a)==='deleted'||lifecycle.get(`${type}:${a.entity_id}`)==='deleted';
     const openType=type==='agenda'||type==='task'?'task':type==='opportunity'?'opportunity':type==='contact'?'contact':'';
     const canOpen=!deleted&&openType&&a.entity_id;
     const text=String(a.details?.label||a.details?.title||a.summary||a.action||label).replace(/enviado a papelera(?: local)?/i,label);
-    return`<div class="tdActivityRow${canOpen?'':' tdActivityInfo'}" ${canOpen?`data-open="1" data-type="${openType}" data-id="${esc(a.entity_id)}"`:`style="cursor:default"${deleted?' title="Actividad histórica de un registro eliminado"':''}`}><span class="tdActIcon">${icon}</span><strong>${esc(label)}</strong><span class="tdActText">${esc(text)}</span><span class="tdActTime">${localDateTime(a.created_at)}</span></div>`;
-  }).join(''):'<div class="tdEmpty">La actividad nueva aparecerá aquí.</div>';
-  $('tdActivityMore').textContent=D.activityAll?'Ver menos':`Ver toda (${D.data.activity.length})`;
-  $('tdActivityMore').hidden=D.data.activity.length<=5;$('tdActivityMore').setAttribute('aria-expanded',String(D.activityAll));
+    return`<${canOpen?'button type="button"':'div'} class="tdActivityRow${canOpen?'':' tdActivityInfo'}" ${canOpen?`data-open="1" data-type="${openType}" data-id="${esc(a.entity_id)}"`:deleted?'title="Actividad histórica de un registro eliminado"':''}><span class="tdActIcon">${icon(iconName)}</span><strong>${esc(label)}</strong><span class="tdActText">${esc(text)}</span><span class="tdActTime">${localDateTime(a.created_at)}</span></${canOpen?'button':'div'}>`;
+  }).join(''):`<div class="tdEmpty">${icon('clock')}<strong>Sin actividad ${D.activityFilter==='technical'?'técnica / de pruebas':'comercial'} en los últimos eventos.</strong><span>${D.activityFilter!=='technical'&&technical.length?'Puedes consultar los registros de validación en Técnica / pruebas.':'Los nuevos eventos de este grupo aparecerán aquí.'}</span></div>`;
+  $('tdActivityMore').textContent=D.activityAll?'Ver menos':`Ver toda (${group.length})`;
+  $('tdActivityMore').hidden=group.length<=5;$('tdActivityMore').setAttribute('aria-expanded',String(D.activityAll));
 }
 function openGoal(){const g=D.data?.goal||{};$('tdGoalAmountInput').value=Number(g.target_amount||0)||'';$('tdGoalCountInput').value=Number(g.target_opportunities||0)||'';$('tdGoalMsg').textContent='';$('tdGoalModal').classList.remove('hidden')}
 function closeGoal(){$('tdGoalModal').classList.add('hidden')}

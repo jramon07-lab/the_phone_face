@@ -40,7 +40,7 @@ async function login(page) {
 async function dashboard(page) {
   await page.locator('.nav[data-view="dashboard"]').first().click();
   await expect(page.locator(HOME)).toBeVisible({ timeout: 20000 });
-  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260920-sales-cockpit-9');
+  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260920-sales-cockpit-10');
   await expect(page.locator(`${HOME} #mOppTotal`)).toHaveText(/^\d+$/, { timeout: 20000 });
   await expect(page.locator(`${HOME} #dashRefresh`)).toBeEnabled({ timeout: 20000 });
   await expect(page.locator(`${HOME} #dashAlerts`)).not.toBeEmpty();
@@ -442,6 +442,16 @@ test('Inicio: actualizar, opciones, rutas secundarias y actividad', async ({ pag
     await expect(page.locator(`${HOME} .tdActivityRow`)).toHaveCount(initialCount);
     covered('Actividad reciente: ampliar y reducir');
   } else unavailable('Ampliar actividad: no hay más de cinco registros');
+  const commercialCount = Number(await page.locator(`${HOME} #tdActivityCommercialCount`).textContent());
+  const technicalCount = Number(await page.locator(`${HOME} #tdActivityTechnicalCount`).textContent());
+  expect(commercialCount + technicalCount).toBeLessThanOrEqual(40);
+  await page.locator(`${HOME} #tdActivityTechnical`).click();
+  await expect(page.locator(`${HOME} #tdActivityTechnical`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${HOME} .tdActivityRow`)).toHaveCount(Math.min(5, technicalCount));
+  await page.locator(`${HOME} #tdActivityCommercial`).click();
+  await expect(page.locator(`${HOME} #tdActivityCommercial`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${HOME} .tdActivityRow`)).toHaveCount(Math.min(5, commercialCount));
+  covered('Actividad: grupos comercial y técnico accesibles sin eliminar historial');
   const activity = page.locator(`${HOME} .tdActivityRow[data-open]`).filter({ hasNotText: /eliminad[ao]/i }).first();
   if (await activity.count()) await openAndReturn(page, activity, 'Actividad reciente abre ficha');
   else unavailable('Actividad reciente con ficha aún existente');
@@ -465,6 +475,10 @@ test('Inicio: Avisos y Agenda permanecen exclusivos durante los sondeos y conser
 });
 
 test('Inicio: mesa de trabajo sin desbordamiento horizontal en tres tamaños de escritorio', async ({ page }) => {
+  await priorities(page);
+  await expect(page.locator(`${HOME} .tdPriorityTable th`).filter({ hasText: 'Fecha prevista' })).toBeVisible();
+  await expect(page.locator(`${HOME} .tdPriorityTable th`).filter({ hasText: 'Importe' })).toBeVisible();
+  await expect(page.locator(`${HOME} .tdPriorityTable .tdAmount`).first()).toBeVisible();
   for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
     await page.setViewportSize(viewport);
     await expect(page.locator(`${HOME} #dashRefresh`)).toBeVisible();
@@ -475,7 +489,12 @@ test('Inicio: mesa de trabajo sin desbordamiento horizontal en tres tamaños de 
       const main = document.querySelector('.referenceWorkspace > main');
       const bounds = home.getBoundingClientRect();
       const cards = ['.tdSalesHero', '.tdPulseGrid', '.tdCockpitGrid', '.tdBusinessDetails'];
+      const table = home.querySelector('.tdPriorityCard').getBoundingClientRect();
+      const lower = home.querySelector('.tdSideRail').getBoundingClientRect();
       return {
+        tableWidth: table.width,
+        lowerWidth: lower.width,
+        panelsBelow: lower.top >= table.bottom,
         documentOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
         workspaceOverflow: Math.max(0, main.scrollWidth - main.clientWidth),
         cardsOutside: cards.filter(selector => {
@@ -489,6 +508,8 @@ test('Inicio: mesa de trabajo sin desbordamiento horizontal en tres tamaños de 
     expect(layout.documentOverflow).toBeLessThanOrEqual(2);
     expect(layout.workspaceOverflow).toBeLessThanOrEqual(2);
     expect(layout.cardsOutside).toEqual([]);
+    expect(Math.abs(layout.tableWidth - layout.lowerWidth)).toBeLessThanOrEqual(2);
+    expect(layout.panelsBelow).toBe(true);
     covered(`Escritorio ${viewport.width}×${viewport.height}: controles y anchura correctos`);
   }
 });
