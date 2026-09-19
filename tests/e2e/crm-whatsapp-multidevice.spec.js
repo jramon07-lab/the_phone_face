@@ -100,6 +100,10 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
         if(action==='ensure'||action==='read')return route.fulfill({json:{ok:true,changed:false,setRead:false}});
         if(action==='avatar')return route.fulfill({json:{ok:true,urlAvatar:''}});
         if(action==='previews')return route.fulfill({json:{ok:true,previews:[]}});
+        // La aplicación puede intentar despachar una automatización pendiente al
+        // arrancar. En esta prueba aislada se confirma localmente, sin salir a
+        // GREEN-API ni enviar un WhatsApp real.
+        if(action==='send')return route.fulfill({json:{ok:true,idMessage:'isolated-test-send'}});
         throw Error('Acción inesperada en prueba aislada: '+action);
       });
     }
