@@ -333,6 +333,11 @@
 #view-dashboard.tpfDashPro .tdHeroFigures>div>b{font-size:37px}
 #view-dashboard.tpfDashPro .tdGoalRing{width:106px;height:106px;flex-basis:106px;border-width:10px;box-shadow:0 0 0 7px #ffffff16,inset 0 0 20px #001b5233}
 #view-dashboard.tpfDashPro .tdHeroFigures .tdGoalRing>b{font-size:23px}
+#view-dashboard.tpfDashPro .tdGoalRing{--td-goal-progress:0%;position:relative;border-color:transparent;background:conic-gradient(#92e3ff var(--td-goal-progress),#ffffff26 0);isolation:isolate}
+#view-dashboard.tpfDashPro .tdGoalRing:before{content:"";position:absolute;inset:9px;border-radius:50%;background:#164aa8;z-index:-1}
+#view-dashboard.tpfDashPro .tdGoalRail{height:5px;margin:11px 0 6px;border-radius:999px;background:#ffffff35;overflow:hidden}
+#view-dashboard.tpfDashPro .tdGoalRail>span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9ce5ff,#fff);box-shadow:0 0 10px #ffffff99;transition:width .45s ease}
+#view-dashboard.tpfDashPro .tdHeroGoal em{display:block;min-height:14px;color:#dceeff;font-size:9px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #view-dashboard.tpfDashPro .tdPulseGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
 #view-dashboard.tpfDashPro .tdPulse{display:grid;grid-template-columns:46px minmax(0,1fr) 18px;align-items:center;gap:11px;min-height:108px;padding:17px 16px;border:1px solid #dce6f4;border-radius:18px;background:#fff;color:#142d51;text-align:left;box-shadow:0 10px 24px #153e6d0c;transition:transform .16s,box-shadow .16s}
 #view-dashboard.tpfDashPro .tdPulse:hover{transform:translateY(-3px);box-shadow:0 16px 28px #153e6d1c}
@@ -340,6 +345,8 @@
 #view-dashboard.tpfDashPro .tdPulse.violet .tdPulseIcon{background:#eee7ff;color:#7145d7}
 #view-dashboard.tpfDashPro .tdPulse.amber .tdPulseIcon{background:#fff0d4;color:#e58a00}
 #view-dashboard.tpfDashPro .tdPulse.green .tdPulseIcon{background:#def8ea;color:#199a52}
+#view-dashboard.tpfDashPro .tdPulse.coral .tdPulseIcon{background:#ffebe8;color:#df5852}
+#view-dashboard.tpfDashPro .tdPulse.coral:hover{border-color:#ffcec9}
 #view-dashboard.tpfDashPro .tdPulseIcon .tdIcon{width:22px;height:22px}
 #view-dashboard.tpfDashPro .tdPulse small{display:block;color:#7788a1;font-size:9px;font-weight:800;letter-spacing:.08em}
 #view-dashboard.tpfDashPro .tdPulse b{display:inline-block;margin:3px 0 1px;font-size:28px;line-height:1;color:#102648}

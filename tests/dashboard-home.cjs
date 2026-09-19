@@ -34,8 +34,8 @@ assert.ok(!source.includes('Tu día, de un vistazo.')&&!source.includes('Cliente
 assert.ok(source.includes('tdPriorityTable')&&source.includes('tdPrevPage')&&source.includes('tdNextPage'),'lists remain usable beyond the first five rows');
 assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
 assert.ok(!html.includes('dashboard-home-pro.js'));
-assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260919-sales-cockpit-2'"));
-assert.ok(html.includes('runtime.js?v=20260919-sales-cockpit-2'));
+assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260919-sales-cockpit-3'"));
+assert.ok(html.includes('runtime.js?v=20260919-sales-cockpit-3'));
 assert.ok(css.includes('body:has(#app:not(.hidden) #view-dashboard.tpfDashPro:not(.hidden)) .referenceSidebar'));
 for(const line of css.split('\n').filter(l=>l.includes('.referenceSidebar')||l.includes('.referenceNav')||l.includes('.referenceWorkspace')))assert.ok(line.includes('body:has(#app:not(.hidden) #view-dashboard.tpfDashPro:not(.hidden))'),'shell styling applies only to the visible authenticated Inicio');
 assert.equal((source.match(/sb\.from\(/g)||[]).length,5,'no new database reads');
