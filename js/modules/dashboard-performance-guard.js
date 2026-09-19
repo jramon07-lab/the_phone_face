@@ -3,7 +3,11 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const D={built:false,busy:false,actionBusy:false,lastLoad:0,data:null,activityAll:false,backupJson:null,backupCsv:null,filter:'priority',page:0};
+const D={built:false,busy:false,actionBusy:false,lastLoad:0,data:null,activityAll:false,upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0};
+const WORK_STATE_KEY='tpf.home.worklist.v1';
+function restoreWorkState(){try{const saved=JSON.parse(window.sessionStorage.getItem(WORK_STATE_KEY)||'null');if(!saved)return;if(['priority','calls','followup','processing'].includes(saved.filter))D.filter=saved.filter;if(typeof saved.query==='string')D.query=saved.query;if(['10','25','50','all'].includes(saved.pageSize))D.pageSize=saved.pageSize;if(Number.isInteger(saved.page)&&saved.page>=0)D.page=saved.page}catch(_){}}
+function saveWorkState(){try{window.sessionStorage.setItem(WORK_STATE_KEY,JSON.stringify({filter:D.filter,query:D.query,pageSize:D.pageSize,page:D.page}))}catch(_){}}
+restoreWorkState();
 
 function appOpen(){const app=$('app');return !!app&&!app.classList.contains('hidden')}
 function dashboardOpen(){const v=$('view-dashboard');return appOpen()&&!!v&&!v.classList.contains('hidden')}
@@ -81,28 +85,28 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-6';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-7';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-6';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-7';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdDate">${icon('calendar')}<span id="tdToday"></span></div><div class="tdCommandActions"><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
-  <section class="tdSalesHero"><div class="tdSalesHeroCopy"><span id="tdGreeting" class="tdHeroEyebrow">Tu centro de ventas</span><h1>Hoy comercial</h1><p>Todo lo que necesitas hacer ahora, sin perderte entre pantallas.</p><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div></div><div class="tdHeroFigures"><div class="tdHeroNumber"><span>Oportunidades activas</span><b id="mOppTotal">—</b><small id="mOppAmount">—</small></div><div id="tdGoalRing" class="tdGoalRing"><b id="dashGoalProgress">—</b><span>objetivo</span></div><div class="tdHeroGoal"><span>Vendido este mes</span><b id="dashWonAmount">—</b><small>objetivo: <strong id="dashGoalAmount">—</strong></small><div class="tdGoalRail"><span id="tdGoalRailFill"></span></div><em id="tdGoalForecastLine">Calculando previsión…</em><button id="dashGoalEdit" class="tdHeroLink">Editar objetivo</button></div><span id="dashForecastAmount" hidden></span></div></section>
+  <section class="tdSalesHero tdSalesHeroCompact"><div class="tdSalesHeroCopy"><span id="tdGreeting" class="tdHeroEyebrow">Tu centro de ventas</span><h1>Hoy comercial</h1><p>Tus gestiones, en un solo lugar.</p><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div></div><div class="tdHeroFigures"><div class="tdHeroNumber"><span>Oportunidades activas</span><b id="mOppTotal">—</b><small id="mOppAmount">—</small></div><div id="tdGoalRing" class="tdGoalRing"><b id="dashGoalProgress">—</b><span>objetivo</span></div><div class="tdHeroGoal"><span>Vendido este mes</span><b id="dashWonAmount">—</b><small>objetivo: <strong id="dashGoalAmount">—</strong></small><div class="tdGoalRail"><span id="tdGoalRailFill"></span></div><em id="tdGoalForecastLine">Calculando previsión…</em><button id="dashGoalEdit" class="tdHeroLink">Editar objetivo</button></div><span id="dashForecastAmount" hidden></span></div></section>
   <section class="tdPulseGrid" aria-label="Indicadores de actividad"><button class="tdPulse blue" data-home-filter="calls"><span class="tdPulseIcon">${icon('phone')}</span><span><small>LLAMADAS</small><b id="tdPulseCalls">—</b><em>Para atender</em></span>${icon('arrow')}</button><button class="tdPulse violet" data-home-filter="followup"><span class="tdPulseIcon">${icon('message')}</span><span><small>OFERTAS A SEGUIR</small><b id="tdPulseFollowup">—</b><em>Clientes esperando</em></span>${icon('arrow')}</button><button class="tdPulse amber" data-home-filter="processing"><span class="tdPulseIcon">${icon('file')}</span><span><small>TRAMITACIONES</small><b id="tdPulseProcessing">—</b><em>Pendientes de gestionar</em></span>${icon('arrow')}</button><button class="tdPulse coral" data-route="alerts-expired"><span class="tdPulseIcon">${icon('alert')}</span><span><small>VENCIDAS</small><b id="tdPulseExpired">—</b><em id="tdPulseExpiredText">Revisar ahora</em></span>${icon('arrow')}</button></section>
   <section class="tdFocusZone"><div class="tdFocusTitle"><span>${icon('target')}</span><div><small>EMPIEZA POR AQUÍ</small><h2>Tu siguiente mejor acción</h2></div></div><div id="tdFocusContent" class="tdFocusContent"></div></section>
-  <div id="dashContactToday" class="tdPipelineGrid" aria-label="Trabajo comercial de hoy"></div>
   <div class="tdCockpitGrid">
     <section class="tdCard tdPriorityCard">
-      <div class="tdHead"><div class="tdTitleBlock">${icon('list')}<div><h2>Prioridad de hoy</h2><p id="tdPrioritySub">Clientes y oportunidades que requieren tu atención.</p></div></div><button id="tdAddContact" class="tdBtn outline" data-home-action="new-contact">＋ Añadir contacto</button></div>
-      <div class="tdFilterBar" id="tdFilterBar" hidden><strong id="tdFilterLabel"></strong><button class="tdLink" data-home-filter="priority">Ver prioridades ${icon('arrow')}</button></div>
+      <div class="tdHead"><div class="tdTitleBlock">${icon('list')}<div><h2>Tu mesa de trabajo</h2><p id="tdPrioritySub">Clientes y oportunidades que requieren tu atención.</p></div></div><button id="tdAddContact" class="tdBtn outline" data-home-action="new-contact">＋ Añadir contacto</button></div>
+      <div class="tdFilterBar" id="tdFilterBar" role="group" aria-label="Filtrar tu mesa de trabajo"><button class="tdWorkTab" data-home-filter="priority" aria-pressed="false">Prioridades <span class="tdWorkTabCount" id="tdTabCountPriority">0</span></button><button class="tdWorkTab" data-home-filter="calls" aria-pressed="false">Llamadas <span class="tdWorkTabCount" id="tdTabCountCalls">0</span></button><button class="tdWorkTab" data-home-filter="followup" aria-pressed="false">Seguimientos <span class="tdWorkTabCount" id="tdTabCountFollowup">0</span></button><button class="tdWorkTab" data-home-filter="processing" aria-pressed="false">Tramitaciones <span class="tdWorkTabCount" id="tdTabCountProcessing">0</span></button></div>
+      <div class="tdWorkToolbar"><div class="tdWorkSearchField"><label for="tdWorkSearch">Buscar en este grupo</label><input id="tdWorkSearch" type="search" placeholder="Nombre, interés o teléfono" autocomplete="off"></div><button id="tdClearSearch" class="tdBtn outline" type="button" disabled>Limpiar búsqueda</button><div class="tdPageSizeField"><label for="tdPageSize">Gestiones por página</label><select id="tdPageSize"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="all">Todas</option></select></div></div>
       <div id="dashAlerts" class="tdTableWrap" aria-live="polite"></div>
       <div class="tdTableFooter"><span id="tdPageInfo"></span><div><button id="tdPrevPage" class="tdPageButton" aria-label="Página anterior">‹</button><button id="tdNextPage" class="tdPageButton" aria-label="Página siguiente">›</button><button class="tdLink" data-route="alerts">Ver avisos ${icon('arrow')}</button></div></div>
     </section>
-    <aside class="tdSideRail"><section class="tdCard tdUpcomingCard"><div class="tdHead"><div class="tdTitleBlock">${icon('calendar')}<div><h2>Próximos seguimientos</h2><p>No dejes pasar ninguna oportunidad.</p></div></div></div><div id="dashPriorityFollowups"></div><button class="tdBtn tdAgendaButton" data-route="agenda">Ver todas las tareas ${icon('arrow')}</button></section><section class="tdCard tdActivityCard"><div class="tdHead"><h2>Actividad reciente</h2><button id="tdActivityMore" class="tdLink">Ver toda</button></div><div id="dashActivity"></div></section></aside>
+    <aside class="tdSideRail"><section class="tdCard tdUpcomingCard"><div class="tdHead"><div class="tdTitleBlock">${icon('calendar')}<div><h2>Próximos seguimientos <span id="tdUpcomingCount" class="tdWorkTabCount">0</span></h2><p>Tareas y oportunidades, por fecha.</p></div></div></div><div id="dashPriorityFollowups"></div><button id="tdUpcomingMore" class="tdLink tdUpcomingMore" aria-expanded="false" hidden>Ver próximos</button><button class="tdBtn tdAgendaButton" data-route="agenda">Ver todas las tareas ${icon('arrow')}</button></section><section class="tdCard tdActivityCard"><div class="tdHead"><h2>Actividad reciente</h2><button id="tdActivityMore" class="tdLink" aria-expanded="false">Ver toda</button></div><div id="dashActivity"></div></section></aside>
   </div>
   <details class="tdBusinessDetails"><summary><span>${icon('chart')} Analítica y previsión</span><small>Embudo, objetivo y todos los indicadores ${icon('down')}</small></summary>
     <div class="tdBusinessContent"><section class="tdAnalysisHero"><div><span class="tdAnalysisEyebrow">CONTROL COMERCIAL</span><h2>Embudo, previsión e indicadores</h2><p>La foto completa del negocio, actualizada con tus oportunidades reales.</p></div><div class="tdAnalysisHeroStats"><div><span>Abiertas</span><b id="tdAnalysisOpen">—</b></div><div><span>Previsión</span><b id="tdAnalysisForecast">—</b></div><div><span>Conversión</span><b id="tdAnalysisConversion">—</b></div></div><button id="dashNewOppDetail" class="tdBtn primary">＋ Nueva oportunidad</button></section><div class="tdBusinessHead"><div><h2>Indicadores principales</h2><p>Accesos al panel de ventas, los avisos, la agenda y los contactos.</p></div></div>
@@ -134,6 +138,11 @@ function bind(){
   $('dashGoalEdit').onclick=openGoal;$('tdGoalCancel').onclick=closeGoal;$('tdGoalSave').onclick=saveGoal;
   $('tdGoalModal').onclick=e=>{if(e.target===$('tdGoalModal'))closeGoal()};
   $('tdActivityMore').onclick=()=>{D.activityAll=!D.activityAll;renderActivity()};
+  $('tdUpcomingMore').onclick=()=>{D.upcomingAll=!D.upcomingAll;renderHomePanels()};
+  $('tdWorkSearch').value=D.query;$('tdPageSize').value=D.pageSize;
+  $('tdWorkSearch').oninput=e=>{D.query=e.target.value;D.page=0;renderHomePanels()};
+  $('tdClearSearch').onclick=()=>{D.query='';D.page=0;$('tdWorkSearch').value='';renderHomePanels();$('tdWorkSearch').focus()};
+  $('tdPageSize').onchange=e=>{D.pageSize=['10','25','50','all'].includes(e.target.value)?e.target.value:'10';D.page=0;renderHomePanels()};
   $('tdPrevPage').onclick=()=>{D.page=Math.max(0,D.page-1);renderHomePanels()};
   $('tdNextPage').onclick=()=>{D.page++;renderHomePanels()};
   $('view-dashboard').addEventListener('click',handleClick);
@@ -144,7 +153,7 @@ function handleClick(e){
   const el=e.target instanceof Element?e.target:null;if(!el)return;
   if(el.closest('[data-home-action="new-contact"]')){runAction(openNewContact);return}
   const filter=el.closest('[data-home-filter]');
-  if(filter&&D.data){D.filter=D.filter===filter.dataset.homeFilter?'priority':filter.dataset.homeFilter;D.page=0;renderHomePanels();$('dashAlerts')?.scrollIntoView?.({behavior:'smooth',block:'center'});return}
+  if(filter&&D.data){if(D.filter!==filter.dataset.homeFilter){D.filter=filter.dataset.homeFilter;D.page=0}renderHomePanels();return}
   const r=el.closest('[data-route]')?.dataset.route;
   if(r){runAction(()=>navigate(r));return}
   const dots=el.closest('[data-dots]');
@@ -213,11 +222,12 @@ function renderHomePanels(){
   if(!D.data)return;
   const d=D.data,map=new Map(d.stages.map(s=>[String(s.id),s])),pending=d.tasks.filter(t=>status(t.status||'pending')==='pending');
   renderCommercial(d,map,pending);renderPriority(d,map,pending);renderUpcoming(d,map,pending);renderFocus(d,map,pending);
-  document.querySelectorAll('#view-dashboard [data-home-filter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.homeFilter===D.filter)));
 }
 
 function renderCommercial(d,map,pending){
-  $('dashContactToday').innerHTML=commercialGroups(d,map,pending).map(g=>`<section class="tdPipeline ${g.tone} ${D.filter===g.key?'isActive':''}"><button class="tdPipelineHead" data-home-filter="${g.key}" aria-pressed="${D.filter===g.key}"><span class="tdStatIcon">${icon(g.icon)}</span><span><strong>${esc(g.title.replace(' pendientes','').replace(' a seguir',''))}</strong><small>${esc(g.caption)}</small></span><b>${g.rows.length}</b>${icon('arrow')}</button><div class="tdPipelineRows">${g.rows.slice(0,5).map(x=>`<button class="tdPipelineRow" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}"><span class="tdPipelineRowIcon">${icon(x.type==='task'?'phone':'file')}</span><span><b>${esc(x.name)}</b><small>${esc(x.title)}</small></span><em class="${x.tone}">${esc(x.stage)}</em></button>`).join('')||'<div class="tdPipelineEmpty">No hay gestiones pendientes.</div>'}</div><button class="tdPipelineFoot" data-home-filter="${g.key}">Ver todas ${icon('arrow')}</button></section>`).join('');
+  const groups=commercialGroups(d,map,pending),counts={priority:priorityRows(d,map,pending).length,...Object.fromEntries(groups.map(g=>[g.key,g.rows.length]))};
+  for(const key of ['priority','calls','followup','processing'])$('tdTabCount'+key.charAt(0).toUpperCase()+key.slice(1)).textContent=counts[key];
+  document.querySelectorAll('#view-dashboard [data-home-filter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.homeFilter===D.filter)));
 }
 
 function renderPulse(d,map,pending,todayTasks,expired){
@@ -236,15 +246,22 @@ function renderFocus(d,map,pending){
   el.innerHTML=`<button class="tdFocusAction" data-open="1" data-type="${first.type}" data-id="${esc(first.id)}"><span class="tdFocusAvatar">${esc(initials(first.name))}</span><span class="tdFocusPerson"><b>${esc(first.name)}</b><small>${esc(first.title)}</small></span><span class="tdFocusDeadline ${first.expired?'late':''}">${icon(first.expired?'alert':isTask?'phone':'clock')}<span>${first.expired?'Vencida':when}</span></span><span class="tdFocusOpen">Abrir ${icon('arrow')}</span></button>`;
 }
 
+function workRows(rows,query){
+  const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' '),search=normalize(query);
+  if(!search)return rows;
+  const digits=search.replace(/\D/g,''),phoneSearch=digits.length>0&&/^[+\d\s().-]+$/.test(search);
+  return rows.filter(x=>normalize([x.name,x.title,x.phone].join(' ')).includes(search)||(phoneSearch&&String(x.phone||'').replace(/\D/g,'').includes(digits)));
+}
+
 function renderPriority(d,map,pending){
-  const all=priorityRows(d,map,pending),group=commercialGroups(d,map,pending).find(g=>g.key===D.filter),rows=group?group.rows:all,pageSize=5;
-  if($('navAlertCount'))$('navAlertCount').textContent=all.length;
+  const all=priorityRows(d,map,pending),group=commercialGroups(d,map,pending).find(g=>g.key===D.filter),groupRows=group?group.rows:all,rows=workRows(groupRows,D.query),pageSize=D.pageSize==='all'?Math.max(1,rows.length):Number(D.pageSize);
   D.page=Math.max(0,Math.min(D.page,Math.ceil(rows.length/pageSize)-1));
   const start=D.page*pageSize,page=rows.slice(start,start+pageSize);
-  $('tdFilterBar').hidden=!group;$('tdFilterLabel').textContent=group?group.title.charAt(0).toUpperCase()+group.title.slice(1):'';
-  $('tdPrioritySub').textContent=group?'Selecciona una gestión para abrirla en el CRM.':'Clientes y oportunidades que requieren tu atención.';
-  $('tdPageInfo').textContent=rows.length?`${start+1}–${Math.min(start+pageSize,rows.length)} de ${rows.length} gestiones`:'Sin gestiones en este grupo';
+  $('tdPrioritySub').textContent=group?group.caption:'Gestiones vencidas y pendientes para hoy, ordenadas por fecha.';
+  $('tdClearSearch').disabled=!D.query;
+  $('tdPageInfo').textContent=rows.length?`${start+1}–${Math.min(start+pageSize,rows.length)} de ${rows.length} gestiones`:(D.query.trim()?'Sin coincidencias en este grupo':'Sin gestiones en este grupo');
   $('tdPrevPage').disabled=D.page===0;$('tdNextPage').disabled=start+pageSize>=rows.length;
+  saveWorkState();
   $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th>Cliente</th><th>Interés</th><th>Estado</th><th>Última actividad</th><th>Próxima acción</th><th><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
     <td><button class="tdClientButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}"><span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}</small></span></button></td>
     <td><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button></td>
@@ -252,22 +269,29 @@ function renderPriority(d,map,pending){
     <td class="tdLastActivity">${x.updated?esc(localDate(localDay(x.updated)))+'<small>'+esc(localTime(x.updated))+'</small>':'—'}</td>
     <td><span class="tdNextAction ${x.expired?'isLate':''}">${icon('clock')}<span>${x.dateTime&&x.date===d.today?esc(localTime(x.when)):esc(localDate(x.date))}${x.expired?'<small>Vencida</small>':''}</span></span></td>
     <td class="tdMenuCell"><button class="tdDots" data-dots="1" aria-label="Acciones de ${esc(x.name)}">${icon('moreVertical')}</button><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
-  </tr>`).join('')}</tbody></table>`:`<div class="tdEmpty">${icon('checkCircle')}<strong>${group?'No hay '+esc(group.title)+'.':'Todo al día.'}</strong><span>${group?'Puedes consultar los otros indicadores.':'No hay gestiones vencidas ni pendientes para hoy.'}</span></div>`;
+  </tr>`).join('')}</tbody></table>`:`<div class="tdEmpty">${icon(D.query.trim()?'list':'checkCircle')}<strong>${D.query.trim()?'No hay coincidencias.':group?'No hay '+esc(group.title)+'.':'Todo al día.'}</strong><span>${D.query.trim()?'Prueba otro nombre, interés o teléfono, o limpia la búsqueda.':group?'Puedes consultar los otros grupos de tu mesa de trabajo.':'No hay gestiones vencidas ni pendientes para hoy.'}</span></div>`;
+}
+
+function upcomingRows(d,map,pending){
+  const rows=pending.filter(t=>status(t.status||'pending')==='pending'&&t.starts_at&&localDay(t.starts_at)>=d.today).map(t=>taskRow(t,d.today));
+  rows.push(...d.opps.filter(o=>activeOpportunity(o,map)&&o.expected_date&&String(o.expected_date).slice(0,10)>=d.today).map(o=>opportunityRow(o,map,d.today)));
+  return rows.sort((a,b)=>a.date.localeCompare(b.date)||String(a.when||'').localeCompare(String(b.when||''))||a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
 }
 
 function renderUpcoming(d,map,pending){
-  let rows=pending.filter(t=>localDay(t.starts_at)>=d.today).sort((a,b)=>String(a.starts_at).localeCompare(String(b.starts_at))).map(t=>taskRow(t,d.today));
-  if(!rows.length)rows=d.opps.filter(o=>activeOpportunity(o,map)&&String(o.expected_date||'').slice(0,10)>=d.today).sort((a,b)=>String(a.expected_date).localeCompare(String(b.expected_date))).map(o=>opportunityRow(o,map,d.today));
-  $('dashPriorityFollowups').innerHTML=rows.slice(0,2).map((x,i)=>`<button class="tdUpcoming ${i===0?'green':'amber'}" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}"><span class="tdUpcomingIcon">${icon(i===0?'checkCircle':'alert')}</span><span class="tdUpcomingText"><span class="tdUpcomingTop"><b>${esc(x.name)}</b><time>${x.dateTime&&x.date===d.today?esc(localTime(x.when)):esc(localDate(x.date))}</time></span><strong>${esc(x.title)}</strong><small>${esc(x.description||x.stage)}${x.date===d.today?' · Hoy':''}</small></span></button>`).join('')||`<div class="tdEmpty">${icon('calendar')}<strong>Sin seguimientos programados</strong><span>Las próximas tareas aparecerán aquí.</span></div>`;
+  const rows=upcomingRows(d,map,pending),shown=D.upcomingAll?rows:rows.slice(0,3),button=$('tdUpcomingMore');
+  $('tdUpcomingCount').textContent=rows.length;
+  button.hidden=rows.length<=3;button.textContent=D.upcomingAll?'Ver menos':`Ver próximos (${rows.length})`;button.setAttribute('aria-expanded',String(D.upcomingAll));
+  $('dashPriorityFollowups').innerHTML=shown.map(x=>`<button class="tdUpcoming ${x.type==='task'?'amber':'green'}" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}"><span class="tdUpcomingIcon">${icon(x.type==='task'?'calendar':'file')}</span><span class="tdUpcomingText"><span class="tdUpcomingTop"><b>${esc(x.name)}</b><time>${x.dateTime&&x.date===d.today?esc(localTime(x.when)):esc(localDate(x.date))}</time></span><strong>${esc(x.title)}</strong><small>${esc(x.description||x.stage)}${x.date===d.today?' · Hoy':''}</small></span></button>`).join('')||`<div class="tdEmpty">${icon('calendar')}<strong>Sin seguimientos programados</strong><span>Las tareas pendientes y oportunidades con próxima fecha aparecerán aquí.</span></div>`;
 }
 function renderFunnel(d){const rows=d.stages.map(s=>({name:s.name,count:d.opps.filter(o=>String(o.stage_id)===String(s.id)).length})),max=Math.max(1,...rows.map(x=>x.count));$('dashFunnel').className='tdFunnel';$('dashFunnel').innerHTML=rows.length?rows.map(x=>`<div class="tdFunnelRow"><span>${esc(x.name)}</span><div class="tdTrack"><div class="tdFill" style="width:${x.count?Math.max(3,x.count/max*100):0}%"></div></div><b>${x.count}</b></div>`).join(''):'<div class="tdEmpty">No hay columnas de ventas.</div>';$('tdFunnelFoot').innerHTML=`<div class="tdMiniStat"><span>Total oportunidades</span><b>${d.opps.length}</b></div><div class="tdMiniStat"><span>Importe total</span><b>${money(d.opps.reduce((n,o)=>n+Number(o.amount||0),0))}</b></div>`}
 
 function renderGoal(d,won,open){const target=Number(d.goal?.target_amount||0),wonAmount=won.filter(o=>localDay(o.updated_at||o.expected_date||o.created_at).startsWith(d.month)).reduce((n,o)=>n+Number(o.amount||0),0),forecast=open.reduce((n,o)=>n+Number(o.amount||0),0),pct=target?Math.min(100,Math.round(wonAmount/target*100)):0;$('dashGoalAmount').textContent=money(target);$('dashWonAmount').textContent=money(wonAmount);$('tdGoalDetailAmount').textContent=money(wonAmount);$('dashGoalProgress').textContent=`${pct}%`;$('dashForecastAmount').textContent=money(forecast);$('tdGoalRing').style.setProperty('--td-goal-progress',`${pct}%`);$('tdGoalRailFill').style.width=`${pct}%`;$('tdGoalForecastLine').textContent=target?`Previsión abierta: ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.';$('tdGoalNote').textContent=target?`Previsión abierta: ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.'}
-function renderForecast(d,map){const rows=d.stages.map(s=>({name:s.name,amount:d.opps.filter(o=>String(o.stage_id)===String(s.id)&&!isLost(o,map)).reduce((n,o)=>n+Number(o.amount||0),0)})).slice(0,7);$('dashForecastBreakdown').innerHTML=rows.length?rows.map(x=>`<div class="tdListRow"><b>${esc(x.name)}</b><span>${money(x.amount)}</span></div>`).join(''):'<div class="tdEmpty">No hay previsión comercial.</div>'}
+function renderForecast(d,map){const rows=d.stages.map(s=>({name:s.name,amount:d.opps.filter(o=>String(o.stage_id)===String(s.id)&&!isLost(o,map)).reduce((n,o)=>n+Number(o.amount||0),0)}));$('dashForecastBreakdown').innerHTML=rows.length?rows.map(x=>`<div class="tdListRow"><b>${esc(x.name)}</b><span>${money(x.amount)}</span></div>`).join(''):'<div class="tdEmpty">No hay previsión comercial.</div>'}
 function activityInfo(a){const type=status(a.entity_type),txt=status(`${a.action||''} ${a.summary||''}`);if(type==='agenda'||type==='task'){if(/delete|papelera/.test(txt))return['🗑','Tarea eliminada'];if(/complete|complet/.test(txt))return['✓','Tarea completada'];return['▣','Tarea actualizada']}if(type==='opportunity'){if(/delete|papelera/.test(txt))return['🗑','Oportunidad eliminada'];if(/move|movid/.test(txt))return['↔','Oportunidad movida'];return['▣','Oportunidad actualizada']}if(type==='contact')return['♙','Contacto actualizado'];if(type.includes('whatsapp'))return['◉','WhatsApp enviado'];return['•','Actividad del CRM']}
 function renderActivity(){
   if(!D.data)return;
-  const rows=D.data.activity.slice(0,D.activityAll?24:6);
+  const rows=D.activityAll?D.data.activity:D.data.activity.slice(0,5);
   $('dashActivity').innerHTML=rows.length?rows.map(a=>{
     const [icon,label]=activityInfo(a),type=status(a.entity_type),deleted=/delete|eliminad|papelera/i.test([a.action,a.summary,a.details?.label,a.details?.title].join(' '));
     const openType=type==='agenda'||type==='task'?'task':type==='opportunity'?'opportunity':type==='contact'?'contact':'';
@@ -275,7 +299,8 @@ function renderActivity(){
     const text=String(a.details?.label||a.details?.title||a.summary||a.action||label).replace(/enviado a papelera(?: local)?/i,label);
     return`<div class="tdActivityRow${canOpen?'':' tdActivityInfo'}" ${canOpen?`data-open="1" data-type="${openType}" data-id="${esc(a.entity_id)}"`:`style="cursor:default"${deleted?' title="Actividad histórica de un registro eliminado"':''}`}><span class="tdActIcon">${icon}</span><strong>${esc(label)}</strong><span class="tdActText">${esc(text)}</span><span class="tdActTime">${localDateTime(a.created_at)}</span></div>`;
   }).join(''):'<div class="tdEmpty">La actividad nueva aparecerá aquí.</div>';
-  $('tdActivityMore').textContent=D.activityAll?'Ver menos':'Ver toda la actividad';
+  $('tdActivityMore').textContent=D.activityAll?'Ver menos':`Ver toda (${D.data.activity.length})`;
+  $('tdActivityMore').hidden=D.data.activity.length<=5;$('tdActivityMore').setAttribute('aria-expanded',String(D.activityAll));
 }
 function openGoal(){const g=D.data?.goal||{};$('tdGoalAmountInput').value=Number(g.target_amount||0)||'';$('tdGoalCountInput').value=Number(g.target_opportunities||0)||'';$('tdGoalMsg').textContent='';$('tdGoalModal').classList.remove('hidden')}
 function closeGoal(){$('tdGoalModal').classList.add('hidden')}

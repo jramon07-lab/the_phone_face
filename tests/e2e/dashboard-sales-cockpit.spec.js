@@ -4,7 +4,7 @@ const HOME = '#view-dashboard.tpfDashPro';
 const businessTables = new Set(['records', 'sales_opportunities', 'sales_stages', 'agenda_items', 'whatsapp_jobs', 'crm_month_goals']);
 const audit = new WeakMap();
 test.setTimeout(180000);
-test.use({ screenshot: 'off', trace: 'off', video: 'off', actionTimeout: 10000, navigationTimeout: 30000 });
+test.use({ screenshot: 'off', trace: 'off', video: 'off', actionTimeout: 10000, navigationTimeout: 30000, viewport: { width: 1440, height: 900 } });
 
 function diagnosticSource(rawUrl) {
   try {
@@ -40,6 +40,7 @@ async function login(page) {
 async function dashboard(page) {
   await page.locator('.nav[data-view="dashboard"]').first().click();
   await expect(page.locator(HOME)).toBeVisible({ timeout: 20000 });
+  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260919-sales-cockpit-7');
   await expect(page.locator(`${HOME} #mOppTotal`)).toHaveText(/^\d+$/, { timeout: 20000 });
   await expect(page.locator(`${HOME} #dashRefresh`)).toBeEnabled({ timeout: 20000 });
   await expect(page.locator(`${HOME} #dashAlerts`)).not.toBeEmpty();
@@ -53,14 +54,88 @@ async function expandAnalytics(page) {
 }
 
 async function priorities(page) {
-  if (await page.locator(`${HOME} #tdFilterBar`).isVisible()) await page.locator(`${HOME} #tdFilterBar [data-home-filter="priority"]`).click();
-  await expect(page.locator(`${HOME} #tdFilterBar`)).toBeHidden();
+  await page.locator(`${HOME} #tdFilterBar [data-home-filter="priority"]`).click();
+  await expect(page.locator(`${HOME} #tdFilterBar`)).toBeVisible();
+  await expect(page.locator(`${HOME} #tdFilterBar [data-home-filter="priority"]`)).toHaveAttribute('aria-pressed', 'true');
   while (await page.locator(`${HOME} #tdPrevPage`).isEnabled()) await page.locator(`${HOME} #tdPrevPage`).click();
+}
+
+async function viewSnapshot(page) {
+  return page.evaluate(() => {
+    const displayed = element => {
+      const style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+    };
+    return {
+      views: [...document.querySelectorAll('.referenceWorkspace > main > section[id^="view-"]')].filter(displayed).map(element => element.id),
+      active: [...document.querySelectorAll('.referenceNav .nav.active[data-view]')].map(element => element.dataset.view),
+    };
+  });
+}
+
+async function exclusiveRoute(page, target, stableMs = 0) {
+  const expected = { views: [`view-${target}`], active: [target] };
+  await expect.poll(() => viewSnapshot(page), { timeout: 20000 }).toEqual(expected);
+  await expect(page.locator(`#view-${target}`)).toBeInViewport();
+  if (target !== 'dashboard') await expect(page.locator(HOME)).toBeHidden();
+  const end = Date.now() + stableMs;
+  while (Date.now() < end) {
+    await page.waitForTimeout(Math.min(250, end - Date.now()));
+    expect(await viewSnapshot(page), 'La vista debe seguir siendo exclusiva al terminar la carga y los sondeos').toEqual(expected);
+  }
+}
+
+async function scrollOffsets(page) {
+  return page.evaluate(() => ({ window: window.scrollY, main: document.querySelector('.referenceWorkspace > main')?.scrollTop || 0 }));
+}
+
+async function clickWithoutScrollJump(page, locator) {
+  // Account for Playwright moving the button into view BEFORE measuring.
+  await locator.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(150);
+  const before = await scrollOffsets(page);
+  await locator.click();
+  let elapsed = 0;
+  for (const sample of [250, 750, 1500]) {
+    await page.waitForTimeout(sample - elapsed);
+    elapsed = sample;
+    const after = await scrollOffsets(page);
+    expect(Math.abs(after.window - before.window), 'El filtro no debe saltar por la página').toBeLessThanOrEqual(48);
+    expect(Math.abs(after.main - before.main), 'El filtro no debe desplazar automáticamente la mesa de trabajo').toBeLessThanOrEqual(48);
+  }
+}
+
+async function pageRange(page) {
+  const label = await page.locator(`${HOME} #tdPageInfo`).textContent();
+  const numbers = label.match(/\d+/g)?.map(Number) || [];
+  const rows = await page.locator(`${HOME} #dashAlerts tbody tr`).count();
+  if (!numbers.length || (numbers.length === 1 && numbers[0] === 0)) {
+    expect(rows, 'La lista vacía debe tener cero filas').toBe(0);
+    return { first: 0, last: 0, total: 0, rows };
+  }
+  expect(numbers.length, 'Rango legible con inicio, fin y total').toBe(3);
+  const [first, last, total] = numbers;
+  expect(rows, 'Las filas visibles deben coincidir con el rango indicado').toBe(last - first + 1);
+  return { first, last, total, rows };
+}
+
+async function sidebarGeometry(page) {
+  return page.evaluate(() => {
+    const sidebar = document.querySelector('.referenceSidebar');
+    const item = document.querySelector('.referenceNav .nav[data-view="database"]');
+    const style = getComputedStyle(item);
+    return {
+      width: Math.round(sidebar.getBoundingClientRect().width),
+      fontSize: style.fontSize, lineHeight: style.lineHeight,
+      padding: style.padding, minHeight: style.minHeight, gap: style.gap,
+    };
+  });
 }
 
 async function visitRoute(page, selector, target, expired = false) {
   await page.locator(`${HOME} ${selector}`).click();
   await expect(page.locator(`#view-${target}`)).toBeVisible({ timeout: 20000 });
+  await exclusiveRoute(page, target, 3000);
   if (expired) {
     await expect(page.locator('#view-alerts .avCounter[data-kind="expired"]')).toHaveClass(/active/, { timeout: 20000 });
     await expect(page.locator('#view-alerts .avCounter.active')).toHaveCount(1);
@@ -181,32 +256,72 @@ test('Inicio: creación desde cabecera y analítica abre formularios y permite c
   }
 });
 
-test('Inicio: indicadores rápidos, cabeceras, pies y paginación filtran correctamente', async ({ page }) => {
-  for (const surface of ['.tdPulse', '.tdPipelineHead', '.tdPipelineFoot']) {
+test('Inicio: indicadores y pestañas conservan el contexto, búsqueda y resultados completos', async ({ page }) => {
+  await expect(page.locator(`${HOME} .tdPipelineGrid`)).toHaveCount(0);
+  await expect(page.locator(`${HOME} #tdFilterBar [data-home-filter]`)).toHaveCount(4);
+  await expect(page.locator(`${HOME} #tdPageSize`)).toHaveValue('10');
+  for (const surface of ['.tdPulse', '#tdFilterBar button']) {
     for (const key of ['calls', 'followup', 'processing']) {
       await priorities(page);
-      await page.locator(`${HOME} ${surface}[data-home-filter="${key}"]`).click();
+      await clickWithoutScrollJump(page, page.locator(`${HOME} ${surface}[data-home-filter="${key}"]`));
       await expect(page.locator(`${HOME} #tdFilterBar`)).toBeVisible();
-      await expect(page.locator(`${HOME} .tdPipeline.isActive`)).toHaveCount(1);
-      await expect(page.locator(`${HOME} .tdPipeline.isActive .tdPipelineHead[data-home-filter="${key}"]`)).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator(`${HOME} #tdFilterBar [aria-pressed="true"]`)).toHaveCount(1);
+      await expect(page.locator(`${HOME} #tdFilterBar [data-home-filter="${key}"]`)).toHaveAttribute('aria-pressed', 'true');
       await expect(page.locator(`${HOME} #tdPrevPage`)).toBeDisabled();
+      const range = await pageRange(page);
+      const pulseId = { calls: 'tdPulseCalls', followup: 'tdPulseFollowup', processing: 'tdPulseProcessing' }[key];
+      const count = Number(await page.locator(`${HOME} #${pulseId}`).textContent());
+      expect(range.total, 'El filtro debe incluir todos los registros del indicador').toBe(count);
+      // Clicking the selected tab must not unexpectedly switch back to Priority.
+      await page.locator(`${HOME} #tdFilterBar [data-home-filter="${key}"]`).click();
+      await expect(page.locator(`${HOME} #tdFilterBar [data-home-filter="${key}"]`)).toHaveAttribute('aria-pressed', 'true');
       covered(`Filtro ${key} desde ${surface}`);
     }
   }
   await priorities(page);
+  const original = await pageRange(page);
+  expect(original.rows).toBeLessThanOrEqual(10);
   const next = page.locator(`${HOME} #tdNextPage`);
   if (await next.isEnabled()) {
-    const initial = await page.locator(`${HOME} #tdPageInfo`).textContent();
     await next.click();
-    await expect(page.locator(`${HOME} #tdPageInfo`)).not.toHaveText(initial);
+    const second = await pageRange(page);
+    expect(second.first).toBe(11);
+    expect(second.total).toBe(original.total);
     await expect(page.locator(`${HOME} #tdPrevPage`)).toBeEnabled();
     await page.locator(`${HOME} #tdPrevPage`).click();
-    await expect(page.locator(`${HOME} #tdPageInfo`)).toHaveText(initial);
+    expect(await pageRange(page)).toEqual(original);
     covered('Paginación siguiente/anterior conserva prioridades');
   } else {
     await expect(next).toBeDisabled();
     unavailable('Paginación siguiente: hay una sola página');
   }
+  for (const size of ['25', '50', 'all']) {
+    await page.locator(`${HOME} #tdPageSize`).selectOption(size);
+    const range = await pageRange(page);
+    expect(range.total).toBe(original.total);
+    expect(range.rows).toBe(Math.min(original.total, size === 'all' ? original.total : Number(size)));
+    await expect(page.locator(`${HOME} #tdPrevPage`)).toBeDisabled();
+    if (size === 'all') await expect(next).toBeDisabled();
+    covered(`Tamaño de lista ${size}: rango completo y consistente`);
+  }
+  // No customer text is placed in the test log, even on a failed fill action.
+  await page.locator(`${HOME} #tdWorkSearch`).fill('zzzz__inicio_demo_no_match__');
+  await expect(page.locator(`${HOME} #dashAlerts tbody tr`)).toHaveCount(0);
+  expect((await pageRange(page)).total).toBe(0);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#app')).toBeVisible({ timeout: 30000 });
+  await dashboard(page);
+  await expect(page.locator(`${HOME} #tdWorkSearch`)).toHaveValue('zzzz__inicio_demo_no_match__');
+  await expect(page.locator(`${HOME} #tdPageSize`)).toHaveValue('all');
+  await expect(page.locator(`${HOME} #tdFilterBar [data-home-filter="priority"]`)).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator(`${HOME} #dashAlerts tbody tr`)).toHaveCount(0);
+  covered('Recargar conserva pestaña, búsqueda y tamaño de lista sin guardar registros');
+  await expect(page.locator(`${HOME} #tdClearSearch`)).toBeVisible();
+  await page.locator(`${HOME} #tdClearSearch`).click();
+  await expect(page.locator(`${HOME} #tdWorkSearch`)).toHaveValue('');
+  expect((await pageRange(page)).rows).toBe(original.total);
+  covered('Búsqueda sin coincidencias y borrar recupera todos los resultados');
+  await page.locator(`${HOME} #tdPageSize`).selectOption('10');
   await visitRoute(page, '.tdPulse[data-route="alerts-expired"]', 'alerts', true);
   covered('Vencidas rápidas abre Avisos con filtro Vencidas activo');
 });
@@ -229,7 +344,7 @@ test('Inicio: oportunidad y menú abren/editan con caché fría y cierran sin gu
   await openAndReturn(page, interestRow.locator('.tdInterestButton'), 'Abrir oportunidad pulsando interés');
 });
 
-test('Inicio: tareas, siguiente acción, columnas y próximos seguimientos abren registros', async ({ page }) => {
+test('Inicio: tareas, siguiente acción y próximos seguimientos abren registros', async ({ page }) => {
   const task = await findPriorityType(page, 'task');
   if (task) {
     await openAndReturn(page, task, 'Abrir tarea pendiente de tabla');
@@ -240,14 +355,23 @@ test('Inicio: tareas, siguiente acción, columnas y próximos seguimientos abren
   await priorities(page);
   for (const [selector, label] of [
     ['#tdFocusContent [data-open]', 'Siguiente mejor acción'],
-    ['#dashContactToday .tdPipelineRow[data-type="opportunity"]', 'Oportunidad de columnas'],
-    ['#dashContactToday .tdPipelineRow[data-type="task"]', 'Llamada de columnas'],
     ['#dashPriorityFollowups [data-open]', 'Próximo seguimiento'],
   ]) {
     const item = page.locator(`${HOME} ${selector}`).first();
     if (await item.count()) await openAndReturn(page, item, label);
     else unavailable(label);
   }
+  const initial = await page.locator(`${HOME} #dashPriorityFollowups .tdUpcoming`).count();
+  expect(initial).toBeLessThanOrEqual(3);
+  const toggle = page.locator(`${HOME} #tdUpcomingMore`);
+  if (await toggle.isVisible()) {
+    await toggle.click();
+    await expect(toggle).toHaveText('Ver menos');
+    expect(await page.locator(`${HOME} #dashPriorityFollowups .tdUpcoming`).count()).toBeGreaterThanOrEqual(initial);
+    await toggle.click();
+    await expect(page.locator(`${HOME} #dashPriorityFollowups .tdUpcoming`)).toHaveCount(initial);
+    covered('Próximos seguimientos: tres iniciales, ampliar y reducir');
+  } else unavailable('Ampliar seguimientos: no hay más de tres');
 });
 
 test('Inicio: analítica, seis indicadores, embudo, previsión y objetivo', async ({ page }) => {
@@ -263,6 +387,7 @@ test('Inicio: analítica, seis indicadores, embudo, previsión y objetivo', asyn
     const route = await metric.getAttribute('data-route');
     await metric.click();
     await expect(page.locator(`#view-${route === 'alerts-expired' ? 'alerts' : route}`)).toBeVisible({ timeout: 20000 });
+    await exclusiveRoute(page, route === 'alerts-expired' ? 'alerts' : route, 3000);
     if (route === 'alerts-expired') await expect(page.locator('#view-alerts .avCounter[data-kind="expired"]')).toHaveClass(/active/, { timeout: 20000 });
     await dashboard(page);
     await expect(page.locator(`${HOME} .tdAnalysisHero`)).toBeVisible();
@@ -305,15 +430,65 @@ test('Inicio: actualizar, opciones, rutas secundarias y actividad', async ({ pag
     ['.tdTableFooter [data-route="alerts"]', 'alerts', 'Ver avisos'],
   ]) { await visitRoute(page, selector, route); covered(label); }
   const initialCount = await page.locator(`${HOME} .tdActivityRow`).count();
-  await page.locator(`${HOME} #tdActivityMore`).click();
-  await expect(page.locator(`${HOME} #tdActivityMore`)).toHaveText('Ver menos');
-  const expandedCount = await page.locator(`${HOME} .tdActivityRow`).count();
-  expect(expandedCount).toBeGreaterThanOrEqual(initialCount);
-  expect(expandedCount).toBeLessThanOrEqual(24);
-  await page.locator(`${HOME} #tdActivityMore`).click();
-  await expect(page.locator(`${HOME} .tdActivityRow`)).toHaveCount(initialCount);
-  covered('Actividad reciente: ampliar y reducir');
+  expect(initialCount).toBeLessThanOrEqual(5);
+  const activityToggle = page.locator(`${HOME} #tdActivityMore`);
+  if (await activityToggle.isVisible()) {
+    await activityToggle.click();
+    await expect(activityToggle).toHaveText('Ver menos');
+    const expandedCount = await page.locator(`${HOME} .tdActivityRow`).count();
+    expect(expandedCount).toBeGreaterThan(initialCount);
+    expect(expandedCount).toBeLessThanOrEqual(40);
+    await activityToggle.click();
+    await expect(page.locator(`${HOME} .tdActivityRow`)).toHaveCount(initialCount);
+    covered('Actividad reciente: ampliar y reducir');
+  } else unavailable('Ampliar actividad: no hay más de cinco registros');
   const activity = page.locator(`${HOME} .tdActivityRow[data-open]`).filter({ hasNotText: /eliminad[ao]/i }).first();
   if (await activity.count()) await openAndReturn(page, activity, 'Actividad reciente abre ficha');
   else unavailable('Actividad reciente con ficha aún existente');
+});
+
+test('Inicio: Avisos y Agenda permanecen exclusivos durante los sondeos y conservan el menú', async ({ page }) => {
+  const sidebar = await sidebarGeometry(page);
+  await exclusiveRoute(page, 'dashboard', 3000);
+  for (const [selector, target] of [
+    ['.tdPulse[data-route="alerts-expired"]', 'alerts'],
+    ['.tdAgendaButton', 'agenda'],
+  ]) {
+    await page.locator(`${HOME} ${selector}`).click();
+    await exclusiveRoute(page, target, 35000);
+    expect(await sidebarGeometry(page), 'Cambiar de pantalla no debe alterar tipografía ni densidad del menú').toEqual(sidebar);
+    if (target === 'alerts') await expect(page.locator('#view-alerts .avCounter[data-kind="expired"]')).toHaveClass(/active/);
+    covered(`${target}: vista exclusiva y menú estable durante 35 segundos`);
+    await dashboard(page);
+    await exclusiveRoute(page, 'dashboard', 3000);
+  }
+});
+
+test('Inicio: mesa de trabajo sin desbordamiento horizontal en tres tamaños de escritorio', async ({ page }) => {
+  for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1920, height: 1080 }]) {
+    await page.setViewportSize(viewport);
+    await expect(page.locator(`${HOME} #dashRefresh`)).toBeVisible();
+    await expect(page.locator(`${HOME} #tdWorkSearch`)).toBeVisible();
+    await expect(page.locator(`${HOME} #tdPageSize`)).toBeVisible();
+    const layout = await page.evaluate(() => {
+      const home = document.getElementById('view-dashboard');
+      const main = document.querySelector('.referenceWorkspace > main');
+      const bounds = home.getBoundingClientRect();
+      const cards = ['.tdSalesHero', '.tdPulseGrid', '.tdCockpitGrid', '.tdBusinessDetails'];
+      return {
+        documentOverflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+        workspaceOverflow: Math.max(0, main.scrollWidth - main.clientWidth),
+        cardsOutside: cards.filter(selector => {
+          const card = home.querySelector(selector);
+          if (!card) return false;
+          const rectangle = card.getBoundingClientRect();
+          return rectangle.left < bounds.left - 2 || rectangle.right > bounds.right + 2;
+        }),
+      };
+    });
+    expect(layout.documentOverflow).toBeLessThanOrEqual(2);
+    expect(layout.workspaceOverflow).toBeLessThanOrEqual(2);
+    expect(layout.cardsOutside).toEqual([]);
+    covered(`Escritorio ${viewport.width}×${viewport.height}: controles y anchura correctos`);
+  }
 });
