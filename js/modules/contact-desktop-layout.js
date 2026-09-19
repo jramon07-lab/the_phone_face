@@ -180,8 +180,10 @@
  let summaryTimer=0;
  const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();},0);});
  sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
- window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;restoreSummaryGroups();sync();select(selected);updateCall();refreshPhoto();});
- modal.addEventListener('input',e=>{if(e.target.id==='contactPhone')updateCall();});
+ // No se actualiza ningún "botón de llamada" aquí: el diseño de referencia no
+ // define updateCall. Invocarlo al abrir una ficha lanzaba un ReferenceError y
+ // podía dejar incompleta la inicialización de los controles de la ficha.
+ window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;restoreSummaryGroups();sync();select(selected);refreshPhoto();});
 
  // Summary limits only the number of cards, never the fields inside each card.
  const summaryLists=[['cpOpportunities','oportunidades','.oppUnifiedCard'],['cpTasks','tareas','.cpTaskWrap'],['cpWhatsappPrograms','programados','.cpWaWrap']];
