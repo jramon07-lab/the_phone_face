@@ -1,0 +1,1 @@
+Esta rama es una copia funcional exacta de main (estable) a fecha 2026-09-19. Este archivo solo existe para activar el despliegue de pruebas.
