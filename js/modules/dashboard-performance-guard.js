@@ -3,7 +3,7 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const D={built:false,busy:false,lastLoad:0,data:null,activityAll:false,backupJson:null,backupCsv:null,filter:'priority',page:0};
+const D={built:false,busy:false,actionBusy:false,lastLoad:0,data:null,activityAll:false,backupJson:null,backupCsv:null,filter:'priority',page:0};
 
 function appOpen(){const app=$('app');return !!app&&!app.classList.contains('hidden')}
 function dashboardOpen(){const v=$('view-dashboard');return appOpen()&&!!v&&!v.classList.contains('hidden')}
@@ -20,6 +20,35 @@ function isLost(o,stages){return /lost|perdid|cancelad|rechazad/.test(status(o.s
 function isExpired(o,stages,today){return !isWon(o,stages)&&!isLost(o,stages)&&!!o.expected_date&&String(o.expected_date).slice(0,10)<today}
 function isOpen(o,stages,today){return !isWon(o,stages)&&!isLost(o,stages)&&!isExpired(o,stages,today)}
 function route(view){document.querySelector(`.nav[data-view="${view}"]`)?.click()}
+function waitFor(check,message,ms=10000){return new Promise((resolve,reject)=>{const started=Date.now();function poll(){let value;try{value=check()}catch(error){reject(error);return}if(value){resolve(value);return}if(Date.now()-started>=ms){reject(new Error(message));return}setTimeout(poll,50)}poll()})}
+function visible(id){const element=$(id);return element&&!element.classList.contains('hidden')?element:null}
+async function runAction(fn){
+  if(D.actionBusy)return;
+  D.actionBusy=true;
+  try{await fn()}catch(error){const message=error?.message||'No se pudo abrir esta acción. Vuelve a intentarlo.';const notice=$('tdDataStatus');if(notice){notice.hidden=false;notice.textContent=message}if(!dashboardOpen()&&typeof window.alert==='function')window.alert(message);else if(!notice)console.error('Inicio',error)}finally{D.actionBusy=false}
+}
+async function prepareSales(){
+  const loader=await waitFor(()=>typeof window.loadSales==='function'&&window.loadSales,'El panel de ventas todavía no está disponible. Vuelve a intentarlo.');
+  await loader();
+}
+async function openNewOpportunity(){
+  await prepareSales();
+  const button=await waitFor(()=>$('newOpp'),'No se encontró el botón de nueva oportunidad.');
+  button.click();
+  await waitFor(()=>visible('oppDetailModal'),'No se pudo abrir la nueva oportunidad. Comprueba tus permisos y las columnas de ventas.');
+}
+async function openNewContact(){
+  route('database');
+  const button=await waitFor(()=>$('tpfContactsAdd'),'El formulario de contactos todavía no está disponible.');
+  button.click();
+  await waitFor(()=>visible('tpfContactsCreateBack'),'No se pudo abrir el formulario de contacto. Comprueba tus permisos y vuelve a intentarlo.');
+}
+async function navigate(view){
+  if(view!=='alerts-expired'){route(view);return}
+  route('alerts');
+  const button=await waitFor(()=>document.querySelector('#view-alerts .avCounter[data-kind="expired"]')||document.querySelector('#view-alerts [data-alert-filter="expired"]'),'No se pudo abrir el filtro de avisos vencidos.');
+  button.click();
+}
 function initials(name){return String(name||'C').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'C'}
 function queryWithTimeout(query,ms=9000){return Promise.race([Promise.resolve(query),new Promise(resolve=>setTimeout(()=>resolve({data:[],count:0,error:{message:'Tiempo de espera agotado'}}),ms))])}
 
@@ -52,23 +81,23 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-4';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-5';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-4';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-5';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdDate">${icon('calendar')}<span id="tdToday"></span></div><div class="tdCommandActions"><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
-  <section class="tdSalesHero"><div class="tdSalesHeroCopy"><span id="tdGreeting" class="tdHeroEyebrow">Tu centro de ventas</span><h1>Hoy comercial</h1><p>Todo lo que necesitas hacer ahora, sin perderte entre pantallas.</p><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-route="database">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div></div><div class="tdHeroFigures"><div class="tdHeroNumber"><span>Oportunidades activas</span><b id="mOppTotal">—</b><small id="mOppAmount">—</small></div><div id="tdGoalRing" class="tdGoalRing"><b id="dashGoalProgress">—</b><span>objetivo</span></div><div class="tdHeroGoal"><span>Vendido este mes</span><b id="dashWonAmount">—</b><small>objetivo: <strong id="dashGoalAmount">—</strong></small><div class="tdGoalRail"><span id="tdGoalRailFill"></span></div><em id="tdGoalForecastLine">Calculando previsión…</em><button id="dashGoalEdit" class="tdHeroLink">Editar objetivo</button></div><span id="dashForecastAmount" hidden></span></div></section>
+  <section class="tdSalesHero"><div class="tdSalesHeroCopy"><span id="tdGreeting" class="tdHeroEyebrow">Tu centro de ventas</span><h1>Hoy comercial</h1><p>Todo lo que necesitas hacer ahora, sin perderte entre pantallas.</p><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div></div><div class="tdHeroFigures"><div class="tdHeroNumber"><span>Oportunidades activas</span><b id="mOppTotal">—</b><small id="mOppAmount">—</small></div><div id="tdGoalRing" class="tdGoalRing"><b id="dashGoalProgress">—</b><span>objetivo</span></div><div class="tdHeroGoal"><span>Vendido este mes</span><b id="dashWonAmount">—</b><small>objetivo: <strong id="dashGoalAmount">—</strong></small><div class="tdGoalRail"><span id="tdGoalRailFill"></span></div><em id="tdGoalForecastLine">Calculando previsión…</em><button id="dashGoalEdit" class="tdHeroLink">Editar objetivo</button></div><span id="dashForecastAmount" hidden></span></div></section>
   <section class="tdPulseGrid" aria-label="Indicadores de actividad"><button class="tdPulse blue" data-home-filter="calls"><span class="tdPulseIcon">${icon('phone')}</span><span><small>LLAMADAS</small><b id="tdPulseCalls">—</b><em>Para atender</em></span>${icon('arrow')}</button><button class="tdPulse violet" data-home-filter="followup"><span class="tdPulseIcon">${icon('message')}</span><span><small>OFERTAS A SEGUIR</small><b id="tdPulseFollowup">—</b><em>Clientes esperando</em></span>${icon('arrow')}</button><button class="tdPulse amber" data-home-filter="processing"><span class="tdPulseIcon">${icon('file')}</span><span><small>TRAMITACIONES</small><b id="tdPulseProcessing">—</b><em>Pendientes de gestionar</em></span>${icon('arrow')}</button><button class="tdPulse coral" data-route="alerts-expired"><span class="tdPulseIcon">${icon('alert')}</span><span><small>VENCIDAS</small><b id="tdPulseExpired">—</b><em id="tdPulseExpiredText">Revisar ahora</em></span>${icon('arrow')}</button></section>
   <section class="tdFocusZone"><div class="tdFocusTitle"><span>${icon('target')}</span><div><small>EMPIEZA POR AQUÍ</small><h2>Tu siguiente mejor acción</h2></div></div><div id="tdFocusContent" class="tdFocusContent"></div></section>
   <div id="dashContactToday" class="tdPipelineGrid" aria-label="Trabajo comercial de hoy"></div>
   <div class="tdCockpitGrid">
     <section class="tdCard tdPriorityCard">
-      <div class="tdHead"><div class="tdTitleBlock">${icon('list')}<div><h2>Prioridad de hoy</h2><p id="tdPrioritySub">Clientes y oportunidades que requieren tu atención.</p></div></div><button id="tdAddContact" class="tdBtn outline">＋ Añadir contacto</button></div>
+      <div class="tdHead"><div class="tdTitleBlock">${icon('list')}<div><h2>Prioridad de hoy</h2><p id="tdPrioritySub">Clientes y oportunidades que requieren tu atención.</p></div></div><button id="tdAddContact" class="tdBtn outline" data-home-action="new-contact">＋ Añadir contacto</button></div>
       <div class="tdFilterBar" id="tdFilterBar" hidden><strong id="tdFilterLabel"></strong><button class="tdLink" data-home-filter="priority">Ver prioridades ${icon('arrow')}</button></div>
       <div id="dashAlerts" class="tdTableWrap" aria-live="polite"></div>
       <div class="tdTableFooter"><span id="tdPageInfo"></span><div><button id="tdPrevPage" class="tdPageButton" aria-label="Página anterior">‹</button><button id="tdNextPage" class="tdPageButton" aria-label="Página siguiente">›</button><button class="tdLink" data-route="alerts">Ver avisos ${icon('arrow')}</button></div></div>
@@ -76,7 +105,7 @@ function build(){
     <aside class="tdSideRail"><section class="tdCard tdUpcomingCard"><div class="tdHead"><div class="tdTitleBlock">${icon('calendar')}<div><h2>Próximos seguimientos</h2><p>No dejes pasar ninguna oportunidad.</p></div></div></div><div id="dashPriorityFollowups"></div><button class="tdBtn tdAgendaButton" data-route="agenda">Ver todas las tareas ${icon('arrow')}</button></section><section class="tdCard tdActivityCard"><div class="tdHead"><h2>Actividad reciente</h2><button id="tdActivityMore" class="tdLink">Ver toda</button></div><div id="dashActivity"></div></section></aside>
   </div>
   <details class="tdBusinessDetails"><summary><span>${icon('chart')} Analítica y previsión</span><small>Embudo, objetivo y todos los indicadores ${icon('down')}</small></summary>
-    <div class="tdBusinessContent"><section class="tdAnalysisHero"><div><span class="tdAnalysisEyebrow">CONTROL COMERCIAL</span><h2>Embudo, previsión e indicadores</h2><p>La foto completa del negocio, actualizada con tus oportunidades reales.</p></div><div class="tdAnalysisHeroStats"><div><span>Abiertas</span><b id="tdAnalysisOpen">—</b></div><div><span>Previsión</span><b id="tdAnalysisForecast">—</b></div><div><span>Conversión</span><b id="tdAnalysisConversion">—</b></div></div><button id="dashNewOppDetail" class="tdBtn primary">＋ Nueva oportunidad</button></section><div class="tdBusinessHead"><div><h2>Indicadores principales</h2><p>Abre cada bloque para trabajar con ese grupo.</p></div></div>
+    <div class="tdBusinessContent"><section class="tdAnalysisHero"><div><span class="tdAnalysisEyebrow">CONTROL COMERCIAL</span><h2>Embudo, previsión e indicadores</h2><p>La foto completa del negocio, actualizada con tus oportunidades reales.</p></div><div class="tdAnalysisHeroStats"><div><span>Abiertas</span><b id="tdAnalysisOpen">—</b></div><div><span>Previsión</span><b id="tdAnalysisForecast">—</b></div><div><span>Conversión</span><b id="tdAnalysisConversion">—</b></div></div><button id="dashNewOppDetail" class="tdBtn primary">＋ Nueva oportunidad</button></section><div class="tdBusinessHead"><div><h2>Indicadores principales</h2><p>Accesos al panel de ventas, los avisos, la agenda y los contactos.</p></div></div>
     <div class="tdMetrics">
       <button class="tdMetric" data-route="sales"><span>Oportunidades</span><b id="tdMetricOppTotal">—</b><small id="tdMetricOppAmount">—</small></button>
       <button class="tdMetric" data-route="sales"><span>Abiertas</span><b id="tdMetricOppOpen">—</b><small>Con fecha vigente</small></button>
@@ -100,8 +129,7 @@ function build(){
 
 function bind(){
   $('dashRefresh').onclick=load;
-  const openNewOpp=()=>{route('sales');setTimeout(()=>$('newOpp')?.click(),120)};$('dashNewOpp').onclick=openNewOpp;$('dashNewOppDetail').onclick=openNewOpp;
-  $('tdAddContact').onclick=()=>{route('database');setTimeout(()=>$('tpfContactsAdd')?.click(),120)};
+  const openNewOpp=()=>runAction(openNewOpportunity);$('dashNewOpp').onclick=openNewOpp;$('dashNewOppDetail').onclick=openNewOpp;
   $('tdMoreBtn').onclick=e=>{e.stopPropagation();$('tdMoreMenu').classList.toggle('hidden')};
   $('dashGoalEdit').onclick=openGoal;$('tdGoalCancel').onclick=closeGoal;$('tdGoalSave').onclick=saveGoal;
   $('tdGoalModal').onclick=e=>{if(e.target===$('tdGoalModal'))closeGoal()};
@@ -114,17 +142,34 @@ function bind(){
 
 function handleClick(e){
   const el=e.target instanceof Element?e.target:null;if(!el)return;
+  if(el.closest('[data-home-action="new-contact"]')){runAction(openNewContact);return}
   const filter=el.closest('[data-home-filter]');
-  if(filter&&D.data){D.filter=D.filter===filter.dataset.homeFilter?'priority':filter.dataset.homeFilter;D.page=0;renderHomePanels();document.querySelector('#view-dashboard [data-home-filter="'+D.filter+'"]')?.focus();return}
+  if(filter&&D.data){D.filter=D.filter===filter.dataset.homeFilter?'priority':filter.dataset.homeFilter;D.page=0;renderHomePanels();$('dashAlerts')?.scrollIntoView?.({behavior:'smooth',block:'center'});return}
   const r=el.closest('[data-route]')?.dataset.route;
-  if(r){if(r==='alerts-expired'){route('alerts');setTimeout(()=>document.querySelector('[data-alert-filter="expired"]')?.click(),100)}else route(r);return}
+  if(r){runAction(()=>navigate(r));return}
   const dots=el.closest('[data-dots]');
   if(dots){e.stopPropagation();const menu=dots.closest('tr')?.querySelector('.tdRowMenu'),wasOpen=menu&&!menu.classList.contains('hidden');document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));if(!wasOpen)menu?.classList.remove('hidden');return}
-  const act=el.closest('[data-action]');if(act){e.stopPropagation();action(act.dataset.action,act.dataset.type,act.dataset.id);return}
-  const row=el.closest('[data-open]');if(row)openItem(row.dataset.type,row.dataset.id);
+  const act=el.closest('[data-action]');if(act){e.stopPropagation();document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));runAction(()=>action(act.dataset.action,act.dataset.type,act.dataset.id));return}
+  const row=el.closest('[data-open]');if(row)runAction(()=>openItem(row.dataset.type,row.dataset.id));
 }
-function openItem(type,id){if(type==='opportunity')window.openOpportunityFull?.(id);else if(type==='task'){if(window.openAlertTask)window.openAlertTask(id);else window.openContactTaskDetail?.(id)}else if(type==='contact'&&id)window.openContact?.(id);else if(type==='agenda')route('agenda')}
-function action(name,type,id){if(name==='open')openItem(type,id);else if(name==='edit'){if(type==='opportunity')window.openOpportunityCard?.(id);else if(type==='task')window.editAlertTask?.(id)}else if(name==='delete'){if(type==='opportunity')window.deleteOpp?.(id);else if(type==='task')window.deleteAlertTask?.(id);setTimeout(load,650)}}
+async function callAction(name,id){const fn=await waitFor(()=>typeof window[name]==='function'&&window[name],'Esta acción todavía no está disponible. Vuelve a intentarlo.');return fn(id)}
+async function openItem(type,id){
+  if(type==='opportunity'){await prepareSales();await callAction('openOpportunityFull',id);await waitFor(()=>visible('opportunityFullPage'),'No se pudo abrir la oportunidad. Puede haberse eliminado o no estar accesible.');}
+  else if(type==='task')await callAction(typeof window.openAlertTask==='function'?'openAlertTask':'openContactTaskDetail',id);
+  else if(type==='contact'&&id)await callAction('openContact',id);
+  else if(type==='agenda')route('agenda');
+}
+async function action(name,type,id){
+  if(name==='open')return openItem(type,id);
+  if(name==='edit'){
+    if(type==='opportunity'){await prepareSales();await callAction('openOpportunityCard',id);await waitFor(()=>visible('oppDetailModal'),'No se pudo abrir el editor de la oportunidad. Puede haberse eliminado o no estar accesible.');}
+    else if(type==='task')await callAction('editAlertTask',id);
+  }else if(name==='delete'){
+    if(type==='opportunity'){await prepareSales();await callAction('deleteOpp',id);}
+    else if(type==='task')await callAction('deleteAlertTask',id);
+    D.lastLoad=0;await load();
+  }
+}
 
 async function fetchData(){const today=localDay(),month=today.slice(0,7),monthStart=`${month}-01`;const results=await Promise.all([queryWithTimeout(sb.from('sales_opportunities').select('*').order('updated_at',{ascending:false}).limit(1000)),queryWithTimeout(sb.from('sales_stages').select('*').eq('active',true).order('position')),queryWithTimeout(sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(500)),queryWithTimeout(sb.from('records').select('id',{count:'exact',head:true}).eq('source_sheet','BASE DE DATOS')),queryWithTimeout(sb.from('crm_audit_log').select('*').order('created_at',{ascending:false}).limit(40)),queryWithTimeout(sb.rpc('crm_get_month_goal',{p_month:monthStart}))]);const [oppR,stageR,taskR,countR,auditR,goalR]=results;return{opps:oppR.data||[],stages:stageR.data||[],tasks:taskR.data||[],contacts:Number(countR.count||0),activity:auditR.data||[],goal:Array.isArray(goalR.data)?goalR.data[0]||{}:goalR.data||{},today,month,monthStart,warnings:results.filter(r=>r.error).map(r=>r.error.message)}}
 async function load(){if(!appOpen()){return}build();if(!dashboardOpen())return;if(D.busy)return;if(Date.now()-D.lastLoad<350)return;D.lastLoad=Date.now();D.busy=true;const b=$('dashRefresh');if(b){b.disabled=true;b.setAttribute('aria-busy','true')}try{D.data=await fetchData();render()}catch(e){console.error('Inicio',e);if($('dashAlerts'))$('dashAlerts').innerHTML=`<div class="tdEmpty">${esc(e?.message||'No se pudo cargar el resumen.')}</div>`}finally{D.busy=false;if($('dashRefresh')){$('dashRefresh').disabled=false;$('dashRefresh').removeAttribute('aria-busy')}}}
@@ -168,6 +213,7 @@ function renderHomePanels(){
   if(!D.data)return;
   const d=D.data,map=new Map(d.stages.map(s=>[String(s.id),s])),pending=d.tasks.filter(t=>status(t.status||'pending')==='pending');
   renderCommercial(d,map,pending);renderPriority(d,map,pending);renderUpcoming(d,map,pending);renderFocus(d,map,pending);
+  document.querySelectorAll('#view-dashboard [data-home-filter]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.homeFilter===D.filter)));
 }
 
 function renderCommercial(d,map,pending){
@@ -219,7 +265,18 @@ function renderFunnel(d){const rows=d.stages.map(s=>({name:s.name,count:d.opps.f
 function renderGoal(d,won,open){const target=Number(d.goal?.target_amount||0),wonAmount=won.filter(o=>localDay(o.updated_at||o.expected_date||o.created_at).startsWith(d.month)).reduce((n,o)=>n+Number(o.amount||0),0),forecast=open.reduce((n,o)=>n+Number(o.amount||0),0),pct=target?Math.min(100,Math.round(wonAmount/target*100)):0;$('dashGoalAmount').textContent=money(target);$('dashWonAmount').textContent=money(wonAmount);$('tdGoalDetailAmount').textContent=money(wonAmount);$('dashGoalProgress').textContent=`${pct}%`;$('dashForecastAmount').textContent=money(forecast);$('tdGoalRing').style.setProperty('--td-goal-progress',`${pct}%`);$('tdGoalRailFill').style.width=`${pct}%`;$('tdGoalForecastLine').textContent=target?`Previsión abierta: ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.';$('tdGoalNote').textContent=target?`Previsión abierta: ${money(forecast)}`:'Añade un objetivo para seguir el progreso del mes.'}
 function renderForecast(d,map){const rows=d.stages.map(s=>({name:s.name,amount:d.opps.filter(o=>String(o.stage_id)===String(s.id)&&!isLost(o,map)).reduce((n,o)=>n+Number(o.amount||0),0)})).slice(0,7);$('dashForecastBreakdown').innerHTML=rows.length?rows.map(x=>`<div class="tdListRow"><b>${esc(x.name)}</b><span>${money(x.amount)}</span></div>`).join(''):'<div class="tdEmpty">No hay previsión comercial.</div>'}
 function activityInfo(a){const type=status(a.entity_type),txt=status(`${a.action||''} ${a.summary||''}`);if(type==='agenda'||type==='task'){if(/delete|papelera/.test(txt))return['🗑','Tarea eliminada'];if(/complete|complet/.test(txt))return['✓','Tarea completada'];return['▣','Tarea actualizada']}if(type==='opportunity'){if(/delete|papelera/.test(txt))return['🗑','Oportunidad eliminada'];if(/move|movid/.test(txt))return['↔','Oportunidad movida'];return['▣','Oportunidad actualizada']}if(type==='contact')return['♙','Contacto actualizado'];if(type.includes('whatsapp'))return['◉','WhatsApp enviado'];return['•','Actividad del CRM']}
-function renderActivity(){if(!D.data)return;const rows=D.data.activity.slice(0,D.activityAll?24:6);$('dashActivity').innerHTML=rows.length?rows.map(a=>{const [icon,label]=activityInfo(a),type=status(a.entity_type),openType=type==='agenda'||type==='task'?'task':type==='opportunity'?'opportunity':type==='contact'?'contact':'';const text=String(a.details?.label||a.details?.title||a.summary||a.action||label).replace(/enviado a papelera(?: local)?/i,label);return`<div class="tdActivityRow" ${openType&&a.entity_id?`data-open="1" data-type="${openType}" data-id="${a.entity_id}"`:''}><span class="tdActIcon">${icon}</span><strong>${esc(label)}</strong><span class="tdActText">${esc(text)}</span><span class="tdActTime">${localDateTime(a.created_at)}</span></div>`}).join(''):'<div class="tdEmpty">La actividad nueva aparecerá aquí.</div>';$('tdActivityMore').textContent=D.activityAll?'Ver menos':'Ver toda la actividad'}
+function renderActivity(){
+  if(!D.data)return;
+  const rows=D.data.activity.slice(0,D.activityAll?24:6);
+  $('dashActivity').innerHTML=rows.length?rows.map(a=>{
+    const [icon,label]=activityInfo(a),type=status(a.entity_type),deleted=/delete|eliminad|papelera/i.test([a.action,a.summary,a.details?.label,a.details?.title].join(' '));
+    const openType=type==='agenda'||type==='task'?'task':type==='opportunity'?'opportunity':type==='contact'?'contact':'';
+    const canOpen=!deleted&&openType&&a.entity_id;
+    const text=String(a.details?.label||a.details?.title||a.summary||a.action||label).replace(/enviado a papelera(?: local)?/i,label);
+    return`<div class="tdActivityRow${canOpen?'':' tdActivityInfo'}" ${canOpen?`data-open="1" data-type="${openType}" data-id="${esc(a.entity_id)}"`:`style="cursor:default"${deleted?' title="Actividad histórica de un registro eliminado"':''}`}><span class="tdActIcon">${icon}</span><strong>${esc(label)}</strong><span class="tdActText">${esc(text)}</span><span class="tdActTime">${localDateTime(a.created_at)}</span></div>`;
+  }).join(''):'<div class="tdEmpty">La actividad nueva aparecerá aquí.</div>';
+  $('tdActivityMore').textContent=D.activityAll?'Ver menos':'Ver toda la actividad';
+}
 function openGoal(){const g=D.data?.goal||{};$('tdGoalAmountInput').value=Number(g.target_amount||0)||'';$('tdGoalCountInput').value=Number(g.target_opportunities||0)||'';$('tdGoalMsg').textContent='';$('tdGoalModal').classList.remove('hidden')}
 function closeGoal(){$('tdGoalModal').classList.add('hidden')}
 async function saveGoal(){const b=$('tdGoalSave');b.disabled=true;$('tdGoalMsg').textContent='Guardando…';try{const r=await queryWithTimeout(sb.rpc('crm_set_month_goal',{p_month:D.data?.monthStart||`${localDay().slice(0,7)}-01`,p_target_amount:Math.max(0,Number($('tdGoalAmountInput').value||0)),p_target_opportunities:Math.max(0,Math.floor(Number($('tdGoalCountInput').value||0)))}));if(r.error)throw r.error;closeGoal();D.lastLoad=0;await load()}catch(e){$('tdGoalMsg').textContent=e?.message||'No se pudo guardar el objetivo.'}finally{b.disabled=false}}

@@ -12,12 +12,19 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: crm-dashboard-demo-validation
-  cancel-in-progress: true
+  group: crm-browser-shared-test-account-v3
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   dashboard-demo:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_PREVIEW_URL: https://the-phone-face-app-whatsapp-git-1957ce-jramon-07-2402s-projects.vercel.app
+      E2E_EXPECTED_COMMIT: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,10 +32,33 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npx playwright install --with-deps chromium
+      - name: Esperar la versión exacta de pruebas
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          node <<'NODE'
+          (async () => {
+            const expected = process.env.E2E_EXPECTED_COMMIT;
+            const url = new URL('/api/health', process.env.VERCEL_PREVIEW_URL);
+            const headers = { 'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET };
+            for (let attempt = 0; attempt < 40; attempt++) {
+              try {
+                const response = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+                if (response.ok) {
+                  const health = await response.json();
+                  if (health.commit === expected && health.branch === 'test/estable-clon-20260919-v2' && health.environment === 'preview') {
+                    console.log('Preview exacta confirmada:', expected);
+                    return;
+                  }
+                }
+              } catch (_) {}
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            throw new Error('La preview no corresponde al commit que se debe probar. No se prueba estable ni una versión anterior.');
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
       - name: Probar Inicio de pruebas con la cuenta demo
         env:
-          # Este es el despliegue de pruebas ya publicado para este cambio.
-          VERCEL_PREVIEW_URL: https://the-phone-face-app-whatsapp-fotos-y-multimedia-ftm8abd89.vercel.app
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
