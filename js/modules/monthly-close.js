@@ -14,7 +14,52 @@
     if($('tpfMonthlyCloseStyle'))return;
     const style=document.createElement('style');
     style.id='tpfMonthlyCloseStyle';
-    style.textContent='#tpfMonthlyClose{position:fixed;inset:0;z-index:100700;background:#10182899;display:grid;place-items:center;padding:18px}.tpfMonthlyCard{width:min(1010px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 24px 60px #0005}.tpfMonthlyHead,.tpfMonthlyFoot{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:20px 26px;border-bottom:1px solid #e4e7ec}.tpfMonthlyHead h2{margin:0;font-size:22px}.tpfMonthlyHead small{display:block;color:#667085;margin-top:4px}.tpfMonthlyHead button{width:34px;height:34px;padding:0;font-size:23px;line-height:1}.tpfMonthlyBody{padding:22px 26px}.tpfMonthlyStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:22px}.tpfMonthlyStat{padding:15px 17px;border:1px solid #d9e2f1;border-radius:12px;background:#f8fbff}.tpfMonthlyStat b{display:block;font-size:23px;color:#172b4d}.tpfMonthlyStat small{color:#667085}.tpfMonthlySection{border:1px solid #e4e7ec;border-radius:12px;overflow:hidden}.tpfMonthlySectionHead{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:#f9fafb}.tpfMonthlySectionHead b{font-size:15px}.tpfMonthlyHint{font-size:12px;color:#667085}.tpfMonthlyTable{width:100%;border-collapse:collapse}.tpfMonthlyTable th,.tpfMonthlyTable td{padding:12px 14px;border-bottom:1px solid #eaecf0;text-align:left}.tpfMonthlyTable tr:last-child td{border-bottom:0}.tpfMonthlyTable th{font-size:12px;color:#475467;background:#fff}.tpfMonthlyEmpty{padding:20px 14px;color:#667085}.tpfMonthlyPending{margin-top:16px;border:1px solid #e4e7ec;border-radius:12px;background:#fff}.tpfMonthlyPending summary{padding:14px 15px;font-weight:800;cursor:pointer;list-style:none}.tpfMonthlyPending summary::-webkit-details-marker{display:none}.tpfMonthlyPending summary:after{content:"⌄";float:right;color:#667085}.tpfMonthlyPending[open] summary{border-bottom:1px solid #eaecf0}.tpfMonthlyPending[open] summary:after{content:"⌃"}.tpfMonthlyPending ul{margin:0;padding:8px 15px 13px;list-style:none}.tpfMonthlyPending li{padding:7px 0;border-bottom:1px solid #f2f4f7}.tpfMonthlyPending li:last-child{border-bottom:0}.tpfMonthlyWarn{padding:11px 13px;background:#fffaeb;color:#7a2e0e;border:1px solid #fedf89;border-radius:9px;margin-top:16px;font-size:13px}.tpfMonthlyFoot{border-top:1px solid #e4e7ec;border-bottom:0;justify-content:flex-end}.tpfMonthlyFoot button,.tpfMonthlyHead button{border:1px solid #d0d5dd;border-radius:9px;background:#fff;padding:10px 13px;font-weight:700;cursor:pointer}.tpfMonthlyFoot .primary{background:#155eef;border-color:#155eef;color:#fff}@media(max-width:680px){.tpfMonthlyStats{grid-template-columns:1fr}.tpfMonthlyTable th:nth-child(3),.tpfMonthlyTable td:nth-child(3){display:none}.tpfMonthlyHead,.tpfMonthlyBody,.tpfMonthlyFoot{padding-left:14px;padding-right:14px}}';
+    style.textContent=`
+#tpfMonthlyClose{position:fixed;inset:0;z-index:100700;background:linear-gradient(135deg,#101828e6,#111827bf);display:flex;align-items:stretch;justify-content:center;padding:18px}
+.tpfMonthlyCard{width:min(1480px,98vw);height:min(920px,96vh);background:#f6f8fb;border:1px solid #ffffff2e;border-radius:24px;box-shadow:0 30px 90px #0008;display:flex;flex-direction:column;overflow:hidden}
+.tpfMonthlyHead{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:20px 24px;background:linear-gradient(135deg,#0f2f68,#155eef);color:#fff}
+.tpfMonthlyHead h2{margin:0;font-size:25px;letter-spacing:-.02em}
+.tpfMonthlyHead small{display:block;color:#dbeafe;margin-top:5px}
+.tpfMonthlyHead .tpfMonthlyCloseX{width:40px;height:40px;padding:0;border:1px solid #ffffff55;border-radius:13px;background:#ffffff18;color:#fff;font-size:25px;line-height:1;cursor:pointer}
+.tpfMonthlyBody{flex:1;min-height:0;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:16px}
+.tpfMonthlyMain,.tpfMonthlyAside{min-height:0;display:flex;flex-direction:column;gap:14px}
+.tpfMonthlyStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tpfMonthlyStat{padding:16px 18px;border:1px solid #d8e2f4;border-radius:16px;background:#fff;box-shadow:0 8px 22px #1018280a}
+.tpfMonthlyStat b{display:block;font-size:27px;line-height:1.1;color:#102a56;letter-spacing:-.02em}
+.tpfMonthlyStat small{color:#667085;font-weight:700}
+.tpfMonthlySection,.tpfMonthlyPendingPanel,.tpfMonthlyInfo{border:1px solid #dfe7f3;border-radius:18px;background:#fff;box-shadow:0 8px 22px #1018280a}
+.tpfMonthlySection{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.tpfMonthlySectionHead,.tpfMonthlyPendingHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:15px 16px;border-bottom:1px solid #e8edf5;background:#fbfdff}
+.tpfMonthlySectionHead b,.tpfMonthlyPendingHead b{font-size:16px;color:#172b4d}
+.tpfMonthlyHint{font-size:12px;color:#667085;text-align:right}
+.tpfMonthlyTableWrap{flex:1;min-height:0;overflow:auto}
+.tpfMonthlyTable{width:100%;border-collapse:separate;border-spacing:0}
+.tpfMonthlyTable th,.tpfMonthlyTable td{padding:13px 14px;border-bottom:1px solid #edf1f7;text-align:left;vertical-align:middle}
+.tpfMonthlyTable th{position:sticky;top:0;z-index:2;background:#f8fafc;font-size:12px;color:#475467;text-transform:uppercase;letter-spacing:.04em}
+.tpfMonthlyTable tr:hover td{background:#f8fbff}
+.tpfMonthlyTable b{color:#1d2939}
+.tpfMonthlyTable small{color:#667085;font-weight:700}
+.tpfMonthlyAmount{font-weight:800;color:#102a56;white-space:nowrap}
+.tpfMonthlyDate{white-space:nowrap;color:#344054}
+.tpfMonthlyEmpty{padding:26px 16px;color:#667085;text-align:center}
+.tpfMonthlyPendingPanel{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.tpfMonthlyPendingHead{background:linear-gradient(135deg,#fff7ed,#fff)}
+.tpfMonthlyPendingCount{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:28px;border-radius:999px;background:#ffedd5;color:#9a3412;font-weight:900}
+.tpfMonthlyPendingList{margin:0;padding:8px;list-style:none;overflow:auto}
+.tpfMonthlyPendingList li{padding:12px;border-radius:13px;border:1px solid #edf1f7;background:#fff;margin-bottom:8px}
+.tpfMonthlyPendingList b{display:block;color:#1d2939}
+.tpfMonthlyPendingMeta{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}
+.tpfMonthlyPendingMeta span{display:inline-flex;padding:4px 7px;border-radius:999px;background:#f2f4f7;color:#475467;font-size:11px;font-weight:800}
+.tpfMonthlyInfo{padding:13px 15px;background:#fffbeb;color:#7a2e0e;border-color:#fedf89;font-size:13px;line-height:1.35}
+.tpfMonthlyFoot{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:16px 20px;border-top:1px solid #dfe7f3;background:#fff}
+.tpfMonthlyFootText{color:#475467;font-size:13px}
+.tpfMonthlyFootActions{display:flex;gap:10px;align-items:center}
+.tpfMonthlyFoot button{border:1px solid #d0d5dd;border-radius:12px;background:#fff;padding:12px 15px;font-weight:800;cursor:pointer}
+.tpfMonthlyFoot .primary{background:#155eef;border-color:#155eef;color:#fff;box-shadow:0 8px 20px #155eef2e}
+.tpfMonthlyFoot button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:1000px){#tpfMonthlyClose{padding:8px}.tpfMonthlyCard{height:98vh;width:98vw;border-radius:18px}.tpfMonthlyBody{grid-template-columns:1fr;overflow:auto}.tpfMonthlySection{min-height:520px}.tpfMonthlyAside{min-height:360px}.tpfMonthlyStats{grid-template-columns:1fr}.tpfMonthlyFoot{position:sticky;bottom:0;align-items:flex-start;flex-direction:column}.tpfMonthlyFootActions{width:100%;justify-content:flex-end}}
+@media(max-width:680px){.tpfMonthlyHead{padding:16px}.tpfMonthlyHead h2{font-size:21px}.tpfMonthlyBody{padding:10px}.tpfMonthlyTable th:nth-child(3),.tpfMonthlyTable td:nth-child(3){display:none}.tpfMonthlyFootActions{flex-direction:column}.tpfMonthlyFootActions button{width:100%}}
+`;
     document.head.appendChild(style);
   }
 
@@ -49,24 +94,37 @@
     }
   }
 
+  function selectedIds(root){
+    return [...root.querySelectorAll('[data-monthly-id]:checked')].map(item=>item.dataset.monthlyId);
+  }
+
+  function refreshSelectedSummary(root){
+    const count=selectedIds(root).length;
+    const label=$('tpfMonthlySelectedText');
+    if(label)label.textContent=count+' seleccionada(s) para pasar a Ganado';
+  }
+
   async function open(){
     addStyle();
     close();
-    // The modal must use the same fresh board data that is displayed behind it.
     await reloadSales();
     const data=board();
     const total=data.tramitado.reduce((sum,item)=>sum+Number(item.amount||0),0);
     const root=document.createElement('div');
     root.id='tpfMonthlyClose';
-    const rows=data.tramitado.map(item=>'<tr><td><input type="checkbox" data-monthly-id="'+escape(item.id)+'" checked></td><td><b>'+escape(item.client_name||item.title||'Sin nombre')+'</b><br><small>'+escape(item.title||'')+'</small></td><td>'+money(item.amount)+'</td><td>'+escape(item.expected_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay oportunidades en Tramitado para cerrar.</td></tr>';
-    const pending=data.pending.map(item=>'<li><b>'+escape(item.client_name||item.title||'Sin nombre')+'</b> · '+escape(data.stages.find(stage=>String(stage.id)===String(item.stage_id))?.name||'')+' · '+money(item.amount)+'</li>').join('')||'<li>No hay ofertas pendientes.</li>';
-    root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><h2>Cierre de mes</h2><small>Revisa las ventas tramitadas antes de cerrarlas como Ganado.</small></div><button type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b>'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><section class="tpfMonthlySection"><div class="tpfMonthlySectionHead"><b>Ventas para cerrar</b><span class="tpfMonthlyHint">Solo se moverán las que marques.</span></div><table class="tpfMonthlyTable"><thead><tr><th><input id="tpfMonthlyAll" type="checkbox" checked></th><th>Cliente / oportunidad</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+rows+'</tbody></table></section><details class="tpfMonthlyPending"><summary>Ver ofertas pendientes ('+data.pending.length+')</summary><ul>'+pending+'</ul></details><div class="tpfMonthlyWarn">Las ofertas pendientes solo se muestran: no se mueven. Las fechas previstas y las revisiones de 3 y 11 meses no se modifican.</div></div><footer class="tpfMonthlyFoot"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Marcar seleccionadas como Ganado</button></footer></section>';
+    const rows=data.tramitado.map(item=>'<tr><td><input type="checkbox" data-monthly-id="'+escape(item.id)+'" checked></td><td><b>'+escape(item.client_name||item.title||'Sin nombre')+'</b><br><small>'+escape(item.title||'')+'</small></td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay oportunidades en Tramitado para cerrar.</td></tr>';
+    const pending=data.pending.map(item=>{
+      const stage=data.stages.find(stage=>String(stage.id)===String(item.stage_id));
+      return '<li><b>'+escape(item.client_name||item.title||'Sin nombre')+'</b><small>'+escape(item.title||'')+'</small><div class="tpfMonthlyPendingMeta"><span>'+escape(stage?.name||'Sin columna')+'</span><span>'+money(item.amount)+'</span><span>'+escape(item.expected_date||'Sin fecha')+'</span></div></li>';
+    }).join('')||'<li><b>No hay ofertas pendientes.</b><small>Todo está listo para cerrar.</small></li>';
+    root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><h2>Cierre de mes</h2><small>Pantalla de control para pasar ventas tramitadas a Ganado sin tocar revisiones ni fechas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><main class="tpfMonthlyMain"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b>'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><section class="tpfMonthlySection"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><div class="tpfMonthlyHint">Marca solo las que quieras mover a Ganado.</div></div><label class="tpfMonthlyHint"><input id="tpfMonthlyAll" type="checkbox" checked> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+rows+'</tbody></table></div></section></main><aside class="tpfMonthlyAside"><section class="tpfMonthlyPendingPanel"><div class="tpfMonthlyPendingHead"><div><b>Ofertas pendientes</b><div class="tpfMonthlyHint">Se ven aquí, pero no se moverán.</div></div><span class="tpfMonthlyPendingCount">'+data.pending.length+'</span></div><ul class="tpfMonthlyPendingList">'+pending+'</ul></section><div class="tpfMonthlyInfo">Importante: el cierre solo cambia la columna de las ventas marcadas a <b>Ganado</b>. No modifica fechas previstas, revisiones de 3 meses ni revisiones de 11 meses.</div></aside></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Pasar seleccionadas a Ganado</button></div></footer></section>';
     document.body.appendChild(root);
     root.querySelectorAll('[data-close]').forEach(button=>button.onclick=close);
     const all=$('tpfMonthlyAll');
-    all.onchange=()=>root.querySelectorAll('[data-monthly-id]').forEach(item=>item.checked=all.checked);
+    all.onchange=()=>{root.querySelectorAll('[data-monthly-id]').forEach(item=>item.checked=all.checked);refreshSelectedSummary(root)};
+    root.querySelectorAll('[data-monthly-id]').forEach(item=>item.onchange=refreshSelectedSummary.bind(null,root));
     $('tpfMonthlySave').onclick=async()=>{
-      const ids=[...root.querySelectorAll('[data-monthly-id]:checked')].map(item=>item.dataset.monthlyId);
+      const ids=selectedIds(root);
       if(!ids.length)return alert('Selecciona al menos una oportunidad.');
       if(!confirm('Se moverán '+ids.length+' oportunidad(es) a Ganado. Las fechas y revisiones no cambiarán.'))return;
       const button=$('tpfMonthlySave');
