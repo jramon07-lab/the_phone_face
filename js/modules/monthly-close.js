@@ -15,52 +15,60 @@
     const style=document.createElement('style');
     style.id='tpfMonthlyCloseStyle';
     style.textContent=`
-#tpfMonthlyClose{position:fixed;inset:0;z-index:100700;background:linear-gradient(135deg,#101828e6,#111827bf);display:flex;align-items:stretch;justify-content:center;padding:8px;overflow:hidden}
-.tpfMonthlyCard{width:min(1560px,99vw);height:98vh;background:#f6f8fb;border:1px solid #ffffff2e;border-radius:18px;box-shadow:0 30px 90px #0008;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain}
-.tpfMonthlyHead{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 18px;background:linear-gradient(135deg,#0f2f68,#155eef);color:#fff}
-.tpfMonthlyHead h2{margin:0;font-size:21px;letter-spacing:-.02em}
-.tpfMonthlyHead small{display:block;color:#dbeafe;margin-top:2px}
-.tpfMonthlyHead .tpfMonthlyCloseX{width:34px;height:34px;padding:0;border:1px solid #ffffff55;border-radius:10px;background:#ffffff18;color:#fff;font-size:22px;line-height:1;cursor:pointer}
-.tpfMonthlyBody{flex:1 1 auto;min-height:0;padding:10px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.tpfMonthlyMain{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:10px;overflow:hidden}
-.tpfMonthlyStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.tpfMonthlyStat{padding:12px 14px;border:1px solid #d8e2f4;border-radius:14px;background:#fff;box-shadow:0 8px 22px #1018280a}
-.tpfMonthlyStat b{display:block;font-size:24px;line-height:1.1;color:#102a56;letter-spacing:-.02em}
-.tpfMonthlyStat small{color:#667085;font-weight:700}
-.tpfMonthlyTabs{display:flex;gap:8px;align-items:center}
-.tpfMonthlyTab{border:1px solid #d0d5dd;border-radius:999px;background:#fff;color:#344054;padding:9px 13px;font-weight:900;cursor:pointer}
-.tpfMonthlyTab.active{background:#155eef;border-color:#155eef;color:#fff;box-shadow:0 8px 18px #155eef24}
-.tpfMonthlyTabCount{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;margin-left:6px;padding:0 6px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px}
+#tpfMonthlyClose{position:fixed;inset:0;z-index:100700;background:radial-gradient(circle at 15% 0%,#2563eb40,transparent 34%),linear-gradient(135deg,#08111fef,#111827e8);display:flex;align-items:stretch;justify-content:center;padding:10px;overflow:hidden}
+.tpfMonthlyCard{width:min(1680px,99vw);height:98vh;background:#f5f7fb;border:1px solid #ffffff36;border-radius:22px;box-shadow:0 34px 110px #0009;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:contain}
+.tpfMonthlyHead{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 22px;background:linear-gradient(135deg,#0b1f44,#124fc6 58%,#2563eb);color:#fff}
+.tpfMonthlyTitleRow{display:flex;align-items:center;gap:12px}
+.tpfMonthlyBadge{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;background:#ffffff1c;border:1px solid #ffffff35;color:#dbeafe;font-size:12px;font-weight:900;letter-spacing:.03em;text-transform:uppercase}
+.tpfMonthlyHead h2{margin:0;font-size:25px;letter-spacing:-.03em}
+.tpfMonthlyHead small{display:block;color:#dbeafe;margin-top:4px;font-weight:700}
+.tpfMonthlyHead .tpfMonthlyCloseX{width:40px;height:40px;padding:0;border:1px solid #ffffff55;border-radius:13px;background:#ffffff18;color:#fff;font-size:24px;line-height:1;cursor:pointer}
+.tpfMonthlyBody{flex:1 1 auto;min-height:0;padding:14px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.tpfMonthlyMain{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.tpfMonthlyStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tpfMonthlyStat{position:relative;overflow:hidden;padding:16px 18px;border:1px solid #d9e4f6;border-radius:18px;background:linear-gradient(180deg,#fff,#f9fbff);box-shadow:0 10px 24px #1018280b}
+.tpfMonthlyStat:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:#2563eb}
+.tpfMonthlyStat:nth-child(2):before{background:#16a34a}.tpfMonthlyStat:nth-child(3):before{background:#f97316}
+.tpfMonthlyStat b{display:block;font-size:27px;line-height:1.05;color:#0f172a;letter-spacing:-.03em}
+.tpfMonthlyStat small{display:block;margin-top:5px;color:#64748b;font-weight:900;text-transform:lowercase}
+.tpfMonthlyTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:center;padding:5px;border:1px solid #dbe4f0;border-radius:18px;background:#fff;box-shadow:0 8px 20px #1018280a}
+.tpfMonthlyTab{display:flex;justify-content:center;align-items:center;gap:8px;border:0;border-radius:14px;background:transparent;color:#334155;padding:12px 14px;font-weight:950;cursor:pointer}
+.tpfMonthlyTab.active{background:#155eef;color:#fff;box-shadow:0 10px 22px #155eef2d}
+.tpfMonthlyTabCount{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:24px;padding:0 7px;border-radius:999px;background:#eef2ff;color:#1d4ed8;font-size:12px}
 .tpfMonthlyTab.active .tpfMonthlyTabCount{background:#ffffff29;color:#fff}
-.tpfMonthlySection,.tpfMonthlyInfo{border:1px solid #dfe7f3;border-radius:14px;background:#fff;box-shadow:0 8px 22px #1018280a}
+.tpfMonthlySection,.tpfMonthlyInfo{border:1px solid #dfe7f3;border-radius:18px;background:#fff;box-shadow:0 10px 24px #1018280a}
 .tpfMonthlySection{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
 .tpfMonthlyView{display:none}
 .tpfMonthlyView.active{display:flex}
-.tpfMonthlySectionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:11px 13px;border-bottom:1px solid #e8edf5;background:#fbfdff}
-.tpfMonthlySectionHead b{font-size:16px;color:#172b4d}
-.tpfMonthlyHint{font-size:12px;color:#667085;text-align:right}
-.tpfMonthlyTableWrap{flex:1 1 auto;min-height:0;max-height:calc(98vh - 230px);overflow-y:auto;overflow-x:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.tpfMonthlySectionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:15px 17px;border-bottom:1px solid #e8edf5;background:linear-gradient(180deg,#fff,#fbfdff)}
+.tpfMonthlySectionHead b{font-size:18px;color:#0f172a;letter-spacing:-.02em}
+.tpfMonthlySectionHead p{margin:3px 0 0;color:#667085;font-size:12px;font-weight:750}
+.tpfMonthlyHint{font-size:12px;color:#667085;text-align:right;font-weight:800}
+.tpfMonthlySelectAll{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #dbe4f0;border-radius:999px;background:#f8fafc;white-space:nowrap}
+.tpfMonthlyTableWrap{flex:1 1 auto;min-height:0;max-height:calc(98vh - 260px);overflow-y:auto;overflow-x:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:#fff}
 .tpfMonthlyTable{width:100%;border-collapse:separate;border-spacing:0}
-.tpfMonthlyTable th,.tpfMonthlyTable td{padding:10px 12px;border-bottom:1px solid #edf1f7;text-align:left;vertical-align:middle}
-.tpfMonthlyTable th{position:sticky;top:0;z-index:2;background:#f8fafc;font-size:11px;color:#475467;text-transform:uppercase;letter-spacing:.04em}
-.tpfMonthlyTable tr:hover td{background:#f8fbff}
-.tpfMonthlyTable b{color:#1d2939}
-.tpfMonthlyTable small{color:#667085;font-weight:700}
+.tpfMonthlyTable th,.tpfMonthlyTable td{padding:12px 15px;border-bottom:1px solid #eef2f7;text-align:left;vertical-align:middle}
+.tpfMonthlyTable th{position:sticky;top:0;z-index:2;background:#f1f5f9;font-size:11px;color:#475467;text-transform:uppercase;letter-spacing:.055em}
+.tpfMonthlyTable tr:nth-child(even) td{background:#fcfdff}
+.tpfMonthlyTable tr:hover td{background:#eff6ff}
+.tpfMonthlyTable input[type="checkbox"]{width:16px;height:16px;accent-color:#155eef}
+.tpfMonthlyTable b{color:#0f172a;font-size:14px}
+.tpfMonthlyTable small{color:#64748b;font-weight:850}
 .tpfMonthlyMeta{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:4px;color:#667085;font-size:12px;font-weight:700}
-.tpfMonthlyMeta span{white-space:nowrap}
-.tpfMonthlyParty{display:block;margin-top:4px;color:#6d28d9;font-size:12px;font-weight:800}
-.tpfMonthlyAmount{font-weight:800;color:#102a56;white-space:nowrap}
-.tpfMonthlyDate{white-space:nowrap;color:#344054}
+.tpfMonthlyMeta span{white-space:nowrap;display:inline-flex;align-items:center;padding:2px 6px;border-radius:999px;background:#f1f5f9;color:#475569}
+.tpfMonthlyParty{display:inline-flex;margin-top:6px;padding:3px 7px;border-radius:999px;background:#f5f3ff;color:#6d28d9;font-size:12px;font-weight:900}
+.tpfMonthlyAmount{font-weight:950;color:#0f2f68;white-space:nowrap}
+.tpfMonthlyDate{white-space:nowrap;color:#334155;font-weight:850}
 .tpfMonthlyEmpty{padding:26px 16px;color:#667085;text-align:center}
-.tpfMonthlyInfo{padding:10px 12px;background:#fffbeb;color:#7a2e0e;border-color:#fedf89;font-size:12px;line-height:1.32}
-.tpfMonthlyFoot{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid #dfe7f3;background:#fff}
-.tpfMonthlyFootText{color:#475467;font-size:13px}
+.tpfMonthlyInfo{padding:8px 11px;background:#fff7ed;color:#9a3412;border-color:#fed7aa;font-size:12px;line-height:1.32;font-weight:800}
+.tpfMonthlyFoot{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 16px;border-top:1px solid #dfe7f3;background:#fff}
+.tpfMonthlyFootText{color:#475467;font-size:13px;font-weight:800}
 .tpfMonthlyFootActions{display:flex;gap:10px;align-items:center}
-.tpfMonthlyFoot button{border:1px solid #d0d5dd;border-radius:11px;background:#fff;padding:10px 14px;font-weight:800;cursor:pointer}
-.tpfMonthlyFoot .primary{background:#155eef;border-color:#155eef;color:#fff;box-shadow:0 8px 20px #155eef2e}
+.tpfMonthlyFoot button{border:1px solid #d0d5dd;border-radius:12px;background:#fff;padding:11px 16px;font-weight:900;cursor:pointer}
+.tpfMonthlyFoot .primary{background:#155eef;border-color:#155eef;color:#fff;box-shadow:0 10px 22px #155eef33}
 .tpfMonthlyFoot button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:1180px){.tpfMonthlyTable th:nth-child(4),.tpfMonthlyTable td:nth-child(4){display:none}}
-@media(max-height:760px){.tpfMonthlyHead{display:none}.tpfMonthlyBody{padding-top:8px}.tpfMonthlyTabs{gap:6px}.tpfMonthlyTab{padding:7px 11px}.tpfMonthlyTable th,.tpfMonthlyTable td{padding-top:8px;padding-bottom:8px}.tpfMonthlyStat{padding:7px 10px}.tpfMonthlyStat b{font-size:18px}.tpfMonthlyTableWrap{max-height:calc(98vh - 180px)}}
+@media(max-height:760px){.tpfMonthlyHead{padding:10px 16px}.tpfMonthlyHead h2{font-size:20px}.tpfMonthlyHead small{display:none}.tpfMonthlyBody{padding:10px}.tpfMonthlyTabs{gap:6px}.tpfMonthlyTab{padding:8px 11px}.tpfMonthlyTable th,.tpfMonthlyTable td{padding-top:8px;padding-bottom:8px}.tpfMonthlyStat{padding:9px 12px}.tpfMonthlyStat b{font-size:20px}.tpfMonthlyTableWrap{max-height:calc(98vh - 206px)}}
 @media(max-width:1000px){#tpfMonthlyClose{padding:8px}.tpfMonthlyCard{height:98vh;width:98vw;border-radius:18px}.tpfMonthlyStats{grid-template-columns:1fr}.tpfMonthlyTabs{flex-wrap:wrap}.tpfMonthlyFoot{align-items:flex-start;flex-direction:column}.tpfMonthlyFootActions{width:100%;justify-content:flex-end}}
 @media(max-width:680px){.tpfMonthlyHead{padding:16px}.tpfMonthlyHead h2{font-size:21px}.tpfMonthlyBody{padding:10px}.tpfMonthlyTable th:nth-child(3),.tpfMonthlyTable td:nth-child(3){display:none}.tpfMonthlyFootActions{flex-direction:column}.tpfMonthlyFootActions button{width:100%}}
 `;
@@ -163,7 +171,7 @@
       const stage=data.stages.find(stage=>String(stage.id)===String(item.stage_id));
       return '<tr><td>'+identityCell(item,contacts)+'</td><td>'+escape(stage?.name||'Sin columna')+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'Sin fecha')+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay ofertas pendientes.</td></tr>';
-    root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><h2>Cierre de mes</h2><small>Pantalla de control para pasar ventas tramitadas a Ganado sin tocar revisiones ni fechas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b>'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><div class="tpfMonthlyTabs" role="tablist"><button class="tpfMonthlyTab active" type="button" data-monthly-view="sales">Ventas para cerrar <span class="tpfMonthlyTabCount">'+data.tramitado.length+'</span></button><button class="tpfMonthlyTab" type="button" data-monthly-view="pending">Ofertas pendientes <span class="tpfMonthlyTabCount">'+data.pending.length+'</span></button></div><main class="tpfMonthlyMain"><section class="tpfMonthlySection tpfMonthlyView active" data-monthly-panel="sales"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><div class="tpfMonthlyHint">Marca solo las que quieras mover a Ganado.</div></div><label class="tpfMonthlyHint"><input id="tpfMonthlyAll" type="checkbox" checked> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+rows+'</tbody></table></div></section><section class="tpfMonthlySection tpfMonthlyView" data-monthly-panel="pending"><div class="tpfMonthlySectionHead"><div><b>Ofertas pendientes</b><div class="tpfMonthlyHint">Solo se muestran para revisar. No se moverán al cerrar.</div></div><div class="tpfMonthlyInfo">No se modifican fechas ni revisiones.</div></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th>Cliente / oportunidad</th><th>Columna</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+pendingRows+'</tbody></table></div></section></main></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Pasar seleccionadas a Ganado</button></div></footer></section>';
+    root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><div class="tpfMonthlyTitleRow"><span class="tpfMonthlyBadge">Control mensual</span><h2>Cierre de mes</h2></div><small>Pasa solo las ventas tramitadas a Ganado. Las ofertas pendientes, revisiones y fechas quedan intactas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b>'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><div class="tpfMonthlyTabs" role="tablist"><button class="tpfMonthlyTab active" type="button" data-monthly-view="sales">Ventas para cerrar <span class="tpfMonthlyTabCount">'+data.tramitado.length+'</span></button><button class="tpfMonthlyTab" type="button" data-monthly-view="pending">Ofertas pendientes <span class="tpfMonthlyTabCount">'+data.pending.length+'</span></button></div><main class="tpfMonthlyMain"><section class="tpfMonthlySection tpfMonthlyView active" data-monthly-panel="sales"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><p>Selecciona únicamente las ventas que quieres pasar a Ganado.</p></div><label class="tpfMonthlySelectAll"><input id="tpfMonthlyAll" type="checkbox" checked> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+rows+'</tbody></table></div></section><section class="tpfMonthlySection tpfMonthlyView" data-monthly-panel="pending"><div class="tpfMonthlySectionHead"><div><b>Ofertas pendientes</b><p>Vista de control. Se ven aquí, pero no se moverán al cerrar el mes.</p></div><div class="tpfMonthlyInfo">Fechas previstas y revisiones de 3 y 11 meses no se modifican.</div></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th>Cliente / oportunidad</th><th>Columna</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+pendingRows+'</tbody></table></div></section></main></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Pasar seleccionadas a Ganado</button></div></footer></section>';
     document.body.appendChild(root);
     const activeScroll=()=>root.querySelector('.tpfMonthlyView.active .tpfMonthlyTableWrap');
     root.addEventListener('wheel',event=>{
