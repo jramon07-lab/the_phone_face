@@ -52,13 +52,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260919-home-reference-1';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260919-home-reference-2';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-home-reference-1';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-home-reference-2';
   v.innerHTML=`
   <header class="tdHero">
     <div><span id="tdGreeting" class="tdGreeting">Hola</span><h1>Hoy comercial</h1><p>Tu resumen diario para cerrar más oportunidades.</p></div>
@@ -153,9 +153,9 @@ function commercialGroups(d,map,pending){
   const processing=active.filter(o=>/pendiente.*tramitar|^tramitad/i.test(map.get(String(o.stage_id))?.name||'')).sort(byDate);
   const toProcess=processing.filter(o=>/pendiente/i.test(map.get(String(o.stage_id))?.name||'')).length;
   return [
-    {key:'calls',title:'llamadas pendientes',caption:todayCalls+' para hoy · '+(calls.length-todayCalls)+' atrasadas',icon:'phone',tone:'blue',rows:calls.map(t=>taskRow(t,d.today))},
+    {key:'calls',title:'llamadas pendientes',caption:todayCalls+' para hoy · '+(calls.length-todayCalls)+(calls.length-todayCalls===1?' atrasada':' atrasadas'),icon:'phone',tone:'blue',rows:calls.map(t=>taskRow(t,d.today))},
     {key:'followup',title:'ofertas a seguir',caption:'Oportunidades en Seguimiento',icon:'file',tone:'amber',rows:followup.map(o=>opportunityRow(o,map,d.today))},
-    {key:'processing',title:'tramitaciones',caption:toProcess+' por tramitar · '+(processing.length-toProcess)+' tramitadas',icon:'checkCircle',tone:'green',rows:processing.map(o=>opportunityRow(o,map,d.today))}
+    {key:'processing',title:'tramitaciones',caption:toProcess+' por tramitar · '+(processing.length-toProcess)+(processing.length-toProcess===1?' tramitada':' tramitadas'),icon:'checkCircle',tone:'green',rows:processing.map(o=>opportunityRow(o,map,d.today))}
   ];
 }
 
@@ -188,7 +188,7 @@ function renderPriority(d,map,pending){
     <td><button class="tdClientButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}"><span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}</small></span></button></td>
     <td><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button></td>
     <td><span class="tdStatusPill ${x.tone}">${icon(x.stage==='Llamar'?'phone':x.tone==='green'?'checkCircle':x.tone==='amber'?'file':'refresh')}<span>${esc(x.stage)}</span></span></td>
-    <td class="tdLastActivity">${x.updated?esc(localDate(x.updated))+'<small>'+esc(localTime(x.updated))+'</small>':'—'}</td>
+    <td class="tdLastActivity">${x.updated?esc(localDate(localDay(x.updated)))+'<small>'+esc(localTime(x.updated))+'</small>':'—'}</td>
     <td><span class="tdNextAction ${x.expired?'isLate':''}">${icon('clock')}<span>${x.dateTime&&x.date===d.today?esc(localTime(x.when)):esc(localDate(x.date))}${x.expired?'<small>Vencida</small>':''}</span></span></td>
     <td class="tdMenuCell"><button class="tdDots" data-dots="1" aria-label="Acciones de ${esc(x.name)}">${icon('moreVertical')}</button><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
   </tr>`).join('')}</tbody></table>`:`<div class="tdEmpty">${icon('checkCircle')}<strong>${group?'No hay '+esc(group.title)+'.':'Todo al día.'}</strong><span>${group?'Puedes consultar los otros indicadores.':'No hay gestiones vencidas ni pendientes para hoy.'}</span></div>`;

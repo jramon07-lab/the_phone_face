@@ -22,9 +22,9 @@ const pending=[
 {id:'today-task',agenda_type:'Tarea',starts_at:'2026-09-19T10:00:00+02:00'}];
 const result=groups(data,stages,pending);
 assert.deepEqual(Array.from(result,g=>[g.key,g.rows.length]),[['calls',3],['followup',1],['processing',2]]);
-assert.equal(result[0].caption,'2 para hoy · 1 atrasadas','Madrid date boundary and overdue calls must be accurate');
+assert.equal(result[0].caption,'2 para hoy · 1 atrasada','Madrid date boundary and overdue calls must be accurate');
 assert.equal(result[1].rows[0].id,'follow','overdue followups stay visible');
-assert.equal(result[2].caption,'1 por tramitar · 1 tramitadas');
+assert.equal(result[2].caption,'1 por tramitar · 1 tramitada');
 assert.equal(groups({...data,opps:[]},stages,[]).every(g=>g.rows.length===0),true);
 const priorities=priorityRows(data,stages,pending);
 assert.equal(priorities.length,6,'all due calls, tasks and open opportunities appear once');
@@ -34,8 +34,8 @@ assert.ok(!source.includes('Tu día, de un vistazo.')&&!source.includes('Cliente
 assert.ok(source.includes('tdPriorityTable')&&source.includes('tdPrevPage')&&source.includes('tdNextPage'),'lists remain usable beyond the first five rows');
 assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
 assert.ok(!html.includes('dashboard-home-pro.js'));
-assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260919-home-reference-1'"));
-assert.ok(html.includes('runtime.js?v=20260919-home-reference-1'));
+assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260919-home-reference-2'"));
+assert.ok(html.includes('runtime.js?v=20260919-home-reference-2'));
 assert.ok(css.includes('body:has(#app:not(.hidden) #view-dashboard.tpfDashPro:not(.hidden)) .referenceSidebar'));
 for(const line of css.split('\n').filter(l=>l.includes('.referenceSidebar')||l.includes('.referenceNav')||l.includes('.referenceWorkspace')))assert.ok(line.includes('body:has(#app:not(.hidden) #view-dashboard.tpfDashPro:not(.hidden))'),'shell styling applies only to the visible authenticated Inicio');
 assert.equal((source.match(/sb\.from\(/g)||[]).length,5,'no new database reads');
