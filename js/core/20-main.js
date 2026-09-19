@@ -787,14 +787,23 @@ function selectedAgendaReminderMinutes(){
 let googleContactsState={connected:false,email:"",canManage:false,loading:true,error:""},googleContactsStatusRetries=0;
 function googleContactsConnected(){return !!googleContactsState.connected}
 function googleContactsEmail(){return String(googleContactsState.email||"").trim()}
-async function googleContactsHeaders(){const {data}=await sb.auth.getSession(),token=data?.session?.access_token;if(!token)throw new Error("Inicia sesión en el CRM.");return {"Authorization":"Bearer "+token,"Content-Type":"application/json"}}
+function googleContactsSessionError(){return /inicia sesi[oó]n|sesion|sesi[oó]n|token/i.test(String(googleContactsState.error||""))}
+async function googleContactsHeaders(){
+  let sessionResult=await sb.auth.getSession(),token=sessionResult?.data?.session?.access_token;
+  if(!token&&sb.auth.refreshSession){
+    try{sessionResult=await sb.auth.refreshSession();token=sessionResult?.data?.session?.access_token}catch(_){}
+  }
+  if(!token)throw new Error("Sesion local caducada. Sal y vuelve a entrar en este PC; Google Contacts sigue conectado al CRM.");
+  return {"Authorization":"Bearer "+token,"Content-Type":"application/json"}
+}
 async function googleContactsServer(action,options={}){const res=await fetch("/api/google-contacts?action="+encodeURIComponent(action),{...options,headers:{...(await googleContactsHeaders()),...(options.headers||{})}}),body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||"No se pudo conectar con Google Contacts.");return body}
 async function loadGoogleContactsStatus(){try{const status=await googleContactsServer("status");googleContactsState={connected:!!status.connected,email:status.email||"",canManage:!!status.canManage,loading:false,error:""};googleContactsStatusRetries=0}catch(error){googleContactsState={connected:false,email:"",canManage:false,loading:false,error:String(error?.message||"No se pudo comprobar la conexión.")};if(googleContactsStatusRetries<2){googleContactsStatusRetries++;setTimeout(loadGoogleContactsStatus,1500)}}updateGoogleContactsUI();window.dispatchEvent(new CustomEvent("tpf:google-contacts-changed"));return googleContactsState}
 
 function updateGoogleContactsUI(){
   const connected=googleContactsConnected();
-  if($("googleContactsStatus"))$("googleContactsStatus").textContent=googleContactsState.loading?"Comprobando…":connected?("Conectado en los dos PCs"+(googleContactsEmail()?" · "+googleContactsEmail():"")):(googleContactsState.error?"No se pudo comprobar: "+googleContactsState.error:"No conectado");
-  if($("connectGoogleContacts"))$("connectGoogleContacts").classList.toggle("hidden",connected);
+  const localSessionIssue=googleContactsSessionError();
+  if($("googleContactsStatus"))$("googleContactsStatus").textContent=googleContactsState.loading?"Comprobando...":connected?("Conectado en los dos PCs"+(googleContactsEmail()?" · "+googleContactsEmail():"")):localSessionIssue?"Sesion local caducada en este PC. Google Contacts sigue conectado al CRM. Pulsa Salir y entra de nuevo.":(googleContactsState.error?"No se pudo comprobar: "+googleContactsState.error:"No conectado");
+  if($("connectGoogleContacts"))$("connectGoogleContacts").classList.toggle("hidden",connected||localSessionIssue);
   if($("renewGoogleContacts"))$("renewGoogleContacts").classList.toggle("hidden",!connected||!googleContactsState.canManage);
   if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").classList.toggle("hidden",!connected||!googleContactsState.canManage);
 }
@@ -810,6 +819,7 @@ if($("connectGoogleContacts"))$("connectGoogleContacts").onclick=()=>connectGoog
 if($("renewGoogleContacts"))$("renewGoogleContacts").onclick=()=>connectGoogleContacts(true).catch(e=>alert(e.message));
 if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").onclick=()=>disconnectGoogleContacts().catch(e=>alert(e.message));
 window.addEventListener("load",loadGoogleContactsStatus);
+if(sb?.auth?.onAuthStateChange)sb.auth.onAuthStateChange((event,session)=>{if(session&&/SIGNED_IN|TOKEN_REFRESHED|INITIAL_SESSION/.test(event))setTimeout(loadGoogleContactsStatus,0)});
 
 function normGooglePhone(v){return String(v||"").replace(/\D/g,"").replace(/^34(?=\d{9}$)/,"");}
 async function googleApi(path,options={}){
