@@ -141,15 +141,18 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
         // la cola real de avatares, no el motor de maquetación del runner.
         Object.defineProperty(box,'getBoundingClientRect',{value:()=>({top:0,bottom:500,left:0,right:320,width:320,height:500})});
         for(let i=0;i<16;i++){
+          // La cola real solo consulta identificadores completos de WhatsApp.
+          // Usamos chats sintéticos válidos para medir la cola sin tocar GREEN-API.
+          const chatId=String(6000000000+i)+'@c.us';
           const el=document.createElement('span');
-          el.dataset.waAvatarId='fixture-'+i;
+          el.dataset.waAvatarId=chatId;
           el.style.cssText='display:block;height:20px';
           Object.defineProperty(el,'getBoundingClientRect',{value:()=>({top:i*20,bottom:(i+1)*20,left:0,right:20,width:20,height:20})});
           box.appendChild(el);
         }
       });
       await fixture.addScriptTag({path:require('node:path').join(process.cwd(),'js/modules/whatsapp-performance-max.js')});
-      await fixture.evaluate(()=>window.hydrateWaAvatars(Array.from({length:16},(_,i)=>'fixture-'+i)));
+      await fixture.evaluate(()=>window.hydrateWaAvatars(Array.from({length:16},(_,i)=>String(6000000000+i)+'@c.us')));
       await expect(fixture.locator('[data-loaded="true"]')).toHaveCount(16,{timeout:10000});
     } finally { await fixture.close(); }
   });
