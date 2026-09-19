@@ -85,13 +85,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260920-sales-cockpit-8';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260920-sales-cockpit-9';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-sales-cockpit-8';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-sales-cockpit-9';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdDate">${icon('calendar')}<span id="tdToday"></span></div><div class="tdCommandActions"><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
@@ -147,7 +147,22 @@ function bind(){
   $('tdNextPage').onclick=()=>{D.page++;renderHomePanels()};
   $('view-dashboard').addEventListener('click',handleClick);
   $('view-dashboard').addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'))});
-  document.addEventListener('scroll',()=>document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden')),true);
+  document.addEventListener('scroll',repositionRowMenus,true);
+  window.addEventListener('resize',repositionRowMenus);
+  document.addEventListener('click',e=>{if(!e.target?.closest?.('#view-dashboard [data-dots], #view-dashboard .tdRowMenu'))document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'))},true);
+}
+
+function positionRowMenu(menu,dots){
+  const anchor=dots.getBoundingClientRect(),box=menu.getBoundingClientRect();
+  if(anchor.bottom<=0||anchor.top>=window.innerHeight||anchor.right<=0||anchor.left>=window.innerWidth){menu.classList.add('hidden');return}
+  menu.style.left=Math.max(8,Math.min(anchor.right-box.width,window.innerWidth-box.width-8))+'px';
+  menu.style.top=Math.max(8,Math.min(window.innerHeight-box.height-8,anchor.bottom+box.height+8<=window.innerHeight?anchor.bottom+5:anchor.top-box.height-5))+'px';
+}
+function repositionRowMenus(){
+  document.querySelectorAll('#view-dashboard .tdRowMenu:not(.hidden)').forEach(menu=>{
+    const dots=menu.closest('tr')?.querySelector('[data-dots]');
+    if(dots)positionRowMenu(menu,dots);else menu.classList.add('hidden');
+  });
 }
 
 function handleClick(e){
@@ -158,7 +173,7 @@ function handleClick(e){
   const r=el.closest('[data-route]')?.dataset.route;
   if(r){runAction(()=>navigate(r));return}
   const dots=el.closest('[data-dots]');
-  if(dots){e.stopPropagation();const menu=dots.closest('tr')?.querySelector('.tdRowMenu'),wasOpen=menu&&!menu.classList.contains('hidden');document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));if(menu&&!wasOpen){menu.classList.remove('hidden');const anchor=dots.getBoundingClientRect(),box=menu.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(anchor.right-box.width,window.innerWidth-box.width-8))+'px';menu.style.top=Math.max(8,anchor.bottom+box.height+8<=window.innerHeight?anchor.bottom+5:anchor.top-box.height-5)+'px'}return}
+  if(dots){e.stopPropagation();const menu=dots.closest('tr')?.querySelector('.tdRowMenu'),wasOpen=menu&&!menu.classList.contains('hidden');document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));if(menu&&!wasOpen){menu.classList.remove('hidden');positionRowMenu(menu,dots)}return}
   const act=el.closest('[data-action]');if(act){e.stopPropagation();document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));runAction(()=>action(act.dataset.action,act.dataset.type,act.dataset.id));return}
   const row=el.closest('[data-open]');if(row)runAction(()=>openItem(row.dataset.type,row.dataset.id));
 }

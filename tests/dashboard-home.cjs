@@ -34,8 +34,8 @@ assert.ok(!source.includes('Tu día, de un vistazo.')&&!source.includes('Cliente
 assert.ok(source.includes('tdPriorityTable')&&source.includes('tdPrevPage')&&source.includes('tdNextPage'),'lists remain usable beyond the first five rows');
 assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
 assert.ok(!html.includes('dashboard-home-pro.js'));
-assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260920-sales-cockpit-8'"));
-assert.ok(html.includes('runtime.js?v=20260920-sales-cockpit-8'));
+assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260920-sales-cockpit-9'"));
+assert.ok(html.includes('runtime.js?v=20260920-sales-cockpit-9'));
 assert.ok(!/\.referenceSidebar|\.referenceNav|\.referenceWorkspace/.test(css),'Inicio must not restyle the shared CRM navigation');
 assert.ok(!source.includes('scrollIntoView'),'filters never force the page to scroll');
 assert.ok(!source.includes('tdPipelineRows'),'do not duplicate and truncate the worklist into previews');

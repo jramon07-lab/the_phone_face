@@ -40,7 +40,7 @@ async function login(page) {
 async function dashboard(page) {
   await page.locator('.nav[data-view="dashboard"]').first().click();
   await expect(page.locator(HOME)).toBeVisible({ timeout: 20000 });
-  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260920-sales-cockpit-8');
+  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260920-sales-cockpit-9');
   await expect(page.locator(`${HOME} #mOppTotal`)).toHaveText(/^\d+$/, { timeout: 20000 });
   await expect(page.locator(`${HOME} #dashRefresh`)).toBeEnabled({ timeout: 20000 });
   await expect(page.locator(`${HOME} #dashAlerts`)).not.toBeEmpty();
@@ -336,7 +336,7 @@ test('Inicio: oportunidad y menú abren/editan con caché fría y cierran sin gu
   await closeOpportunityEditor(page, true);
   covered('Editar oportunidad desde tres puntos sin precargar Ventas');
   await dashboard(page);
-  await openAndReturn(page, await findPriorityType(page, 'opportunity'), 'Abrir oportunidad pulsando cliente');
+  await openAndReturn(page, await findPriorityType(page, 'opportunity'), 'Abrir oportunidad pulsando título');
   const menuRow = (await findPriorityType(page, 'opportunity')).locator('xpath=ancestor::tr');
   await menuRow.locator('[data-dots]').click();
   await openAndReturn(page, menuRow.locator('[data-action="open"]'), 'Abrir oportunidad desde tres puntos');
