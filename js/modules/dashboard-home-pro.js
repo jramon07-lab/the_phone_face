@@ -1,6 +1,5 @@
 (function(){
 'use strict';
-const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const number=id=>Number(String($(id)?.textContent||'0').replace(/[^0-9]/g,''))||0;
 const stageCount=name=>{const item=[...document.querySelectorAll('#dashFunnel > *')].find(x=>String(x.textContent||'').toLowerCase().includes(name));return Number(String(item?.textContent||'0').match(/\d+(?!.*\d)/)?.[0]||0)};
@@ -39,5 +38,5 @@ function install(){
  new MutationObserver(later).observe(root,{childList:true,subtree:true,characterData:true});
  setTimeout(refresh,350);setTimeout(refresh,1200);
 }
-M.register('dashboard-home-pro',{install});
+install();
 })();
