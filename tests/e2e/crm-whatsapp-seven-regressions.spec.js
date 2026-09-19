@@ -132,7 +132,17 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
         window.waApi=async(_action,{chatId})=>({urlAvatar:'data:image/svg+xml;base64,PHN2Zy8+'});
         window.waApplyAvatar=(element,url)=>{element.dataset.loaded=String(!!url);};
         const box=document.getElementById('waLiveChats');
-        for(let i=0;i<16;i++){const el=document.createElement('span');el.dataset.waAvatarId='fixture-'+i;el.style.cssText='display:block;height:20px';box.appendChild(el);}
+        // El DOM aislado de Chromium no siempre calcula cajas de una página
+        // creada con setContent. Declaramos una geometría visible para probar
+        // la cola real de avatares, no el motor de maquetación del runner.
+        Object.defineProperty(box,'getBoundingClientRect',{value:()=>({top:0,bottom:500,left:0,right:320,width:320,height:500})});
+        for(let i=0;i<16;i++){
+          const el=document.createElement('span');
+          el.dataset.waAvatarId='fixture-'+i;
+          el.style.cssText='display:block;height:20px';
+          Object.defineProperty(el,'getBoundingClientRect',{value:()=>({top:i*20,bottom:(i+1)*20,left:0,right:20,width:20,height:20})});
+          box.appendChild(el);
+        }
       });
       await fixture.addScriptTag({path:require('node:path').join(process.cwd(),'js/modules/whatsapp-performance-max.js')});
       await fixture.evaluate(()=>window.hydrateWaAvatars(Array.from({length:16},(_,i)=>'fixture-'+i)));
