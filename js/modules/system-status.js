@@ -8,7 +8,8 @@ const MODULE_ALIASES={'contact-navigation':['contact-open','contact-actions'],'a
 // esta vista solo errores recientes: los resueltos se guardan aparte en el
 // registro central y no deben mantener un indicador rojo indefinidamente.
 const RECENT_BROWSER_ERROR_MS=15*60*1000;
-function errors(){try{const rows=JSON.parse(localStorage.getItem('tpf_system_errors_v1')||'[]');const now=Date.now();const fresh=(Array.isArray(rows)?rows:[]).filter(row=>{const at=new Date(row?.at||row?.created_at||0).getTime();return !Number.isFinite(at)||now-at<=RECENT_BROWSER_ERROR_MS});if(fresh.length!==(Array.isArray(rows)?rows.length:0))localStorage.setItem('tpf_system_errors_v1',JSON.stringify(fresh));return fresh}catch(_){return[]}}
+function nonBlockingGoogleConflict(item){const type=String(item?.type||'').toLowerCase(),text=`${String(item?.message||'')} ${String(item?.detail||'')}`.toLowerCase();return type.includes('409')&&text.includes('/api/google-contacts?action=proxy')}
+function errors(){try{const rows=JSON.parse(localStorage.getItem('tpf_system_errors_v1')||'[]');const now=Date.now();const fresh=(Array.isArray(rows)?rows:[]).filter(row=>{if(nonBlockingGoogleConflict(row))return false;const at=new Date(row?.at||row?.created_at||0).getTime();return !Number.isFinite(at)||now-at<=RECENT_BROWSER_ERROR_MS});if(fresh.length!==(Array.isArray(rows)?rows.length:0))localStorage.setItem('tpf_system_errors_v1',JSON.stringify(fresh));return fresh}catch(_){return[]}}
 function conflicts(){try{return typeof M.conflicts==='function'?M.conflicts()||[]:[]}catch(_){return[]}}
 function external(){try{return JSON.parse(localStorage.getItem('tpf_external_checks_v1')||'{}')}catch(_){return{}}}
 function saveExternal(x){try{localStorage.setItem('tpf_external_checks_v1',JSON.stringify(x||{}))}catch(_){}}
