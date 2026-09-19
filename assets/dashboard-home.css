@@ -92,7 +92,7 @@
 #view-dashboard.tpfDashPro .tdFilterBar{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;margin-bottom:10px;background:#edf5ff;border-radius:7px;font-size:12px}
 #view-dashboard.tpfDashPro .tdTableFooter{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #edf1f7;padding-top:10px;margin-top:10px;color:#7286a3;font-size:10px}
 #view-dashboard.tpfDashPro .tdTableFooter>div{display:flex;align-items:center;gap:8px}
-#view-dashboard.tpfDashPro .tdPageButton{width:26px;height:27px;border:1px solid #d8e4f4;border-radius:5px;background:#fff;color:#30619f;font-size:18px}
+#view-dashboard.tpfDashPro .tdPageButton{display:grid;place-items:center;width:26px;height:27px;padding:0;line-height:1;border:1px solid #d8e4f4;border-radius:5px;background:#fff;color:#30619f;font-size:18px}
 #view-dashboard.tpfDashPro .tdPageButton:disabled{color:#b9c6d8;background:#fafcfe;cursor:default}
 #view-dashboard.tpfDashPro .tdUpcomingCard{display:flex;flex-direction:column;padding:21px 15px}
 #view-dashboard.tpfDashPro .tdUpcomingCard .tdTitleBlock{gap:10px}

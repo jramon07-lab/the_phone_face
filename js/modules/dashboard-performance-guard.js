@@ -52,13 +52,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260919-home-reference-2';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260919-home-reference-3';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-home-reference-2';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-home-reference-3';
   v.innerHTML=`
   <header class="tdHero">
     <div><span id="tdGreeting" class="tdGreeting">Hola</span><h1>Hoy comercial</h1><p>Tu resumen diario para cerrar más oportunidades.</p></div>
