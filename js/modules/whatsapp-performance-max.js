@@ -120,7 +120,10 @@ function waPerformanceScheduleAvatarRetry(chatId,state){
   state.cooldownUntil=Date.now()+60000;
 }
 async function waPerformanceLoadAvatar(chatId){
-  const id=String(chatId||'');if(!id)return;
+  // La cola puede conservar una fila antigua tras un refresco. GREEN solo
+  // acepta chats individuales completos; nunca se consulta con "undefined",
+  // un teléfono suelto o un id de grupo.
+  const id=String(chatId||'');if(!/^\d{10,15}@c\.us$/.test(id))return;
   const state=waAvatarRetry.get(id)||{attempts:0,cooldownUntil:0,timer:0,loading:false,resolvedEmpty:false};
   waAvatarRetry.set(id,state);
   if(state.loading||state.resolvedEmpty||Date.now()<Number(state.cooldownUntil||0))return;
