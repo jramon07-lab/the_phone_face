@@ -316,3 +316,60 @@
 #view-dashboard.tpfDashPro .tdBusinessDetails{margin-top:4px}
 @media(max-width:1200px){#view-dashboard.tpfDashPro .tdSalesHero{grid-template-columns:1fr;padding:24px}#view-dashboard.tpfDashPro .tdHeroFigures{justify-content:flex-start!important}#view-dashboard.tpfDashPro .tdCockpitGrid{grid-template-columns:1fr!important}#view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:1fr 1fr}#view-dashboard.tpfDashPro .tdPipelineRows{min-height:230px}}
 @media(max-width:800px){#view-dashboard.tpfDashPro .tdSalesHero{padding:22px 18px}#view-dashboard.tpfDashPro .tdHeroFigures{flex-wrap:wrap;gap:14px!important}#view-dashboard.tpfDashPro .tdHeroNew{width:100%}#view-dashboard.tpfDashPro .tdPipelineGrid{grid-template-columns:1fr!important}#view-dashboard.tpfDashPro .tdPipelineRows{min-height:auto}#view-dashboard.tpfDashPro .tdCockpitGrid{grid-template-columns:1fr!important}#view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:1fr!important}#view-dashboard.tpfDashPro .tdSalesHero h1{font-size:38px!important}}
+
+/* Premium command centre — visual rebuild, no business logic changed. */
+#view-dashboard.tpfDashPro{background:linear-gradient(180deg,#f2f6ff 0,#f7f9fd 48%,#eef3fb 100%)!important}
+#view-dashboard.tpfDashPro .tdSalesHero{grid-template-columns:minmax(360px,1.25fr) minmax(420px,.95fr);min-height:260px;padding:34px 40px;border-radius:24px;background:radial-gradient(circle at 86% 10%,#58c6ff 0,#1d73f3 25%,#133d9d 62%,#0d235d 100%);box-shadow:0 24px 55px #0f398a3d}
+#view-dashboard.tpfDashPro .tdSalesHero:before{content:"";position:absolute;inset:auto -50px -130px auto;width:390px;height:390px;border-radius:50%;background:radial-gradient(circle,#ffffff28 0 2px,transparent 3px);background-size:20px 20px;opacity:.7}
+#view-dashboard.tpfDashPro .tdSalesHero:after{width:390px;height:390px;right:4%;top:-185px;border-width:54px;border-color:#fff1}
+#view-dashboard.tpfDashPro .tdSalesHero h1{font-size:clamp(43px,4vw,62px);margin-bottom:12px}
+#view-dashboard.tpfDashPro .tdSalesHero p{max-width:480px;font-size:17px;line-height:1.55;color:#e3efff}
+#view-dashboard.tpfDashPro .tdHeroQuick{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+#view-dashboard.tpfDashPro .tdHeroGhost{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:9px 13px;border:1px solid #ffffff55;border-radius:10px;background:#ffffff12;color:#fff;font-size:12px;font-weight:700;backdrop-filter:blur(8px)}
+#view-dashboard.tpfDashPro .tdHeroGhost .tdIcon{width:16px;height:16px}
+#view-dashboard.tpfDashPro .tdHeroNew{min-height:42px;background:#fff;border:0;border-radius:10px;padding:9px 14px;box-shadow:0 9px 22px #06183e44}
+#view-dashboard.tpfDashPro .tdHeroFigures{display:grid;grid-template-columns:1fr 108px 1fr;align-items:center;gap:22px;padding:20px 0 20px 28px;border-left:1px solid #ffffff3d}
+#view-dashboard.tpfDashPro .tdHeroNumber,.tpfDashPro .tdHeroGoal{padding:4px 0}
+#view-dashboard.tpfDashPro .tdHeroFigures>div>b{font-size:37px}
+#view-dashboard.tpfDashPro .tdGoalRing{width:106px;height:106px;flex-basis:106px;border-width:10px;box-shadow:0 0 0 7px #ffffff16,inset 0 0 20px #001b5233}
+#view-dashboard.tpfDashPro .tdHeroFigures .tdGoalRing>b{font-size:23px}
+#view-dashboard.tpfDashPro .tdPulseGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
+#view-dashboard.tpfDashPro .tdPulse{display:grid;grid-template-columns:46px minmax(0,1fr) 18px;align-items:center;gap:11px;min-height:108px;padding:17px 16px;border:1px solid #dce6f4;border-radius:18px;background:#fff;color:#142d51;text-align:left;box-shadow:0 10px 24px #153e6d0c;transition:transform .16s,box-shadow .16s}
+#view-dashboard.tpfDashPro .tdPulse:hover{transform:translateY(-3px);box-shadow:0 16px 28px #153e6d1c}
+#view-dashboard.tpfDashPro .tdPulseIcon{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#e4f0ff;color:#1474ec}
+#view-dashboard.tpfDashPro .tdPulse.violet .tdPulseIcon{background:#eee7ff;color:#7145d7}
+#view-dashboard.tpfDashPro .tdPulse.amber .tdPulseIcon{background:#fff0d4;color:#e58a00}
+#view-dashboard.tpfDashPro .tdPulse.green .tdPulseIcon{background:#def8ea;color:#199a52}
+#view-dashboard.tpfDashPro .tdPulseIcon .tdIcon{width:22px;height:22px}
+#view-dashboard.tpfDashPro .tdPulse small{display:block;color:#7788a1;font-size:9px;font-weight:800;letter-spacing:.08em}
+#view-dashboard.tpfDashPro .tdPulse b{display:inline-block;margin:3px 0 1px;font-size:28px;line-height:1;color:#102648}
+#view-dashboard.tpfDashPro .tdPulse em{display:block;color:#70829c;font-size:10px;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view-dashboard.tpfDashPro .tdPulse>.tdIcon{width:16px;height:16px;color:#91a3bd}
+#view-dashboard.tpfDashPro .tdFocusZone{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;align-items:stretch;margin:18px 0;padding:0;border:1px solid #dce7f8;border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 12px 28px #1438660c}
+#view-dashboard.tpfDashPro .tdFocusTitle{display:flex;align-items:center;gap:12px;padding:20px;background:linear-gradient(135deg,#112e6a,#2057b7);color:#fff}
+#view-dashboard.tpfDashPro .tdFocusTitle>span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#ffffff19;color:#9bd7ff}
+#view-dashboard.tpfDashPro .tdFocusTitle .tdIcon{width:22px;height:22px}
+#view-dashboard.tpfDashPro .tdFocusTitle small{display:block;color:#a8ceff;font-size:9px;font-weight:800;letter-spacing:.1em}
+#view-dashboard.tpfDashPro .tdFocusTitle h2{margin:3px 0 0;color:#fff;font-size:17px;line-height:1.15}
+#view-dashboard.tpfDashPro .tdFocusContent{display:flex;align-items:center;min-width:0}
+#view-dashboard.tpfDashPro .tdFocusAction{display:grid;grid-template-columns:46px minmax(0,1fr) auto auto;gap:13px;align-items:center;width:100%;border:0;background:#fff;padding:17px 22px;color:#153153;text-align:left}
+#view-dashboard.tpfDashPro .tdFocusAvatar{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#d9edff,#e8e3ff);color:#2458ae;font-size:13px;font-weight:800}
+#view-dashboard.tpfDashPro .tdFocusPerson b{display:block;font-size:15px}
+#view-dashboard.tpfDashPro .tdFocusPerson small{display:block;margin-top:4px;color:#71839e;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view-dashboard.tpfDashPro .tdFocusDeadline{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border-radius:999px;background:#e9f2ff;color:#1767ce;font-size:11px;font-weight:800}
+#view-dashboard.tpfDashPro .tdFocusDeadline.late{background:#fff0ef;color:#c5423e}
+#view-dashboard.tpfDashPro .tdFocusDeadline .tdIcon{width:15px;height:15px}
+#view-dashboard.tpfDashPro .tdFocusOpen{display:inline-flex;align-items:center;gap:6px;color:#1769d5;font-size:12px;font-weight:800}
+#view-dashboard.tpfDashPro .tdFocusOpen .tdIcon{width:16px;height:16px}
+#view-dashboard.tpfDashPro .tdFocusEmpty{display:flex;align-items:center;gap:10px;padding:18px 22px;color:#2e7e53;font-size:13px;font-weight:700}
+#view-dashboard.tpfDashPro .tdFocusEmpty .tdIcon{width:22px;height:22px}
+#view-dashboard.tpfDashPro .tdPipeline{border-radius:18px;background:#fff;border:1px solid #dfe8f5;box-shadow:0 11px 26px #193b620b}
+#view-dashboard.tpfDashPro .tdPipeline.amber,#view-dashboard.tpfDashPro .tdPipeline.green{background:#fff}
+#view-dashboard.tpfDashPro .tdPipelineHead{padding:17px 18px;background:linear-gradient(180deg,#f9fbff,#fff);border-top:4px solid #2485f7}
+#view-dashboard.tpfDashPro .tdPipeline.amber .tdPipelineHead{border-top-color:#f0a122}
+#view-dashboard.tpfDashPro .tdPipeline.green .tdPipelineHead{border-top-color:#23a65b}
+#view-dashboard.tpfDashPro .tdPipelineRows{min-height:252px;padding:10px 11px}
+#view-dashboard.tpfDashPro .tdCockpitGrid .tdPriorityCard{min-height:430px;border-radius:18px}
+#view-dashboard.tpfDashPro .tdSideRail>.tdCard{border-radius:18px}
+@media(max-width:1200px){#view-dashboard.tpfDashPro .tdSalesHero{grid-template-columns:1fr}#view-dashboard.tpfDashPro .tdHeroFigures{padding:22px 0 0;border-left:0;border-top:1px solid #ffffff3d}#view-dashboard.tpfDashPro .tdPulseGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#view-dashboard.tpfDashPro .tdFocusZone{grid-template-columns:1fr}.tpfDashPro .tdFocusTitle{padding:16px 20px}}
+@media(max-width:700px){#view-dashboard.tpfDashPro .tdSalesHero{padding:26px 20px}#view-dashboard.tpfDashPro .tdHeroFigures{grid-template-columns:1fr 88px 1fr;gap:12px}#view-dashboard.tpfDashPro .tdGoalRing{width:88px;height:88px;flex-basis:88px}#view-dashboard.tpfDashPro .tdHeroFigures>div>b{font-size:27px}#view-dashboard.tpfDashPro .tdPulseGrid{grid-template-columns:1fr}#view-dashboard.tpfDashPro .tdFocusAction{grid-template-columns:42px minmax(0,1fr) auto;padding:15px}#view-dashboard.tpfDashPro .tdFocusOpen{display:none}#view-dashboard.tpfDashPro .tdFocusDeadline{font-size:10px}.tpfDashPro .tdFocusTitle{padding:15px} }
