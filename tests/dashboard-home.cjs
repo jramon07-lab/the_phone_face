@@ -1,12 +1,10 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync('js/modules/dashboard-performance-guard.js','utf8');
-const html=fs.readFileSync('index.html','utf8');
-const runtime=fs.readFileSync('js/modules/runtime.js','utf8');
-const css=fs.readFileSync('assets/dashboard-home.css','utf8');
+const html=fs.readFileSync('index.html','utf8'),runtime=fs.readFileSync('js/modules/runtime.js','utf8'),css=fs.readFileSync('assets/dashboard-home.css','utf8');
 const sandbox={window:{TPFModules:{register(){}}},document:{getElementById(){return null}},Intl,Date,Map,setTimeout,clearInterval,setInterval};
-vm.runInNewContext(source.replace("M.register('dashboard-performance-guard'","window.testHome={commercialGroups};M.register('dashboard-performance-guard'"),sandbox);
-const groups=sandbox.window.testHome.commercialGroups;
+vm.runInNewContext(source.replace("M.register('dashboard-performance-guard'","window.testHome={commercialGroups,priorityRows};M.register('dashboard-performance-guard'"),sandbox);
+const {commercialGroups:groups,priorityRows}=sandbox.window.testHome;
 const stages=new Map([['1',{name:'Seguimiento'}],['2',{name:'Pendiente de tramitar'}],['3',{name:'Tramitado'}],['4',{name:'Ganado'}],['5',{name:'Perdido'}]]);
 const data={today:'2026-09-19',opps:[
 {id:'follow',stage_id:'1',expected_date:'2026-09-17'},
@@ -14,22 +12,33 @@ const data={today:'2026-09-19',opps:[
 {id:'done',stage_id:'3'},
 {id:'won',stage_id:'4',expected_date:'2026-09-19'},
 {id:'lost',stage_id:'5',expected_date:'2026-09-19'},
-{id:'closed-follow',stage_id:'1',status:'won'},
-{id:'cancelled',stage_id:'2',status:'cancelled'}]};
-const pending=[{id:'today-task',starts_at:'2026-09-19T09:00:00+02:00'},{id:'tomorrow-task',starts_at:'2026-09-20T09:00:00+02:00'},{id:'midnight-task',starts_at:'2026-09-18T22:30:00Z'}];
+{id:'closed-follow',stage_id:'1',status:'won',expected_date:'2026-09-19'},
+{id:'cancelled',stage_id:'2',status:'cancelled',expected_date:'2026-09-19'}]};
+const pending=[
+{id:'today-call',agenda_type:'Llamada',starts_at:'2026-09-19T09:00:00+02:00'},
+{id:'tomorrow-call',agenda_type:'Llamada',starts_at:'2026-09-20T09:00:00+02:00'},
+{id:'midnight-call',agenda_type:'Llamada',starts_at:'2026-09-18T22:30:00Z'},
+{id:'overdue-call',agenda_type:'Llamada',starts_at:'2026-09-18T09:00:00Z'},
+{id:'today-task',agenda_type:'Tarea',starts_at:'2026-09-19T10:00:00+02:00'}];
 const result=groups(data,stages,pending);
-assert.deepEqual(Array.from(result,g=>[g.key,g.rows.length]),[['today',3],['followup',1],['pending',1],['processed',1]]);
-assert.equal(result[1].rows[0].id,'follow','overdue followups must remain visible');
+assert.deepEqual(Array.from(result,g=>[g.key,g.rows.length]),[['calls',3],['followup',1],['processing',2]]);
+assert.equal(result[0].caption,'2 para hoy · 1 atrasadas','Madrid date boundary and overdue calls must be accurate');
+assert.equal(result[1].rows[0].id,'follow','overdue followups stay visible');
+assert.equal(result[2].caption,'1 por tramitar · 1 tramitadas');
 assert.equal(groups({...data,opps:[]},stages,[]).every(g=>g.rows.length===0),true);
-assert.ok(source.includes('renderCommercial(d,map,pending)'));
-assert.ok(source.includes('Hoy comercial')&&source.includes('Tu día, de un vistazo.'));
-assert.ok(!source.includes('Clientes a contactar hoy')&&!source.includes('function renderContacts('));
-assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'return navigation must reload the same renderer');
-assert.ok(!html.includes('dashboard-home-pro.js'),'remove the competing patch');
-assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260919-home-verified-1'"),'active renderer cache version');
-assert.ok(html.includes('runtime.js?v=20260919-home-verified-1'));
-assert.ok(css.includes('#view-dashboard.tpfDashPro .tdCommercialTab.isActive'));
-assert.ok(!css.includes('.referenceSidebar'),'do not restyle other CRM sections');
+const priorities=priorityRows(data,stages,pending);
+assert.equal(priorities.length,6,'all due calls, tasks and open opportunities appear once');
+assert.ok(priorities.every(r=>!['won','lost','closed-follow','cancelled','tomorrow-call'].includes(r.id)));
+assert.ok(source.includes('Hoy comercial')&&source.includes('Prioridad de hoy')&&source.includes('Próximos seguimientos'));
+assert.ok(!source.includes('Tu día, de un vistazo.')&&!source.includes('Clientes a contactar hoy'));
+assert.ok(source.includes('tdPriorityTable')&&source.includes('tdPrevPage')&&source.includes('tdNextPage'),'lists remain usable beyond the first five rows');
+assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
+assert.ok(!html.includes('dashboard-home-pro.js'));
+assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260919-home-reference-1'"));
+assert.ok(html.includes('runtime.js?v=20260919-home-reference-1'));
+assert.ok(css.includes('body:has(#app:not(.hidden) #view-dashboard.tpfDashPro:not(.hidden)) .referenceSidebar'));
+for(const line of css.split('\n').filter(l=>l.includes('.referenceSidebar')||l.includes('.referenceNav')||l.includes('.referenceWorkspace')))assert.ok(line.includes('body:has(#app:not(.hidden) #view-dashboard.tpfDashPro:not(.hidden))'),'shell styling applies only to the visible authenticated Inicio');
 assert.equal((source.match(/sb\.from\(/g)||[]).length,5,'no new database reads');
-assert.equal((source.match(/sb\.rpc\(/g)||[]).length,2,'only the existing goal RPCs');
-console.log('dashboard home: real renderer, summary counts, Madrid date boundary and isolation passed');
+assert.equal((source.match(/sb\.rpc\(/g)||[]).length,2,'only existing goal RPCs');
+assert.ok(!/sb\.(?:from|rpc)[\s\S]{0,100}sendMessage/.test(source));
+console.log('dashboard home reference: counts, pending status, Madrid dates, closed exclusions, pagination and scope passed');

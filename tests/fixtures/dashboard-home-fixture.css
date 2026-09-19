@@ -1,14 +1,9 @@
-html,body{margin:0;min-height:100%;background:#f2f5fa;font-family:Arial,Helvetica,sans-serif}
-.fixtureSidebar{position:fixed;left:0;top:0;bottom:0;width:210px;background:#12243f;color:#fff;padding:28px 16px;display:flex;flex-direction:column}
-.fixtureBrand{font-size:16px;font-weight:800;line-height:1.5;margin-bottom:36px}
-.fixtureBrand small{display:block;font-size:9px;letter-spacing:.12em;color:#92a9c7;font-weight:500}
-.fixtureSidebar .nav{display:block;width:100%;border:0;text-align:left;background:transparent;color:#b9c9df;font-weight:600;padding:14px 16px;border-radius:9px;margin-bottom:6px;cursor:pointer}
-.fixtureSidebar .nav.active{background:#2364ed;color:#fff}
-.fixtureNote{font-size:10px;line-height:1.9;color:#91a9ca;margin-top:auto}
-.fixtureWorkspace{margin-left:210px;min-width:0}
-.fixtureWorkspace main{padding:0}
-.fixtureBanner{padding:8px 20px;text-align:center;font-size:10px;letter-spacing:.02em;background:#fff4d6;color:#84600b}
-.fixtureOther{padding:40px;min-height:90vh}
-#fixtureAction:not(:empty){position:fixed;bottom:15px;left:230px;padding:12px;background:#172c4c;color:#fff;border-radius:9px;font-size:12px;z-index:999}
+html,body{margin:0;min-height:100%;font-family:"Segoe UI",Arial,sans-serif}
+.fixtureBanner{padding:6px 15px;text-align:center;font-size:10px;background:#fff6df;color:#866316}
+.referenceSidebar button.nav{width:100%;border:0;text-align:left;background:transparent}
+.referenceBrand{justify-content:center}.referenceBrand small{text-align:center}
+.fixtureNote{position:absolute;bottom:26px;left:26px;color:#8ba8ca;font-size:10px;line-height:1.8}
+.fixtureOther{padding:40px;min-height:95vh}
+#fixtureAction:not(:empty){position:fixed;bottom:15px;left:275px;padding:12px;background:#172c4c;color:#fff;border-radius:9px;font-size:12px;z-index:999}
 .hidden{display:none!important}
-@media(max-width:760px){.fixtureSidebar{position:static;width:100%;padding:12px;display:block}.fixtureBrand,.fixtureNote{display:none}.fixtureSidebar nav{display:flex;overflow:auto}.fixtureSidebar .nav{width:auto;white-space:nowrap;padding:9px}.fixtureWorkspace{margin-left:0}#fixtureAction:not(:empty){left:12px}}
+@media(max-width:800px){.referenceSidebar{display:none!important}.referenceWorkspace{margin:0!important;width:100%!important}.fixtureOther{padding:20px}#fixtureAction:not(:empty){left:12px}}
