@@ -50,6 +50,7 @@ async function enterApp(user){
  if($("sideRole"))$("sideRole").textContent=perms?.is_admin?"Administrador":"Usuario";
  crmApplyExpandedPermissions();
  loadSales();
+ if(typeof loadGoogleContactsStatus==="function")setTimeout(loadGoogleContactsStatus,0);
 }
 async function doSignIn(){
  const btn=$("signin");
