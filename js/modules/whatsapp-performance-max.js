@@ -241,9 +241,11 @@ function waPerformanceBindList(box){
 
 function install(){
   try{
-    if(typeof hydrateWaAvatars==='function')window.hydrateWaAvatars=async function(chatIds=[]){waPerformanceHydrateVisible(chatIds)};
+    // Las funciones del CRM se publican en window. Consultarlas ahí evita
+    // depender de la resolución implícita de nombres globales de cada navegador.
+    if(typeof window.hydrateWaAvatars==='function')window.hydrateWaAvatars=async function(chatIds=[]){waPerformanceHydrateVisible(chatIds)};
 
-    if(typeof loadWaHistory==='function')window.loadWaHistory=async function(scrollBottom=true,retry=0){
+    if(typeof window.loadWaHistory==='function')window.loadWaHistory=async function(scrollBottom=true,retry=0){
       if(!waLiveState.selected)return;
       const chatId=waLiveState.selected.id;
       const selection=waLiveState.selectionVersion;
