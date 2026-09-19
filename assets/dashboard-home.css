@@ -132,8 +132,7 @@
 #view-dashboard.tpfDashPro .tdDots{display:grid;place-items:center;width:28px;height:34px;padding:0;border:0;border-radius:6px;background:transparent;color:#7287a1}
 #view-dashboard.tpfDashPro .tdDots:hover{background:#e9f1fc;color:var(--td-blue)}
 #view-dashboard.tpfDashPro .tdDots .tdIcon{width:17px;height:17px}
-#view-dashboard.tpfDashPro .tdRowMenu{position:absolute;right:3px;top:40px;z-index:90;width:140px;padding:5px;border:1px solid #d7e2f0;border-radius:8px;background:#fff;box-shadow:0 8px 22px #183b6b26}
-#view-dashboard.tpfDashPro .tdPriorityTable tr:nth-last-child(-n+2) .tdRowMenu{top:auto;bottom:40px}
+#view-dashboard.tpfDashPro .tdRowMenu{position:fixed;z-index:2900;width:140px;padding:5px;border:1px solid #d7e2f0;border-radius:8px;background:#fff;box-shadow:0 8px 22px #183b6b26}
 #view-dashboard.tpfDashPro .tdRowMenu button{display:block;width:100%;padding:9px;border:0;border-radius:5px;background:#fff;color:#365674;font-size:12px;text-align:left}
 #view-dashboard.tpfDashPro .tdRowMenu button:hover{background:#edf4ff}
 #view-dashboard.tpfDashPro .tdRowMenu .danger{color:#ae493d}

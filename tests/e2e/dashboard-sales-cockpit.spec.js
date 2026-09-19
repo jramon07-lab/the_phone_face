@@ -492,3 +492,53 @@ test('Inicio: mesa de trabajo sin desbordamiento horizontal en tres tamaños de 
     covered(`Escritorio ${viewport.width}×${viewport.height}: controles y anchura correctos`);
   }
 });
+
+test('Inicio: menú completo accesible en la primera y última fila de una lista corta', async ({ page }) => {
+  await priorities(page);
+  await page.locator(`${HOME} #tdPageSize`).selectOption('all');
+  const rows = page.locator(`${HOME} #dashAlerts tbody tr`);
+  await expect.poll(() => rows.count()).toBeGreaterThan(0);
+  const shortest = await rows.evaluateAll(elements => {
+    const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+    const entries = elements.map(row => ({
+      name: row.querySelector('.tdClientButton b')?.textContent.trim() || '',
+      search: normalize(`${row.querySelector('.tdClientButton')?.textContent || ''} ${row.querySelector('.tdInterestButton')?.textContent || ''}`),
+    }));
+    return entries.filter(entry => entry.name).map(entry => ({
+      query: entry.name,
+      count: entries.filter(candidate => candidate.search.includes(normalize(entry.name))).length,
+    })).sort((a, b) => a.count - b.count || b.query.length - a.query.length)[0] || null;
+  });
+  expect(Boolean(shortest), 'La demo necesita una fila con nombre para comprobar el menú filtrado').toBeTruthy();
+  // Dispatch the real input event without putting a customer's name in an
+  // action argument that Playwright could include in a failure call log.
+  await page.locator(`${HOME} #tdWorkSearch`).evaluate((input, value) => {
+    input.value = value;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }, shortest.query);
+  await expect(rows).toHaveCount(shortest.count);
+  for (const position of ['first', 'last']) {
+    const row = position === 'first' ? rows.first() : rows.last();
+    await row.locator('[data-dots]').click();
+    const menu = row.locator('.tdRowMenu');
+    await expect(menu).toBeVisible();
+    for (const action of ['open', 'edit', 'delete']) {
+      const button = menu.locator(`[data-action="${action}"]`);
+      await expect(button).toBeVisible();
+      const hit = await button.evaluate(element => {
+        const rect = element.getBoundingClientRect();
+        const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return {
+          insideViewport: rect.width > 0 && rect.height > 0 && rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+          receivesPointer: target === element || element.contains(target),
+        };
+      });
+      expect(hit, `El menú de la fila ${position}, acción ${action}, debe estar dentro de pantalla y recibir el puntero`).toEqual({ insideViewport: true, receivesPointer: true });
+    }
+    // Inspect Delete's hit area, never click it or any mutating action.
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    covered(`Menú de fila ${position}: Abrir/Editar/Eliminar visibles y sin recorte; ninguna acción ejecutada`);
+  }
+  await page.locator(`${HOME} #tdClearSearch`).click();
+});
