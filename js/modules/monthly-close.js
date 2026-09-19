@@ -46,6 +46,9 @@
 .tpfMonthlyTable tr:hover td{background:#f8fbff}
 .tpfMonthlyTable b{color:#1d2939}
 .tpfMonthlyTable small{color:#667085;font-weight:700}
+.tpfMonthlyMeta{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:4px;color:#667085;font-size:12px;font-weight:700}
+.tpfMonthlyMeta span{white-space:nowrap}
+.tpfMonthlyParty{display:block;margin-top:4px;color:#6d28d9;font-size:12px;font-weight:800}
 .tpfMonthlyAmount{font-weight:800;color:#102a56;white-space:nowrap}
 .tpfMonthlyDate{white-space:nowrap;color:#344054}
 .tpfMonthlyEmpty{padding:26px 16px;color:#667085;text-align:center}
@@ -105,18 +108,60 @@
     if(label)label.textContent=count+' seleccionada(s) para pasar a Ganado';
   }
 
+  async function contactLookup(){
+    try{
+      if(!window.TPFRecordLinks?.load)return {records:new Map(),lookup:null};
+      const rows=await window.TPFRecordLinks.load(sb);
+      return {records:new Map(rows.map(row=>[String(row.id),row])),lookup:window.TPFRecordLinks.index(rows)};
+    }catch(error){
+      console.warn('Cierre de mes: no se pudieron cargar los contactos vinculados',error);
+      return {records:new Map(),lookup:null};
+    }
+  }
+
+  function recordValues(record){
+    const data=record?.data||{};
+    return {
+      name:text(data['NOMBRE Y APELLIDOS']||[data.NOMBRE,data.APELLIDOS].filter(Boolean).join(' ')),
+      phone:text(data['TELÉFONO']||data.TELEFONO||data.PHONE||data.MOVIL),
+      dni:text(data['DNI / NIF']||data.DNI||data.NIF)
+    };
+  }
+
+  function managerNames(item,contacts){
+    const id=String(item.record_id||item.contact_id||'');
+    if(!id||!contacts.lookup?.managers?.has(id))return [];
+    return [...contacts.lookup.managers.get(id)].map(managerId=>recordValues(contacts.records.get(String(managerId))).name).filter(Boolean);
+  }
+
+  function identityCell(item,contacts){
+    const record=contacts.records.get(String(item.record_id||''));
+    const values=recordValues(record);
+    const info=window.TPFContactParty?.opportunityIdentity?.(item,record)||{};
+    const holder=text(info.holder);
+    const managers=[text(info.manager),...managerNames(item,contacts)].filter(Boolean);
+    const phone=text(item.phone||info.recipient_phone||values.phone);
+    const dni=text(info.dni||values.dni);
+    const party=[];
+    if(holder&&normal(holder)!==normal(item.client_name||values.name))party.push('Titular: '+holder);
+    if(managers.length)party.push('Gestionado por: '+[...new Set(managers)].join(' · '));
+    const meta=[phone?'Tel. '+phone:'',dni?'DNI '+dni:''].filter(Boolean).map(value=>'<span>'+escape(value)+'</span>').join('');
+    return '<b>'+escape(item.client_name||holder||item.title||'Sin nombre')+'</b><br><small>'+escape(item.title||'')+'</small>'+(meta?'<div class="tpfMonthlyMeta">'+meta+'</div>':'')+(party.length?'<span class="tpfMonthlyParty">'+escape(party.join(' · '))+'</span>':'');
+  }
+
   async function open(){
     addStyle();
     close();
     await reloadSales();
     const data=board();
+    const contacts=await contactLookup();
     const total=data.tramitado.reduce((sum,item)=>sum+Number(item.amount||0),0);
     const root=document.createElement('div');
     root.id='tpfMonthlyClose';
-    const rows=data.tramitado.map(item=>'<tr><td><input type="checkbox" data-monthly-id="'+escape(item.id)+'" checked></td><td><b>'+escape(item.client_name||item.title||'Sin nombre')+'</b><br><small>'+escape(item.title||'')+'</small></td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay oportunidades en Tramitado para cerrar.</td></tr>';
+    const rows=data.tramitado.map(item=>'<tr><td><input type="checkbox" data-monthly-id="'+escape(item.id)+'" checked></td><td>'+identityCell(item,contacts)+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay oportunidades en Tramitado para cerrar.</td></tr>';
     const pendingRows=data.pending.map(item=>{
       const stage=data.stages.find(stage=>String(stage.id)===String(item.stage_id));
-      return '<tr><td><b>'+escape(item.client_name||item.title||'Sin nombre')+'</b><br><small>'+escape(item.title||'')+'</small></td><td>'+escape(stage?.name||'Sin columna')+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'Sin fecha')+'</td></tr>';
+      return '<tr><td>'+identityCell(item,contacts)+'</td><td>'+escape(stage?.name||'Sin columna')+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'Sin fecha')+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay ofertas pendientes.</td></tr>';
     root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><h2>Cierre de mes</h2><small>Pantalla de control para pasar ventas tramitadas a Ganado sin tocar revisiones ni fechas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b>'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><div class="tpfMonthlyTabs" role="tablist"><button class="tpfMonthlyTab active" type="button" data-monthly-view="sales">Ventas para cerrar <span class="tpfMonthlyTabCount">'+data.tramitado.length+'</span></button><button class="tpfMonthlyTab" type="button" data-monthly-view="pending">Ofertas pendientes <span class="tpfMonthlyTabCount">'+data.pending.length+'</span></button></div><main class="tpfMonthlyMain"><section class="tpfMonthlySection tpfMonthlyView active" data-monthly-panel="sales"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><div class="tpfMonthlyHint">Marca solo las que quieras mover a Ganado.</div></div><label class="tpfMonthlyHint"><input id="tpfMonthlyAll" type="checkbox" checked> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+rows+'</tbody></table></div></section><section class="tpfMonthlySection tpfMonthlyView" data-monthly-panel="pending"><div class="tpfMonthlySectionHead"><div><b>Ofertas pendientes</b><div class="tpfMonthlyHint">Solo se muestran para revisar. No se moverán al cerrar.</div></div><div class="tpfMonthlyInfo">No se modifican fechas ni revisiones.</div></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th>Cliente / oportunidad</th><th>Columna</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+pendingRows+'</tbody></table></div></section></main></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Pasar seleccionadas a Ganado</button></div></footer></section>';
     document.body.appendChild(root);
