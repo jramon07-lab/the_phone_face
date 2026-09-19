@@ -39,6 +39,8 @@ assert.match(desktop,/item\?\.app_version===build&&item\?\.device===currentDevic
 assert.match(desktop,/Date\.parse\(item\?\.last_seen_at/);
 assert.match(statusCore,/isExpectedSystemProbe/);
 assert.match(statusCore,/api\.github\.com\/repos\/jramon07-lab\/the_phone_face\/actions\/runs/);
+assert.match(statusCore,/isExpectedGoogleContactsConflict/);
+assert.match(statusCore,/t\.includes\('409'\)[\s\S]*\/api\/google-contacts\?action=proxy/);
 assert.match(statusCore,/transientNetworkFailures/);
 assert.match(statusCore,/failures!==3/);
 assert.match(statusCore,/tpf:system-request-recovered/);
