@@ -38,7 +38,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 let catalog=[],selected=null,quantities={},visibility={},activeOperator='',instances=[],busy=false,finalPriceManual=false,directOperator=OPERATORS[0],directNetflix=false,shopGift=false,permanenceRefund=false,permanenceAmount='',welcomeOffer=false,secondOfferAfterCurrent=false,offerMode='followup',offerSendTiming='now',offerScheduledLocal='',offerRequestKey='',previewCustomer='',offerContext=null;
 const current=()=>{try{return currentContact||null}catch(_){return null}};
 const offerContact=()=>offerContext||current();
-const offerName=()=>{const c=offerContact()||{},d=c.data||{};return String(offerContext?.name||$('contactName')?.value||c.fullName||d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||'Cliente').trim()};
+const offerName=()=>{const c=offerContact()||{},d=c.data||{};return String(d.NOMBRE||offerContext?.name||$('contactName')?.value||c.fullName||d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||'Cliente').trim()};
 const offerPhone=()=>{const c=offerContact()||{},d=c.data||{};return String(offerContext?.phone||$('contactPhone')?.value||d['TELÉFONO']||d.TELEFONO||d.PHONE||'').trim()};
 const contactValue=(contact,...keys)=>{const data=contact?.data||{};for(const key of keys){const value=data[key];if(value!=null&&String(value).trim())return String(value).trim()}return''};
 const contactDisplayName=contact=>String(contact?.fullName||contactValue(contact,'NOMBRE Y APELLIDOS','CLIENTE')||[contactValue(contact,'NOMBRE'),contactValue(contact,'APELLIDOS','APELLIDO')].filter(Boolean).join(' ')||'Cliente').trim();
