@@ -40,7 +40,7 @@ async function login(page) {
 async function dashboard(page) {
   await page.locator('.nav[data-view="dashboard"]').first().click();
   await expect(page.locator(HOME)).toBeVisible({ timeout: 20000 });
-  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260919-sales-cockpit-7');
+  await expect(page.locator(HOME)).toHaveAttribute('data-home-version', '20260920-sales-cockpit-8');
   await expect(page.locator(`${HOME} #mOppTotal`)).toHaveText(/^\d+$/, { timeout: 20000 });
   await expect(page.locator(`${HOME} #dashRefresh`)).toBeEnabled({ timeout: 20000 });
   await expect(page.locator(`${HOME} #dashAlerts`)).not.toBeEmpty();
@@ -177,7 +177,7 @@ async function openAndReturn(page, locator, label) {
 async function findPriorityType(page, type) {
   await priorities(page);
   for (let i = 0; i < 210; i += 1) {
-    const item = page.locator(`${HOME} #dashAlerts .tdClientButton[data-type="${type}"]`).first();
+    const item = page.locator(`${HOME} #dashAlerts ${type === 'contact' ? '.tdClientButton' : '.tdInterestButton'}[data-type="${type}"]`).first();
     if (await item.count()) return item;
     const next = page.locator(`${HOME} #tdNextPage`);
     if (!(await next.isEnabled())) break;

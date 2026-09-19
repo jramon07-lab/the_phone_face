@@ -1212,30 +1212,29 @@ window.openOpportunityFull=async(id)=>{
   $("oppFullTitle").textContent=data.title||"Oportunidad";
   $("oppFullContent").innerHTML=`
     <div class="oppReadHeader">
-      <div>
-        <span class="oppReadEyebrow">OPORTUNIDAD</span>
-        <h2>${oppVal(data.title||"Oportunidad")}</h2>
-      </div>
+      <span class="oppReadEyebrow">FICHA DE OPORTUNIDAD</span>
       <span class="oppReadStage">${oppVal(stageName)}</span>
     </div>
-
-    <div class="oppGrid">
-      <div class="oppField">
-        <span>Cliente</span>
+    <section class="oppContactSummary" aria-label="Contacto vinculado">
+      <div class="oppContactAvatar" aria-hidden="true">${oppVal(contactName.trim().split(/\s+/).slice(0,2).map(s=>s[0]).join(''))}</div>
+      <div class="oppContactIdentity">
+        <span class="oppReadEyebrow">CLIENTE</span>
         ${contactId
-          ? `<button class="oppContactLink" onclick="returnToContactFromOpportunity('${contactId}','${data.id}')">${oppVal(contactName)}</button>`
+          ? `<button class="oppContactLink" id="oppFullContactLink">${oppVal(contactName)} <span aria-hidden="true">↗</span></button>`
           : `<strong>${oppVal(contactName)}</strong>`}
+        <p>${oppVal(data.phone||"Sin teléfono")}${contactId?' · Ver ficha del contacto':' · Sin contacto vinculado'}</p>
       </div>
-      <div class="oppField"><span>Teléfono</span><strong>${oppVal(data.phone)}</strong></div>
-      <div class="oppField"><span>Importe</span><strong>${oppVal(data.amount!=null?fmtMoney(data.amount):"")}</strong></div>
+    </section>
+    <div class="oppSummaryMetrics">
+      <div class="oppField oppAmount"><span>Importe de la oportunidad</span><strong>${oppVal(data.amount!=null?fmtMoney(data.amount):"")}</strong></div>
+      <div class="oppField"><span>Fecha prevista de cierre</span><strong>${oppVal(data.expected_date?fmtDateOnly(data.expected_date):"")}</strong></div>
       <div class="oppField"><span>Estado / columna</span><strong>${oppVal(stageName)}</strong></div>
-      <div class="oppField"><span>Fecha prevista</span><strong>${oppVal(data.expected_date?fmtDateOnly(data.expected_date):"")}</strong></div>
-      <div class="oppField"><span>Última actualización</span><strong>${oppVal(data.updated_at?new Date(data.updated_at).toLocaleString("es-ES"):"")}</strong></div>
     </div>
-
-    ${data.notes?`<div class="oppField oppReadNotes"><span>Notas</span><strong>${oppVal(data.notes)}</strong></div>`:""}
+    <section class="oppField oppReadNotes"><h3>Notas de la oportunidad</h3><p>${data.notes?oppVal(data.notes):'Esta oportunidad todavía no tiene notas.'}</p></section>
+    <div class="oppUpdated">Última actualización: ${oppVal(data.updated_at?new Date(data.updated_at).toLocaleString("es-ES"):"")}</div>
   `;
-
+  const contactLink=$("oppFullContactLink");
+  if(contactLink)contactLink.onclick=()=>returnToContactFromOpportunity(contactId,data.id);
   $("opportunityFullPage").classList.remove("hidden");
 };
 

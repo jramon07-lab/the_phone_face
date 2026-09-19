@@ -1,0 +1,42 @@
+/* Read-only opportunity presentation. Keep existing navigation and editing handlers. */
+#opportunityFullPage{background:#f3f6fa;color:#182d49;padding:0;overflow-y:auto;overscroll-behavior:contain;font:15px/1.5 "Segoe UI",Arial,sans-serif}
+#opportunityFullPage *{box-sizing:border-box}
+#opportunityFullPage .oppFullShell{width:100%;max-width:1180px;margin:0 auto;padding:24px 28px 64px}
+#opportunityFullPage .oppFullTop{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 24px;padding:0}
+#opportunityFullPage .oppFullTop .row{display:flex;gap:10px;flex-wrap:wrap}
+#opportunityFullPage button{font:inherit;cursor:pointer}
+#opportunityFullPage .oppFullTop button{min-height:44px;padding:10px 16px;border:1px solid #cfdae9;border-radius:10px;background:#fff;color:#345982}
+#opportunityFullPage #oppFullEdit{background:#1666db;border-color:#1666db;color:#fff}
+#opportunityFullPage #oppFullDelete{background:#fff;border-color:#ecd8d8;color:#a33838}
+#opportunityFullPage button:focus-visible{outline:3px solid #78afff;outline-offset:3px}
+#opportunityFullPage .oppFullCard{padding:32px;border:1px solid #dfe6ef;border-radius:18px;background:#fff;box-shadow:0 8px 32px #182d4908}
+#opportunityFullPage #oppFullTitle{margin:0 0 10px;color:#182d49;font-size:clamp(24px,2.3vw,34px);font-weight:750;line-height:1.25;letter-spacing:-.03em;overflow-wrap:anywhere}
+#opportunityFullPage .oppReadHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 28px;padding:0 0 24px;border-bottom:1px solid #e7edf4}
+#opportunityFullPage .oppReadEyebrow{color:#61728a;font-size:12px;font-weight:700;letter-spacing:.07em}
+#opportunityFullPage .oppReadStage{padding:7px 12px;border:1px solid #c8dcf7;border-radius:8px;background:#edf4ff;color:#235fae;font-size:14px;font-weight:650}
+#opportunityFullPage .oppContactSummary{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+#opportunityFullPage .oppContactAvatar{display:grid;place-items:center;flex:0 0 56px;width:56px;height:56px;border-radius:16px;background:#eaf2ff;color:#2868b7;font-size:20px;font-weight:700}
+#opportunityFullPage .oppContactIdentity{min-width:0}
+#opportunityFullPage .oppContactIdentity>.oppReadEyebrow{display:block;margin-bottom:3px}
+#opportunityFullPage .oppContactLink{display:inline;padding:0;border:0;background:transparent;color:#195ebc;font-size:20px;font-weight:700;text-align:left;overflow-wrap:anywhere}
+#opportunityFullPage .oppContactLink:hover{text-decoration:underline;text-underline-offset:4px}
+#opportunityFullPage .oppContactIdentity p{margin:4px 0 0;color:#61728a;font-size:14px;overflow-wrap:anywhere}
+#opportunityFullPage .oppSummaryMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:28px}
+#opportunityFullPage .oppField{padding:20px;border:1px solid #dfe6ef;border-radius:12px;background:#f8fafc;min-width:0}
+#opportunityFullPage .oppField>span{display:block;color:#61728a;font-size:13px;margin-bottom:9px}
+#opportunityFullPage .oppField>strong{display:block;color:#182d49;font-size:19px;font-weight:650;overflow-wrap:anywhere}
+#opportunityFullPage .oppAmount{background:#edf4ff;border-color:#d4e3f8}
+#opportunityFullPage .oppAmount>strong{font-size:28px;color:#195ebc;letter-spacing:-.025em}
+#opportunityFullPage .oppReadNotes{margin:0 0 20px;background:#fff}
+#opportunityFullPage .oppReadNotes h3{margin:0 0 12px;font-size:16px;color:#182d49}
+#opportunityFullPage .oppReadNotes p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#4b617e}
+#opportunityFullPage .oppUpdated{color:#61728a;font-size:13px;padding:0 0 8px}
+#opportunityFullPage #oppFullFollowupAudit{margin-top:20px}
+@media(max-width:700px){
+  #opportunityFullPage .oppFullShell{padding:16px 12px 88px}
+  #opportunityFullPage .oppFullCard{padding:20px 16px;border-radius:14px}
+  #opportunityFullPage .oppSummaryMetrics{grid-template-columns:1fr}
+  #opportunityFullPage .oppContactLink{font-size:18px}
+  #opportunityFullPage .oppFullTop{gap:10px;margin-bottom:16px}
+  #opportunityFullPage .oppFullTop button{padding:9px 12px}
+}

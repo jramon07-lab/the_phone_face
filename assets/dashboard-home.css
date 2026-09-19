@@ -77,7 +77,7 @@
 #view-dashboard.tpfDashPro .tdFocusDeadline .tdIcon{width:14px;height:14px}
 #view-dashboard.tpfDashPro .tdFocusOpen{display:flex;align-items:center;gap:5px;color:var(--td-blue);font-size:12px;font-weight:650}
 #view-dashboard.tpfDashPro .tdFocusEmpty{display:flex;align-items:center;gap:10px;color:#306b52;font-size:13px}
-#view-dashboard.tpfDashPro .tdCockpitGrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+#view-dashboard.tpfDashPro .tdCockpitGrid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
 #view-dashboard.tpfDashPro .tdCard{min-width:0;padding:20px;border:1px solid var(--td-border);border-radius:12px;background:#fff;box-shadow:0 3px 8px #152e4904}
 #view-dashboard.tpfDashPro .tdHead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
 #view-dashboard.tpfDashPro .tdHead h2{margin:0;color:var(--td-ink);font-size:18px;font-weight:700;letter-spacing:-.025em;line-height:1.3}
@@ -277,3 +277,29 @@
 #view-dashboard.tpfDashPro .tdBottom{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){#view-dashboard.tpfDashPro *{scroll-behavior:auto!important;transition:none!important}}
+/* Full-width work area, readable data, and secondary panels below the table. */
+#view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+#view-dashboard.tpfDashPro .tdPriorityTable{font-size:14px}
+#view-dashboard.tpfDashPro .tdPriorityTable th{font-size:12px;text-transform:none;letter-spacing:0;padding-top:14px;padding-bottom:14px}
+#view-dashboard.tpfDashPro .tdClientButton b{font-size:15px}
+#view-dashboard.tpfDashPro .tdClientButton small{font-size:13px}
+#view-dashboard.tpfDashPro .tdInterestButton{font-size:14px;color:#195ebc}
+#view-dashboard.tpfDashPro :is(.tdClientButton,.tdInterestButton):hover{color:#124fb0}
+#view-dashboard.tpfDashPro button.tdClientButton:hover b{text-decoration:underline;text-underline-offset:3px}
+#view-dashboard.tpfDashPro :is(.tdStatusPill,.tdNextAction,.tdLastActivity){font-size:13px}
+#view-dashboard.tpfDashPro :is(.tdHead p,.tdWorkTab,.tdBtn,.tdLink,.tdFunnelRow,.tdListRow){font-size:14px}
+#view-dashboard.tpfDashPro :is(.tdWorkToolbar label,.tdMiniStat span){font-size:13px}
+#view-dashboard.tpfDashPro .tdFunnelRow{grid-template-columns:minmax(120px,1.2fr) 1fr 28px;gap:12px}
+#view-dashboard.tpfDashPro .tdTrack{height:10px}
+#view-dashboard.tpfDashPro .tdMiniStat b{font-size:20px}
+@media(min-width:1051px){
+  #view-dashboard.tpfDashPro .tdSalesHero{padding:18px 24px;gap:20px}
+  #view-dashboard.tpfDashPro .tdSalesHero h1{font-size:28px}
+  #view-dashboard.tpfDashPro .tdSalesHeroCopy>p{margin:5px 0 12px}
+  #view-dashboard.tpfDashPro .tdHeroNumber>b{font-size:30px}
+  #view-dashboard.tpfDashPro .tdHeroGoal>b{font-size:23px}
+}
+@media(max-width:700px){
+  #view-dashboard.tpfDashPro .tdSideRail{grid-template-columns:1fr}
+  #view-dashboard.tpfDashPro .tdFunnelRow{grid-template-columns:minmax(110px,1.2fr) 1fr 24px;gap:8px}
+}

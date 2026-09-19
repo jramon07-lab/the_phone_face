@@ -85,13 +85,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-7';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260920-sales-cockpit-8';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-7';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-sales-cockpit-8';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdDate">${icon('calendar')}<span id="tdToday"></span></div><div class="tdCommandActions"><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
@@ -191,12 +191,12 @@ function isCall(t){return /llamada|^call$/.test(status(t.agenda_type||t.type))||
 function opportunityRow(o,map,today){
   const stage=map.get(String(o.stage_id))?.name||'Abierta',expired=isExpired(o,map,today);
   const tone=/tramitad/i.test(stage)?'green':/pendiente.*tramitar/i.test(stage)?'amber':/seguimiento/i.test(stage)?'blue':'muted';
-  return{type:'opportunity',id:String(o.id),name:o.client_name||'Sin cliente',phone:o.phone||'',title:o.title||'Oportunidad',stage,tone,updated:o.updated_at||o.created_at||'',date:String(o.expected_date||'').slice(0,10),dateTime:false,expired,rank:expired?0:1,amount:o.amount};
+  return{type:'opportunity',id:String(o.id),contactId:String(o.record_id||o.contact_id||o.customer_id||''),name:o.client_name||o.contact_name||o.customer_name||'Sin cliente',phone:o.phone||'',title:o.title||'Oportunidad',stage,tone,updated:o.updated_at||o.created_at||'',date:String(o.expected_date||'').slice(0,10),dateTime:false,expired,rank:expired?0:1,amount:o.amount};
 }
 
 function taskRow(t,today){
   const date=localDay(t.starts_at),call=isCall(t);
-  return{type:'task',id:String(t.id),name:t.customer_name||'Sin cliente',phone:t.customer_phone||'',title:t.title||'Tarea',stage:call?'Llamar':t.agenda_type||'Tarea',tone:call?'blue':'amber',updated:t.updated_at||t.created_at||'',date,dateTime:true,when:t.starts_at,expired:!!date&&date<today,rank:date&&date<today?0:1,description:t.description||''};
+  return{type:'task',id:String(t.id),contactId:String(t.related_record_id||''),name:t.customer_name||'Sin cliente',phone:t.customer_phone||'',title:t.title||'Tarea',stage:call?'Llamar':t.agenda_type||'Tarea',tone:call?'blue':'amber',updated:t.updated_at||t.created_at||'',date,dateTime:true,when:t.starts_at,expired:!!date&&date<today,rank:date&&date<today?0:1,description:t.description||''};
 }
 
 function commercialGroups(d,map,pending){
@@ -264,7 +264,7 @@ function renderPriority(d,map,pending){
   $('tdPrevPage').disabled=D.page===0;$('tdNextPage').disabled=start+pageSize>=rows.length;
   saveWorkState();
   $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th>Cliente</th><th>Interés</th><th>Estado</th><th>Última actividad</th><th>Próxima acción</th><th><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
-    <td><button class="tdClientButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}"><span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}</small></span></button></td>
+    <td>${x.contactId?`<button class="tdClientButton" data-open="1" data-type="contact" data-id="${esc(x.contactId)}" aria-label="Abrir contacto: ${esc(x.name)}">`:'<div class="tdClientButton" title="Sin contacto vinculado">'}<span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}${x.contactId?'':' · Sin vincular'}</small></span>${x.contactId?'</button>':'</div>'}</td>
     <td><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button></td>
     <td><span class="tdStatusPill ${x.tone}">${icon(x.stage==='Llamar'?'phone':x.tone==='green'?'checkCircle':x.tone==='amber'?'file':'refresh')}<span>${esc(x.stage)}</span></span></td>
     <td class="tdLastActivity">${x.updated?esc(localDate(localDay(x.updated)))+'<small>'+esc(localTime(x.updated))+'</small>':'—'}</td>
