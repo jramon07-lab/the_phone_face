@@ -131,6 +131,10 @@ test('WhatsApp conserva los siete flujos del CRM sin escribir datos', async ({ p
         window.hydrateWaAvatars=async()=>{};
         window.waApi=async(_action,{chatId})=>({urlAvatar:'data:image/svg+xml;base64,PHN2Zy8+'});
         window.waApplyAvatar=(element,url)=>{element.dataset.loaded=String(!!url);};
+        // El módulo real utiliza estos símbolos globales directamente. La
+        // página aislada solo tiene propiedades en window, así que las
+        // publicamos también como variables globales del laboratorio.
+        window.eval('var waLiveState=window.waLiveState;var waApi=window.waApi;var waApplyAvatar=window.waApplyAvatar;var hydrateWaAvatars=window.hydrateWaAvatars;');
         const box=document.getElementById('waLiveChats');
         // El DOM aislado de Chromium no siempre calcula cajas de una página
         // creada con setContent. Declaramos una geometría visible para probar
