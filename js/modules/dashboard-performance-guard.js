@@ -81,13 +81,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-5';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260919-sales-cockpit-6';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-5';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260919-sales-cockpit-6';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdDate">${icon('calendar')}<span id="tdToday"></span></div><div class="tdCommandActions"><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>

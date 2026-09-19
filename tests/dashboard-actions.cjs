@@ -1,6 +1,8 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync('js/modules/dashboard-performance-guard.js','utf8');
+const css=fs.readFileSync('assets/dashboard-home.css','utf8');
+assert.match(css,/#view-dashboard\.tpfDashPro:not\(\.hidden\)>\.tdCommandBar\{display:flex!important\}/,'Inicio toolbar must remain visible despite legacy WhatsApp header suppression');
 const nodes=new Map(),selectors=new Map(),calls=[];
 function element(id,hidden=false){
   const classes=new Set(hidden?['hidden']:[]);

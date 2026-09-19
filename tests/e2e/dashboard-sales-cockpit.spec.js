@@ -4,7 +4,18 @@ const HOME = '#view-dashboard.tpfDashPro';
 const businessTables = new Set(['records', 'sales_opportunities', 'sales_stages', 'agenda_items', 'whatsapp_jobs', 'crm_month_goals']);
 const audit = new WeakMap();
 test.setTimeout(180000);
-test.use({ screenshot: 'off', trace: 'off', video: 'off' });
+test.use({ screenshot: 'off', trace: 'off', video: 'off', actionTimeout: 10000, navigationTimeout: 30000 });
+
+function diagnosticSource(rawUrl) {
+  try {
+    const path = new URL(rawUrl).pathname;
+    const rest = path.match(/\/rest\/v1\/(?:rpc\/)?[a-z_]+/i);
+    if (rest) return rest[0];
+    if (/^\/(?:js|assets)\/[a-z0-9_./-]+\.(?:js|css)$/i.test(path)) return path;
+    const api = path.match(/^\/api\/[a-z_-]+/i);
+    return api ? api[0] : '<page>';
+  } catch (_) { return '<unknown>'; }
+}
 
 function covered(label) {
   // Control names only: never log customers, IDs, payloads or credentials.
@@ -101,20 +112,38 @@ async function findPriorityType(page, type) {
 }
 
 test.beforeEach(async ({ page }) => {
-  const result = { runtimeErrors: 0, consoleErrors: 0, blockedBusinessWrites: 0, unexpectedDialogs: 0 };
+  const result = { runtimeErrors: 0, consoleErrors: 0, blockedBusinessWrites: 0, unexpectedDialogs: 0, isolatedWhatsappQueueReads: 0 };
   audit.set(page, result);
   page.on('pageerror', () => { result.runtimeErrors += 1; });
   page.on('console', message => {
-    if (message.type() === 'error' && !message.location().url.startsWith('chrome-extension://')) result.consoleErrors += 1;
+    if (message.type() === 'error' && !message.location().url.startsWith('chrome-extension://')) {
+      result.consoleErrors += 1;
+      const category = /Failed to load resource|net::ERR_/i.test(message.text()) ? 'resource-error' : 'application-error';
+      console.log(`[Inicio demo] ERROR: ${category} source=${diagnosticSource(message.location().url)}`);
+    }
   });
   page.on('dialog', async dialog => { result.unexpectedDialogs += 1; await dialog.dismiss(); });
   // Only open/cancel forms. Block accidental business writes as a safety net.
   await page.route('**/rest/v1/**', async route => {
     const request = route.request();
-    const path = new URL(request.url()).pathname.replace(/^.*\/rest\/v1\//, '');
+    const url = new URL(request.url());
+    const path = url.pathname.replace(/^.*\/rest\/v1\//, '');
+    // waAutoSendDueSchedules (whatsapp-green-core.js) runs on startup and
+    // every 30s. Isolate ONLY its due-message queue, before it can claim/send.
+    // The dashboard's live agenda reads use no such filters and stay intact.
+    if (request.method() === 'GET' && path === 'agenda_items' &&
+        url.searchParams.get('whatsapp_enabled') === 'eq.true' &&
+        url.searchParams.get('status') === 'eq.pending' &&
+        String(url.searchParams.get('whatsapp_scheduled_at') || '').startsWith('lte.')) {
+      result.isolatedWhatsappQueueReads += 1;
+      console.log('[Inicio demo] AISLADO: cola automática de WhatsApp; lectura vacía sólo en este navegador');
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      return;
+    }
     const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(request.method());
     if (mutating && (businessTables.has(path.split('/')[0]) || /^(rpc\/)?crm_set_(month_goal|contact_labels)$/.test(path))) {
       result.blockedBusinessWrites += 1;
+      console.log(`[Inicio demo] BLOQUEADO: ${request.method()} ${diagnosticSource(request.url())}`);
       await route.abort('blockedbyclient');
     } else await route.continue();
   });
@@ -125,7 +154,8 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
   const result = audit.get(page);
   console.log(`[Inicio demo] diagnóstico: ${JSON.stringify(result)}`);
-  expect(result, 'Navegación libre de errores y escrituras comerciales').toEqual({ runtimeErrors: 0, consoleErrors: 0, blockedBusinessWrites: 0, unexpectedDialogs: 0 });
+  const { isolatedWhatsappQueueReads, ...errors } = result;
+  expect(errors, 'Navegación libre de errores y escrituras comerciales').toEqual({ runtimeErrors: 0, consoleErrors: 0, blockedBusinessWrites: 0, unexpectedDialogs: 0 });
 });
 
 test('Inicio: creación desde cabecera y analítica abre formularios y permite cancelar', async ({ page }) => {
