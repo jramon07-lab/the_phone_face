@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio · verificación con datos ficticios</title>
+<link rel="stylesheet" href="/assets/app.css"><link rel="stylesheet" href="/tests/fixtures/dashboard-home-fixture.css">
+<script defer src="/tests/fixtures/dashboard-home-fixture.js"></script>
+<script defer src="/js/modules/dashboard-performance-guard.js?v=20260919-home-verified-1"></script></head>
+<body><aside class="fixtureSidebar"><div class="fixtureBrand">▯ THE PHONE FACE<small>STORE · DATOS FICTICIOS</small></div>
+<nav aria-label="Navegación de prueba"><button class="nav active" data-view="dashboard">Inicio</button><button class="nav" data-view="alerts">Avisos <span id="navAlertCount"></span></button><button class="nav" data-view="sales">Panel de ventas</button><button class="nav" data-view="database">Contactos</button><button class="nav" data-view="agenda">Agenda</button></nav>
+<div class="fixtureNote">VERIFICACIÓN VISUAL<br>No conectado a clientes<br>No envía mensajes</div></aside>
+<div id="app" class="fixtureWorkspace"><div class="fixtureBanner">DATOS FICTICIOS · Mismo componente y CSS que el Inicio del CRM · Sin conexión a la base de datos</div>
+<main><section id="view-dashboard"></section>
+<section id="view-database" class="fixtureOther hidden"><h1>Contactos de prueba</h1><p>Vuelve a Inicio para comprobar que no desaparece Hoy comercial.</p></section>
+<section id="view-sales" class="fixtureOther hidden"><h1>Panel de ventas de prueba</h1><button id="newOpp">Nueva oportunidad ficticia</button></section>
+<section id="view-agenda" class="fixtureOther hidden"><h1>Agenda de prueba</h1></section>
+<section id="view-alerts" class="fixtureOther hidden"><h1>Avisos de prueba</h1><button data-alert-filter="expired">Vencidas</button></section>
+</main><output id="fixtureAction" aria-live="polite"></output></div></body></html>

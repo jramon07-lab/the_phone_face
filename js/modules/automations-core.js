@@ -322,21 +322,7 @@ async function loadCommercialDashboard(){
     const today0=new Date();today0.setHours(0,0,0,0);const today1=new Date(today0);today1.setDate(today1.getDate()+1);
     let agenda=[];try{const {data,error}=await sb.from("agenda_items").select("*").gte("starts_at",today0.toISOString()).lt("starts_at",today1.toISOString()).order("starts_at",{ascending:true});if(!error)agenda=data||[]}catch(e){}
     if(!legacyCommercialDashboardActive())return;
-    const calls=agenda.filter(x=>/llamad|teléfono|telefono|contactar/i.test(`${x.title||""} ${x.type||""}`)).length;
-    const tasks=Math.max(0,agenda.length-calls);
-    const followups=open.filter(o=>/seguimiento/i.test(stageName(o.stage_id))).length;
-    const processing=open.filter(o=>/tramitado|pendiente de tramitar/i.test(stageName(o.stage_id))).length;
-    const todayPanel=$("dashContactToday").closest(".dashPanel");
-    const todayHead=todayPanel?.querySelector(".dashPanelHead h3");
-    const todayAction=todayPanel?.querySelector(".dashPanelHead .linkBtn");
-    if(todayHead)todayHead.textContent="✦ Hoy comercial";
-    if(todayAction){todayAction.textContent="Ver agenda";todayAction.onclick=()=>openAppView("agenda")}
-    if(!document.getElementById("todayCommercialCss")){
-      const style=document.createElement("style");style.id="todayCommercialCss";style.textContent=".todayCommercial{display:grid;gap:8px}.todayCommercial button{display:grid!important;grid-template-columns:34px 1fr auto;align-items:center;gap:9px;text-align:left;padding:10px!important;border:1px solid #e5edf8!important;border-radius:11px!important;background:linear-gradient(90deg,#fff,#f4f8ff)!important}.todayCommercial i{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:#e8f1ff;color:#175cd3;font-style:normal}.todayCommercial b{font-size:19px!important;line-height:1;color:#123d91}.todayCommercial span{font-size:10px!important;color:#667085}.todayCommercial em{font-style:normal;color:#98a2b3;font-size:19px}";document.head.appendChild(style)
-    }
-    const rows=[["☎",calls,calls===1?"llamada pendiente":"llamadas pendientes","agenda"],["✓",tasks,tasks===1?"tarea para hoy":"tareas para hoy","agenda"],["✦",followups,"ofertas a seguir","sales"],["▣",processing,"tramitaciones","sales"]];
-    $("dashContactToday").className="todayCommercial";
-    $("dashContactToday").innerHTML=rows.map(([icon,count,label,view])=>`<button type="button" onclick="openAppView('${view}')"><i>${icon}</i><span><b>${count}</b><small>${label}</small></span><em>›</em></button>`).join("");
+    $("dashContactToday").innerHTML=agenda.slice(0,10).map(x=>`<button class="dashItem" onclick="openAppView('agenda')"><b>${esc(x.customer_name||x.title||"Seguimiento")}</b><span>${esc(x.customer_phone||"")} · ${new Date(x.starts_at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span></button>`).join("")||'<div class="small">No tienes contactos programados para hoy.</div>';
     const priority=open.filter(o=>{const d=o.expected_date?new Date(o.expected_date+"T23:59:59").getTime():0;return d&&d<Date.now()}).sort((a,b)=>String(a.expected_date).localeCompare(String(b.expected_date))).slice(0,8);
     $("dashPriorityFollowups").innerHTML=priority.map(o=>`<button class="dashItem" onclick="openOpportunityFull('${o.id}')"><b>${esc(o.client_name||o.title||"Oportunidad")}</b><span>${esc(o.expected_date||"Sin fecha")} · ${esc(crmMoney(o.amount||0))} <i class="priorityTag">Vencida</i></span></button>`).join("")||'<div class="small">No hay seguimientos vencidos.</div>';
     $("goalAmountInput").value=goalAmount||"";$("goalOppInput").value=goalOpps||"";
