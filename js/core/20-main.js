@@ -795,6 +795,7 @@ function updateGoogleContactsUI(){
   const connected=googleContactsConnected();
   if($("googleContactsStatus"))$("googleContactsStatus").textContent=googleContactsState.loading?"Comprobando…":connected?("Conectado en los dos PCs"+(googleContactsEmail()?" · "+googleContactsEmail():"")):(googleContactsState.error?"No se pudo comprobar: "+googleContactsState.error:"No conectado");
   if($("connectGoogleContacts"))$("connectGoogleContacts").classList.toggle("hidden",connected);
+  if($("renewGoogleContacts"))$("renewGoogleContacts").classList.toggle("hidden",!connected||!googleContactsState.canManage);
   if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").classList.toggle("hidden",!connected||!googleContactsState.canManage);
 }
 async function connectGoogleContacts(selectAccount=false){
@@ -806,6 +807,7 @@ async function disconnectGoogleContacts(){
   await googleContactsServer("disconnect",{method:"POST",body:"{}"});await loadGoogleContactsStatus();
 }
 if($("connectGoogleContacts"))$("connectGoogleContacts").onclick=()=>connectGoogleContacts(true).catch(e=>alert(e.message));
+if($("renewGoogleContacts"))$("renewGoogleContacts").onclick=()=>connectGoogleContacts(true).catch(e=>alert(e.message));
 if($("disconnectGoogleContacts"))$("disconnectGoogleContacts").onclick=()=>disconnectGoogleContacts().catch(e=>alert(e.message));
 window.addEventListener("load",loadGoogleContactsStatus);
 
