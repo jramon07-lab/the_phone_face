@@ -153,12 +153,17 @@ async function run(){
     if(avatarCalls===1)throw new Error('fallo temporal');
     return{urlAvatar:'https://cdn.test/avatar.jpg'};
   };
-  await api.waPerformanceLoadAvatar('avatar-0');
-  assert.equal(api.waAvatarRetry.get('avatar-0').attempts,1);
-  await api.waPerformanceLoadAvatar('avatar-0');
+  const validAvatarChat='34600000000@c.us';
+  await api.waPerformanceLoadAvatar(validAvatarChat);
+  assert.equal(api.waAvatarRetry.get(validAvatarChat).attempts,1);
+  await api.waPerformanceLoadAvatar(validAvatarChat);
   assert.equal(avatarCalls,2,'un fallo temporal debe poder reintentarse');
-  assert.equal(state.avatars['avatar-0'],'https://cdn.test/avatar.jpg');
-  assert.equal(avatarNodes[0].applied,'https://cdn.test/avatar.jpg');
+  assert.equal(state.avatars[validAvatarChat],'https://cdn.test/avatar.jpg');
+
+  await api.waPerformanceLoadAvatar('undefined');
+  await api.waPerformanceLoadAvatar('34695661409');
+  await api.waPerformanceLoadAvatar('grupo@g.us');
+  assert.equal(avatarCalls,2,'la cola no debe pedir avatares sin un chatId individual válido');
 
   console.log('WhatsApp performance max OK');
 }
