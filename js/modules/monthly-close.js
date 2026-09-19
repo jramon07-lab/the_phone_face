@@ -16,13 +16,13 @@
     style.id='tpfMonthlyCloseStyle';
     style.textContent=`
 #tpfMonthlyClose{position:fixed;inset:0;z-index:100700;background:linear-gradient(135deg,#101828e6,#111827bf);display:flex;align-items:stretch;justify-content:center;padding:8px}
-.tpfMonthlyCard{width:min(1560px,99vw);height:98vh;background:#f6f8fb;border:1px solid #ffffff2e;border-radius:18px;box-shadow:0 30px 90px #0008;display:flex;flex-direction:column;overflow:hidden}
+.tpfMonthlyCard{width:min(1560px,99vw);height:98vh;background:#f6f8fb;border:1px solid #ffffff2e;border-radius:18px;box-shadow:0 30px 90px #0008;display:flex;flex-direction:column;overflow:auto;overscroll-behavior:contain}
 .tpfMonthlyHead{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 18px;background:linear-gradient(135deg,#0f2f68,#155eef);color:#fff}
 .tpfMonthlyHead h2{margin:0;font-size:21px;letter-spacing:-.02em}
 .tpfMonthlyHead small{display:block;color:#dbeafe;margin-top:2px}
 .tpfMonthlyHead .tpfMonthlyCloseX{width:34px;height:34px;padding:0;border:1px solid #ffffff55;border-radius:10px;background:#ffffff18;color:#fff;font-size:22px;line-height:1;cursor:pointer}
-.tpfMonthlyBody{flex:1;min-height:0;padding:10px;display:flex;flex-direction:column;gap:10px}
-.tpfMonthlyMain{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.tpfMonthlyBody{flex:0 0 auto;min-height:0;padding:10px;display:flex;flex-direction:column;gap:10px}
+.tpfMonthlyMain{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;gap:10px}
 .tpfMonthlyStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .tpfMonthlyStat{padding:12px 14px;border:1px solid #d8e2f4;border-radius:14px;background:#fff;box-shadow:0 8px 22px #1018280a}
 .tpfMonthlyStat b{display:block;font-size:24px;line-height:1.1;color:#102a56;letter-spacing:-.02em}
@@ -33,13 +33,13 @@
 .tpfMonthlyTabCount{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:22px;margin-left:6px;padding:0 6px;border-radius:999px;background:#f2f4f7;color:#344054;font-size:12px}
 .tpfMonthlyTab.active .tpfMonthlyTabCount{background:#ffffff29;color:#fff}
 .tpfMonthlySection,.tpfMonthlyInfo{border:1px solid #dfe7f3;border-radius:14px;background:#fff;box-shadow:0 8px 22px #1018280a}
-.tpfMonthlySection{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.tpfMonthlySection{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;overflow:visible}
 .tpfMonthlyView{display:none}
 .tpfMonthlyView.active{display:flex}
 .tpfMonthlySectionHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:11px 13px;border-bottom:1px solid #e8edf5;background:#fbfdff}
 .tpfMonthlySectionHead b{font-size:16px;color:#172b4d}
 .tpfMonthlyHint{font-size:12px;color:#667085;text-align:right}
-.tpfMonthlyTableWrap{flex:1;min-height:0;overflow:auto}
+.tpfMonthlyTableWrap{flex:0 0 auto;min-height:0;overflow:visible}
 .tpfMonthlyTable{width:100%;border-collapse:separate;border-spacing:0}
 .tpfMonthlyTable th,.tpfMonthlyTable td{padding:10px 12px;border-bottom:1px solid #edf1f7;text-align:left;vertical-align:middle}
 .tpfMonthlyTable th{position:sticky;top:0;z-index:2;background:#f8fafc;font-size:11px;color:#475467;text-transform:uppercase;letter-spacing:.04em}
@@ -53,7 +53,7 @@
 .tpfMonthlyDate{white-space:nowrap;color:#344054}
 .tpfMonthlyEmpty{padding:26px 16px;color:#667085;text-align:center}
 .tpfMonthlyInfo{padding:10px 12px;background:#fffbeb;color:#7a2e0e;border-color:#fedf89;font-size:12px;line-height:1.32}
-.tpfMonthlyFoot{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid #dfe7f3;background:#fff}
+.tpfMonthlyFoot{position:sticky;bottom:0;z-index:5;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 14px;border-top:1px solid #dfe7f3;background:#fff}
 .tpfMonthlyFootText{color:#475467;font-size:13px}
 .tpfMonthlyFootActions{display:flex;gap:10px;align-items:center}
 .tpfMonthlyFoot button{border:1px solid #d0d5dd;border-radius:11px;background:#fff;padding:10px 14px;font-weight:800;cursor:pointer}
@@ -61,7 +61,7 @@
 .tpfMonthlyFoot button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:1180px){.tpfMonthlyTable th:nth-child(4),.tpfMonthlyTable td:nth-child(4){display:none}}
 @media(max-height:760px){.tpfMonthlyHead{display:none}.tpfMonthlyBody{padding-top:8px}.tpfMonthlyTable th,.tpfMonthlyTable td{padding-top:8px;padding-bottom:8px}.tpfMonthlyStat{padding-top:10px;padding-bottom:10px}.tpfMonthlyStat b{font-size:22px}}
-@media(max-width:1000px){#tpfMonthlyClose{padding:8px}.tpfMonthlyCard{height:98vh;width:98vw;border-radius:18px}.tpfMonthlyBody{overflow:auto}.tpfMonthlySection{min-height:520px}.tpfMonthlyStats{grid-template-columns:1fr}.tpfMonthlyTabs{flex-wrap:wrap}.tpfMonthlyFoot{position:sticky;bottom:0;align-items:flex-start;flex-direction:column}.tpfMonthlyFootActions{width:100%;justify-content:flex-end}}
+@media(max-width:1000px){#tpfMonthlyClose{padding:8px}.tpfMonthlyCard{height:98vh;width:98vw;border-radius:18px}.tpfMonthlyStats{grid-template-columns:1fr}.tpfMonthlyTabs{flex-wrap:wrap}.tpfMonthlyFoot{align-items:flex-start;flex-direction:column}.tpfMonthlyFootActions{width:100%;justify-content:flex-end}}
 @media(max-width:680px){.tpfMonthlyHead{padding:16px}.tpfMonthlyHead h2{font-size:21px}.tpfMonthlyBody{padding:10px}.tpfMonthlyTable th:nth-child(3),.tpfMonthlyTable td:nth-child(3){display:none}.tpfMonthlyFootActions{flex-direction:column}.tpfMonthlyFootActions button{width:100%}}
 `;
     document.head.appendChild(style);
