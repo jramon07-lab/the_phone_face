@@ -1047,4 +1047,4 @@ body.tpfUnified .waCleanWorkspace .waCleanFilters>div{left:0;right:auto}
 body.tpfUnified #view-whatsapplive.waCleanFullscreen{position:fixed!important;inset:0!important;height:100dvh!important;width:100vw!important;z-index:150!important;background:#fff!important;margin:0!important}
 }
 
-@media(min-width:1051px){body.tpfWaWorkspaceOnly .sidebar,body.tpfWaWorkspaceOnly .topbar,body.tpfWaWorkspaceOnly #sidebarToggle{display:none!important}body.tpfWaWorkspaceOnly .referenceWorkspace main{margin-left:0!important;width:100%!important}}
+@media(min-width:1051px){body.tpfWaWorkspaceOnly .referenceSidebar,body.tpfWaWorkspaceOnly .referenceTopbar,body.tpfWaWorkspaceOnly #sidebarToggle{display:none!important}body.tpfWaWorkspaceOnly .referenceWorkspace{margin-left:0!important;width:100%!important}body.tpfWaWorkspaceOnly{overflow:hidden!important}}
