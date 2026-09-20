@@ -65,7 +65,7 @@
   const metric=block?.querySelector('.tpfSummaryMetric');if(!metric||metric.dataset.summary===text)return;
   metric.dataset.summary=text;const numbers=(text.match(/\d+/g)||[]).map(Number),key=block.dataset.tpfSummaryGroup;
   const chips=key==='work'?[[numbers[1]||0,'abiertas','blue'],[numbers[2]||0,'vencidas','red'],[numbers[4]||0,'tareas','neutral']]:key==='programs'?[[numbers[0]||0,'','neutral']]:[[numbers[0]||0,'ofertas','blue'],[numbers[1]||0,'activas','green']];
-  metric.replaceChildren(...chips.map(([count,label,tone])=>{const chip=document.createElement('span');chip.className='tpfSummaryChip';chip.dataset.tone=tone;chip.textContent=count+(label?' '+label:'');return chip;}));
+  metric.replaceChildren(...chips.map(([count,label,tone])=>{const chip=document.createElement('span');chip.className='tpfSummaryChip';chip.dataset.tone=tone;const word=count===1?({abiertas:'abierta',vencidas:'vencida',tareas:'tarea',ofertas:'oferta',activas:'activa'}[label]||label):label;chip.textContent=count+(word?' '+word:'');return chip;}));
   block.querySelector('.tpfSummaryTrigger').setAttribute('aria-label',block.querySelector('.tpfSummaryTitle').textContent+'. '+text);
   let detail=block.querySelector('.tpfSummaryCounts');if(!detail){detail=document.createElement('p');detail.className='tpfSummaryCounts';block.querySelector('.tpfSummaryBody').prepend(detail);}detail.textContent=text;
  }

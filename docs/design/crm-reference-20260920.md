@@ -39,3 +39,9 @@ This is a real-code adaptation of the reference, not a pixel-identical copy of e
 - `crm-clean-workspace.yml` checks only the exact preview commit. Its browser test navigates normal/fullscreen views, opens filters, opportunity/contact/editor, checks all six contact tabs and protected notes, and cancels without saving. Screenshots mask customer data.
 
 Validation must distinguish local regression checks from browser execution and visual inspection. Generated design images are not evidence of a running UI. At authoring time, the interactive browser connection was unavailable; the preview workflow is the remaining visual/interaction gate.
+
+## Approved contact layout correction
+
+The initial functional check did not establish visual fidelity. The follow-up widens the contact data column, puts the original CRM/Google/WhatsApp disclosure above all six tabs, presents summary counts as colored badges (with full counts inside the disclosure), and aligns compact editor fields in two columns. The original data nodes, copy actions, note protections and save handlers are preserved. Recent activity and all quick actions remain available.
+
+The preview browser gate now measures data width (>400px at 1440px), disclosure position above tabs, three work badges, editor height (<730px), footer visibility at 1440×900 and 1100×700, and note unlock/cancel preservation. Real screenshots were compared against the approved reference. This verifies the covered flows, not every CRM integration.

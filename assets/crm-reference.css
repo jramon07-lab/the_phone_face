@@ -632,3 +632,7 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfEditorNotes{margin-t
 body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfEditorNotes textarea{height:60px!important;min-height:60px!important}
 body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalActions{padding:10px 20px!important}
 @media(max-width:650px){body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label{grid-template-columns:100px minmax(0,1fr)!important}body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label>.tpfCopyButton{left:72px!important}}
+
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label>.tpfCopyButton{left:auto!important;right:5px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label>input{padding-right:32px!important}
+@media(min-width:1024px){body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for="contactNotes"]:has(+textarea[readonly])::after{content:' · Protegidas';font-size:11px;font-weight:400;color:#76859b}}
