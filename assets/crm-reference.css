@@ -555,7 +555,7 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalActions
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChevron{grid-column:2!important;grid-row:1 / span 2!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-open="false"] .tpfSummaryBody{display:none!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity{margin-top:18px;padding:16px;background:#fff;border:1px solid #e3eaf3;border-radius:9px}
- body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity .tpfRecentHeading{display:flex;justify-content:space-between;align-items:center;gap:12px}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity h3{margin:0;font-size:14px}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity button{padding:5px 8px;font-size:11px;min-height:28px}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity p{font-size:12px;line-height:1.6;color:#657791;border-top:1px solid #edf1f6;padding-top:10px;margin:10px 0 0;white-space:pre-line;overflow-wrap:anywhere}
@@ -570,4 +570,10 @@ body.tpfUnified #view-sales #salesBoard .tpfSalesNotes>div{white-space:pre-wrap;
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference:not(.tpf-contact-editing) #contactSave{display:none!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{grid-template-columns:58px minmax(0,1fr)!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{grid-column:1 / -1!important;grid-row:3!important;justify-content:flex-start!important}
+}
+
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label{margin:10px 0 3px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{margin:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel{min-height:0!important}
 }

@@ -9,7 +9,7 @@ async function evidence(page, name) {
     const candidate = page.locator(selector);
     if (await candidate.isVisible()) root = candidate;
   }
-  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div, .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta').filter({visible:true});
+  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div, .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta').filter({visible:true});
   await root.screenshot({ path: test.info().outputPath(name + '.png'), mask: [personal], maskColor: '#dce5ef' });
 }
 async function insideViewport(locator, page) {
@@ -64,6 +64,8 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
     test.info().annotations.push({ type: 'coverage-gap', description: 'Sin oportunidades/contactos en demo; dossier y editor no comprobados.' });
     return;
   }
+  const notes=page.locator('#salesBoard .tpfSalesNotes').first();
+  if(await notes.count()){await notes.locator('summary').click();await expect(notes).toHaveAttribute('open','');await expect(page.locator('#oppDetailModal')).toBeHidden();await notes.locator('summary').click();}
   const copy=page.locator('#salesBoard .tpfCopyButton').first();
   if(await copy.count()){await copy.click();await expect(page.locator('#oppDetailModal')).toBeHidden();await expect(page.locator('#contactModal')).toBeHidden();}
   await opportunity.click();
@@ -85,6 +87,8 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('.tpfSummaryBody').first()).toBeVisible();
   await page.locator('.tpfSummaryTrigger').first().click();
   await expect(page.locator('#contactSave')).toBeHidden();
+  await expect(page.locator('.tpfRecentActivity h3')).toBeVisible();
+  await expect(page.locator('.tpfRecentActivity button')).toBeVisible();
   await evidence(page, '06-contacto');
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactsCreateBack.tpfContactEditor')).toBeVisible();

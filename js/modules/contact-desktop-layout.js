@@ -114,8 +114,8 @@
  }
  // Read-only activity preview; actions remain in the original history pane.
  const recent=document.createElement('section');recent.className='tpfRecentActivity';
- const recentHead=document.createElement('header'),recentTitle=document.createElement('h3'),recentMore=document.createElement('button'),recentBody=document.createElement('div');
- recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',()=>select('historial',true));
+ const recentHead=document.createElement('div'),recentTitle=document.createElement('h3'),recentMore=document.createElement('button'),recentBody=document.createElement('div');
+ recentHead.className='tpfRecentHeading';recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',()=>select('historial',true));
  recentHead.append(recentTitle,recentMore);recent.append(recentHead,recentBody);
  function refreshRecent(){
   const entries=[...$('cpTimeline')?.children||[]].slice(0,3).map(node=>{const copy=node.cloneNode(true);copy.querySelectorAll('button,input,select,textarea').forEach(control=>control.remove());return copy.textContent.trim();}).filter(Boolean);
