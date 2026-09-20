@@ -61,7 +61,7 @@ jobs:
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
         run: |
           npx playwright test tests/e2e/crm-clean-workspace.spec.js tests/e2e/crm-whatsapp-workspace.spec.js tests/e2e/crm-mobile.spec.js tests/e2e/crm-functional.spec.js --workers=1 --retries=0
-          npx playwright test tests/e2e/crm-complete-flows.spec.js --grep '^Móvil:' --workers=1 --retries=0
+          npx playwright test tests/e2e/crm-complete-flows.spec.js --grep 'Móvil: todas las secciones' --workers=1 --retries=0 --output=test-results-mobile --reporter=list
       - name: Guardar evidencia si falla
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,4 +70,5 @@ jobs:
           path: |
             playwright-report
             test-results
+            test-results-mobile
           if-no-files-found: ignore
