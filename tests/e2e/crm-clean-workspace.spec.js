@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-test.setTimeout(180000);
+test.setTimeout(240000);
 test.use({ viewport: { width: 1440, height: 900 }, screenshot: 'off', trace: 'off', video: 'off' });
 
 async function evidence(page, name) {
@@ -59,6 +59,38 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('.tpfMoreMenu [data-tpf-contact-offer]')).toBeVisible();
   await page.locator('.tpfContactsTitle').click();
   await evidence(page,'00-contactos-normal');
+  // Exercise actual menu actions, not only the presence of their labels.
+  for(const fullscreen of [false,true]){
+    if(fullscreen)await page.locator('#tpfContactsExpand').click();
+    const openMenu=async()=>{await page.locator('#tpfContactsRows .tpfContactActions').first().locator('button').last().click();};
+    const before=await page.locator('#tpfContactsSearch').inputValue();
+    await openMenu();
+    await page.locator('.tpfMoreMenu [data-more="opp"]').click();
+    await expect(page.locator('#oppDetailModal')).toBeVisible();
+    await expect(page.locator('#oppModalClient')).not.toHaveValue('');
+    await expect(page.locator('#oppModalOpenContact')).toHaveAttribute('data-record-id',/.+/);
+    await page.locator('#oppModalClose').click();
+    await expect(page.locator('#contactModal')).toBeHidden();
+    await openMenu();
+    await page.locator('.tpfMoreMenu [data-more="task"]').click();
+    await expect(page.locator('#agendaCreateCard')).toBeVisible();
+    await page.locator('#agendaCloseCreate').click();
+    await expect(page.locator('#agendaCreateCard')).toBeHidden();
+    for(const cancel of [false,true]){
+      await openMenu();
+      await page.locator('.tpfMoreMenu [data-tpf-contact-offer]').click();
+      await expect(page.locator('#opOfferModal')).toBeVisible();
+      await expect(page.locator('#opContent .opCard').first()).toBeVisible();
+      await expect(page.locator('#contactModal')).toBeHidden();
+      if(cancel)await page.locator('#opOfferModal').getByRole('button',{name:'Cancelar',exact:true}).click();
+      else await page.locator('#opOfferModal .opClose').click();
+      await expect(page.locator('#opOfferModal')).toBeHidden();
+      await expect(page.locator('#contactModal')).toBeHidden();
+      await expect(page.locator('#tpfContactsSearch')).toHaveValue(before);
+    }
+    if(fullscreen){await expect(page.locator('#tpfContactsApp')).toHaveClass(/tpfContactsFull/);await page.locator('#tpfContactsExpand').click();}
+  }
+
   await page.locator('#tpfContactsExpand').click();
   await expect(page.locator('#tpfContactsApp')).toHaveClass(/tpfContactsFull/);
   await insideViewport(page.locator('#tpfContactsNext'),page);

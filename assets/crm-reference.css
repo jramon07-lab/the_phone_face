@@ -961,3 +961,11 @@ body.tpfContactsOnly .referenceSidebar,body.tpfContactsOnly .referenceTopbar,bod
 body.tpfContactsOnly .referenceWorkspace{margin-left:0!important;width:100%!important}
 body.tpfContactsOnly{overflow:hidden!important}
 .tpfPickerToolbar select{padding:6px 10px!important;line-height:20px!important}
+
+/* Readable compact list and actions; keep room for edge overlays. */
+body.tpfUnified #tpfContactsApp .tpfContactsTable td{font-size:13px!important}
+body.tpfUnified #tpfContactsApp .tpfContactsTable td small{font-size:12px!important}
+body.tpfUnified .tpfOpportunityPicker .tpfPickerScroll td{font-size:14px}
+body.tpfUnified .tpfOpportunityPicker [data-picker-open]{font-size:13px;min-height:34px;padding:6px 10px}
+body.tpfUnified .tpfMoreMenu{width:220px;max-height:calc(100dvh - 16px);overflow:auto}
+body.tpfUnified .tpfMoreMenu button{font-size:14px!important;min-height:40px}

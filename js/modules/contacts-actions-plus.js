@@ -7,14 +7,11 @@
   const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
   async function openOffer(contactId){
-    const opened=window.openContact?.(contactId);
-    if(opened&&typeof opened.then==='function')await opened;
     for(let attempt=0;attempt<40;attempt++){
-      const button=document.getElementById('cpNewOffer');
-      if(button&&!button.disabled){button.click();return;}
+      if(typeof window.openOfferComposerForContact==='function')return window.openOfferComposerForContact(contactId);
       await wait(50);
     }
-    alert('El configurador de ofertas todavía no está disponible. Vuelve a intentarlo en unos segundos.');
+    throw new Error('El configurador de ofertas todavía no está disponible. Vuelve a intentarlo en unos segundos.');
   }
 
   function addOfferAction(menu){

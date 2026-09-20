@@ -181,6 +181,14 @@ function openOfferForOpportunity(context){
  return openConfigurator();
 }
 window.openOfferComposerForOpportunity=openOfferForOpportunity;
+// Open from a list without navigating through the contact profile.
+window.openOfferComposerForContact=async function(contactId){
+ const result=await sb.from('records').select('id,data').eq('id',contactId).single();
+ if(result.error)throw result.error;
+ if(!result.data)throw new Error('No se ha encontrado el contacto.');
+ offerContext=await directOfferContext(result.data);
+ return openConfigurator();
+};
 function closeModal(){if(busy)return;$('opOfferModal')?.classList.add('hidden');offerContext=null;previewCustomer=''}
 function renderTabs(){const root=$('opTabs');root.innerHTML=operatorList().map(op=>`<button type="button" data-op="${esc(op)}" class="${op===activeOperator?'active':''}">${esc(op)}</button>`).join('')+(isAdmin()?'<button type="button" id="opManageCatalog">⚙ Catálogo</button>':'');root.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{activeOperator=b.dataset.op;selected=null;quantities={};finalPriceManual=false;renderTabs();renderConfigurator()});$('opManageCatalog')?.addEventListener('click',openCatalog)}
 function resetSelections(offer){quantities={};visibility={};for(const line of offer?.line_options||[]){visibility[line.id]=true;if(line.active&&line.default_selected)quantities[line.id]=1}finalPriceManual=false}
