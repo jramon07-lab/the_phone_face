@@ -14,6 +14,6 @@ assert.equal((core.match(/phoneQuery&&waNormalizePhone\(c\.id\)\.includes\(phone
 assert.match(core,/function waHandleLiveSearch\(\)\{clearTimeout\(waLiveSearchTimer\);waLiveSearchTimer=setTimeout\(\(\)=>renderWhatsAppChats\(\),220\)\}/,'the core search must be safe before optional modules load');
 assert.match(source,/removeEventListener\('input',waHandleLiveSearch\)/,'the optimized search must replace the early safe handler');
 assert.match(runtime,/whatsapp-performance-max\.js/,'runtime must load the fixed search module');
-assert.match(html,/whatsapp-green-core\.js\?v=20260911-shared-history-1/,'the browser must refresh the fixed WhatsApp core');
+assert.match(html,/whatsapp-green-core\.js\?v=20260920-contact-final-5/,'the browser must refresh the fixed WhatsApp core');
 assert.match(html,/runtime\.js\?v=/,'the browser must load the runtime loader');
 console.log('WhatsApp search stays indexed and debounced');
