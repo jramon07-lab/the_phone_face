@@ -153,28 +153,39 @@ window.addEventListener('tpf:contacts-loaded',e=>{
  else{profileToken++;const box=$('tpfContactPartySummary');if(box)box.innerHTML='Esta ficha ya no está disponible.';}
 });
 function opportunityContext(){return clean($('oppModalOpenContact')?.dataset.recordId);}
+function opportunityPreview(state=opportunity){
+ const fallback={holder:clean($('oppModalClient')?.value)||'Sin titular indicado',dni:'',manager:'',recipient:clean($('oppModalClient')?.value),phone:clean($('oppModalPhone')?.value),pending:false};
+ if(!state||state.ownerId!==opportunityContext()||state.opportunityId!==clean($('oppModalId')?.value))return {...fallback,loading:true};
+ if(state.loading||state.error)return {...fallback,loading:!!state.loading,error:state.error||''};
+ const p=state.previous;
+ if(state.historical)return {holder:p.holder_name||fallback.holder,dni:p.holder_dni||'',manager:p.same===false?p.contact_name||'Sin gestor indicado':'',recipient:p.recipient_name||p.contact_name||fallback.recipient,phone:p.recipient_phone||p.contact_phone||fallback.phone,pending:false};
+ if(state.selected==='legacy'&&p)return {holder:p.holder_name||fallback.holder,dni:p.holder_dni||'',manager:fallback.recipient,recipient:p.recipient==='holder'?p.holder_name:fallback.recipient,phone:p.recipient==='holder'?p.holder_phone:fallback.phone,pending:!!state.selectionDirty};
+ const own=state.owner?identity(state.owner):null,selected=state.items.find(x=>x.record_id===state.selected);
+ const manager=selected?own:state.managers.length===1?identity(state.managers[0]):identity(state.managers.find(x=>x.id===state.managerId));
+ const holder=selected||(state.managers.length?own:null);
+ return {holder:holder?.name||fallback.holder,dni:holder?.dni||own?.dni||'',manager:manager?.name||(state.managers.length?'Selecciona un gestor':''),recipient:manager?.name||(state.managers.length?'Pendiente de elegir':fallback.recipient),phone:manager?.phone||(state.managers.length?'':fallback.phone),pending:!!state.suggested||!!state.selectionDirty};
+}
+function notifyOpportunityPreview(){window.dispatchEvent(new CustomEvent('tpf:opportunity-party-preview'));}
 function drawOpportunity(state){
  const root=state.root;if(opportunity!==state||!root.isConnected)return;
  const old=root.querySelector('[data-rel-opportunity]');if(old)old.remove();
- const box=document.createElement('div');box.dataset.relOpportunity='';
- if(state.error){box.innerHTML=`<p role="alert">${esc(state.error)}</p><button type="button" class="secondary" data-rel-retry>Reintentar</button>`;root.prepend(box);box.querySelector('button').onclick=()=>loadOpportunity(state);return;}
- if(state.loading){box.textContent='Comprobando titulares vinculados…';root.prepend(box);return;}
- if(state.opportunityId&&(state.historical||(!state.items.length&&!state.managers.length))){
-  const o={record_id:state.ownerId,client_name:$('oppModalClient')?.value,contract_party:state.previous};
-  const info=P.opportunityIdentity(o,state.owner);root.hidden=false;
-  box.innerHTML=`<div class="tpfRelRow"><b>Titular:</b> ${esc(info.holder)}</div><div>DNI / NIF: ${esc(info.dni||'No indicado')}</div><div class="tpfRelRow"><b>Gestionado por:</b> ${esc(info.manager||'El propio titular')}</div>${info.unlinked?'<small>Oportunidad antigua sin ficha vinculada. Selecciona el contacto correcto en el buscador.</small>':''}`;
-  root.prepend(box);return;
- }
- if(state.historical){const p=state.previous,own=state.owner?identity(state.owner):null,holder=own&&norm(own.name)===norm(p.holder_name)?own:null,candidates=[...(own?[own]:[]),...state.managers.map(identity)].filter(x=>norm(x.name)===norm(p.contact_name)&&clean(x.phone)===clean(p.contact_phone)),manager=candidates.length===1?candidates[0]:null;box.innerHTML=`<div class="tpfRelRow">Titular: ${holder?button(holder):esc(p.holder_name)}</div><div class="tpfRelRow">Gestionado por: ${manager?button(manager):esc(p.contact_name)}</div>`;root.prepend(box);return;}
- const own=state.owner?identity(state.owner):null;
- box.innerHTML=`${state.items.length?`<label class="tpf-party-check"><input type="checkbox" data-rel-other ${state.selected?'checked':''}><span>La oportunidad es para otra persona</span></label><div data-rel-choices ${state.selected?'':'hidden'}><label>Buscar entre sus titulares<input type="search" data-rel-filter placeholder="Nombre, teléfono o DNI"></label><select data-rel-choice aria-label="Titular de la oportunidad"><option value="">Selecciona un titular</option>${state.items.map(x=>`<option value="${esc(x.record_id)}" ${state.selected===x.record_id?'selected':''}>${esc(x.name)} · ${esc(x.dni||displayPhone(x.phone))}</option>`).join('')}</select></div>`:''}${state.managers.length?`<div class="tpfRelRow">Gestionado por: ${state.managers.length===1?button(identity(state.managers[0])):`<select data-rel-manager aria-label="Elegir gestor"><option value="">Selecciona quién gestiona esta oportunidad</option>${state.managers.map(r=>`<option value="${esc(r.id)}">${esc(identity(r).name)}</option>`).join('')}</select>`}</div>`:''}<div data-rel-selection></div>`;
- root.prepend(box);
- if(state.suggested){const note=document.createElement('small');note.textContent='Titular vinculado detectado. Se aplicará a esta oportunidad al guardar.';box.appendChild(note);}
- const display=()=>{const x=state.items.find(x=>x.record_id===state.selected);box.querySelector('[data-rel-selection]').innerHTML=x?`<div class="tpfRelRow">Titular: ${button(x)}</div><div class="tpfRelRow">Gestionado por: ${button(own)}</div>`:'';};display();
- box.querySelector('[data-rel-other]')?.addEventListener('change',e=>{box.querySelector('[data-rel-choices]').hidden=!e.target.checked;state.chooseOther=e.target.checked;if(!e.target.checked){state.selected='';box.querySelector('[data-rel-choice]').value='';}display();});
- box.querySelector('[data-rel-choice]')?.addEventListener('change',e=>{state.selected=e.target.value;display();});
+ const box=document.createElement('div');box.dataset.relOpportunity='';root.hidden=false;root.prepend(box);
+ if(state.error){box.innerHTML=`<p role="alert">${esc(state.error)}</p><button type="button" class="secondary" data-rel-retry>Reintentar</button>`;box.querySelector('button').onclick=()=>loadOpportunity(state);notifyOpportunityPreview();return;}
+ if(state.loading){box.textContent='Comprobando titulares vinculados…';notifyOpportunityPreview();return;}
+ const canChoose=!state.historical&&(state.items.length||state.managers.length>1);
+ box.innerHTML=`<div class="tpfRelHeading"><h3>Titular y gestión</h3>${canChoose?`<button type="button" class="secondary" data-rel-edit aria-expanded="${!!state.editorOpen}">Cambiar titular / gestor</button>`:''}</div><div class="tpfRelIdentityGrid" data-rel-selection></div>${canChoose?`<div data-rel-editor ${state.editorOpen?'':'hidden'}>${state.items.length?`<label class="tpf-party-check"><input type="checkbox" data-rel-other ${state.chooseOther||state.selected?'checked':''}><span>La oportunidad es para otra persona</span></label><div data-rel-choices ${state.chooseOther||state.selected?'':'hidden'}><label ${state.items.length>4?'':'hidden'}>Buscar entre sus titulares<input type="search" data-rel-filter placeholder="Nombre, teléfono o DNI"></label><select data-rel-choice aria-label="Titular de la oportunidad"><option value="">Selecciona un titular</option>${state.items.map(x=>`<option value="${esc(x.record_id)}" ${state.selected===x.record_id?'selected':''}>${esc(x.name)} · ${esc(x.dni||displayPhone(x.phone))}</option>`).join('')}</select></div>`:''}${state.managers.length>1?`<label>Gestionado por<select data-rel-manager aria-label="Elegir gestor"><option value="">Selecciona un gestor</option>${state.managers.map(r=>`<option value="${esc(r.id)}" ${state.managerId===r.id?'selected':''}>${esc(identity(r).name)}</option>`).join('')}</select></label>`:''}</div>`:''}`;
+ const display=()=>{
+  const info=opportunityPreview(state),selected=state.items.find(x=>x.record_id===state.selected),own=state.owner?identity(state.owner):null;
+  const holderLink=!state.historical?(selected||own):own&&norm(own.name)===norm(info.holder)?own:null;
+  const managerLink=selected?own:state.managers.map(identity).find(x=>norm(x.name)===norm(info.manager));
+  box.querySelector('[data-rel-selection]').innerHTML=`<div><span class="tpfRelCaption">Titular del contrato</span>${holderLink?button(holderLink):`<strong>${esc(displayName(info.holder))}</strong>`}<small>DNI / NIF: ${esc(info.dni||'Sin indicar')}</small></div><div><span class="tpfRelCaption">Gestionado por</span>${managerLink?button(managerLink):`<strong>${esc(displayName(info.manager||'El propio titular'))}</strong>`}<small>WhatsApp: ${esc(displayPhone(info.phone)||'Sin teléfono')}</small></div>`;
+  notifyOpportunityPreview();
+ };display();
+ box.querySelector('[data-rel-edit]')?.addEventListener('click',e=>{state.editorOpen=!state.editorOpen;box.querySelector('[data-rel-editor]').hidden=!state.editorOpen;e.currentTarget.setAttribute('aria-expanded',String(state.editorOpen));});
+ box.querySelector('[data-rel-other]')?.addEventListener('change',e=>{box.querySelector('[data-rel-choices]').hidden=!e.target.checked;state.chooseOther=e.target.checked;state.selectionDirty=true;state.suggested=false;if(!e.target.checked){state.selected='';box.querySelector('[data-rel-choice]').value='';}display();});
+ box.querySelector('[data-rel-choice]')?.addEventListener('change',e=>{state.selected=e.target.value;state.selectionDirty=true;state.suggested=false;display();});
  box.querySelector('[data-rel-filter]')?.addEventListener('input',e=>{for(const option of box.querySelector('[data-rel-choice]').options){const x=state.items.find(x=>x.record_id===option.value);option.hidden=!!x&&!match(x,e.target.value);}});
- box.querySelector('[data-rel-manager]')?.addEventListener('change',e=>{state.managerId=e.target.value;});
+ box.querySelector('[data-rel-manager]')?.addEventListener('change',e=>{state.managerId=e.target.value;state.selectionDirty=true;display();});
  root.hidden=!state.items.length&&!state.managers.length&&state.previous?.same!==false;
 }
 // Use a unique linked holder only for opportunities without a saved contract.
@@ -188,7 +199,7 @@ async function loadOpportunity(state){
  state.loading=true;state.error='';drawOpportunity(state);
  try{
   const id=state.ownerId;state.owner=id?await record(id):null;
-  state.items=links(state.owner?.data?.TPF_RELACIONES);if(state.previous?.same===false&&!state.historical)state.items.unshift({record_id:'legacy',name:state.previous.holder_name,dni:state.previous.holder_dni,phone:state.previous.holder_phone});state.managers=id?await managers(id):[];defaultLinkedHolder(state);
+  state.items=await currentHolders(links(state.owner?.data?.TPF_RELACIONES));if(state.previous?.same===false&&!state.historical)state.items.unshift({record_id:'legacy',name:state.previous.holder_name,dni:state.previous.holder_dni,phone:state.previous.holder_phone});state.managers=id?await managers(id):[];if(state.previous?.same===false&&!state.historical&&!state.selectionInitialized){state.selected='legacy';state.chooseOther=true;state.selectionInitialized=true;}defaultLinkedHolder(state);
  }catch(e){state.error=e.message||'No se pudieron comprobar los titulares. Reintenta antes de guardar.';}
  state.loading=false;drawOpportunity(state);
 }
@@ -223,5 +234,5 @@ async function prepareOpportunity(payload){
 }
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-rel-open]');if(!b)return;e.preventDefault();if(b.closest('#tpfContactParty')){window.alert('Guarda o cancela la edición y abre el titular desde la ficha del contacto.');return;}openLink(b.dataset.relOpen);});
 const css=document.createElement('style');css.textContent='.tpfRelRow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}.tpfRelLink{color:#2563eb!important;text-transform:none!important}.tpfRelCard{margin-top:12px}.tpfRelCard>.tpfRelLink{background:transparent!important;border:0!important;padding:0!important;text-align:left;font-size:16px;font-weight:700}.tpfRelLegacy summary,.tpfRelSummary summary{cursor:pointer;font-weight:600;font-size:14px}.tpfRelLegacy{margin-top:8px}.tpfRelResult{display:flex!important;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin:5px 0}.tpf-party [data-rel-panel],.tpf-party [data-rel-choices]{margin-top:12px}.tpf-party [data-rel-list]{margin-bottom:8px}.tpf-party [data-rel-searchbox]{margin-top:12px}.tpf-party [data-rel-results]{max-height:220px;overflow:auto}.tpf-party[hidden]{display:none!important}';document.head.appendChild(css);
-window.TPFContactRelations={prepareOpportunity,applyContactData,identity,links,match,searchRecords,record};
+window.TPFContactRelations={opportunityPreview,prepareOpportunity,applyContactData,identity,links,match,searchRecords,record};
 })();

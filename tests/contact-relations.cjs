@@ -40,6 +40,17 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  state({selected:'father'});rows=[manager];await assert.rejects(()=>R.prepareOpportunity({}),/ya no existe/);rows=[manager,father];
  state({selected:'father'});duringRead=()=>{fields.oppModalId.value='changed';};await assert.rejects(()=>R.prepareOpportunity({}),/cambiado/);duringRead=null;
  state({ownerId:'father',managers:[manager,{id:'second'}]});await assert.rejects(()=>R.prepareOpportunity({}),/Selecciona quién/);
+ // The preview must match the holder/recipient that will be saved.
+ state({owner:manager,items:[{record_id:'father',name:'Torcuato',dni:'TEST',phone:'600000002'}],selected:'father',suggested:true});
+ let preview=R.opportunityPreview();assert.equal(preview.holder,'Torcuato');assert.equal(preview.manager,'Carmen');assert.equal(preview.phone,'600000001');assert.equal(preview.pending,true);
+ state({historical:true,previous:{same:false,holder_name:'Titular guardado',holder_dni:'H1',contact_name:'Gestora guardada',recipient_name:'Titular guardado',recipient_phone:'600000002'}});
+ preview=R.opportunityPreview();assert.equal(preview.holder,'Titular guardado');assert.equal(preview.manager,'Gestora guardada');assert.equal(preview.recipient,'Titular guardado');assert.equal(preview.phone,'600000002');assert.equal(preview.pending,false);
+ state({owner:father,ownerId:'father',managers:[manager,{id:'second',data:{NOMBRE:'Otra'}}]});
+ preview=R.opportunityPreview();assert.equal(preview.recipient,'Pendiente de elegir');assert.equal(preview.phone,'');
+ state({selected:'legacy',previous:{same:false,holder_name:'Anterior',holder_phone:'600000003',recipient:'holder'}});assert.equal(R.opportunityPreview().phone,'600000003');
+ state({owner:manager});fields.oppModalClient.value='Nombre editado';assert.equal(R.opportunityPreview().holder,'Nombre editado');fields.oppModalClient.value='Carmen';
+ state({loading:true});assert.equal(R.opportunityPreview().loading,true);
+ state();fields.oppModalId.value='different';assert.equal(R.opportunityPreview().loading,true);
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'jose'));
  assert(R.match({name:'José García',phone:'600 000 001',dni:'ABC'},'600000001'));
  const P=context.TPFContactParty;

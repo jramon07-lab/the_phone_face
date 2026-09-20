@@ -7,19 +7,48 @@ const paths={dashboard:'M3 10 12 3l9 7v11H3Z M9 21v-8h6v8',alerts:'M18 8a6 6 0 0
 function icons(){document.querySelectorAll('.referenceNav .nav[data-view]').forEach(node=>{const slot=node.querySelector('b');if(!slot||slot.querySelector('svg'))return;const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths[node.dataset.view]||'M6 2h8l5 5v15H6Z M14 2v6h5 M9 12h7 M9 16h7');svg.append(path);slot.replaceChildren(svg);});}
 const nav=document.querySelector('.referenceNav');if(nav){icons();new MutationObserver(icons).observe(nav,{childList:true,subtree:true});}
 function opportunity(){
- const card=document.querySelector('#oppDetailModal .opportunityModalCard');if(!card||card.querySelector('.crmOpportunityLayout'))return;
+ const modal=$('oppDetailModal'),card=modal?.querySelector('.opportunityModalCard');if(!card||card.querySelector('.crmOpportunityLayout'))return;
  const layout=document.createElement('div');layout.className='crmOpportunityLayout';
  const main=document.createElement('div');main.className='crmOpportunityMain';
  const aside=document.createElement('aside');aside.className='crmOpportunityAside';aside.setAttribute('aria-label','Resumen de la oportunidad');
  const summary=document.createElement('section');summary.className='crmOpportunitySummary';
- summary.innerHTML='<h3>Resumen de la oportunidad</h3><dl><dt>Cliente</dt><dd data-crm-summary="client"></dd><dt>Teléfono</dt><dd data-crm-summary="phone"></dd><dt>Importe</dt><dd data-crm-summary="amount"></dd><dt>Fecha prevista</dt><dd data-crm-summary="date"></dd><dt>Estado</dt><dd data-crm-summary="stage"></dd></dl>';
+ summary.innerHTML='<h3>Resumen de la oportunidad</h3><div class="crmSummaryAmount" data-crm-summary="amount"></div><span class="crmSummaryStage" data-crm-summary="stage"></span><dl><dt>Titular del contrato</dt><dd data-crm-summary="holder"></dd><dt>DNI / NIF</dt><dd data-crm-summary="dni"></dd><dt>Gestionado por</dt><dd data-crm-summary="manager"></dd><dt>WhatsApp dirigido a</dt><dd data-crm-summary="recipient"></dd><dt>Teléfono WhatsApp</dt><dd data-crm-summary="phone"></dd><dt>Fecha prevista</dt><dd data-crm-summary="date"></dd></dl><div class="crmSummaryNotes"><h4>Notas internas</h4><p data-crm-summary="notes"></p><button type="button" class="secondary" data-crm-expand hidden aria-expanded="false">Ver completas</button></div><p class="crmSummaryPending" data-crm-pending hidden>Pendiente de guardar</p>';
  aside.append(summary);layout.append(main,aside);
  const sections=[...card.querySelectorAll(':scope > .opportunitySection')];if(!sections.length)return;
  sections[0].before(layout);sections.forEach(n=>main.append(n));
- const meta=$('oppMetaInfo');if(meta)aside.append(meta);
- function update(){const values={client:$('oppModalClient')?.value||'Sin contacto',phone:$('oppModalPhone')?.value||'Sin teléfono',amount:($('oppModalAmount')?.value!==''?Number($('oppModalAmount')?.value):0).toLocaleString('es-ES',{style:'currency',currency:'EUR'}),date:$('oppModalDate')?.value?$('oppModalDate').value.split('-').reverse().join('/'):'Sin fecha',stage:$('oppModalStage')?.selectedOptions?.[0]?.textContent||'Sin estado'};for(const [key,value]of Object.entries(values)){summary.querySelector('[data-crm-summary="'+key+'"]').textContent=value;}}
- card.addEventListener('input',update);card.addEventListener('change',update);
- new MutationObserver(update).observe($('oppDetailModal'),{attributes:true,attributeFilter:['class']});update();
+ const notes=$('oppModalNotes'),notesLabel=notes.closest('label'),notesSection=document.createElement('section');notesSection.className='opportunitySection crmOpportunityNotes';
+ const notesTitle=document.createElement('h3');notesTitle.className='opportunitySectionTitle';notesTitle.textContent='Notas internas';notesSection.append(notesTitle,notesLabel);main.append(notesSection);
+ notesLabel.firstChild.textContent='Tus anotaciones sobre esta oportunidad';notes.placeholder='Escribe aquí lo que necesitas recordar…';notes.rows=4;
+ const activity=document.createElement('details');activity.className='crmOpportunityActivity';
+ activity.innerHTML='<summary>Actividad y origen</summary><div class="crmOpportunityActivityBody"><p data-crm-origin hidden></p></div>';
+ main.append(activity);const meta=$('oppMetaInfo');if(meta)activity.querySelector('div').append(meta);
+ const header=card.querySelector('.opportunityModalHeader'),badges=document.createElement('div');badges.className='crmOpportunityHeaderMetrics';badges.innerHTML='<strong data-crm-header="amount"></strong><span data-crm-header="stage"></span>';header.querySelector('div').append(badges);
+ const footer=card.querySelector('.opportunityActions'),more=document.createElement('details');more.className='crmOpportunityMore';more.innerHTML='<summary>Más opciones</summary><div></div>';more.querySelector('div').append($('oppModalDelete'));footer.prepend(more);
+ $('oppModalClose').hidden=true;
+ const status=document.createElement('span');status.className='crmOpportunitySaveState';status.setAttribute('role','status');footer.insertBefore(status,$('oppModalSave'));
+ const fields=['oppModalTitle','oppModalClient','oppModalPhone','oppModalAmount','oppModalDate','oppModalStage','oppModalNotes'];
+ const fingerprint=()=>JSON.stringify(fields.map(id=>$(id)?.value||''));let baseline='',wasOpen=false,openedId='';
+ const setText=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
+ const tones={'próximo':'future','este mes':'current','seguimiento':'followup','pendiente de tramitar':'pending','tramitado':'processed','ganado':'won','perdido':'lost'};
+ const expand=summary.querySelector('[data-crm-expand]'),notePreview=summary.querySelector('[data-crm-summary="notes"]');
+ expand.onclick=()=>{const expanded=expand.getAttribute('aria-expanded')!=='true';expand.setAttribute('aria-expanded',String(expanded));notePreview.classList.toggle('expanded',expanded);expand.textContent=expanded?'Ver menos':'Ver completas';};
+ function update(){
+  if(modal.classList.contains('hidden'))return;
+  const info=window.TPFContactRelations?.opportunityPreview()||{},amountInput=$('oppModalAmount')?.value,amount=amountInput!==''&&Number.isFinite(Number(amountInput))?Number(amountInput).toLocaleString('es-ES',{style:'currency',currency:'EUR'}):'Sin importe';
+  const stage=$('oppModalStage')?.selectedOptions?.[0]?.textContent||'Sin estado';
+  const values={holder:info.loading?'Comprobando…':info.holder||$('oppModalClient')?.value||'Sin titular',dni:info.loading?'—':info.dni||'Sin indicar',manager:info.loading?'Comprobando…':info.manager||'El propio titular',recipient:info.loading?'Comprobando…':info.recipient||'Sin indicar',phone:info.loading?'—':window.TPFContactParty?.displayPhone(info.phone)||info.phone||'Sin teléfono',amount,date:$('oppModalDate')?.value?$('oppModalDate').value.split('-').reverse().join('/'):'Sin fecha',stage,notes:notes.value||'Aún no hay notas internas.'};
+  for(const [key,value]of Object.entries(values))setText(summary.querySelector('[data-crm-summary="'+key+'"]'),value);
+  setText(header.querySelector('[data-crm-header="amount"]'),amount);setText(header.querySelector('[data-crm-header="stage"]'),stage);
+  const tone=tones[stage.trim().toLowerCase()]||'neutral';summary.querySelector('[data-crm-summary="stage"]').dataset.tone=tone;header.querySelector('[data-crm-header="stage"]').dataset.tone=tone;
+  const pending=fingerprint()!==baseline||!!info.pending;summary.querySelector('[data-crm-pending]').hidden=!pending;
+  setText(status,info.error?'No se pudieron comprobar los titulares':info.loading?'Comprobando titulares…':pending?'Cambios sin guardar':$('oppModalId').value?'Sin cambios pendientes':'Nueva oportunidad');
+  status.classList.toggle('pending',pending);expand.hidden=notes.value.length<180&&notes.value.split('\n').length<4;
+  const origin=window.TPFOpportunityNotes?.split(notes.dataset.originalNotes||'').origin||'';const originNode=activity.querySelector('[data-crm-origin]');originNode.hidden=!origin;setText(originNode,origin?'Origen: '+origin:'');
+  more.hidden=!$('oppModalId').value;
+ }
+ function opened(){const open=!modal.classList.contains('hidden');if(open&&(!wasOpen||openedId!==$('oppModalId').value)){openedId=$('oppModalId').value;baseline=fingerprint();activity.open=false;more.open=false;expand.setAttribute('aria-expanded','false');notePreview.classList.remove('expanded');expand.textContent='Ver completas';layout.scrollTop=0;}wasOpen=open;update();}
+ card.addEventListener('input',update);card.addEventListener('change',update);window.addEventListener('tpf:opportunity-party-preview',update);
+ new MutationObserver(opened).observe(modal,{attributes:true,attributeFilter:['class']});opened();
 }
 opportunity();
 const settings=$('view-settings');

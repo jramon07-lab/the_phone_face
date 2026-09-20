@@ -498,7 +498,7 @@ window.openOpportunityCard=(id)=>{
   pendingOpportunityRecordId=o.record_id||null;
   $("oppModalAmount").value=o.amount??"";
   $("oppModalDate").value=o.expected_date||"";
-  $("oppModalNotes").value=o.notes||"";
+  if(window.TPFOpportunityNotes)window.TPFOpportunityNotes.fill($("oppModalNotes"),o.notes);else $("oppModalNotes").value=o.notes||"";
 
   $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
     `<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`
@@ -586,7 +586,7 @@ $("oppModalSave").onclick=async()=>{
     phone:$("oppModalPhone").value.trim()||null,
     amount:$("oppModalAmount").value!==""?Number($("oppModalAmount").value):null,
     expected_date:$("oppModalDate").value||null,
-    notes:$("oppModalNotes").value.trim()||null,
+    notes:(window.TPFOpportunityNotes?window.TPFOpportunityNotes.read($("oppModalNotes")):$("oppModalNotes").value.trim())||null,
     stage_id:stage.id,
     record_id:pendingOpportunityRecordId||null
   };
@@ -668,7 +668,7 @@ window.newOppInStage=async(stageId)=>{
   $("oppModalOpenContact").dataset.recordId="";
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
-  $("oppModalNotes").value="";
+  if(window.TPFOpportunityNotes)window.TPFOpportunityNotes.fill($("oppModalNotes"),"");else $("oppModalNotes").value="";
   $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
     `<option value="${s.id}" ${String(s.id)===String(stage.id)?"selected":""}>${esc(s.name)}</option>`
   ).join("");
@@ -1209,6 +1209,7 @@ window.openOpportunityFull=async(id)=>{
   const contactId=data.record_id||data.contact_id||data.customer_id||"";
   const contactName=data.client_name||data.contact_name||data.customer_name||"Sin contacto";
 
+  const noteParts=window.TPFOpportunityNotes?.split(data.notes)||{internal:data.notes||"",origin:""};
   $("oppFullTitle").textContent=data.title||"Oportunidad";
   $("oppFullContent").innerHTML=`
     <div class="oppReadHeader">
@@ -1230,7 +1231,8 @@ window.openOpportunityFull=async(id)=>{
       <div class="oppField"><span>Fecha prevista de cierre</span><strong>${oppVal(data.expected_date?fmtDateOnly(data.expected_date):"")}</strong></div>
       <div class="oppField"><span>Estado / columna</span><strong>${oppVal(stageName)}</strong></div>
     </div>
-    <section class="oppField oppReadNotes"><h3>Notas de la oportunidad</h3><p>${data.notes?oppVal(data.notes):'Esta oportunidad todavía no tiene notas.'}</p></section>
+    <section class="oppField oppReadNotes"><h3>Notas de la oportunidad</h3><p>${noteParts.internal?oppVal(noteParts.internal):'Esta oportunidad todavía no tiene notas.'}</p></section>
+    ${noteParts.origin?`<section class="oppField oppReadOrigin"><h3>Origen</h3><p>${oppVal(noteParts.origin)}</p></section>`:""}
     <div class="oppUpdated">Última actualización: ${oppVal(data.updated_at?new Date(data.updated_at).toLocaleString("es-ES"):"")}</div>
   `;
   const contactLink=$("oppFullContactLink");
@@ -1943,7 +1945,7 @@ function openNewOpportunityInStage(stageId){
   pendingOpportunityRecordId=null;
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
-  $("oppModalNotes").value="";
+  if(window.TPFOpportunityNotes)window.TPFOpportunityNotes.fill($("oppModalNotes"),"");else $("oppModalNotes").value="";
   $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
     `<option value="${s.id}" ${String(s.id)===String(stageId)?"selected":""}>${esc(s.name)}</option>`
   ).join("");

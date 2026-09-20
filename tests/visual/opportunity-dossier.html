@@ -1,0 +1,84 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificación de ficha · Datos ficticios</title>
+<link rel="stylesheet" href="/assets/app.css"><link rel="stylesheet" href="/assets/opportunity-detail.css"><link rel="stylesheet" href="/assets/crm-unified.css"><link rel="stylesheet" href="/assets/crm-reference.css">
+<style>body{margin:0;background:#eef3f8}.fixtureNotice{padding:25px 20px;width:215px;font:13px/1.6 Arial;color:#536980}.fixtureNotice strong{display:block;color:#254f80;font-size:17px;margin-bottom:18px}.fixtureNotice button{display:block;margin-top:15px}</style></head><body class="tpfUnified"><aside class="fixtureNotice"><strong>THE PHONE FACE</strong>Verificación visual<br>Datos ficticios<br>Sin conexión a clientes ni envíos<button id="fixtureReopen">Abrir ficha de ejemplo</button><button id="fixtureStored">Contrato guardado</button></aside><div id="oppDetailModal" class="modalBack hidden">
+  <div class="modalCard opportunityModalCard" onclick="event.stopPropagation()">
+    <div class="opportunityModalHeader">
+      <div>
+        <div class="opportunityEyebrow">OPORTUNIDAD</div>
+        <h2 id="oppModalHeading">Ficha de oportunidad</h2>
+      </div>
+      <button id="oppModalCloseX" class="modalCloseX" type="button">← Volver</button>
+    </div>
+
+    <input type="hidden" id="oppModalId">
+
+    <div class="opportunitySection">
+      <div class="opportunitySectionTitle">Datos principales</div>
+      <div class="modalGrid opportunityGrid">
+        <label class="full">Título
+          <input id="oppModalTitle" placeholder="Título de la oportunidad">
+        </label>
+        <label>Cliente
+          <input id="oppModalClient" placeholder="Nombre del cliente">
+          <button type="button" id="oppModalOpenContact" class="oppContactOpenBtn">Ver ficha completa</button>
+        </label>
+        <label>Teléfono
+          <input id="oppModalPhone" placeholder="Teléfono">
+        </label>
+        <label class="full opportunityContactSearchLabel">Buscar contacto existente
+          <input id="oppModalDni" placeholder="Escribe nombre, teléfono o DNI" autocomplete="off">
+          <span class="small">Selecciona una coincidencia para vincular la oportunidad con su ficha.</span>
+          <div id="oppContactMatches" class="oppContactMatches hidden"></div>
+        </label>
+        <label>Importe
+          <input id="oppModalAmount" type="number" step="0.01" placeholder="0,00">
+        </label>
+        <label>Fecha prevista
+          <input id="oppModalDate" type="date">
+        </label>
+        <label class="full">Columna / Estado
+          <select id="oppModalStage"></select>
+        </label>
+        <label class="full">Notas
+          <textarea id="oppModalNotes" rows="4" placeholder="Notas de la oportunidad"></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="opportunitySection">
+      <div class="opportunitySectionTitle">Campos personalizados</div>
+      <div id="oppCustomFieldsView" class="oppCustomFieldsView"></div>
+    </div>
+
+    <div class="opportunityMeta" id="oppMetaInfo"></div>
+
+    <div class="modalActions opportunityActions">
+      <button id="oppModalSave" class="primary">Guardar cambios</button>
+      <button id="oppModalDelete" class="danger">Eliminar oportunidad</button>
+      <button id="oppModalClose" class="secondary">← Volver</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/modules/contact-party.js"></script><script src="/js/modules/opportunity-notes.js"></script>
+<script>
+// This fixture executes the production presentation modules using read-only example records.
+const records=[{id:'demo-manager',data:{'NOMBRE Y APELLIDOS':'María José Demo','TELÉFONO':'600000001',TPF_RELACIONES:{managed_contacts:[{record_id:'demo-holder',name:'José Antonio Demo'}]}}},{id:'demo-holder',data:{'NOMBRE Y APELLIDOS':'José Antonio Demo','TELÉFONO':'','DNI / NIF':'DEMO'}}];
+const sb={from(table){if(table!=='records')throw Error('Fixture: only example record reads');let id,ids,inverse=false;return {select(){return this},eq(k,v){if(k==='id')id=v;return this},contains(){inverse=true;return this},async limit(){return {data:[]}},async in(k,v){ids=v;return {data:records.filter(r=>ids.includes(r.id))}},async maybeSingle(){return {data:records.find(r=>r.id===id)}}}}};
+function openContact(){document.querySelector('.fixtureNotice').textContent='Enlace de contacto pulsado. Esta verificación solo usa datos ficticios.';}
+</script><script src="/js/modules/contact-relations.js"></script><script src="/js/modules/crm-reference-layout.js"></script><script>
+const byId=id=>document.getElementById(id);
+function showExample(saved){
+ byId('oppDetailModal').classList.add('hidden');
+ setTimeout(()=>{
+ byId('oppModalId').value=saved?'saved-demo':'draft-demo';byId('oppModalTitle').value='CAMBIO VODAFONE';byId('oppModalHeading').textContent='CAMBIO VODAFONE';byId('oppModalClient').value='María José Demo';byId('oppModalPhone').value='600000001';byId('oppModalOpenContact').dataset.recordId='demo-manager';byId('oppModalAmount').value='27';byId('oppModalDate').value='2026-09-22';byId('oppModalStage').innerHTML='<option value="follow">Seguimiento</option><option value="pending">Pendiente de tramitar</option><option value="won">Ganado</option>';
+ TPFOpportunityNotes.fill(byId('oppModalNotes'),'Oferta creada desde el configurador\n\nLlamar el martes por la mañana.\nConfirmar la dirección de instalación con el titular.');
+ byId('oppCustomFieldsView').innerHTML='<div class="oppCustomItem"><span>Operador</span><strong>Vodafone</strong></div>';byId('oppMetaInfo').textContent='Creada: 20/09/2026 · Estado guardado: Seguimiento';
+ TPFContactParty.mountOpportunity(saved?{same:false,holder_name:'José Antonio Demo',holder_dni:'DEMO',contact_name:'María José Demo',contact_phone:'600000001',recipient_name:'María José Demo',recipient_phone:'600000001'}:null);
+ byId('oppDetailModal').classList.remove('hidden');
+ },0);
+}
+byId('oppModalCloseX').onclick=()=>byId('oppDetailModal').classList.add('hidden');byId('oppModalClose').onclick=byId('oppModalCloseX').onclick;
+byId('oppModalSave').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se guardan datos reales.';};byId('oppModalDelete').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se elimina ningún registro.';};
+byId('fixtureReopen').onclick=()=>showExample(false);byId('fixtureStored').onclick=()=>showExample(true);showExample(false);
+</script></body></html>
