@@ -61,6 +61,7 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await evidence(page,'00-contactos-normal');
   await page.locator('#tpfContactsExpand').click();
   await expect(page.locator('#tpfContactsApp')).toHaveClass(/tpfContactsFull/);
+  await insideViewport(page.locator('#tpfContactsNext'),page);
   await evidence(page,'00-contactos-completo');
   await expect(page.locator('.tpfOppOpen').first()).toBeVisible({timeout:30000});
   await page.locator('.tpfOppOpen').first().click();

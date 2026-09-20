@@ -897,7 +897,7 @@ body.tpfUnified #tpfContactsApp .tpfContactsTableScroll{max-height:calc(100dvh -
 body.tpfUnified #tpfContactsApp .tpfContactsPager{padding:10px 12px!important;font-size:11px}
 body.tpfUnified #tpfContactsApp.tpfContactsFull{position:fixed;inset:0;z-index:150;max-width:none!important;background:#f5f8fc;overflow:auto;height:100dvh}
 body.tpfUnified #tpfContactsApp .tpfContactsFilters.tpfFiltersDrawer{position:fixed!important;top:140px!important;right:25px!important;max-height:calc(100dvh - 165px)!important;z-index:80020!important}
-body.tpfUnified #tpfContactsApp.tpfContactsFull .tpfContactsTableScroll{max-height:calc(100dvh - 195px)}
+body.tpfUnified #tpfContactsApp.tpfContactsFull .tpfContactsTableScroll{max-height:calc(100dvh - 240px)}
 /* The picker shows actual pipeline stages, not repeated contact names. */
 .tpfOpportunityPicker{z-index:99000!important;background:#12203980!important;padding:24px!important}
 .tpfOpportunityPicker[hidden]{display:none!important}
