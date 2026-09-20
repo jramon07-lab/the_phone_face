@@ -56,7 +56,7 @@
    return total+' WhatsApp programado'+(total===1?'':'s');
   }
   const cards=[...offers?.querySelectorAll('.cpOfferCard,.cpOfferItem')||[]];
-  const rows=cards.length?cards:[...offers?.querySelectorAll('.cpOfferList > *')||[]];
+  const rows=cards;
   const active=rows.filter(x=>/seguimiento activo/.test(summaryText(x))).length;
   const paused=rows.filter(x=>/seguimiento pausado/.test(summaryText(x))).length;
   const processed=rows.filter(x=>/tramitado/.test(summaryText(x))).length;
@@ -111,9 +111,11 @@
  function refreshSummaryMetrics(){
   panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));
  }
+ const observedOfferLists=new WeakSet();
  function syncSummarySections(){
   for(const [id,key] of [['cpOffersSection','ofertas'],['cpAutomationStatus','automatizaciones']]){
    const section=$(id);if(!section||!modal.contains(section))continue;
+   const offerList=section.querySelector('.cpOfferList');if(offerList&&!observedOfferLists.has(offerList)){observedOfferLists.add(offerList);new MutationObserver(refreshSummaryMetrics).observe(offerList,{childList:true,subtree:true,characterData:true});}
    if(section.dataset.cpRefPane!==key)section.dataset.cpRefPane=key;
    if(!sections.includes(section))sections.push(section);
    const target=mounted?panel:right;
@@ -249,7 +251,7 @@
   const list=$(id);if(!list)return;
   const more=document.createElement('button');more.type='button';more.className='cpRefMore';more.dataset.cpRefMore=key;
   list.after(more);
-  const update=()=>{const count=list.querySelectorAll(':scope > '+selector).length;more.hidden=count<=2;more.textContent=key==='programados'&&right.dataset.cpRefProgramsAll==='true'?'Mostrar solo 2':'Ver todos ('+count+')';};
+  const update=()=>{const count=list.querySelectorAll(':scope > '+selector).length;more.hidden=count<=2;refreshSummaryMetrics();more.textContent=key==='programados'&&right.dataset.cpRefProgramsAll==='true'?'Mostrar solo 2':'Ver todos ('+count+')';};
   more.addEventListener('click',()=>{if(key==='programados'){right.dataset.cpRefProgramsAll=right.dataset.cpRefProgramsAll==='true'?'false':'true';update();}else select(key,true);});
   new MutationObserver(update).observe(list,{childList:true});update();
  });

@@ -139,6 +139,8 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await tasks.locator('.tpfSummaryTrigger').click();
   await evidence(page, '06-contacto');
   await page.locator('[data-tpf-summary-group="offers"] .tpfSummaryTrigger').click();
+  const offerCards=await page.locator('#cpOffersSection .cpOfferCard').count();
+  await expect(page.locator('[data-tpf-summary-group="offers"] .tpfSummaryChip').first()).toHaveText(offerCards+(offerCards===1?' oferta':' ofertas'));
   await evidence(page,'06-contacto-ofertas');
   await page.locator('[data-tpf-summary-group="offers"] .tpfSummaryTrigger').click();
   await page.locator('#tpfContactEditToggle').click();

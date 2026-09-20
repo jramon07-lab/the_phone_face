@@ -13,3 +13,11 @@ context.taskFilter='completed';context.filterTasks();assert.deepEqual(cards.map(
 context.mounted=false;context.filterTasks();assert(cards.every(c=>!c.filtered));
 cards.splice(0);context.mounted=true;context.filterTasks();assert.equal(context.taskEmpty.hidden,false);assert.equal(context.taskEmpty.textContent,'No hay tareas completadas.');
 console.log('PASS: task filters with completed rows first, summary limit, full task tab, mobile restoration and empty state. No network or writes.');
+const metrics=source.slice(source.indexOf(' function summaryMetrics(key){'),source.indexOf(' function setSummaryMetric('));
+let offers=[];
+const metricContext={$:id=>id==='cpOffersSection'?{querySelectorAll:selector=>selector==='.cpOfferCard,.cpOfferItem'?offers:[{textContent:'No hay ofertas.'}]}:null,summaryText:node=>node.textContent.toLowerCase()};
+vm.createContext(metricContext);vm.runInContext(metrics,metricContext);
+assert.equal(metricContext.summaryMetrics('offers'),'0 ofertas · 0 activas · 0 pausadas · 0 tramitadas');
+offers=[{textContent:'Seguimiento activo'},{textContent:'Seguimiento pausado'},{textContent:'Tramitado'}];
+assert.equal(metricContext.summaryMetrics('offers'),'3 ofertas · 1 activas · 1 pausadas · 1 tramitadas');
+console.log('PASS: empty offer placeholder is not counted; active, paused and processed cards remain counted.');
