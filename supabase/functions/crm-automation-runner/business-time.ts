@@ -34,6 +34,7 @@ function addLocalMonths(parts:MadridParts,months:number):MadridParts {
 }
 
 function isSunday(parts:MadridParts){return new Date(Date.UTC(parts.year,parts.month-1,parts.day)).getUTCDay()===0;}
+function isSaturday(parts:MadridParts){return new Date(Date.UTC(parts.year,parts.month-1,parts.day)).getUTCDay()===6;}
 
 export function madridDateAfter(origin:Date,value=1,unit="days"):string {
   const amount=Math.max(0,Math.floor(Number(value)||0)),parts=madridParts(origin);
@@ -52,6 +53,14 @@ export function nextBusinessSendAt(origin:Date,value=1,unit="days"):Date {
       const monday=addLocalDays(target,1);
       const mondayMinute=minute<600?600:minute<=840?minute:minute<1050?1050:minute<=1230?minute:600;
       return localDate(monday.year,monday.month,monday.day,mondayMinute);
+    }
+    // Los sábados solo se contacta por la mañana. Si el cálculo cae
+    // después de las 14:00, se pasa al lunes a las 10:00.
+    if(isSaturday(target)){
+      if(minute<600)return localDate(target.year,target.month,target.day,600);
+      if(minute<=840)return localDate(target.year,target.month,target.day,minute);
+      const monday=addLocalDays(target,2);
+      return localDate(monday.year,monday.month,monday.day,600);
     }
     if(minute<600)return localDate(target.year,target.month,target.day,600);
     if(minute<=840)return localDate(target.year,target.month,target.day,minute);

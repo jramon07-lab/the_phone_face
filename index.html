@@ -1177,29 +1177,22 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="whatsappSettingsStatus" data-state="unknown">
       <h3>WhatsApp</h3>
-      <div class="small">Modo actual de envío para los WhatsApp programados.</div>
-
-      <div class="waModeBox">
-        <label class="waModeOption">
-          <input type="radio" name="waMode" id="waModeManual" value="manual" checked>
-          <div>
-            <b>WhatsApp normal (manual)</b>
-            <span>Cuando llegue la hora, se abre WhatsApp con el número y mensaje preparados. Tú pulsas Enviar.</span>
-          </div>
-        </label>
-
-        <label class="waModeOption waModeDisabled">
-          <input type="radio" name="waMode" id="waModeApi" value="api" disabled>
-          <div>
-            <b>Envío automático por API</b>
-            <span>Disponible cuando conectemos WhatsApp Business API.</span>
-          </div>
-        </label>
+      <div class="small">Estado de la conexión y del envío automático.</div>
+      <div class="small waApiReady" role="status" aria-live="polite">
+        <b id="whatsappSettingsTitle">Estado sin comprobar</b>
+        <div id="whatsappSettingsDetail">Consulta el estado para comprobar la conexión y los procesos de envío.</div>
       </div>
-
-      <div class="small waApiReady">La agenda ya queda preparada para reutilizar las mismas programaciones cuando se conecte la API.</div>
+      <div class="waModeBox" aria-label="Estado de WhatsApp">
+        <div class="waModeOption"><div><b>Conexión con WhatsApp</b><span id="whatsappSettingsProvider">Sin comprobar</span></div></div>
+        <div class="waModeOption"><div><b>WhatsApp programados en servidor</b><span id="whatsappSettingsScheduled">Sin comprobar</span></div></div>
+        <div class="waModeOption"><div><b>Automatizaciones en servidor</b><span id="whatsappSettingsAutomations">Sin comprobar</span></div></div>
+      </div>
+      <div class="row" style="margin-top:14px;align-items:center">
+        <button id="whatsappSettingsRefresh" class="secondary" type="button">Consultar estado</button>
+        <span id="whatsappSettingsChecked" class="small">Pendiente de consulta</span>
+      </div>
     </div>
 
     <div class="card">
@@ -1592,6 +1585,7 @@
 <script src="/js/modules/automations-settings.js"></script>
 <script src="/js/modules/system-status.js?v=20260916-current-commit-1"></script>
 <script src="/js/modules/system-monitoring.js?v=20260905-errors-1"></script>
+<script src="/js/modules/whatsapp-settings-status.js?v=20260920-server-status-1"></script>
 <script src="/js/modules/edit-presence.js?v=20260902-01"></script>
 <script src="/js/modules/google-drive-backups.js?v=20260902-01"></script>
 <script src="/js/modules/agenda-detail-pro.js?v=20260906-tasks-unified-2"></script>

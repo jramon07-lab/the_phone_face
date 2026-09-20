@@ -4,6 +4,7 @@ process.env.SUPABASE_URL='https://example.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY='service-test';
 process.env.TELEGRAM_BOT_TOKEN='bot-test';
 process.env.CRON_SECRET='cron-test-secret';
+process.env.CRM_STABLE_ORIGIN='https://crm.example';
 
 const now=Date.now(),task={id:'a1',status:'pending',title:'Llamar a Antonio',description:'Revisar oferta',customer_name:'Antonio López',customer_phone:'600333248',starts_at:new Date(now-1000).toISOString(),reminder_at:null,related_record_id:'c1',whatsapp_enabled:false};
 const settings=new Map([

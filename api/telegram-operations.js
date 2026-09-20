@@ -2,12 +2,13 @@
 
 const crypto=require('crypto');
 const O=require('../lib/telegram-operations-core');
+const {stableOrigin}=require('../lib/telegram-agenda-core');
 
 const SB_URL=String(process.env.SUPABASE_URL||'https://overfzbjtpjqxzbujezg.supabase.co').replace(/\/$/,'');
 const SERVICE_KEY=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'');
 const BOT_TOKEN=String(process.env.TELEGRAM_BOT_TOKEN||'');
 const CRON_SECRET=String(process.env.CRON_SECRET||'');
-const CRM_STABLE_ORIGIN=String(process.env.CRM_STABLE_ORIGIN||'https://the-phone-face-app-whatsapp-git-1e9acf-jramon-07-2402s-projects.vercel.app').replace(/\/$/,'');
+const CRM_STABLE_ORIGIN=stableOrigin(process.env.CRM_STABLE_ORIGIN);
 const SETTINGS_KEY='team_notification_settings';
 const ENABLED_KEY='telegram_operations_server_enabled_at';
 const SEND_ACTIONS='(send_template,send_whatsapp_now,__send_whatsapp)';

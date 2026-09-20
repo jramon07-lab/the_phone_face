@@ -8,7 +8,7 @@ import { classifyGreenDelivery, extractGreenMessageId } from "./delivery-receipt
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")||"";
 const SERVICE_KEY=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
-const GREEN_PROXY="https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app/api/green";
+const GREEN_PROXY="https://the-phone-face-app-whatsapp-fotos-y.vercel.app/api/green";
 const sb=createClient(SUPABASE_URL,SERVICE_KEY,{auth:{persistSession:false}});
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 

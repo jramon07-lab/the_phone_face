@@ -1,6 +1,6 @@
 name: CRM Browser Validation
 
-# Chrome is the official browser for CRM release validation.
+# Chrome validates the exact production deployment using read-only navigation.
 on:
   workflow_dispatch:
   push:
@@ -10,55 +10,80 @@ on:
     # 05:00 en España peninsular durante horario de verano.
     - cron: '0 3 * * *'
 
-# Las validaciones usan la misma cuenta: una sesión de cierre de otra
-# ejecución no puede invalidar la prueba de dos dispositivos en curso.
+permissions:
+  contents: read
+
+# All validations share the demo account; never cancel another active session.
 concurrency:
   group: crm-browser-shared-test-account-v3
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   e2e:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      E2E_SERVICE_UNIFICATION: '1'
+      SERVICE_TARGET_URL: https://the-phone-face-app-whatsapp-fotos-y.vercel.app
+      E2E_EXPECTED_COMMIT: ${{ github.sha }}
+      E2E_EXPECTED_BRANCH: main
+      E2E_EXPECTED_ENVIRONMENT: production
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm install
+      - name: Validate exact production context and required secrets
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: |
+          node <<'NODE'
+          const {execFileSync}=require('node:child_process');
+          const {expectation,crmOrigin}=require('./scripts/wait-service-deployment.cjs');
+          const expected=expectation();
+          const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+          if(head!==expected.commit)throw Error('El checkout no corresponde al SHA esperado.');
+          if(process.env.GITHUB_REF_NAME!=='main'||expected.branch!=='main'||expected.environment!=='production') {
+            throw Error('Esta validación solo admite el commit exacto de main en producción.');
+          }
+          if(crmOrigin(process.env.SERVICE_TARGET_URL)!=='https://the-phone-face-app-whatsapp-fotos-y.vercel.app') {
+            throw Error('El destino no es el origen canónico de producción.');
+          }
+          for(const key of ['VERCEL_AUTOMATION_BYPASS_SECRET','CRM_TEST_EMAIL','CRM_TEST_PASSWORD']) {
+            if(!process.env[key])throw Error(`Falta ${key}.`);
+          }
+          NODE
+      - name: Install repository dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
       - run: npx playwright install --with-deps chromium
-      - name: Validate required browser-test secrets
+      - name: Wait for exact main commit in production
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/wait-service-deployment.cjs
+      - name: Run read-only PC and mobile validation
         env:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
           CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
-        run: |
-          test -n "$VERCEL_AUTOMATION_BYPASS_SECRET" || (echo "Missing VERCEL_AUTOMATION_BYPASS_SECRET" && exit 1)
-          test -n "$CRM_TEST_EMAIL" || (echo "Missing CRM_TEST_EMAIL" && exit 1)
-          test -n "$CRM_TEST_PASSWORD" || (echo "Missing CRM_TEST_PASSWORD" && exit 1)
-      - name: Run official Chrome validation
-        env:
-          VERCEL_PREVIEW_URL: ''
-          # La ronda nocturna debe revisar el CRM estable actual, no una preview antigua.
-          PLAYWRIGHT_BASE_URL: https://the-phone-face-app-whatsapp-fotos-y.vercel.app
-          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
-          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
-        # All authenticated tests share the demo account. A parallel logout can
-        # revoke another test's session, so validate flows one at a time.
-        # Safari is optional compatibility coverage, outside the Chrome gate.
-        run: |
-          npx playwright test tests/e2e/crm-whatsapp-multidevice.spec.js --workers=1 --retries=0
-          npx playwright test tests/e2e/crm-*.spec.js --workers=1 --retries=0 --grep-invert 'Dos PCs:|Dos sesiones autenticadas:'
-      - name: Upload browser evidence
+        # Only this guarded suite may run against the shared production data.
+        # Never invoke the crm-* wildcard: other suites mutate real records.
+        run: npx playwright test tests/e2e/crm-service-unification.spec.js --workers=1 --retries=0 --reporter=line
+      # No screenshots, traces, videos or DOM snapshots are uploaded.
+      - name: Record validation scope
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: crm-browser-evidence
-          path: |
-            playwright-report
-            test-results
-            browser-evidence
-          if-no-files-found: ignore
+        run: |
+          node <<'NODE'
+          require('node:fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            'Validación de producción limitada al SHA exacto de main, inicio de sesión y navegación de solo lectura. No se permiten escrituras comerciales, envíos, ejecución de colas ni cambios de ajustes. Los bloqueos se cuentan en el log; no se simulan éxitos. No prueba entrega de mensajes ni ejecución de automatizaciones. No se publican capturas ni datos de clientes.\n');
+          NODE

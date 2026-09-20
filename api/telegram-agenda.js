@@ -7,6 +7,7 @@ const SB_URL=String(process.env.SUPABASE_URL||'https://overfzbjtpjqxzbujezg.supa
 const SERVICE_KEY=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'');
 const BOT_TOKEN=String(process.env.TELEGRAM_BOT_TOKEN||'');
 const CRON_SECRET=String(process.env.CRON_SECRET||'');
+const CRM_STABLE_ORIGIN=T.stableOrigin(process.env.CRM_STABLE_ORIGIN);
 const SETTINGS_KEY='team_notification_settings';
 const ENABLED_KEY='telegram_agenda_server_enabled_at';
 
@@ -42,8 +43,8 @@ function safeEqual(one,two){
   return a.length===b.length&&a.length>0&&crypto.timingSafeEqual(a,b);
 }
 
-async function ensureWebhook(req){
-  const desired=`https://${req.headers.host}/api/telegram-agenda`;
+async function ensureWebhook(){
+  const desired=`${CRM_STABLE_ORIGIN}/api/telegram-agenda`;
   const info=await telegram('getWebhookInfo',{});
   if(info?.url===desired)return false;
   await telegram('setWebhook',{url:desired,secret_token:T.webhookSecret(CRON_SECRET),allowed_updates:['callback_query'],drop_pending_updates:false});
@@ -167,7 +168,7 @@ async function runCron(req){
   if(!SERVICE_KEY||!BOT_TOKEN||!CRON_SECRET)throw new Error('Faltan credenciales privadas de Telegram, Supabase o Cron en Vercel.');
   const config=(await setting(SETTINGS_KEY))?.value||{};
   if(!config.agenda_telegram||!String(config.telegram_chat_id||'').trim())return {ok:true,enabled:false,sent:0};
-  const webhookChanged=await ensureWebhook(req);
+  const webhookChanged=await ensureWebhook();
   let enabled=(await setting(ENABLED_KEY))?.value?.at;
   if(!enabled){enabled=new Date().toISOString();await saveSetting(ENABLED_KEY,{at:enabled});return {ok:true,enabled:true,initialized:true,webhookChanged,sent:0};}
   const now=Date.now(),floor=Math.max(new Date(enabled).getTime(),now-T.DEFAULT_DELIVERY_WINDOW_MS);
@@ -187,7 +188,7 @@ async function runCron(req){
     seen.set(signature,item.key);
     const claim=await claimDelivery(item);if(!claim)continue;
     try{
-      const result=await telegram('sendMessage',{chat_id:String(config.telegram_chat_id),message_thread_id:config.agenda_telegram_thread_id||undefined,text:T.taskMessage(item.task,{kind:item.kind,dni:dnis.get(String(item.task.related_record_id||''))||''}),disable_web_page_preview:true,reply_markup:T.initialKeyboard(item.task.id,{phone:item.task.customer_phone,baseUrl:`https://${req.headers.host}`})});
+      const result=await telegram('sendMessage',{chat_id:String(config.telegram_chat_id),message_thread_id:config.agenda_telegram_thread_id||undefined,text:T.taskMessage(item.task,{kind:item.kind,dni:dnis.get(String(item.task.related_record_id||''))||''}),disable_web_page_preview:true,reply_markup:T.initialKeyboard(item.task.id,{phone:item.task.customer_phone,baseUrl:CRM_STABLE_ORIGIN})});
       await saveSetting(item.key,{status:'sent',owner_id:claim.owner_id,attempt:claim.attempt+1,sent_at:Date.now(),message_id:result?.message_id||null});sent++;
     }catch(error){
       await saveSetting(item.key,{status:'pending',owner_id:claim.owner_id,attempt:claim.attempt+1,next_at:Date.now()+60000,last_error:String(error.message||error).slice(0,500)});failed++;
@@ -207,7 +208,7 @@ module.exports=async function handler(req,res){
       if(!safeEqual(req.headers['x-telegram-bot-api-secret-token'],T.webhookSecret(CRON_SECRET)))return json(res,401,{ok:false,error:'Webhook no autorizado'});
       const config=(await setting(SETTINGS_KEY))?.value||{};
       if(!config.agenda_telegram||!config.telegram_chat_id)return json(res,200,{ok:true,ignored:true});
-      if(req.body?.callback_query)return json(res,200,{ok:true,...await handleCallback(req.body.callback_query,config.telegram_chat_id,`https://${req.headers.host}`)});
+      if(req.body?.callback_query)return json(res,200,{ok:true,...await handleCallback(req.body.callback_query,config.telegram_chat_id,CRM_STABLE_ORIGIN)});
       return json(res,200,{ok:true,ignored:true});
     }
     return json(res,405,{ok:false,error:'Método no permitido'});

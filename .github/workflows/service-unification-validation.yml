@@ -1,0 +1,103 @@
+name: Validar unificación de servicios (solo lectura)
+
+on:
+  push:
+    branches:
+      - work/unify-crm-services-20260920
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Origen Vercel del CRM; vacío para localizar la preview por SHA'
+        required: false
+        type: string
+      expected_commit:
+        description: 'SHA completo; vacío para el commit de la rama seleccionada'
+        required: false
+        type: string
+      expected_environment:
+        description: 'Entorno que debe devolver /api/health'
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+      expected_branch:
+        description: 'Rama exacta del deployment; vacía para la rama seleccionada'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  deployments: read
+
+concurrency:
+  group: crm-browser-shared-test-account-v3
+  cancel-in-progress: false
+
+jobs:
+  readonly-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      E2E_SERVICE_UNIFICATION: '1'
+      SERVICE_TARGET_URL: ${{ inputs.target_url || '' }}
+      E2E_EXPECTED_COMMIT: ${{ inputs.expected_commit || github.sha }}
+      E2E_EXPECTED_BRANCH: ${{ inputs.expected_branch || github.ref_name }}
+      E2E_EXPECTED_ENVIRONMENT: ${{ inputs.expected_environment || 'preview' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_commit || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verificar contexto y secretos requeridos
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: |
+          node <<'NODE'
+          const {execFileSync}=require('node:child_process');
+          const {expectation,crmOrigin}=require('./scripts/wait-service-deployment.cjs');
+          const expected=expectation();
+          const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+          if(head!==expected.commit)throw Error('El checkout no corresponde al SHA esperado.');
+          if(process.env.SERVICE_TARGET_URL)crmOrigin(process.env.SERVICE_TARGET_URL);
+          for(const key of ['VERCEL_AUTOMATION_BYPASS_SECRET','CRM_TEST_EMAIL','CRM_TEST_PASSWORD']) {
+            if(!process.env[key])throw Error(`Falta ${key}.`);
+          }
+          NODE
+      - name: Instalar dependencias del repositorio
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            npm install --no-audit --no-fund
+          fi
+      - name: Validación local obligatoria
+        run: npm run verify
+      - name: Instalar navegador de validación
+        run: npx playwright install --with-deps chromium
+      - name: Esperar y comprobar el despliegue exacto
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/wait-service-deployment.cjs
+      - name: Navegar PC y móvil con cuenta demo y bloqueo de escrituras
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/crm-service-unification.spec.js --workers=1 --retries=0 --reporter=line
+      # Deliberately no screenshots, traces, videos or DOM snapshots are uploaded:
+      # the demo account reads the shared CRM database.
+      - name: Registrar alcance de la comprobación
+        if: always()
+        run: |
+          node <<'NODE'
+          require('node:fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            'Validación limitada a lecturas, inicio de sesión y navegación. No se envían mensajes, ejecutan colas, crean filas ni guardan ajustes. Las operaciones automáticas bloqueadas se cuentan en el log; no se simulan respuestas correctas. No demuestra entrega de mensajes ni ejecución de automatizaciones.\n');
+          NODE
