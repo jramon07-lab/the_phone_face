@@ -13,6 +13,7 @@
   let templateTargetQuick=false;
   let internalSendBusy=false;
   let createEditState=null;
+  let createEditOpening=false;
   let contactLabelCategories={};
   let contactLabelCategoriesReady=false;
   let contactLabelCategoriesRequest=null;
@@ -94,7 +95,6 @@
 
   function recordField(d,...names){for(const n of names){if(d?.[n]!==undefined&&d?.[n]!==null)return String(d[n]);}return '';}
   function setCreateValue(id,value){const el=byId(id);if(el)el.value=value==null?'':String(value);}
-  async function waitForCreateModal(){for(let i=0;i<80;i++){const back=byId('tpfContactsCreateBack');if(back&&!back.classList.contains('hidden'))return back;await new Promise(r=>setTimeout(r,25));}return null;}
   function restoreCreateModal(close=true){
     const s=createEditState;if(!s)return;
     const save=byId('tpfContactsCreateSave'),closeBtn=byId('tpfContactsCreateClose'),cancel=byId('tpfContactsCreateCancel');
@@ -139,14 +139,20 @@
     }catch(err){if(msg)msg.textContent=err?.message||'No se pudo guardar el contacto.';if(btn)btn.disabled=false;}
   }
   async function openCreateModalEdit(){
-    if(createEditState)return;
+    if(createEditState||createEditOpening)return;
     let c=null;try{c=(typeof currentContact!=='undefined'&&currentContact)||null;}catch(_){}
     const id=c?.id||currentRecordId;if(!id)return;
     // El selector histórico puede haber quedado abierto por una versión anterior.
     byId('contactLabelsModal')?.classList.add('hidden');
     const add=byId('tpfContactsAdd');if(!add)return;
-    add.click();
-    const back=await waitForCreateModal();if(!back)return;
+    if(typeof add.onclick!=='function')return;
+    createEditOpening=true;
+    const toggle=byId('tpfContactEditToggle');if(toggle)toggle.disabled=true;
+    try{
+    // Await the real async form opener; a synthetic click plus a two-second poll
+    // could lose the editor whenever its capability/label reads finished later.
+    await add.onclick.call(add);
+    const back=byId('tpfContactsCreateBack');if(!back||back.classList.contains('hidden'))return;
     back.dataset.tpfProfileEditing='1';
     const save=byId('tpfContactsCreateSave'),closeBtn=byId('tpfContactsCreateClose'),cancel=byId('tpfContactsCreateCancel');
     const title=back.querySelector('.tpfContactsModalHead h3'),subtitle=back.querySelector('.tpfContactsModalHead .small');
@@ -182,6 +188,10 @@
     if(save){save.textContent='Guardar cambios';save.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();saveCreateModalEdit();};}
     if(closeBtn)closeBtn.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
     if(cancel)cancel.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
+    }catch(error){
+      const hint=byId('tpfContactProtectedHint');if(hint)hint.textContent=error?.message||'No se pudo abrir el editor. Vuelve a intentarlo.';
+      M.report?.('contact-profile',error,'open editor');
+    }finally{createEditOpening=false;if(toggle)toggle.disabled=false;}
   }
 
   function bindNativeEditControls(){

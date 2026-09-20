@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 
-function fixture(){
+function fixture(delay=0){
   const listeners={},nodes={};
   const listen=(name,fn)=>(listeners[name]??=[]).push(fn);
   const emit=(name,event={})=>{for(const fn of listeners[name]||[])fn(event);};
@@ -24,11 +24,13 @@ function fixture(){
   const first=node('tpfCreateFirst');
   for(const suffix of ['Last','Nickname','Phone','Email','Dni','Bank','Notes','Obs','Labels'])node('tpfCreate'+suffix);
   const add=node('tpfContactsAdd');
-  add.click=()=>{
+  add.onclick=async()=>{
+    if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
     first.value='';back.classList.remove('hidden');
     // The shared form focuses its first input before the profile fills it.
     emit('focusin',{target:first});
   };
+  add.click=()=>{void add.onclick();};
   let releaseLabels;
   const labels=new Promise(resolve=>releaseLabels=resolve);
   const document={body:{},getElementById:id=>nodes[id]||null,querySelector:()=>null,querySelectorAll:()=>[],addEventListener:listen};
@@ -48,7 +50,7 @@ function fixture(){
 
 (async()=>{
   const f=fixture(),opening=f.window.testEditor.openCreateModalEdit();
-  await Promise.resolve();
+  await new Promise(resolve=>setImmediate(resolve));
   assert.equal(f.first.value,'Control');
   assert.equal(f.guarded(),false,'Loading a contact after autofocus must not become an unsaved user edit');
   f.emit('beforeinput',{target:f.first});f.first.value='User draft';
@@ -60,9 +62,15 @@ function fixture(){
   assert.equal(f.back.classList.contains('hidden'),true);
 
   const g=fixture(),pending=g.window.testEditor.openCreateModalEdit();
-  await Promise.resolve();await g.window.testEditor.returnFromCreateEdit();
+  await new Promise(resolve=>setImmediate(resolve));await g.window.testEditor.returnFromCreateEdit();
   g.releaseLabels({data:[]});await pending;
   assert.equal(g.back.classList.contains('hidden'),true);
   assert.equal(g.cancel.onclick,g.nativeCancel,'A late response must not replace handlers after cancellation');
+  const slow=fixture(2200);slow.releaseLabels({data:[]});
+  await slow.window.testEditor.openCreateModalEdit();
+  assert.equal(slow.back.dataset.tpfProfileEditing,'1','Slow async form loading must still initialize edit mode');
+  assert.equal(slow.first.value,'Control');
+  assert.equal(slow.guarded(),false);
+  await slow.window.testEditor.returnFromCreateEdit();
   console.log('PASS contact editor loading: clean baseline, real draft protection, cancellation during label loading');
 })().catch(error=>{console.error(error);process.exitCode=1;});
