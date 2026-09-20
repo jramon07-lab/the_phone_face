@@ -5,6 +5,7 @@ test.use({ viewport: { width: 1440, height: 900 }, screenshot: 'off', trace: 'of
 async function evidence(page, name) {
   // Capture only the active surface; masks on background panels can obscure a modal.
   let root = await page.locator('#view-database').isVisible()?page.locator('#view-database'):page.locator('#view-sales');
+  if(await page.locator('#tpfContactsApp.tpfContactsFull').isVisible())root=page.locator('#tpfContactsApp');
   for (const selector of ['#contactModal .contactProfile','#oppDetailModal .opportunityModalCard','#tpfContactsCreateBack .tpfContactsModal','.tpfOpportunityPicker:not([hidden]) .tpfPickerPanel']) {
     const candidate = page.locator(selector);
     if (await candidate.isVisible()) root = candidate;

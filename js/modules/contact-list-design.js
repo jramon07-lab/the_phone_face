@@ -3,7 +3,7 @@
 'use strict';
 const $=id=>document.getElementById(id);let full=false,menu,more;
 function closeMenu(){if(menu)menu.hidden=true;more?.setAttribute('aria-expanded','false');}
-function toggleFull(on){full=on;$('tpfContactsApp')?.classList.toggle('tpfContactsFull',full);$('tpfContactsExpand')?.setAttribute('aria-pressed',String(full));if($('tpfContactsExpand'))$('tpfContactsExpand').textContent=full?'↙ Salir de pantalla completa':'⛶ Pantalla completa';}
+function toggleFull(on){full=on;document.body.classList.toggle('tpfContactsOnly',full);$('tpfContactsApp')?.classList.toggle('tpfContactsFull',full);$('tpfContactsExpand')?.setAttribute('aria-pressed',String(full));if($('tpfContactsExpand'))$('tpfContactsExpand').textContent=full?'↙ Salir de pantalla completa':'⛶ Pantalla completa';}
 function mount(){
  const app=$('tpfContactsApp'),head=app?.querySelector('.tpfContactsHeaderActions');if(!app||!head)return;
  if(!more){

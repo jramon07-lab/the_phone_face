@@ -956,3 +956,8 @@ body.tpfUnified #tpfContactsApp .tpfContactsTable th:nth-child(8){width:84px}
 body.tpfUnified #tpfContactsApp .tpfContactIdentity{min-width:0}
 body.tpfUnified #tpfContactsApp .tpfContactIdentity>div{min-width:0}
 }
+
+body.tpfContactsOnly .referenceSidebar,body.tpfContactsOnly .referenceTopbar,body.tpfContactsOnly #sidebarToggle{display:none!important}
+body.tpfContactsOnly .referenceWorkspace{margin-left:0!important;width:100%!important}
+body.tpfContactsOnly{overflow:hidden!important}
+.tpfPickerToolbar select{padding:6px 10px!important;line-height:20px!important}
