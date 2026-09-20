@@ -1646,7 +1646,7 @@ function renderSalesList(){
   if(!$("salesListRows"))return;
   const stages=salesCache.stages||[];
   const stageName=id=>stages.find(s=>String(s.id)===String(id))?.name||"";
-  const rows=salesCache.opportunities||[];
+  const rows=salesFilteredOpps();
 
   $("salesListRows").innerHTML=rows.length?rows.map(o=>`
     <div class="salesListRow" data-opp-id="${esc(o.id||'')}">

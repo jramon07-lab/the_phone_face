@@ -175,3 +175,5 @@ body.tpfUnified.tpfBoardOnly #view-sales .salesBoardPage{height:100dvh!important
 body.tpfUnified.tpfBoardOnly #view-sales .salesBoardTopbar{height:auto!important;min-height:54px!important}
 body.tpfUnified.tpfBoardOnly #view-sales.tpfSalesHasSelection #salesBulkBar{display:flex!important}
 @media(max-width:900px){body.tpfUnified #view-sales .salesSummaryExtra{grid-template-columns:1fr 1fr!important}body.tpfUnified #view-sales .salesSummaryStagesWrap{grid-column:1/-1!important}}
+
+body.tpfUnified #view-sales #salesListRows .salesListRow.tpfSummaryHidden,body.tpfUnified #view-sales #salesListRows .salesListRow[style*="display: none"]{display:none!important}
