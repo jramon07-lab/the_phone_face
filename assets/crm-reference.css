@@ -828,3 +828,24 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>lab
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard .tpfGoogleInlineStatus{margin-left:auto!important}
 }
 @media(min-width:1024px) and (max-width:1200px){body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow{grid-template-columns:1fr}}
+
+/* Individual contact editing: identical controls for all six protected fields. */
+#contactModal .tpfInlineContactPencil{position:absolute;right:0;top:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;padding:4px;border:0;border-radius:6px;background:transparent;color:#617b9e;cursor:pointer;pointer-events:auto;z-index:4}
+#contactModal .tpfInlineContactPencil[hidden]{display:none}
+#contactModal .tpfInlineContactPencil svg{width:17px;height:17px}
+#contactModal .tpfInlineContactPencil:hover,#contactModal .tpfInlineContactPencil:focus-visible{color:#075ee8;background:#edf3ff;outline:2px solid #bcd1fa}
+#contactModal .cpData>label.tpfInlineEditableLabel{position:relative}
+#contactModal .cpData>label.tpfInlineEditableLabel>.tpfCopyButton{right:29px!important}
+#contactModal .cpData>label[for="contactNotes"].tpfInlineEditableLabel::after{content:none!important}
+#contactModal .cpData>.tpfInlineNativeHidden{display:none!important}
+#contactModal .cpData>label.tpfInlineActiveLabel>.tpfCopyButton,#contactModal .cpData>label.tpfInlineActiveLabel>.tpfInlineContactPencil{visibility:hidden}
+#contactModal .tpfInlineContactEdit{grid-column:2!important;position:relative;z-index:2;min-width:0;padding:5px 0 10px}
+#contactModal .tpfInlineContactEdit .tpfInlineContactInput{box-sizing:border-box;width:100%;min-height:38px;padding:9px 10px;border:1px solid #91b6f5;border-radius:8px;background:#fff;color:#162b49;font:inherit;line-height:1.45;resize:vertical}
+#contactModal .tpfInlineContactInput:focus{outline:2px solid #dce9ff;outline-offset:1px}
+#contactModal .tpfInlineContactActions{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+#contactModal .tpfInlineContactActions button{padding:7px 10px;border:1px solid #d7e2f1;border-radius:7px;background:#fff;color:#365575;font:inherit;font-size:12px;cursor:pointer}
+#contactModal .tpfInlineContactActions [data-inline-save]{background:#0862e9;border-color:#0862e9;color:#fff}
+#contactModal .tpfInlineContactActions button:disabled{opacity:.6;cursor:wait}
+#contactModal .tpfInlineContactMessage{font-size:12px;line-height:1.4;color:#a13f22;margin:7px 0 0}
+#contactModal .tpfInlineContactMessage:empty{display:none}
+@media(min-width:1024px){#contactModal .cpData>#contactPhone,#contactModal .cpData>#contactDni,#contactModal .cpData>#contactObservations,#contactModal .cpData>#contactNotes,#contactModal .cpData>#contactBank,#contactModal .cpData>#contactEmail{padding-right:58px!important}}

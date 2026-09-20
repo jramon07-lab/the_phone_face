@@ -172,9 +172,31 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   const phone=await page.locator('#contactPhone').boundingBox();
   const phoneCopy=page.locator('label[for="contactPhone"] .tpfCopyButton');
   if(await phoneCopy.isVisible()){
-    const copyBox=await phoneCopy.boundingBox();expect(copyBox.x).toBeGreaterThan(phone.x+phone.width-35);
+    const copyBox=await phoneCopy.boundingBox();expect(copyBox.x).toBeGreaterThan(phone.x+phone.width-65);
     await phoneCopy.click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
   }
+  // Every field edits independently; no real contact data is saved in this check.
+  for(const id of ['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail']){
+    const native=page.locator('#'+id), original=await native.inputValue();
+    await page.locator('[data-inline-field="'+id+'"]').click();
+    const editor=page.locator('.tpfInlineContactInput');
+    await expect(editor).toHaveCount(1);
+    await expect(editor).toBeEditable();
+    await editor.fill(id==='contactEmail'?'prueba@example.com':'Prueba sin guardar');
+    await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
+    if(id==='contactNotes')await evidence(page,'06-edicion-individual-notas');
+    await page.locator('[data-inline-cancel]').click();
+    await expect(editor).toHaveCount(0);
+    await expect(native).toHaveValue(original);
+    await expect(native).toHaveAttribute('readonly','');
+  }
+  await page.locator('[data-inline-field="contactNotes"]').click();
+  await page.locator('.tpfInlineContactInput').fill('Borrador de prueba');
+  await page.locator('[data-inline-field="contactPhone"]').click();
+  await expect(page.locator('.tpfInlineContactMessage')).toContainText('Guarda o cancela');
+  await page.locator('.tpfInlineContactInput').press('Escape');
+  await expect(page.locator('.tpfInlineContactInput')).toHaveCount(0);
+  await expect(page.locator('#contactModal')).toBeVisible();
   await evidence(page,'06-contacto-trabajo');
   await opportunities.locator('.tpfSummaryTrigger').click();
   await tasks.locator('.tpfSummaryTrigger').click();

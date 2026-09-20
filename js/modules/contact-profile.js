@@ -79,7 +79,7 @@
       toggle.setAttribute('aria-pressed',String(editMode));
     }
     const hint=byId('tpfContactProtectedHint');
-    if(hint){const text=editMode?'Edición activada. Guarda los cambios cuando termines.':'Datos protegidos. Pulsa “Editar datos” para modificarlos.';if(hint.textContent!==text)hint.textContent=text;}
+    if(hint){const text=editMode?'Edición activada. Guarda los cambios cuando termines.':'Pulsa el lápiz para editar un campo.';if(hint.textContent!==text)hint.textContent=text;}
     const real=saveButton();if(real){real.disabled=!editMode;real.style.display='none';}
     const local=byId('tpfContactSaveLocal');if(local){local.disabled=!editMode;local.style.display=editMode?'inline-flex':'none';}
   }
@@ -204,7 +204,7 @@
       const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
       const saveLocal=document.createElement('button');saveLocal.id='tpfContactSaveLocal';saveLocal.type='button';saveLocal.className='primary';saveLocal.textContent='Guardar cambios';
       actions.append(b,saveLocal);bar.append(title,actions);if(h)h.replaceWith(bar);else data.prepend(bar);
-      const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Datos protegidos. Pulsa “Editar datos” para modificarlos.';bar.insertAdjacentElement('afterend',hint);
+      const hint=document.createElement('div');hint.id='tpfContactProtectedHint';hint.className='tpfContactProtectedHint';hint.textContent='Pulsa el lápiz para editar un campo.';bar.insertAdjacentElement('afterend',hint);
     }
     bindNativeEditControls();
   }
