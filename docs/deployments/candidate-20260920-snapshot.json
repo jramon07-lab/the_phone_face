@@ -1,0 +1,397 @@
+{
+  "checked_at": "2026-09-20T17:00:08.207942+00:00",
+  "automations": [
+    {
+      "id": "042df29c-330b-431d-9bb2-ea64a5be5abf",
+      "name": "Validacion flujo 1788796821917 editado",
+      "sha256": "e2b44e4a165d5c3e2ba57cba57f2588682d09575822032ade946ee9b0df69aed",
+      "enabled": false
+    },
+    {
+      "id": "0977977e-90df-4298-83fd-bcbfd39d9282",
+      "name": "TRAMITACIÓN · Lowi",
+      "sha256": "89c717ea94a0bbd5db6342747bdbc1039e82f0dd3e8f10f2be97f266978f3d51",
+      "enabled": false
+    },
+    {
+      "id": "143107e4-252b-445d-b107-5472ed84cbe5",
+      "name": "prueba",
+      "sha256": "56fd2c61e27885142dc6be528936d56c6b2ad211dc23ccdaf4e5edb850d34372",
+      "enabled": false
+    },
+    {
+      "id": "1c33bfa8-db44-4d16-acee-5752a12b1624",
+      "name": "TRAMITACIÓN · MásMóvil",
+      "sha256": "063dcdbcbd37eb0a890a4f6dec8ceed365d216ea07bc5fa33b1c9a1dabe3553d",
+      "enabled": true
+    },
+    {
+      "id": "1c779991-ebc9-499f-a183-09324369665a",
+      "name": "DEMO · Después de tramitar",
+      "sha256": "744723bf0dd7c20f6b7d8cdd1f16c47d7c89a3573534e391e36708d475762724",
+      "enabled": false
+    },
+    {
+      "id": "1d4b9fcb-f485-4b29-b457-2357deeb0017",
+      "name": "OFERTA VODAFONE",
+      "sha256": "fbcc377acd9326382a6afd57eaa8c8d5f5ab875f2e32bd037df9668bdb98c645",
+      "enabled": false
+    },
+    {
+      "id": "1e48df12-93d0-4b2a-aa4c-da48e923be53",
+      "name": "RENOVACIÓN · Vodafone · 11 meses",
+      "sha256": "4930094e8e2abda96a64ff6c7c6a4ec0ed726e1886c6457fd4723658d612600a",
+      "enabled": true
+    },
+    {
+      "id": "28c850a0-314e-4884-820c-160c981e8653",
+      "name": "CAMBIO VODAFONE",
+      "sha256": "eaabcae6f5fd46367787c072d567bb876dfc752b1079fb5ee6d0d106e25a521e",
+      "enabled": false
+    },
+    {
+      "id": "440fc5f2-84ab-4de7-93cd-986b185e2c5b",
+      "name": "RENOVACIÓN · O2 · 11 meses",
+      "sha256": "94212ef7b099f20cc48535ccaed62148b570daa095abc0563bb512c132bda720",
+      "enabled": true
+    },
+    {
+      "id": "46a4a9b8-e7da-4a0b-9842-2a478c0f8712",
+      "name": "TRAMITACIÓN · O2",
+      "sha256": "42fe8cb3915e4f6f5193b8daf704a7f7a204b831cbb6f1917a5345721b302508",
+      "enabled": true
+    },
+    {
+      "id": "51086511-15ad-4a18-9d1b-b28968afa477",
+      "name": "TRAMITACIÓN · Orange",
+      "sha256": "57f722b012c174a9f28a746f88b989f86fe27b6763809d4a726055504e6c465d",
+      "enabled": false
+    },
+    {
+      "id": "5c0250c6-aca7-4770-8a82-962fadf9788d",
+      "name": "RENOVACIÓN · MásMóvil · 11 meses",
+      "sha256": "7cec0942891d8033f21b635649acb92d008c7e3a2f747247ec38a7016bfdf5da",
+      "enabled": true
+    },
+    {
+      "id": "5eacb274-40ee-48d7-bec6-e212bf7ecdc5",
+      "name": "DEMO · Oferta y seguimiento",
+      "sha256": "7646c08122250fce283c94a8a49aafa2f71594be2a3c28e82597cd78edf91ff1",
+      "enabled": false
+    },
+    {
+      "id": "6752d944-b076-4904-9c90-b32a383071e2",
+      "name": "POSVENTA · MásMóvil · 3 meses",
+      "sha256": "ace8816f1cb86744d62bd21fa76ffa93fc6e3a23cf65378b47d93063bcbc2dcc",
+      "enabled": true
+    },
+    {
+      "id": "80099e0f-57e3-4a55-a2a9-19962751e1b5",
+      "name": "OFERTAS · Seguimiento general",
+      "sha256": "abc30d9a75cf4def5c7256be12a6caf663837ca1147bc6d5bdd150c914a4a19f",
+      "enabled": true
+    },
+    {
+      "id": "87046b0c-03f2-4daf-961f-437a1baa74f8",
+      "name": "POSVENTA · Vodafone · 3 meses",
+      "sha256": "14cf47b7f052a2f469b4a963a106f2d756504fb01c96b41824f409df53c41c11",
+      "enabled": true
+    },
+    {
+      "id": "8e25386a-978b-46d7-a381-8fb9af60a37f",
+      "name": "TRAMITACIÓN · Vodafone",
+      "sha256": "b0208ef707735ae8f95a8602bbe533048e2b7b3a4297d7f695e387880c838c2c",
+      "enabled": true
+    },
+    {
+      "id": "96eea530-76d3-4314-aa60-e58b62f998a7",
+      "name": "PRUEBA E2E COMPLETA · RAMON · 04-09-2026",
+      "sha256": "6f48c5daccbc5df794d7a3e5ced65bbfc6c5dcbfc7eb4f14c6e3f4dd0c6de38a",
+      "enabled": false
+    },
+    {
+      "id": "a012037f-6304-4d53-8d52-88bfb4ad148a",
+      "name": "TRAMITACIÓN · Yoigo",
+      "sha256": "b0ad099e8c9fe89ebe3a4ae3d979fbea38068dbebb99b1ea1fd22003f5c29c38",
+      "enabled": true
+    },
+    {
+      "id": "bd137208-96e4-4db4-94ed-2d57dc962192",
+      "name": "Bienvenida de cliente nuevo",
+      "sha256": "cba6fbbfa40a3e0e3401dd43e4447788c1dcf9859b20218feee73d25992e4f80",
+      "enabled": true
+    },
+    {
+      "id": "df3941d7-89de-4865-a457-1793d14ac36c",
+      "name": "POSVENTA · Yoigo · 3 meses",
+      "sha256": "471c535a52e16f2a88ae735c5031daa37d5ebabf60a62dff7f4d5a4b934877a7",
+      "enabled": true
+    },
+    {
+      "id": "f979c531-79c4-45bc-91ca-31fdc13ac185",
+      "name": "POSVENTA · O2 · 3 meses",
+      "sha256": "a8acbcde8d5e8b67eaba5e458523de38c2d96c6c6b27ccc1beaabd95fc59659e",
+      "enabled": true
+    },
+    {
+      "id": "feab0538-3ac5-4bef-b518-9ad51e2b7f8e",
+      "name": "RENOVACIÓN · Yoigo · 11 meses",
+      "sha256": "7b084469078d63bf53b74027ed4c6cdc3d451c42e83365f9c0ef61177c989190",
+      "enabled": true
+    }
+  ],
+  "pending_jobs": [
+    {
+      "id": "11cad6eb-1814-4e63-80e5-e913c283151c",
+      "run_at": "2026-12-19T09:00:00+00:00",
+      "sha256": "2d2801333f30cf8082048316f269c7b9ef085b819f340e22d6d71c2bff2743d4",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "15688654-42e1-4fbc-ac30-0bb87bcaf48a",
+      "run_at": "2026-12-07T18:09:00+00:00",
+      "sha256": "f5cca367d9115eeaa8b8f9e9ddd441efcc32280678f87791ef771d646265322f",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "1bceb37c-93b8-4fcf-b85f-e9d1e790aa2c",
+      "run_at": "2026-09-24T17:49:04.645+00:00",
+      "sha256": "7bf7833bbbc4468688a0bcc55b5780018290f069458553c206f1b73ae8c3ffd6",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "2301b712-cbdd-4e58-a0b4-aacf4a9093e3",
+      "run_at": "2026-09-24T17:32:56.855+00:00",
+      "sha256": "2457bd6899dcd8eadb312330dbe05b6afa34bdafcd34ea8b703c45be0c95cf72",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "25492a28-e9f8-4a2b-9de2-fa71ce8e9ea3",
+      "run_at": "2026-12-15T16:30:00+00:00",
+      "sha256": "12c1acf3299fbfdfa5f8d7f8309fa3894748ed4321192790686cc262228779fa",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "29c7fe9f-510a-4cbb-bf43-3a477d499f47",
+      "run_at": "2026-12-15T09:00:00+00:00",
+      "sha256": "760a6efe16448c821f01efaf7e538b1700cc52bb37c5438738839e5d6a856d71",
+      "status": "pending",
+      "automation_id": "f979c531-79c4-45bc-91ca-31fdc13ac185"
+    },
+    {
+      "id": "2e35fa9e-82cb-41bd-9de3-fe9be2e8e333",
+      "run_at": "2026-09-21T09:09:34.427+00:00",
+      "sha256": "20f5229cd58ae2d4c307739523e3a4797a3b5f5c745533988e91a18f9a49af64",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "35429e24-be35-4826-986b-2442978dfde0",
+      "run_at": "2026-09-21T17:32:56.855+00:00",
+      "sha256": "d0d0853c40988c9d97740906364e471963752bb12d2f70ae47c068faacef638f",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "3fc6bdcc-63e7-43e9-ab8e-b15094510e52",
+      "run_at": "2027-08-18T12:00:00+00:00",
+      "sha256": "2d25356f94a3169d989c0770f187d17c8535fbc53d70890e936e823e6d681e1c",
+      "status": "pending",
+      "automation_id": "5c0250c6-aca7-4770-8a82-962fadf9788d"
+    },
+    {
+      "id": "47a8b92a-7975-417a-8857-ac300a394ce7",
+      "run_at": "2027-08-14T17:44:00+00:00",
+      "sha256": "84b383df0658165ad00f7520f83b6c87f84052617d48a63cc38cbc6ecfdff8f4",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "53378bdb-bee4-4521-87da-50d6656f9f0f",
+      "run_at": "2026-09-24T09:09:09.338+00:00",
+      "sha256": "4041b67fb40300f7140ad5ad7bbb27f5e447e929cc9989058abcc4977ac39570",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "58f4d9ee-11c7-4141-bd3f-5fd5a97409b8",
+      "run_at": "2026-12-14T18:44:00+00:00",
+      "sha256": "5b569f6e00dc300394ff58b8515536ea70ebab9b7c1898171d2cad242fff23ac",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "648f5209-4ef5-44f2-8f18-3041c967be99",
+      "run_at": "2026-09-21T17:49:04.645+00:00",
+      "sha256": "1d33697adf60ec6738627931c1881d8c62142233388a365c0d5c676798b222cb",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "696ae2fe-ab43-40a0-a692-a67f38d7366d",
+      "run_at": "2027-08-16T08:00:00+00:00",
+      "sha256": "13f4cf1df830b01e87faafd8a0216058f546a132036c307c9b1bcf096ef8e658",
+      "status": "pending",
+      "automation_id": "440fc5f2-84ab-4de7-93cd-986b185e2c5b"
+    },
+    {
+      "id": "7bec5e48-ba1d-4724-ad54-5e8ae75cda23",
+      "run_at": "2026-12-18T13:00:00+00:00",
+      "sha256": "7a173e7611c4232abd586c7636e8b96a31cf8b413d24010dd0824cf03ee2c1b3",
+      "status": "pending",
+      "automation_id": "6752d944-b076-4904-9c90-b32a383071e2"
+    },
+    {
+      "id": "7f74c082-95bb-4216-bb22-ad1a0095aa9e",
+      "run_at": "2026-09-22T08:31:16.388+00:00",
+      "sha256": "00919dfae4daa6b64944e2cb6465deac2d68c0bd7c640e4a13c37e0fee7e160b",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "81523421-2d9d-4eaf-92fa-c5903a771d98",
+      "run_at": "2026-12-15T12:32:00+00:00",
+      "sha256": "3456b063914dde9aaf5dd2df811b6d1b81fdbf1bbcea380ab63af6bd02079ceb",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "86fe916f-8a83-4278-832a-b075506196e1",
+      "run_at": "2027-08-07T17:09:00+00:00",
+      "sha256": "952bf4a30de03bbf61b3814f3131a5fb309c8e36470545af5bc4a36946637be4",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "8b695fb7-ba88-4378-bcef-d0d78f222ffd",
+      "run_at": "2027-08-19T08:00:00+00:00",
+      "sha256": "d3e3b6affe0b5530628d7c02276d5343e6be71cf5e7275a79eefdb7543bd5fd6",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "9f3a5575-bf46-4575-abfb-7a49813a4e92",
+      "run_at": "2026-09-21T08:00:00+00:00",
+      "sha256": "fb6d446b9f377f9db6b237fdc6bcfbc62d7c4e05c5f434f7a1e93cf246365c34",
+      "status": "pending",
+      "automation_id": "8e25386a-978b-46d7-a381-8fb9af60a37f"
+    },
+    {
+      "id": "a150d8ea-2cfa-4016-93a4-bb28bfde7e47",
+      "run_at": "2026-09-21T08:00:00+00:00",
+      "sha256": "c2b69fb513afd446fda526122608ac429e6f499fdccf1e0f088fec05798cb5ec",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "a588348a-0b6f-4a0f-9a44-cad6efc511dd",
+      "run_at": "2027-08-19T08:00:00+00:00",
+      "sha256": "f6972a139e1fc376a58548d6678cc062369b80f2dbb9f2d1c3dff4ce095bae5b",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "ac8b090e-46e6-472e-960c-adff8c825948",
+      "run_at": "2026-09-21T08:00:00+00:00",
+      "sha256": "80718056a47ad647dbe1cc3db2a3f29b8845c770541fd417b1e9ca940b70a739",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "b602e5b4-ff38-4264-92e6-2ec1caa0c877",
+      "run_at": "2026-09-22T08:31:33.332+00:00",
+      "sha256": "a1abbb9697bc0ddb961bff55619603a69fa4b5ba8896d56924f2fbb70992c01c",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "b87f00d6-67bb-40ce-b146-fea7319e6e91",
+      "run_at": "2026-12-15T09:00:00+00:00",
+      "sha256": "db874735dde6baac66eb076e4112f4c9702d4576cb24f6060d64664d52d787f9",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "b9e9a5ae-88b0-4995-8eae-1c4ab55febdb",
+      "run_at": "2026-09-21T09:09:09.338+00:00",
+      "sha256": "9a82886dc04d696ccf4631f6f1979864af7d7d6b9a08b16e2e175da3db2448ad",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "bc019be7-c666-43bd-86c4-cd7507cae971",
+      "run_at": "2027-08-16T08:00:00+00:00",
+      "sha256": "162bab41098206ba4b5394a7b3bbca4ab9779ad33ceaa7f972fdbe79e29595f5",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "bd9df321-4880-4fd6-b227-2cfb2e5b27d8",
+      "run_at": "2026-12-19T09:00:00+00:00",
+      "sha256": "1b321e3865ad6981b5bc66a7c59cd80dfccd5249fe81bce154a8312d72f2d453",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "cf69a442-b4af-4e51-ad32-589c5f009645",
+      "run_at": "2027-08-16T15:30:00+00:00",
+      "sha256": "5e52c55914e8976dc70fc4634f02839147f5be5b55c0e31d19ec671d150a8468",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "cf714bde-3a39-4745-a429-269668954afd",
+      "run_at": "2026-09-21T08:00:00+00:00",
+      "sha256": "41f5f84d57f6867f060395fb595abe2b20be2a7592221de0bdb29ee0f8334687",
+      "status": "pending",
+      "automation_id": "8e25386a-978b-46d7-a381-8fb9af60a37f"
+    },
+    {
+      "id": "d008ca46-cf83-4377-8eed-58dd2ddce1d1",
+      "run_at": "2027-08-18T11:59:00+00:00",
+      "sha256": "3cd8bf1c96daf19fe5fbdcbb1cad943f846221726272fc8202a1dd20f16d1e89",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "e892a6d8-e818-44bc-bff4-cc7415badc9a",
+      "run_at": "2027-08-16T11:32:00+00:00",
+      "sha256": "7a527fdcb2f0d8d8b4e1f1539bd7f261364d5fe3ee44baff121379054cfca5a8",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    },
+    {
+      "id": "ed3c373a-94d6-473e-a6df-44ecf58f9c58",
+      "run_at": "2026-12-08T17:14:00+00:00",
+      "sha256": "46b1063e1bda1b91302c9176fa1566d67ee7060a2f78dcd2f940993c9763091a",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "f0d0b71f-a9f6-4456-9108-e1aaaed51903",
+      "run_at": "2026-09-24T09:09:34.427+00:00",
+      "sha256": "32c2ef7250051b2b8373742a60eb88dd0a176bcfea9a033aa55dfd94bf690bed",
+      "status": "pending",
+      "automation_id": "80099e0f-57e3-4a55-a2a9-19962751e1b5"
+    },
+    {
+      "id": "f1ebbab9-526b-4578-a38b-ff30bc9b1795",
+      "run_at": "2026-12-18T12:59:00+00:00",
+      "sha256": "50fccb9b7c6927acb3465c0cea5bbe76634785d531efdd5bdc11973216386adf",
+      "status": "pending",
+      "automation_id": "87046b0c-03f2-4daf-961f-437a1baa74f8"
+    },
+    {
+      "id": "f7abab01-5800-491e-86a4-0e52581e413a",
+      "run_at": "2027-08-09T16:14:00+00:00",
+      "sha256": "3b19cb69d22633a7595a1ba4b6250552258c023dfaf207c262b2dde991b00305",
+      "status": "pending",
+      "automation_id": "1e48df12-93d0-4b2a-aa4c-da48e923be53"
+    }
+  ]
+}
