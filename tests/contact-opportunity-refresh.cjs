@@ -8,12 +8,14 @@ async function run(){
   const start=main.indexOf('document.addEventListener("wheel",');
   const end=main.indexOf('},{passive:false});',start)+'},{passive:false});'.length;
   let wheel,prevented=0,scrolled=0;
-  vm.runInNewContext(main.slice(start,end),{document:{addEventListener(type,fn){wheel=fn}},$:()=>({classList:{contains:()=>false}}),window:{scrollBy(){scrolled++}}});
-  for(const selector of ['#contactModal','.contactProfileBack','.modalBack','textarea','#salesScroll']){
+  vm.runInNewContext(main.slice(start,end),{document:{addEventListener(type,fn){wheel=fn}},$:()=>({classList:{contains:()=>false},contains:target=>!target.outside}),window:{scrollBy(){scrolled++}}});
+  for(const selector of ['#contactModal','.contactProfileBack','.modalBack','.opModal','#tpfCleanFilters','textarea','#salesScroll']){
     wheel({target:{closest:s=>s.split(',').map(x=>x.trim()).includes(selector)},deltaY:120,preventDefault(){prevented++}});
   }
   assert.equal(prevented,0,'Sales wheel handler blocked native profile scrolling');
   assert.equal(scrolled,0,'Sales moved background behind profile');
+  wheel({target:{outside:true,closest:()=>null},deltaY:120,preventDefault(){prevented++}});
+  assert.equal(prevented,0,'Sales must not capture wheel events outside its panel');
   wheel({target:{closest:()=>null},deltaY:120,preventDefault(){prevented++}});
   assert.equal(prevented,1);assert.equal(scrolled,1,'Normal sales behavior changed');
   const contacts=[{id:'c1',data:{NOMBRE:'Uno'}},{id:'c2',data:{NOMBRE:'Dos'}}];

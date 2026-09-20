@@ -169,6 +169,7 @@ function drawOpportunity(state){
  const own=state.owner?identity(state.owner):null;
  box.innerHTML=`${state.items.length?`<label class="tpf-party-check"><input type="checkbox" data-rel-other ${state.selected?'checked':''}><span>La oportunidad es para otra persona</span></label><div data-rel-choices ${state.selected?'':'hidden'}><label>Buscar entre sus titulares<input type="search" data-rel-filter placeholder="Nombre, teléfono o DNI"></label><select data-rel-choice aria-label="Titular de la oportunidad"><option value="">Selecciona un titular</option>${state.items.map(x=>`<option value="${esc(x.record_id)}" ${state.selected===x.record_id?'selected':''}>${esc(x.name)} · ${esc(x.dni||displayPhone(x.phone))}</option>`).join('')}</select></div>`:''}${state.managers.length?`<div class="tpfRelRow">Gestionado por: ${state.managers.length===1?button(identity(state.managers[0])):`<select data-rel-manager aria-label="Elegir gestor"><option value="">Selecciona quién gestiona esta oportunidad</option>${state.managers.map(r=>`<option value="${esc(r.id)}">${esc(identity(r).name)}</option>`).join('')}</select>`}</div>`:''}<div data-rel-selection></div>`;
  root.prepend(box);
+ if(state.suggested){const note=document.createElement('small');note.textContent='Titular vinculado detectado. Se aplicará a esta oportunidad al guardar.';box.appendChild(note);}
  const display=()=>{const x=state.items.find(x=>x.record_id===state.selected);box.querySelector('[data-rel-selection]').innerHTML=x?`<div class="tpfRelRow">Titular: ${button(x)}</div><div class="tpfRelRow">Gestionado por: ${button(own)}</div>`:'';};display();
  box.querySelector('[data-rel-other]')?.addEventListener('change',e=>{box.querySelector('[data-rel-choices]').hidden=!e.target.checked;state.chooseOther=e.target.checked;if(!e.target.checked){state.selected='';box.querySelector('[data-rel-choice]').value='';}display();});
  box.querySelector('[data-rel-choice]')?.addEventListener('change',e=>{state.selected=e.target.value;display();});
@@ -176,11 +177,18 @@ function drawOpportunity(state){
  box.querySelector('[data-rel-manager]')?.addEventListener('change',e=>{state.managerId=e.target.value;});
  root.hidden=!state.items.length&&!state.managers.length&&state.previous?.same!==false;
 }
+// Use a unique linked holder only for opportunities without a saved contract.
+// Saved snapshots remain authoritative; multiple holders require a choice.
+function defaultLinkedHolder(state){
+ if(state.previous||state.historical||state.selectionInitialized)return;
+ state.selectionInitialized=true;
+ if(state.items.length===1&&!state.managers.length){state.selected=state.items[0].record_id;state.chooseOther=true;state.suggested=true;}
+}
 async function loadOpportunity(state){
  state.loading=true;state.error='';drawOpportunity(state);
  try{
   const id=state.ownerId;state.owner=id?await record(id):null;
-  state.items=links(state.owner?.data?.TPF_RELACIONES);if(state.previous?.same===false&&!state.historical)state.items.unshift({record_id:'legacy',name:state.previous.holder_name,dni:state.previous.holder_dni,phone:state.previous.holder_phone});state.managers=id?await managers(id):[];
+  state.items=links(state.owner?.data?.TPF_RELACIONES);if(state.previous?.same===false&&!state.historical)state.items.unshift({record_id:'legacy',name:state.previous.holder_name,dni:state.previous.holder_dni,phone:state.previous.holder_phone});state.managers=id?await managers(id):[];defaultLinkedHolder(state);
  }catch(e){state.error=e.message||'No se pudieron comprobar los titulares. Reintenta antes de guardar.';}
  state.loading=false;drawOpportunity(state);
 }

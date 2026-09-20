@@ -872,10 +872,10 @@ async function createGoogleContact(name,phone,email,nickname="",options={}){
    No modifica el desplazamiento horizontal existente del tablero. */
 document.addEventListener("wheel",(e)=>{
   const salesView=$("view-sales");
-  if(!salesView || salesView.classList.contains("hidden"))return;
+  if(!salesView || salesView.classList.contains("hidden") || !salesView.contains(e.target))return;
 
   /* No interferir con campos, desplegables, modales ni con el scroll horizontal del tablero */
-  if(e.target.closest("input, textarea, select, .modalBack, #contactModal, .contactProfileBack"))return;
+  if(e.target.closest("input, textarea, select, .modalBack, .opModal, #tpfCleanFilters, #contactModal, .contactProfileBack"))return;
   if(e.target.closest("#salesScroll"))return;
 
   e.preventDefault();

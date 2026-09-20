@@ -177,3 +177,33 @@ body.tpfUnified.tpfBoardOnly #view-sales.tpfSalesHasSelection #salesBulkBar{disp
 @media(max-width:900px){body.tpfUnified #view-sales .salesSummaryExtra{grid-template-columns:1fr 1fr!important}body.tpfUnified #view-sales .salesSummaryStagesWrap{grid-column:1/-1!important}}
 
 body.tpfUnified #view-sales #salesListRows .salesListRow.tpfSummaryHidden,body.tpfUnified #view-sales #salesListRows .salesListRow[style*="display: none"]{display:none!important}
+
+/* Compact detail views: shared margins, full-width work cards and native scroll. */
+body.tpfUnified .opModal{padding:16px!important;box-sizing:border-box!important}
+body.tpfUnified .opModal .opShell{display:flex!important;flex-direction:column!important;max-height:calc(100dvh - 32px)!important;min-height:0!important;overflow:hidden!important;border-radius:12px!important}
+body.tpfUnified .opModal .opHead{position:relative!important;flex:none!important;padding:12px 18px!important}
+body.tpfUnified .opModal .opBody,body.tpfUnified .opModal .directSaleBody{min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;touch-action:pan-y;padding:14px 18px 24px!important;scrollbar-gutter:stable}
+body.tpfUnified .opModal .opGrid{gap:16px!important}
+body.tpfUnified .opModal .opCard{padding:14px!important;border-radius:9px!important}
+body.tpfUnified .crmOpportunityLayout{grid-template-columns:minmax(0,1fr) 230px;gap:14px}
+body.tpfUnified .crmOpportunityMain .opportunitySection{padding:14px;margin-bottom:10px}
+body.tpfUnified .crmOpportunitySummary{padding:14px}
+body.tpfUnified .crmOpportunitySummary dt{margin-top:11px}
+body.tpfUnified #oppDetailModal .opportunityModalCard{padding:14px!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow{min-height:54px!important;padding-top:6px!important;padding-bottom:6px!important}
+body.tpfUnified .tpfTestMode{bottom:4px!important;right:6px!important;padding:3px 8px!important;border-radius:5px!important;font-size:9px!important;box-shadow:none!important;pointer-events:none!important}
+body.tpfUnified #view-sales #salesListView{margin-bottom:34px!important}
+@media(min-width:1024px){
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpTop{min-height:42px!important;padding:8px 18px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{padding:4px 18px 12px!important;column-gap:12px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:260px minmax(0,1fr)!important;gap:14px!important;padding:0 18px 30px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{padding:14px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{gap:6px!important;flex-wrap:wrap!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button{min-width:0!important;padding:8px 10px!important;min-height:34px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-summary-group="work"] .tpfSummaryBody{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody [data-cp-ref-pane]{grid-column:auto!important;grid-row:auto!important;min-width:0!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedCard{width:100%!important;max-width:none!important;padding:12px!important;box-sizing:border-box!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedTop{display:flex!important;justify-content:space-between!important;gap:10px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryMetric{font-size:11px!important;line-height:1.5!important}
+}
+@media(max-width:850px){body.tpfUnified .crmOpportunityLayout{grid-template-columns:1fr}body.tpfUnified .opModal{padding:6px!important}body.tpfUnified .opModal .opShell{max-height:calc(100dvh - 12px)!important}}

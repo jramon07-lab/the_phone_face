@@ -9,10 +9,14 @@ let rows=[manager,father],duringRead=null;
 context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){if(key==='id')id=v;return this;},order(){return this;},async range(){return {data:[]};},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
 // Test-only access to private state; the published module has no test hooks.
 const source=fs.readFileSync(path.join(base,'js/modules/contact-relations.js'),'utf8');
-vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={defaultLinkedHolder,createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
 const R=context.TPFContactRelations,fixture=context.__fixture;
 function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',opportunityId:'',items:manager.data.TPF_RELACIONES.managed_contacts,managers:[],selected:'',loading:false,...overrides};fixture.set(s);fields.oppModalOpenContact.dataset.recordId=s.ownerId;fields.oppModalId.value=s.opportunityId;return s;}
 (async()=>{
+ const unique={items:[{record_id:'father'}],managers:[]};fixture.defaultLinkedHolder(unique);assert.equal(unique.selected,'father');assert.equal(unique.chooseOther,true);
+ const multiple={items:[{record_id:'father'},{record_id:'husband'}],managers:[]};fixture.defaultLinkedHolder(multiple);assert.equal(multiple.selected,undefined);
+ const frozenDefault={previous:{same:true},items:[{record_id:'father'}],managers:[]};fixture.defaultLinkedHolder(frozenDefault);assert.equal(frozenDefault.selected,undefined);
+ unique.selected='';fixture.defaultLinkedHolder(unique);assert.equal(unique.selected,'');
  assert.equal(fixture.displayName('MARTINA SÁNCHEZ'),'Martina Sánchez');
  const card=fixture.holderCard({record_id:'holder',name:'MARTINA SÁNCHEZ',dni:'TEST',phone:'+34600111222'},{name:'GESTOR',phone:'+34600333444'});
  assert(card.includes('data-rel-open="holder"'));assert(card.includes('Martina Sánchez'));assert(card.includes('WhatsApp automático'));assert(card.includes('600111222'));assert(!card.includes('+34'));
