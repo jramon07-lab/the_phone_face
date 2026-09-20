@@ -3,6 +3,8 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const fields={
+ contactName:{label:'Nombre y apellidos',keys:['NOMBRE Y APELLIDOS','CLIENTE'],identity:true,sidebarOnly:true},
+ contactNickname:{label:'Apodo',keys:['APODO','Apodo','ALIAS'],sidebarOnly:true},
  contactPhone:{label:'Teléfono',keys:['TELÉFONO','TELEFONO','PHONE','MOVIL'],type:'tel'},
  contactDni:{label:'DNI / NIF',keys:['DNI / NIF','DNI','NIF']},
  contactObservations:{label:'Observaciones',keys:['OBSERVACIONES','OBSERVACION','Observaciones'],multiline:true},
@@ -10,12 +12,21 @@ const fields={
  contactBank:{label:'Banco / IBAN',keys:['BANCO','Banco']},
  contactEmail:{label:'Correo electrónico',keys:['EMAIL','CORREO','CORREO ELECTRÓNICO','Email','email'],type:'email'}
 };
-const read=(data,config)=>{for(const key of config.keys)if(data?.[key]!=null)return String(data[key]);return '';};
+const read=(data,config)=>{if(config.identity){const name=String(data?.['NOMBRE Y APELLIDOS']||data?.CLIENTE||'').trim().split(/\s+/),first=name.shift()||'';return JSON.stringify([String(data?.NOMBRE??first),String(data?.APELLIDOS??data?.APELLIDO??name.join(' '))]);}for(const key of config.keys)if(data?.[key]!=null)return String(data[key]);return '';};
 function allowed(){return typeof perms!=='undefined'&&!!(perms?.is_admin||perms?.can_edit_records);}
 function contact(){try{return typeof currentContact!=='undefined'?currentContact:null;}catch(_){return null;}}
 function prepare(data,id,original,value){
  const config=fields[id];if(!config)throw Error('Campo no válido.');
+ if(config.identity){
+  const latest=read(data,config);if(latest!==original&&latest!==value)throw Error('El nombre ha cambiado en otro dispositivo. Vuelve a abrir la edición.');
+  const parts=JSON.parse(value);if(!Array.isArray(parts)||parts.length!==2)throw Error('Revisa el nombre y los apellidos.');
+  const normalize=v=>typeof window.TPFContactDisplayCase==='function'?window.TPFContactDisplayCase(String(v).trim()):String(v).trim();
+  const [first,last]=parts.map(normalize);if(!first)throw Error('Escribe el nombre.');
+  const next={...data,NOMBRE:first,APELLIDOS:last,'NOMBRE Y APELLIDOS':[first,last].filter(Boolean).join(' ')};
+  if('APELLIDO' in next)next.APELLIDO=last;return next;
+ }
  value=config.multiline?String(value):String(value).trim();
+ if(id==='contactNickname'&&typeof window.TPFContactDisplayCase==='function')value=window.TPFContactDisplayCase(value);
  if(id==='contactEmail'&&value&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))throw Error('Revisa el correo electrónico.');
  if(id==='contactPhone'&&value&&!/^\+?[\d\s().-]{6,25}$/.test(value))throw Error('Revisa el teléfono.');
  if(id==='contactPhone'&&value&&(value.replace(/\D/g,'').length<6||value.replace(/\D/g,'').length>15))throw Error('Revisa el teléfono.');
@@ -72,6 +83,7 @@ function enhance(){
  const modal=$('contactModal');if(!modal)return;
  if(session&&(modal.classList.contains('hidden')||String(contact()?.id)!==session.contactId))close();
  for(const [id,config] of Object.entries(fields)){
+  if(config.sidebarOnly)continue;
   const native=$(id);if(!native)continue;
   const label=modal.querySelector('label[for="'+id+'"]');if(!label)continue;
   let pencil=label.querySelector('[data-inline-field]');
@@ -89,6 +101,6 @@ window.addEventListener('click',e=>{
 window.addEventListener('tpf:contact-open',()=>{close();enhance();});
 window.addEventListener('tpf:contact-updated',enhance);
 function install(){const modal=$('contactModal');if(!modal)return;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(enhance,0);}).observe(modal,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});enhance();}
-window.TPFContactInlineEdit={prepare,saveField};
+window.TPFContactInlineEdit={prepare,saveField,fields,read,allowed};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();

@@ -7,6 +7,8 @@ on:
     paths:
       - 'assets/crm-reference.css'
       - 'js/modules/whatsapp-workspace-design.js'
+      - 'js/modules/whatsapp-contact-fields.js'
+      - 'js/modules/contact-inline-edit.js'
       - 'tests/e2e/crm-whatsapp-workspace.spec.js'
       - '.github/workflows/crm-whatsapp-workspace.yml'
   workflow_dispatch:

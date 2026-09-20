@@ -1048,3 +1048,51 @@ body.tpfUnified #view-whatsapplive.waCleanFullscreen{position:fixed!important;in
 }
 
 @media(min-width:1051px){body.tpfWaWorkspaceOnly .referenceSidebar,body.tpfWaWorkspaceOnly .referenceTopbar,body.tpfWaWorkspaceOnly #sidebarToggle{display:none!important}body.tpfWaWorkspaceOnly .referenceWorkspace{margin-left:0!important;width:100%!important}body.tpfWaWorkspaceOnly{overflow:hidden!important}}
+
+/* Shared inline editing in the WhatsApp contact panel. */
+@media(min-width:1051px){
+body.tpfUnified #view-whatsapplive.waFieldsReady #waSideIdentity,
+body.tpfUnified #view-whatsapplive.waFieldsReady #waSideEditContact,
+body.tpfUnified #view-whatsapplive.waFieldsReady #waSideOpenContact,
+body.tpfUnified #view-whatsapplive.waFieldsReady .waNativeNotes{display:none!important}
+body.tpfUnified .waFieldsReady .waContactHeader>div:last-child{display:grid!important;grid-template-columns:minmax(0,1fr) 26px;align-items:center;gap:2px 4px;min-width:0}
+body.tpfUnified .waFieldsReady #waSideName,body.tpfUnified .waFieldsReady #waSideNickname{grid-column:1;margin:0!important}
+body.tpfUnified .waFieldsReady #waFieldIdentityEditors{grid-column:1/-1}
+body.tpfUnified .waFieldsReady .waFieldPencil,body.tpfUnified .waFieldsReady .waFieldCopy{border:0!important;background:transparent!important;padding:4px!important;min-width:24px!important;width:24px;height:28px;color:#2460aa!important;cursor:pointer}
+body.tpfUnified .waFieldsReady .waFieldPencil svg{width:17px;height:17px}
+body.tpfUnified .waFieldsReady .waFieldRow{display:grid;grid-template-columns:75px minmax(0,1fr) 24px 24px;align-items:center;gap:4px;padding:8px 0;border-bottom:1px solid #e8edf3;font-size:12px}
+body.tpfUnified .waFieldsReady .waFieldValue{overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.4}
+body.tpfUnified .waFieldsReady .waFieldLabel{font-weight:600;color:#52667f}
+body.tpfUnified .waFieldsReady .waFieldDisclosure{padding:7px 0;border-bottom:1px solid #e8edf3;font-size:12px}
+body.tpfUnified .waFieldsReady .waFieldDisclosure>summary{cursor:pointer;font-weight:700;padding:5px 0;color:#193456}
+body.tpfUnified .waFieldsReady .waFieldDisclosure small{color:#667085;font-size:11px}
+body.tpfUnified .waFieldsReady .waFieldEditor{grid-column:1/-1;width:100%;min-width:0;display:grid;gap:6px;padding:8px 0}
+body.tpfUnified .waFieldsReady .waFieldEditor input,body.tpfUnified .waFieldsReady .waFieldEditor textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #90b4f5;border-radius:7px;padding:8px;font:inherit;background:white;resize:vertical}
+body.tpfUnified .waFieldsReady .waFieldActions{display:flex;gap:5px}
+body.tpfUnified .waFieldsReady .waFieldActions button{padding:6px!important;font-size:12px!important}
+body.tpfUnified .waFieldsReady .waFieldActions button:first-child{background:#0866ef;color:white;border-color:#0866ef}
+body.tpfUnified .waFieldsReady .waFieldEditor p{font-size:12px;margin:0;color:#a43922}
+body.tpfUnified .waFieldsReady .waFieldEditing>.waFieldValue{display:none}
+body.tpfUnified .waFieldsReady [hidden]{display:none!important}
+body.tpfUnified .waFieldsReady #waSideTags button{background:transparent;border:0;color:inherit;padding:0 3px;font-size:14px;min-width:18px;cursor:pointer}
+body.tpfUnified .waFieldsReady #waSideTags .waGlobalTagChip{display:inline-flex;align-items:center;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedCard{padding:10px!important;margin:6px 0!important;border-radius:9px!important}
+body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedTitle{font-size:13px!important}
+body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedAmount{font-size:15px!important;margin:4px 0!important}
+body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedMeta,body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedClient{font-size:11px!important;margin:3px 0!important}
+body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedActions{margin:5px 0!important;padding:0!important}
+body.tpfUnified .waFieldsReady #waSideOpps .oppUnifiedSummary{display:none!important}
+body.tpfUnified .waCleanWorkspace .waCleanFilters>div[popover]{position:fixed!important;inset:auto;margin:0!important;z-index:210000;width:230px;max-width:calc(100vw - 16px);max-height:260px;overflow:auto;box-sizing:border-box}
+body.tpfUnified .waCleanWorkspace .waCleanFilters>div[popover]:not(:popover-open){display:none!important}
+body.tpfUnified .waCleanWorkspace .waCleanFilters>div[popover]:popover-open{display:grid!important}
+}
+/* Header and actions stay visible; only the schedule form body scrolls. */
+body.tpfUnified #tpfSched3 .tpfS3{display:flex!important;flex-direction:column!important;max-height:calc(100dvh - 32px)!important;overflow:hidden!important}
+body.tpfUnified #tpfSched3 .tpfS3h,body.tpfUnified #tpfSched3 .tpfS3f{flex:0 0 auto!important;padding:12px 18px!important;background:#fff}
+body.tpfUnified #tpfSched3 .tpfS3b{flex:1 1 auto;min-height:0;overflow:auto!important;padding:14px 18px!important}
+body.tpfUnified #tpfSched3 .tpfS3grid{gap:6px!important;margin:8px 0 12px!important}
+body.tpfUnified #tpfSched3 .tpfS3q{padding:8px 5px!important;min-height:60px!important;font-size:12px!important}
+body.tpfUnified #tpfSched3 textarea{min-height:85px!important;max-height:170px}
+body.tpfUnified #tpfSched3 .tpfS3f{border-top:1px solid #dce5ef}
+body.tpfUnified #tpfSched3 .tpfS3primary{background:#0866ef;border-color:#0866ef}
+@media(min-width:1051px){body.tpfUnified .waFieldsReady .waFieldPeek{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;margin-top:3px}body.tpfUnified .waFieldsReady details[open]>.waFieldPeek,body.tpfUnified .waFieldsReady details[open]>summary>.waFieldPeek{display:none}}
