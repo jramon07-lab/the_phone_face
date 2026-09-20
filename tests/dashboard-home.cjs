@@ -42,7 +42,7 @@ assert.match(shell,/<details class="tdBusinessDetails">/,'Analytics remains avai
 assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
 assert.ok(!html.includes('dashboard-home-pro.js'));
 assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260920-inicio-12'"));
-assert.ok(html.includes('runtime.js?v=20260920-clean-workspace-2'));
+assert.ok(html.includes('runtime.js?v=20260920-contact-final-5'));
 assert.ok(!/\.referenceSidebar|\.referenceNav|\.referenceWorkspace/.test(css),'Inicio must not restyle the shared CRM navigation');
 assert.ok(!source.includes('scrollIntoView'),'filters never force the page to scroll');
 assert.ok(!source.includes('tdPipelineRows'),'do not duplicate and truncate the worklist into previews');

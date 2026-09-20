@@ -61,10 +61,9 @@ function ensureContainers(){
  const right=document.querySelector('#contactModal .cpRight');
  if(right){
   let section=$('cpAutomationStatus');
-  if(!section){section=document.createElement('section');section.id='cpAutomationStatus';section.className='cpSideSection casCard';section.innerHTML=loadingHtml()}
+  if(!section){section=document.createElement('section');section.id='cpAutomationStatus';section.className='cpSideSection casCard collapsed';section.innerHTML=loadingHtml()}
   const offers=$('cpOffersSection');
-  if(offers&&section.nextElementSibling!==offers)offers.before(section);
-  else if(!offers&&section.parentElement!==right)right.prepend(section);
+  if(!section.closest('#tpfSummaryAccordion')){if(offers&&section.previousElementSibling!==offers)offers.after(section);else if(!offers&&section.parentElement!==right)right.prepend(section);}
  }
  const waCard=$('waContactCard'),waOpp=$('waSideOpps')?.closest('.waSideSection');
  if(waCard&&waOpp&&!$('waAutomationStatus')){const section=document.createElement('section');section.id='waAutomationStatus';section.className='waSideSection casCard compact collapsed';section.innerHTML=loadingHtml();waOpp.before(section)}
@@ -96,7 +95,7 @@ async function fetchSnapshot(contact,force=false){
 }
 async function renderTarget(target,contact,force=false){
  ensureContainers();const box=$(target==='profile'?'cpAutomationStatus':'waAutomationStatus');if(!box||!contact?.id)return;
- const id=String(contact.id);box.dataset.contactId=id;if(!cache.has(id))box.innerHTML=loadingHtml();
+ const id=String(contact.id);if(target==='profile'&&box.dataset.contactId!==id)box.classList.add('collapsed');box.dataset.contactId=id;if(!cache.has(id))box.innerHTML=loadingHtml();
  try{const snapshot=await fetchSnapshot(contact,force);if(!targetStillMatches(target,id)||box.dataset.contactId!==id)return;box.innerHTML=summaryHtml(snapshot,target==='whatsapp');const toggle=box.querySelector('[data-cas-toggle]'),collapsed=box.classList.contains('collapsed');if(toggle){toggle.textContent=collapsed?'⌄':'⌃';toggle.setAttribute('aria-expanded',String(!collapsed))}}
  catch(error){if(targetStillMatches(target,id)&&box.dataset.contactId===id)box.innerHTML=errorHtml(error?.message||error);M.report('contact-automation-status',error,'load '+target)}
 }

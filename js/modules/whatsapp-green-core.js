@@ -1889,26 +1889,46 @@ async function crmRefreshCurrentContactLabels(){
   if(!cid){if($("contactLabelsList"))$("contactLabelsList").innerHTML="";return}
   try{
     const rows=await crmGetContactLabels(cid);
+    if(String(currentContact?.id)!==String(cid))return;
     currentContactLabelIds=rows.map(x=>x.id);
-    $("contactLabelsList").innerHTML=rows.map(x=>`<button type="button" class="contactLabelChip ${crmLabelTone(x.id||x.name)} contactLabelChipRemove" data-label-id="${esc(x.id)}" title="Quitar etiqueta ${esc(x.name)}" aria-label="Quitar etiqueta ${esc(x.name)}"><span>${esc(x.name)}</span><b aria-hidden="true">×</b></button>`).join("")||'<span class="small">Sin etiquetas</span>';
+    $("contactLabelsList").innerHTML=rows.map(x=>`<span class="contactLabelChip ${crmLabelTone(x.id||x.name)}"><span>${esc(x.name)}</span><button type="button" class="contactLabelChipRemove" data-label-id="${esc(x.id)}" data-label-name="${esc(x.name)}" title="Quitar etiqueta ${esc(x.name)} de este contacto" aria-label="Quitar etiqueta ${esc(x.name)} de este contacto">×</button></span>`).join("")||'<span class="small">Sin etiquetas</span>';
     if(waLiveState?.contact&&String(waLiveState.contact.id)===String(cid)){
       $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip ${crmLabelTone(x.id||x.name)}">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
     }
   }catch(e){console.warn("Etiquetas contacto",e)}
 }
+let contactLabelMutationBusy=false;
+async function crmChangeSingleContactLabel(contactId,labelId,add=false){
+  // Read current assignments before changing one; never restore an old whole snapshot.
+  const rows=await crmGetContactLabels(contactId),ids=rows.map(row=>String(row.id));
+  const found=ids.includes(String(labelId));if(found===add)return;
+  const next=add?[...ids,String(labelId)]:ids.filter(id=>id!==String(labelId));
+  const {error}=await sb.rpc("crm_set_contact_labels",{p_contact_id:contactId,p_label_ids:next});if(error)throw error;
+}
+function crmShowLabelUndo(contactId,labelId,name){
+  let notice=$('tpfLabelUndo');if(!notice){notice=document.createElement('div');notice.id='tpfLabelUndo';notice.setAttribute('role','status');document.body.append(notice);}
+  const message=document.createElement('span');message.textContent='Etiqueta retirada: '+name;
+  const undo=document.createElement('button');undo.type='button';undo.textContent='Deshacer';
+  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Cerrar aviso');close.onclick=()=>notice.remove();
+  notice.replaceChildren(message,undo,close);
+  undo.onclick=async()=>{if(contactLabelMutationBusy)return;contactLabelMutationBusy=true;undo.disabled=true;
+    try{await crmChangeSingleContactLabel(contactId,labelId,true);if(String(currentContact?.id)===String(contactId))await crmRefreshCurrentContactLabels();renderWhatsAppChats();notice.remove();}
+    catch(error){undo.disabled=false;message.textContent=error.message||'No se pudo recuperar la etiqueta.';}
+    finally{contactLabelMutationBusy=false;}
+  };
+}
 $("contactLabelsList").onclick=async e=>{
   const chip=e.target.closest?.(".contactLabelChipRemove");
-  if(!chip||!currentContact)return;
+  if(!chip||!currentContact||contactLabelMutationBusy)return;
   e.preventDefault();
-  const labelId=String(chip.dataset.labelId||'');if(!labelId)return;
-  const previous=[...currentContactLabelIds];
-  chip.disabled=true;
+  const labelId=String(chip.dataset.labelId||''),contactId=currentContact.id,name=chip.dataset.labelName||'Etiqueta';if(!labelId)return;
+  contactLabelMutationBusy=true;chip.disabled=true;
   try{
-    const ids=previous.filter(id=>String(id)!==labelId);
-    const {error}=await sb.rpc("crm_set_contact_labels",{p_contact_id:currentContact.id,p_label_ids:ids});
-    if(error)throw error;
-    await crmRefreshCurrentContactLabels();renderWhatsAppChats();
+    await crmChangeSingleContactLabel(contactId,labelId,false);
+    if(String(currentContact?.id)===String(contactId))await crmRefreshCurrentContactLabels();renderWhatsAppChats();
+    crmShowLabelUndo(contactId,labelId,name);
   }catch(err){chip.disabled=false;alert(err?.message||'No se pudo quitar la etiqueta.');}
+  finally{contactLabelMutationBusy=false;}
 };
 $("contactManageLabels").onclick=async()=>{
   if(!currentContact)return;

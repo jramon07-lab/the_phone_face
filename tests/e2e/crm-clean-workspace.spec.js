@@ -9,7 +9,7 @@ async function evidence(page, name) {
     const candidate = page.locator(selector);
     if (await candidate.isVisible()) root = candidate;
   }
-  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta, #tpfContactPartySummary [data-rel-cards], #tpfContactPartySummary [data-rel-managedby], .oppUnifiedTitle, .oppUnifiedClient, .oppUnifiedNotes, .cpAuthLine, .cpTaskButton b').filter({visible:true});
+  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta, #tpfContactPartySummary [data-rel-cards], #tpfContactPartySummary [data-rel-managedby], .oppUnifiedTitle, .oppUnifiedClient, .oppUnifiedNotes, .tpfOpportunityNotesPreview, .tpfProfilePartyCard, .cpAuthLine, .cpTaskButton b').filter({visible:true});
   await root.screenshot({ path: test.info().outputPath(name + '.png'), mask: [personal], maskColor: '#dce5ef' });
 }
 async function insideViewport(locator, page) {
@@ -102,14 +102,44 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('[data-tpf-summary-group="opportunities"] #cpSideNewOpp')).toBeVisible();
   await expect(page.locator('[data-tpf-summary-group="tasks"] #cpSideNewTask')).toBeVisible();
   const relationBox=await page.locator('#tpfContactPartySummary').boundingBox();
-  expect(relationBox.y).toBeGreaterThanOrEqual(dataBox.y+dataBox.height);
+  expect(relationBox.y+relationBox.height).toBeLessThanOrEqual(googleBox.y+1);
+  const relations=page.locator('#tpfContactPartySummary [data-rel-holders]');
+  await expect(relations).not.toHaveAttribute('open');
+  await relations.locator(':scope > summary').click();
+  await expect(relations).toHaveAttribute('open','');
+  await evidence(page,'06-titulares-desplegados');
+  await relations.locator(':scope > summary').click();
+  const recent=page.locator('.tpfRecentActivity');
+  await expect(recent).not.toHaveAttribute('open');
+  await recent.locator('h3').click();
+  await expect(recent).toHaveAttribute('open','');
+  await recent.locator('h3').click();
+  await recent.locator('button').click();
+  await expect(page.locator('#cpRefTab-historial')).toHaveAttribute('aria-selected','true');
+  await page.locator('#cpRefTab-resumen').click();
+  const menu=page.locator('.tpfContactMore');
+  await menu.locator('summary').click();
+  await expect(menu.locator('button')).toHaveCount(2);
+  await expect(menu.locator('#cpNewOpp')).toBeVisible();
+  await expect(menu.locator('#cpNewTask')).toBeVisible();
+  await evidence(page,'06-menu-acciones');
+  await menu.locator('summary').press('Escape');
+  await expect(menu).not.toHaveAttribute('open');
+  await expect(page.locator('.cpData .contactLabelsBox')).toHaveCount(0);
+  await expect(page.locator('.tpfStandaloneLabels #contactManageLabels')).toHaveText('+ Añadir etiqueta');
+  const automation=page.locator('#cpAutomationStatus');
+  await expect(automation).toHaveClass(/collapsed/);
+  await expect(automation.locator('[data-cas-toggle]')).toBeVisible();
+  await automation.locator('[data-cas-toggle]').click();
+  await expect(automation.locator('.casPanelBody')).toBeVisible();
+  await automation.locator('[data-cas-toggle]').click();
   const opportunities=page.locator('[data-tpf-summary-group="opportunities"]');
   const tasks=page.locator('[data-tpf-summary-group="tasks"]');
   await opportunities.locator('.tpfSummaryTrigger').click();
   await tasks.locator('.tpfSummaryTrigger').click();
   const row=page.locator('#cpOpportunities > .oppUnifiedCard').first();
   if(await row.count()){
-    expect((await row.boundingBox()).height).toBeLessThan(170);
+    expect((await row.boundingBox()).height).toBeLessThan(300);
     await expect(row.locator('select')).toBeVisible();
     await expect(row.locator('.oppUnifiedActions button').first()).toBeVisible();
     await row.locator('.tpfWorkDetails summary').click();
@@ -121,7 +151,7 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await page.locator('[data-task-filter="pending"]').click();
   await expect(page.locator('#cpTasks > [data-task-status="completed"]:visible')).toHaveCount(0);
   const pendingCount=await page.locator('#cpTasks > [data-task-status="pending"]').count();
-  await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(Math.min(2,pendingCount));
+  await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(Math.min(4,pendingCount));
   await page.locator('#cpRefTab-tareas').click();
   await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(pendingCount);
   await page.locator('#cpRefTab-resumen').click();

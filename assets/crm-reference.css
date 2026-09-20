@@ -721,3 +721,92 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>lab
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryCreate{flex:none;width:30px!important;height:30px!important;min-height:30px!important;padding:0!important;margin:0!important;font-size:20px!important;color:#0863ec!important;background:#edf3ff!important;border:0!important;border-radius:6px!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference :is([data-tpf-summary-group="opportunities"],[data-tpf-summary-group="tasks"]) .cpSideTitle{display:none!important}
 }
+
+/* Final approved contact workspace: native actions, compact cards and disclosures. */
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference >.contactProfile>.cpIdentity{grid-template-columns:48px minmax(180px,1fr) auto!important;column-gap:12px!important;row-gap:2px!important;padding-block:4px 10px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{width:48px!important;height:48px!important;grid-row:1 / span 2!important;font-size:20px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpProfileIdentityText{grid-column:2!important;grid-row:1!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpBadge{grid-column:2!important;grid-row:2!important;font-size:10px!important;padding:3px 7px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{display:flex!important;grid-column:3!important;grid-row:1 / span 2!important;justify-content:flex-end!important;align-items:center!important;width:auto!important;margin:0!important;gap:6px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick>button{width:auto!important;min-width:0!important;min-height:34px!important;font-size:12px!important;padding:7px 10px!important;white-space:nowrap!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #contactWhatsapp{order:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpNewOffer{order:1!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDirectSale{order:2!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpNewReview{order:3!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpScheduleWhatsapp{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactMore{position:relative;order:4;flex:none;color:#1d58a1;z-index:8}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactMore>summary{list-style:none;cursor:pointer;border:1px solid #cbdcf2;border-radius:7px;background:#f2f7ff;width:34px;height:34px;display:grid;place-items:center;font-size:21px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactMore>summary::-webkit-details-marker{display:none}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactMoreBody{position:absolute;right:0;top:40px;min-width:185px;padding:6px;border:1px solid #dce5ef;border-radius:8px;background:#fff;box-shadow:0 5px 18px #15335b22;z-index:20}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactMoreBody button{display:block!important;width:100%!important;text-align:left!important;white-space:nowrap!important;min-height:36px!important;padding:8px 10px!important;font-size:12px!important;border:0!important;color:#24456b!important;background:#fff!important;margin:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactMoreBody button:hover{background:#edf4ff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference >.contactProfile>#tpfContactPartySummary{margin:0 20px 10px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelSummary{position:relative!important;padding:0!important;border:1px solid #dfe7f2!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelSummary>details>summary{display:flex!important;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 110px 12px 14px!important;cursor:pointer;list-style:none;min-height:42px;box-sizing:border-box}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelSummary>details>summary::before{content:'›';font-size:20px;line-height:1;color:#2b67b4}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelSummary>details[open]>summary::before{content:'⌄'}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelSummary>details>summary::-webkit-details-marker{display:none}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelationCounts{font-size:11px;font-weight:400;color:#63768d}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelationsManage{position:absolute;right:10px;top:7px;z-index:1;border:1px solid #d5e2f2!important;background:#fff!important;color:#2463af!important;padding:5px 9px!important;min-height:30px!important;font-size:11px!important;border-radius:6px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelationsContent{padding:0 14px 12px;border-top:1px solid #edf1f6}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRelationsContent h4{font-size:12px!important;color:#647790!important;margin:10px 0 7px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-rel-cards],body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfProfileManagers{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfProfilePartyCard{display:grid;grid-template-columns:32px minmax(0,1fr) auto;align-items:center;gap:5px 9px;border:1px solid #e1e9f3;border-radius:7px;padding:9px;background:#fbfdff}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfProfilePartyAvatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#e5efff;color:#2464b4;font-size:12px;font-weight:600}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfProfilePartyCard strong{font-size:12px;overflow-wrap:anywhere;display:block;color:#203b5f}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfProfilePartyCard small{font-size:10px!important;display:block;color:#6b7e95;margin-top:2px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfProfilePartyCard>button{font-size:11px!important;min-height:28px!important;padding:4px 7px!important;background:transparent!important;color:#1668d8!important;border:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfPartyMore{grid-column:2 / -1;font-size:11px;color:#677b94}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfPartyMore>summary{cursor:pointer;font-size:10px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfPartyMore p{font-size:11px!important;line-height:1.5!important;margin:7px 0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .contactLabelsBox.tpfStandaloneLabels{order:1!important;margin:0!important;padding:14px!important;border:1px solid #dfe7f2!important;border-radius:9px!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .contactLabelsHead{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:8px!important;margin-bottom:12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .contactLabelsHead>label{font-size:15px!important;font-weight:650!important;color:#203b5f!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #contactManageLabels{font-size:11px!important;min-height:30px!important;padding:5px 8px!important;color:#2162b5!important;border:1px solid #d3e1f4!important;background:#fff!important;border-radius:6px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #contactLabelsList{display:flex!important;flex-wrap:wrap!important;gap:7px!important;max-height:none!important;overflow:visible!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactExtra{order:3!important;padding:12px 14px;border:1px solid #e1e8f2;border-radius:8px;background:#fff}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactExtra>summary{font-size:13px;font-weight:600;color:#29486b;cursor:pointer}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactExtraBody>*{margin-top:12px!important;font-size:11px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactExtraBody .cpRefExpiry,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactExtraBody #cpAuthorship{padding:10px!important;box-shadow:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #contactDelete{order:4!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;max-height:none!important;align-items:start!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities>.oppUnifiedCard{grid-template-columns:minmax(0,1fr) auto!important;gap:7px 8px!important;margin:0!important;padding:12px!important;height:auto!important;min-height:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedTop{grid-column:1 / -1!important;grid-row:1!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedTitle{font-size:13px!important;white-space:normal!important;overflow-wrap:anywhere!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedAmount{grid-column:1!important;grid-row:2!important;font-size:16px!important;font-weight:650!important;color:#1264cb!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedMeta{grid-column:1 / -1!important;grid-row:3!important;font-size:11px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedStageControl{grid-column:2!important;grid-row:2!important;width:130px!important;max-width:100%!important;align-self:center!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .oppUnifiedActions{grid-column:1!important;grid-row:5!important;justify-self:start!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .tpfOpportunityNotesPreview{grid-column:1 / -1;grid-row:4;margin:0;font-size:12px;line-height:1.5;color:#62748b;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .tpfWorkDetails{grid-column:2!important;grid-row:5!important;align-self:center!important;min-width:0}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .tpfWorkDetails[open]{grid-column:1 / -1!important;grid-row:6!important;padding-top:8px;border-top:1px solid #e5ebf3}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpOpportunities .tpfWorkDetails>summary{padding:5px 0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks>.cpTaskWrap{margin:0!important;padding:12px!important;grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks .cpTaskButton{grid-column:1 / -1!important;grid-row:1!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks .cpTaskActions{grid-column:1!important;grid-row:2!important;justify-self:start!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks .tpfWorkDetails{grid-column:2!important;grid-row:2!important;align-self:center!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks .tpfWorkDetails[open]{grid-column:1 / -1!important;grid-row:3!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpOpportunities>.oppUnifiedCard:nth-child(n){display:grid!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpOpportunities>.oppUnifiedCard:nth-child(n+5){display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks>.cpTaskWrap:nth-child(n){display:grid!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks>.cpTaskWrap.tpfTaskFiltered:nth-child(n){display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpWhatsappPrograms{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-tpf-summary-group="programs"] .cpSideTitle,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-tpf-summary-group="offers"] .cpOfferTitle{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfSummaryAccordion>#cpAutomationStatus{grid-column:1 / -1!important;grid-row:auto!important;order:0!important;margin:0!important;border:1px solid #dfe7f2!important;border-radius:9px!important;padding:12px!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus.collapsed .casPanelBody{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity{border:1px solid #dfe7f2!important;border-radius:9px!important;padding:12px!important;margin-top:12px!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity>.tpfRecentHeading{cursor:pointer;list-style:none;display:flex!important;align-items:center!important;gap:10px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity>.tpfRecentHeading::-webkit-details-marker{display:none}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity>.tpfRecentHeading::before{content:'›';font-size:20px;color:#2b67b4}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity[open]>.tpfRecentHeading::before{content:'⌄'}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity h3{font-size:14px!important;margin:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity button{margin-left:auto!important;font-size:11px!important}
+}
+@media(min-width:1024px) and (max-width:1200px){body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{grid-column:1 / -1!important;grid-row:3!important;justify-content:flex-start!important;margin-top:6px!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference  #cpOpportunities,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference  #cpTasks{grid-template-columns:1fr!important}}
+
+#contactLabelsList .contactLabelChip{display:inline-flex!important;align-items:center!important;gap:7px!important;max-width:100%!important;white-space:normal!important;padding:5px 8px!important;border-radius:8px;font-size:11px!important;line-height:1.5!important}
+#contactLabelsList .contactLabelChip>span{overflow-wrap:anywhere}
+#contactLabelsList .contactLabelChipRemove{display:inline-flex!important;align-items:center;justify-content:center;flex:none!important;width:22px!important;min-width:22px!important;height:22px!important;min-height:22px!important;padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important;color:inherit!important;font-size:16px!important;cursor:pointer}
+#tpfLabelUndo{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:150000;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px);padding:12px 16px;border:1px solid #c6d9ef;border-radius:9px;background:#fff;box-shadow:0 4px 22px #15335b33;color:#23405f;font-size:13px}
+#tpfLabelUndo button{border:0;background:#edf4ff;color:#1165d4;border-radius:5px;padding:7px 10px;cursor:pointer}

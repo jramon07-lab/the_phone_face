@@ -77,9 +77,13 @@
   [...root.querySelectorAll('[data-cp-ref-pane]')].forEach(section=>panel.appendChild(section));
   root.remove();
  }
+ function mountSummaryAction(block,key,items){
+  const title=items[0]?.querySelector(key==='offers'?'.cpOfferTitle':'.cpSideTitle'),button=title?.querySelector('button');
+  if(button){summaryActions.set(button,title);button.classList.add('tpfSummaryCreate');button.setAttribute('aria-label',({tasks:'Nueva tarea',opportunities:'Nueva oportunidad',offers:'Nueva oferta',programs:'Nuevo WhatsApp'})[key]);block.querySelector('.tpfSummaryHeading').append(button);}
+ }
  function makeSummaryGroup(root,key,title,items){
   const existing=root.querySelector('[data-tpf-summary-group="'+key+'"]');
-  if(existing){setSummaryMetric(existing,summaryMetrics(key));return existing;}
+  if(existing){const body=existing.querySelector('.tpfSummaryBody');items.filter(Boolean).forEach(item=>{if(item.parentElement!==body)body.append(item);});mountSummaryAction(existing,key,items);setSummaryMetric(existing,summaryMetrics(key));return existing;}
   const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen='false';
   const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded','false');
   const label=document.createElement('span');label.className='tpfSummaryTitle';label.textContent=title;
@@ -90,11 +94,7 @@
   items.filter(Boolean).forEach(item=>body.appendChild(item));
   trigger.addEventListener('click',()=>{const open=block.dataset.tpfOpen!=='true';block.dataset.tpfOpen=String(open);trigger.setAttribute('aria-expanded',String(open));});
   const head=document.createElement('div');head.className='tpfSummaryHeading';head.append(trigger);
-  if(key==='opportunities'||key==='tasks'){
-   const title=items[0]?.querySelector('.cpSideTitle'),button=title?.querySelector('button');
-   if(button){summaryActions.set(button,title);button.classList.add('tpfSummaryCreate');button.setAttribute('aria-label',key==='tasks'?'Nueva tarea':'Nueva oportunidad');head.append(button);}
-  }
-  block.append(head,body);root.appendChild(block);setSummaryMetric(block,summaryMetrics(key));return block;
+  block.append(head,body);mountSummaryAction(block,key,items);root.appendChild(block);setSummaryMetric(block,summaryMetrics(key));return block;
  }
  function applySummaryGroups(){
   if(!mounted||selected!=='resumen'){restoreSummaryGroups();return;}
@@ -106,7 +106,8 @@
   makeSummaryGroup(root,'opportunities','Oportunidades',[opp]);
   makeSummaryGroup(root,'tasks','Tareas',[tasks]);
   makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
-  makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers,automation]);
+  const offersGroup=makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers]);
+  if(automation&&(automation.parentElement!==root||automation.previousElementSibling!==offersGroup))offersGroup.after(automation);
  }
  function refreshSummaryMetrics(){
   panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));
@@ -130,9 +131,9 @@
   docs.innerHTML='<div class="cpRefDrive"><strong>Google Drive</strong><span class="cpPendingBadge">Pendiente de conectar</span></div><div class="cpRefDocActions"><button type="button" disabled>Subir archivos</button><button type="button" disabled>Escanear / Crear PDF</button><button type="button" disabled>Abrir en Drive</button></div><div class="cpRefDocumentEmpty"><span class="cpRefDocumentIcon" aria-hidden="true">▤</span><h3 id="cpDocumentsTitle">Documentos del cliente</h3><p>La conexión con Google Drive todavía está pendiente.</p><p>Podrás vincular una carpeta existente y reunir aquí los PDF y fotografías de este cliente.</p><span>Subida de archivos y escaneo de DNI: pendientes</span></div>';
  }
  // Read-only activity preview; actions remain in the original history pane.
- const recent=document.createElement('section');recent.className='tpfRecentActivity';
- const recentHead=document.createElement('div'),recentTitle=document.createElement('h3'),recentMore=document.createElement('button'),recentBody=document.createElement('div');
- recentHead.className='tpfRecentHeading';recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',()=>select('historial',true));
+ const recent=document.createElement('details');recent.className='tpfRecentActivity';
+ const recentHead=document.createElement('summary'),recentTitle=document.createElement('h3'),recentMore=document.createElement('button'),recentBody=document.createElement('div');
+ recentHead.className='tpfRecentHeading';recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',e=>{e.preventDefault();select('historial',true);});
  recentHead.append(recentTitle,recentMore);recent.append(recentHead,recentBody);
  function refreshRecent(){
   const entries=[...$('cpTimeline')?.children||[]].slice(0,3).map(node=>{const copy=node.cloneNode(true);copy.querySelectorAll('button,input,select,textarea').forEach(control=>control.remove());return copy.textContent.trim();}).filter(Boolean);
@@ -171,6 +172,23 @@
   const title=document.createElement('b');title.textContent=heading.textContent;summary.appendChild(title);if(status)summary.appendChild(status);heading.remove();
   details.appendChild(summary);details.append(...card.childNodes);card.appendChild(details);
  }
+ const secondaryPositions=new Map();
+ const info=document.createElement('details');info.className='tpfContactExtra';info.innerHTML='<summary>Información adicional</summary><div class="tpfContactExtraBody"></div>';
+ function moveSecondary(node,target,before=null){
+  if(!node)return;if(!secondaryPositions.has(node)){const anchor=document.createComment('original contact section');node.before(anchor);secondaryPositions.set(node,anchor);}
+  if(node.parentElement!==target||(before&&node.nextSibling!==before))target.insertBefore(node,before);
+ }
+ function arrangeSecondary(){
+  if(!mounted)return;
+  const relations=$('tpfContactPartySummary');
+  if(relations){const next=$('tpfGoogleInlineCard')?.parentElement===profile?$('tpfGoogleInlineCard'):tabs;moveSecondary(relations,profile,next);}
+  const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
+  if(info.parentElement!==left)left.append(info);
+  for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner')])moveSecondary(node,info.lastElementChild);
+ }
+ function restoreSecondary(){for(const [node,anchor] of secondaryPositions){if(anchor.parentNode)anchor.after(node);anchor.remove();}secondaryPositions.clear();info.remove();}
+ let secondaryTimer=0;
+ new MutationObserver(()=>{clearTimeout(secondaryTimer);secondaryTimer=setTimeout(arrangeSecondary,0);}).observe(left,{childList:true});
  const expiry=document.createElement('section');expiry.className='cpRefExpiry';expiry.innerHTML='<h3>Caducidad del DNI</h3><span class="cpPendingBadge">Pendiente</span><p>Lectura y confirmación de la fecha todavía no disponibles.</p>';
  const edit=document.createElement('button');edit.type='button';edit.className='cpRefEdit';edit.textContent='Editar datos';
  edit.addEventListener('click',()=>{$('tpfContactEditToggle')?.click();});
@@ -205,17 +223,17 @@
    left.appendChild(expiry);
    modal.classList.add('tpfContactReference');select(selected);
   }else if(!on&&mounted){
-   restoreSummaryGroups();mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
+   restoreSummaryGroups();restoreSecondary();mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
    sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===profile)right.prepend($('tpfGoogleInlineCard'));
    tabs.remove();followHeading.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
   }
-  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();refreshRecent();fitContactText();
+  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();arrangeSecondary();refreshRecent();fitContactText();
  }
  document.addEventListener('click',e=>{
   if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
   if(!e.target.closest?.('#cpNewTask,#cpSideNewTask'))return;
-  e.preventDefault();e.stopImmediatePropagation();if(embeddedCreate)return;
+  e.preventDefault();e.stopImmediatePropagation();closeMore();if(embeddedCreate)return;
   let contact=null;try{contact=typeof currentContact!=='undefined'?currentContact:null;}catch(_){}
   if(!contact?.id)return;
   const contactId=contact.id;
@@ -238,7 +256,7 @@
  mq.addEventListener('change',sync);
  // Only direct section insertions matter; message/content mutations must not retrigger layout.
  let summaryTimer=0;
- const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();compactGoogle();},0);});
+ const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();compactGoogle();arrangeSecondary();},0);});
  sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
  // No se actualiza ningún "botón de llamada" aquí: el diseño de referencia no
  // define updateCall. Invocarlo al abrir una ficha lanzaba un ReferenceError y
@@ -251,7 +269,7 @@
   const list=$(id);if(!list)return;
   const more=document.createElement('button');more.type='button';more.className='cpRefMore';more.dataset.cpRefMore=key;
   list.after(more);
-  const update=()=>{const count=list.querySelectorAll(':scope > '+selector).length;more.hidden=count<=2;refreshSummaryMetrics();more.textContent=key==='programados'&&right.dataset.cpRefProgramsAll==='true'?'Mostrar solo 2':'Ver todos ('+count+')';};
+  const update=()=>{const count=list.querySelectorAll(':scope > '+selector).length;more.hidden=count<=(key==='programados'?2:4);refreshSummaryMetrics();more.textContent=key==='programados'&&right.dataset.cpRefProgramsAll==='true'?'Mostrar solo 2':'Ver todos ('+count+')';};
   more.addEventListener('click',()=>{if(key==='programados'){right.dataset.cpRefProgramsAll=right.dataset.cpRefProgramsAll==='true'?'false':'true';update();}else select(key,true);});
   new MutationObserver(update).observe(list,{childList:true});update();
  });
@@ -263,6 +281,8 @@
    if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent='Detalles';detail.append(title);card.append(detail);}
    for(const node of card.querySelectorAll(':scope > .oppUnifiedClient,:scope > .oppUnifiedNotes,:scope > .cpAuthLine'))detail.append(node);
    const remove=card.querySelector('.oppUnifiedActions > .danger,.cpTaskActions > .dangerText');if(remove)detail.append(remove);
+   const notes=card.querySelector('.oppUnifiedNotes');
+   if(notes){let preview=card.querySelector(':scope > .tpfOpportunityNotesPreview');if(!preview){preview=document.createElement('p');preview.className='tpfOpportunityNotesPreview';detail.before(preview);}if(preview.textContent!==notes.textContent)preview.textContent=notes.textContent;}
    const select=card.querySelector('.oppUnifiedStageControl select');if(select)select.setAttribute('aria-label','Cambiar estado de la oportunidad');
   }
   refreshSummaryMetrics();
@@ -276,16 +296,29 @@
  const taskEmpty=document.createElement('p');taskEmpty.className='tpfTaskFilterEmpty';$('cpTasks')?.after(taskEmpty);
  function filterTasks(){
   const cards=[...$('cpTasks')?.querySelectorAll(':scope > .cpTaskWrap')||[]];let shown=0;
-  cards.forEach(card=>{const match=(card.dataset.taskStatus==='completed')===(taskFilter==='completed');const hide=mounted&&(!match||(selected==='resumen'&&shown>=2));if(match)shown++;card.classList.toggle('tpfTaskFiltered',hide);});
+  cards.forEach(card=>{const match=(card.dataset.taskStatus==='completed')===(taskFilter==='completed');const hide=mounted&&(!match||(selected==='resumen'&&shown>=4));if(match)shown++;card.classList.toggle('tpfTaskFiltered',hide);});
   taskFilters.querySelectorAll('button').forEach(button=>{const done=button.dataset.taskFilter==='completed',count=cards.filter(card=>(card.dataset.taskStatus==='completed')===done).length;const text=(done?'Completadas':'Pendientes')+' ('+count+')';if(button.textContent!==text)button.textContent=text;button.setAttribute('aria-pressed',String(button.dataset.taskFilter===taskFilter));});
   taskEmpty.hidden=!mounted||shown>0;const text=taskFilter==='completed'?'No hay tareas completadas.':'No hay tareas pendientes.';if(taskEmpty.textContent!==text)taskEmpty.textContent=text;
  }
  window.addEventListener('tpf:contact-open',()=>{taskFilter='pending';compactWorkCards();filterTasks();});
  tabs.addEventListener('click',filterTasks);tabs.addEventListener('keydown',filterTasks);
  mq.addEventListener('change',()=>{compactWorkCards();filterTasks();});
- const schedule=$('cpScheduleWhatsapp'),oldScheduleText=schedule?.textContent;
- const refreshHeader=()=>{if(schedule)schedule.textContent=mounted?'Programar WhatsApp':oldScheduleText;};
+ const quick=identity.querySelector('.cpQuick'),quickPositions=new Map();
+ const moreMenu=document.createElement('details');moreMenu.className='tpfContactMore';moreMenu.innerHTML='<summary aria-label="Más acciones">⋯</summary><div class="tpfContactMoreBody"></div>';
+ function closeMore(){moreMenu.open=false;}
+ function refreshHeader(){
+  if(!quick)return;
+  if(!mounted){for(const [node,anchor] of quickPositions){if(anchor.parentNode)anchor.after(node);anchor.remove();}quickPositions.clear();moreMenu.remove();return;}
+  if(moreMenu.parentElement!==quick)quick.append(moreMenu);
+  for(const id of ['cpNewOpp','cpNewTask']){const button=$(id);if(!button)continue;if(!quickPositions.has(button)){const anchor=document.createComment('original quick action');button.before(anchor);quickPositions.set(button,anchor);}if(button.parentElement!==moreMenu.lastElementChild)moreMenu.lastElementChild.append(button);const text=id==='cpNewOpp'?'Nueva oportunidad':'Nueva tarea';if(button.textContent!==text)button.textContent=text;}
+  for(const id of ['contactWhatsapp','cpNewOffer','cpDirectSale','cpNewReview']){const button=$(id);if(button&&button.parentElement!==quick)quick.insertBefore(button,moreMenu);}
+ }
+ moreMenu.addEventListener('click',e=>{if(e.target.closest('button'))closeMore();});
+ document.addEventListener('click',e=>{if(!moreMenu.contains(e.target))closeMore();});
+ moreMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeMore();moreMenu.querySelector('summary').focus();}});
+ window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=false;info.open=false;});
  new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});
+ if(quick)new MutationObserver(refreshHeader).observe(quick,{childList:true,subtree:true});
  // Reuse the existing read-only avatar loader and its shared in-memory cache.
  let photoKey='',photoEpoch=0;
  const avatar=$('cpAvatar');
