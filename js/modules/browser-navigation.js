@@ -3,7 +3,7 @@
 // PC only. No database writes, message sends, or changes to approved handlers.
 if(window.TPFBrowserNavigation||!window.tpfCaptureCurrentScreen||location.pathname.startsWith('/movil'))return;
 const $=id=>document.getElementById(id),MARK='tpfNavigation',session=Date.now().toString(36)+Math.random().toString(36).slice(2);
-const layers=[['tpfContactsCreateBack','tpfContactsCreateCancel'],['waFilePreviewModal','waFilePreviewClose'],['waTemplateModal','waTemplateClose'],['waQuickModal','waQuickClose'],['agendaTypeModal','agendaCloseTypes'],['agendaCreateCard','agendaCloseCreate'],['oppDetailModal','oppModalCloseX'],['cpTaskDetailPage','cpTaskDetailBack'],['cpTaskPage','cpTaskBack']];
+const layers=[['opOfferModal','opOfferClose'],['tpfContactsCreateBack','tpfContactsCreateCancel'],['waFilePreviewModal','waFilePreviewClose'],['waTemplateModal','waTemplateClose'],['waQuickModal','waQuickClose'],['agendaTypeModal','agendaCloseTypes'],['agendaCreateCard','agendaCloseCreate'],['oppDetailModal','oppModalCloseX'],['cpTaskDetailPage','cpTaskDetailBack'],['cpTaskPage','cpTaskBack']];
 const backIds=new Set(['contactClose','oppFullBack','salesFullBackBtn',...layers.map(x=>x[1]),'tpfContactsCreateClose','oppModalClose','waQuickCancel']);
 const entries=new Map(),edited=new Map();let position=0,current=null,busy=false,repair=null,timer=null,nativeReturn=false,popQueue=Promise.resolve(),pendingBack=null;
 const visible=el=>!!el&&el.isConnected&&!el.closest('.hidden,[hidden],[aria-hidden="true"]')&&getComputedStyle(el).display!=='none';

@@ -76,13 +76,14 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
     await expect(page.locator('#agendaCreateCard')).toBeVisible();
     await page.locator('#agendaCloseCreate').click();
     await expect(page.locator('#agendaCreateCard')).toBeHidden();
-    for(const cancel of [false,true]){
+    for(const cancel of [false,true,'back']){
       await openMenu();
       await page.locator('.tpfMoreMenu [data-tpf-contact-offer]').click();
       await expect(page.locator('#opOfferModal')).toBeVisible();
       await expect(page.locator('#opContent .opCard').first()).toBeVisible();
       await expect(page.locator('#contactModal')).toBeHidden();
-      if(cancel)await page.locator('#opOfferModal').getByRole('button',{name:'Cancelar',exact:true}).click();
+      if(cancel==='back'){await page.waitForTimeout(250);await page.goBack();}
+      else if(cancel)await page.locator('#opOfferModal').getByRole('button',{name:'Cancelar',exact:true}).click();
       else await page.locator('#opOfferModal .opClose').click();
       await expect(page.locator('#opOfferModal')).toBeHidden();
       await expect(page.locator('#contactModal')).toBeHidden();
