@@ -15,10 +15,10 @@ function capture(){
 }
 function mark(n){return {...(history.state||{}),[MARK]:{session,index:n}};}
 function update(){if(current){const s=capture();if(s.key===current.key){current=s;entries.set(position,s);}}}
-function dirty(){for(const [el,value] of edited){if(!visible(el)){if(!el.closest('[data-tpf-suspended]'))edited.delete(el);continue;}if(fieldValue(el)!==value)return true;}return false;}
+function dirty(){if(window.TPFContactEditor?.isDirty())return true;for(const [el,value] of edited){if(window.TPFContactEditor?.owns(el)){edited.delete(el);continue;}if(!visible(el)){if(!el.closest('[data-tpf-suspended]'))edited.delete(el);continue;}if(fieldValue(el)!==value)return true;}return false;}
 function fieldValue(el){return el.type==='checkbox'||el.type==='radio'?String(el.checked):el.type==='file'?[...(el.files||[])].map(f=>f.name+':'+f.size).join('|'):el.value;}
 function editorFor(el){const layer=topLayer();if(layer?.el.contains(el))return layer.el;return el.closest?.('#contactModal.tpf-contact-editing,#cpNoteForm');}
-function remember(e){const el=e.target;if(!el?.matches?.('input,textarea,select')||el.disabled||el.readOnly||!editorFor(el))return;if(!edited.has(el))edited.set(el,fieldValue(el));}
+function remember(e){const el=e.target;if(!el?.matches?.('input,textarea,select')||el.disabled||el.readOnly||window.TPFContactEditor?.owns(el)||!editorFor(el))return;if(!edited.has(el))edited.set(el,fieldValue(el));}
 function approve(){return !dirty()||window.confirm('Tienes cambios sin guardar. ¿Quieres salir y descartarlos?');}
 function schedule(){clearTimeout(timer);timer=setTimeout(sync,100);}
 function sync(){
@@ -75,6 +75,8 @@ async function pop(e){
 }
 function click(e){
  const button=e.target.closest?.('button,a,.nav,[role="button"]');if(!button)return;
+ // Cancelling one field's edit keeps the current screen and its other drafts.
+ if(button.matches('[data-note-restore],[data-crm-notes-cancel],[data-rel-cancelnew]'))return;
  const back=backIds.has(button.id)||/^(←\s*)?(volver|cancelar|cerrar)(\s|$)/i.test(button.textContent.trim());
  if(busy&&e.isTrusted&&(back||button.matches('.nav'))){
   e.preventDefault();e.stopImmediatePropagation();

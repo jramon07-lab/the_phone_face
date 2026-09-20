@@ -6,6 +6,14 @@ const $=id=>document.getElementById(id);
 const paths={dashboard:'M3 10 12 3l9 7v11H3Z M9 21v-8h6v8',alerts:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',search:'M21 21l-6-6 M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0',sales:'M4 20V12 M10 20V4 M16 20V8 M22 20V2',database:'M16 21v-3a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v3 M13 6a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M18 3a4 4 0 0 1 0 8',agenda:'M3 5h18v16H3Z M7 2v6 M17 2v6 M3 11h18',whatsapplive:'M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4c0 4-9 2-14-3S1 3 5 3Z',email:'M3 5h18v14H3Z M3 6l9 7 9-7',labels:'M3 3h9l9 9-9 9-9-9Z M7 7h.01',settings:'M9 3h6l1 4 4 2v6l-4 2-1 4H9l-1-4-4-2V9l4-2Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',automations:'M12 3v7 M4 14v7 M20 14v7 M4 14h16 M12 10v4',whatsapp:'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 6v6l4 2',import:'M12 16V3 M7 8l5-5 5 5 M3 15v6h18v-6',trash:'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',system:'M3 12h4l3-8 4 16 3-8h4'};
 function icons(){document.querySelectorAll('.referenceNav .nav[data-view]').forEach(node=>{const slot=node.querySelector('b');if(!slot||slot.querySelector('svg'))return;const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',paths[node.dataset.view]||'M6 2h8l5 5v15H6Z M14 2v6h5 M9 12h7 M9 16h7');svg.append(path);slot.replaceChildren(svg);});}
 const nav=document.querySelector('.referenceNav');if(nav){icons();new MutationObserver(icons).observe(nav,{childList:true,subtree:true});}
+function dockTestBadge(){
+ const badge=$('tpfTestMode');if(!badge)return;
+ const editor=$('tpfContactsCreateBack'),opp=$('oppDetailModal');
+ const target=editor&&!editor.classList.contains('hidden')?editor.querySelector('.tpfContactsModalHead'):opp&&!opp.classList.contains('hidden')?opp.querySelector('.opportunityModalHeader'):null;
+ if(target){if(badge.parentElement!==target)target.insertBefore(badge,target.lastElementChild);if(!badge.classList.contains('tpfTestModeDocked'))badge.classList.add('tpfTestModeDocked');badge.title='CRM de pruebas · WhatsApp limitado al teléfono de pruebas';}
+ else{if(badge.parentElement!==document.body)document.body.append(badge);badge.classList.remove('tpfTestModeDocked');}
+}
+new MutationObserver(records=>{if(records.some(r=>['oppDetailModal','tpfContactsCreateBack'].includes(r.target.id)||[...(r.addedNodes||[])].some(n=>n.id==='tpfTestMode')))dockTestBadge();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});dockTestBadge();
 function opportunity(){
  const modal=$('oppDetailModal'),card=modal?.querySelector('.opportunityModalCard');if(!card||card.querySelector('.crmOpportunityLayout'))return;
  const layout=document.createElement('div');layout.className='crmOpportunityLayout';
@@ -20,15 +28,16 @@ function opportunity(){
  sections[0].before(layout);sections.forEach(n=>main.append(n));
  const notes=$('oppModalNotes'),notesLabel=notes.closest('label'),notesSection=document.createElement('section');notesSection.className='opportunitySection crmOpportunityNotes';
  const notesTitle=document.createElement('h3');notesTitle.className='opportunitySectionTitle';notesTitle.textContent='Notas de esta oportunidad';notesSection.append(notesTitle,notesLabel);main.insertBefore(notesSection,sections[1]||null);
- notesLabel.firstChild.textContent='Anotaciones sobre esta venta';notes.placeholder='Escribe aquí lo que necesitas recordar sobre esta oportunidad…';notes.rows=3;
+ notesLabel.firstChild.textContent='Anotaciones sobre esta venta';notes.placeholder='Escribe aquí lo que necesitas recordar sobre esta oportunidad…';notes.rows=2;
  const notesActions=document.createElement('div');notesActions.className='crmNotesActions';notesActions.innerHTML='<button type="button" class="secondary" data-crm-notes-edit>Editar notas</button><button type="button" class="secondary" data-crm-notes-cancel hidden>Cancelar edición</button><span data-crm-notes-hint>Notas protegidas</span>';
- notesTitle.after(notesActions);const notesMessage=document.createElement('p');notesMessage.className='crmEditMessage';notesMessage.setAttribute('role','alert');notesMessage.hidden=true;notesSection.append(notesMessage);
+ const notesHeading=document.createElement('div');notesHeading.className='crmNotesHeading';notesTitle.before(notesHeading);notesHeading.append(notesTitle,notesActions);const notesMessage=document.createElement('p');notesMessage.className='crmEditMessage';notesMessage.setAttribute('role','alert');notesMessage.hidden=true;notesSection.append(notesMessage);
  const notesEdit=notesActions.querySelector('[data-crm-notes-edit]'),notesCancel=notesActions.querySelector('[data-crm-notes-cancel]');
- const syncNotesProtection=()=>{const locked=notes.dataset.notesProtected==='true';notesEdit.hidden=!locked;notesEdit.textContent=notes.value?'Editar notas':'Añadir notas';notesCancel.hidden=locked;notesActions.querySelector('[data-crm-notes-hint]').textContent=locked?'Notas protegidas':'Edición activada · guarda al terminar';};
+ const resizeNotes=()=>{notes.style.height='auto';notes.style.height=Math.max(46,Math.min(notes.scrollHeight,150))+'px';};
+ const syncNotesProtection=()=>{const locked=notes.dataset.notesProtected==='true';resizeNotes();notesEdit.hidden=!locked;notesEdit.textContent=notes.value?'Editar notas':'Añadir notas';notesCancel.hidden=locked;notesActions.querySelector('[data-crm-notes-hint]').textContent=locked?'Notas protegidas':'Edición activada · guarda al terminar';};
  notesEdit.onclick=()=>{window.TPFOpportunityNotes?.protect(notes,false);syncNotesProtection();notes.focus();};
  notesCancel.onclick=()=>{window.TPFOpportunityNotes?.restore(notes);notesMessage.hidden=true;syncNotesProtection();update();};
  modal.addEventListener('click',e=>{if(!e.target.closest('#oppModalSave'))return;const error=window.TPFOpportunityNotes?.validate(notes);if(error){e.preventDefault();e.stopImmediatePropagation();notesMessage.textContent=error;notesMessage.hidden=false;notes.focus();}},true);
- notes.addEventListener('input',()=>{notesMessage.hidden=true;});
+ notes.addEventListener('input',()=>{notesMessage.hidden=true;resizeNotes();});
  const parties=document.createElement('section');parties.className='opportunitySection crmOpportunityParties';
  const partySlot=document.createElement('div');partySlot.id='crmOpportunityPartySlot';parties.append(partySlot);notesSection.after(parties);
  const existingParty=$('tpfOpportunityParty');if(existingParty)partySlot.append(existingParty);
@@ -39,10 +48,11 @@ function opportunity(){
  activity.innerHTML='<summary>Actividad y origen</summary><div class="crmOpportunityActivityBody"><p data-crm-origin hidden></p></div>';
  main.append(activity);const meta=$('oppMetaInfo');if(meta)activity.querySelector('div').append(meta);
  const header=card.querySelector('.opportunityModalHeader'),badges=document.createElement('div');badges.className='crmOpportunityHeaderMetrics';badges.innerHTML='<strong data-crm-header="amount"></strong><span data-crm-header="stage"></span>';header.querySelector('div').append(badges);
+ header.querySelector('.opportunityEyebrow').textContent='Panel de ventas / Oportunidad';
  const footer=card.querySelector('.opportunityActions'),deleteButton=$('oppModalDelete');footer.prepend(deleteButton);deleteButton.classList.add('crmOpportunityDelete');
  deleteButton.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>');
- $('oppModalClose').hidden=true;
- const status=document.createElement('span');status.className='crmOpportunitySaveState';status.setAttribute('role','status');footer.insertBefore(status,$('oppModalSave'));
+ $('oppModalClose').hidden=false;$('oppModalClose').textContent='Cancelar';footer.insertBefore($('oppModalClose'),$('oppModalSave'));
+ const status=document.createElement('span');status.className='crmOpportunitySaveState';status.setAttribute('role','status');footer.insertBefore(status,$('oppModalClose'));
  const fields=['oppModalTitle','oppModalClient','oppModalPhone','oppModalAmount','oppModalDate','oppModalStage','oppModalNotes'];
  const fingerprint=()=>JSON.stringify(fields.map(id=>$(id)?.value||''));let baseline='',wasOpen=false,openedId='',selectedContact='',contactSignature='',extrasKey='',generation=0;
  const extrasCache=new Map();

@@ -1,0 +1,47 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const classes=new Set(['tpfContactEditor']),nodes={},panels={};let linked='[]',legacy={same:true},labels=[],baselines=0;
+const classList={contains:x=>classes.has(x),toggle(){},add:x=>classes.add(x),remove:x=>classes.delete(x)};
+const root={classList,contains:el=>Object.values(nodes).includes(el),querySelector:s=>s==='.tpfContactsModalHead .small'?nodes.subtitle:s==='.tpfContactsModalBody'?nodes.body:null};
+nodes.tpfContactsCreateBack=root;nodes.subtitle={};nodes.body={};nodes.tpfEditorAvatar={};nodes.tpfEditorSaveState={classList};nodes.tpfContactParty={};
+nodes.tpfCreateLabels={querySelectorAll:()=>labels.map(value=>({value}))};
+for(const id of ['First','Last','Nickname','Phone','Dni','Email','Bank','Notes','Obs'])nodes['tpfCreate'+id]={value:'',readOnly:false};
+for(const id of ['tpfCreateNotes','tpfCreateObs']){const controls={};panels[id]={classList,querySelector:s=>controls[s]??=( {})};nodes[id].closest=()=>panels[id];}
+const window={TPFContactRelations:{contactFingerprint:()=>linked},TPFContactParty:{read:()=>legacy},dispatchEvent(){baselines++;}};
+vm.runInNewContext(fs.readFileSync('js/modules/contact-editor.js','utf8'),{window,document:{getElementById:id=>nodes[id]||null},CustomEvent:class{},console});
+const editor=window.TPFContactEditor;
+nodes.tpfCreateFirst.value='María José';nodes.tpfCreateNotes.value='Nota guardada';nodes.tpfCreateObs.value='Observación guardada';labels=['first'];
+editor.begin({editing:true});
+assert.equal(nodes.tpfCreateNotes.readOnly,true);assert.equal(nodes.tpfCreateObs.readOnly,true);assert.equal(editor.isDirty(),false);assert.equal(baselines,1);
+nodes.tpfCreatePhone.value='600000001';
+assert.equal(editor.isDirty(),true,'A changed real field must count as an unsaved change');
+const untouched=editor.readText({NOTAS:'Nota más reciente desde otro PC',OBSERVACIONES:'Observación más reciente'});
+assert.equal(untouched.NOTAS,'Nota más reciente desde otro PC','Editing a phone must preserve the latest locked notes');
+assert.equal(untouched.OBSERVACIONES,'Observación más reciente');
+nodes.tpfCreateNotes.readOnly=false;nodes.tpfCreateNotes.value='';
+assert.throws(()=>editor.readText({NOTAS:'Nota guardada',OBSERVACIONES:'Observación guardada'}),/vacías/);
+nodes.tpfCreateNotes.value='Nueva anotación';
+assert.throws(()=>editor.readText({NOTAS:'Modificada por otro usuario'}),/otro dispositivo/);
+assert.equal(editor.readText({NOTAS:'Nota guardada'}).NOTAS,'Nueva anotación');
+nodes.tpfCreateNotes.value='Nota guardada';nodes.tpfCreateNotes.readOnly=true;
+editor.begin({editing:true});assert.equal(editor.isDirty(),false);
+// Viewing details, filtering labels and copying values do not change persisted data.
+nodes.filter={value:'Vodafone'};nodes.details={open:true};assert.equal(editor.isDirty(),false);
+linked='[{"record_id":"holder"}]';assert.equal(editor.isDirty(),true,'Actual holder association changes must count');
+linked='[]';assert.equal(editor.isDirty(),false,'Undoing an association change restores a clean form');
+labels=['first','second'];assert.equal(editor.isDirty(),true,'Label selections are real changes');
+labels=['first'];assert.equal(editor.isDirty(),false);
+legacy={same:false,holder_name:'Otro'};assert.equal(editor.isDirty(),true);
+classes.add('hidden');assert.equal(editor.isDirty(),false);assert.equal(editor.owns(nodes.tpfCreateFirst),false);
+classes.delete('hidden');
+nodes.tpfCreateNotes.value='';nodes.tpfCreateObs.value='';editor.begin({editing:false});
+assert.equal(nodes.tpfCreateNotes.readOnly,false,'New contacts can enter notes without inheriting a previous lock');
+assert.equal(editor.readText({}).NOTAS,'');
+nodes.tpfCreateNotes.value='Primera nota';assert.equal(editor.readText({}).NOTAS,'Primera nota');
+assert.equal(editor.resolveText('original','original',false,'actualizada','Notas'),'actualizada');
+assert.equal(editor.resolveText('original','modificada',false,'modificada','Notas'),'modificada');
+// Both existing save paths call the shared guard before updating any record.
+const list=fs.readFileSync('js/modules/contacts-list-ui.js','utf8'),profile=fs.readFileSync('js/modules/contact-profile.js','utf8');
+assert(list.indexOf('TPFContactEditor?.readText(previous)')<list.indexOf(".update({data}).eq('id',editing)"));
+assert(profile.indexOf('TPFContactEditor?.readText(q.data?.data||{})')<profile.indexOf(".update({data:d}).eq('id',s.id)"));
+console.log('PASS contact editor: locks, lossless save, blank-note guard, concurrent changes, exact dirty state, associations, labels and create reset.');

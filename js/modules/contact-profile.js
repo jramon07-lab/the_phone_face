@@ -120,9 +120,9 @@
     const rawNickname=byId('tpfCreateNickname')?.value.trim()||'',nickname=typeof window.TPFContactDisplayCase==='function'?window.TPFContactDisplayCase(rawNickname):rawNickname,phone=byId('tpfCreatePhone')?.value.trim()||'',email=byId('tpfCreateEmail')?.value.trim()||'',dni=byId('tpfCreateDni')?.value.trim()||'',bank=byId('tpfCreateBank')?.value.trim()||'',notes=byId('tpfCreateNotes')?.value||'',obs=byId('tpfCreateObs')?.value||'';
     if(byId('tpfCreateNickname'))byId('tpfCreateNickname').value=nickname;if(btn)btn.disabled=true;if(msg)msg.textContent='Guardando…';
     try{
-      const q=await sb.from('records').select('data').eq('id',s.id).maybeSingle();if(q.error)throw q.error;
+      const q=await sb.from('records').select('data').eq('id',s.id).maybeSingle();if(q.error)throw q.error;if(!q.data)throw Error('El contacto ya no está disponible. Vuelve a abrir su ficha.');
       const d={...(q.data?.data||{})};
-      d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d.APODO=nickname;d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;d.NOTAS=notes;d.OBSERVACIONES=obs;
+      d.NOMBRE=first;d.APELLIDOS=last;d['NOMBRE Y APELLIDOS']=[first,last].filter(Boolean).join(' ').trim();d.APODO=nickname;d['TELÉFONO']=phone;d['DNI / NIF']=dni;d.DNI=dni;d.EMAIL=email;d.BANCO=bank;Object.assign(d,window.TPFContactEditor?.readText(q.data?.data||{})||{NOTAS:notes,OBSERVACIONES:obs});
       d.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
       window.TPFContactRelations?.applyContactData(d,s.id);
       const u=await sb.from('records').update({data:d}).eq('id',s.id);if(u.error)throw u.error;
@@ -178,6 +178,7 @@
     setTimeout(()=>window.TPFContactLabelPicker?.sync(),0);
     if(title)title.textContent='Editar contacto';
     if(subtitle)subtitle.textContent='Modifica los datos del contacto.';
+    window.TPFContactEditor?.begin({editing:true});
     if(save){save.textContent='Guardar cambios';save.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();saveCreateModalEdit();};}
     if(closeBtn)closeBtn.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
     if(cancel)cancel.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};

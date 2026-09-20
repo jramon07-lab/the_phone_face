@@ -52,8 +52,8 @@ function compact(root,label){
  root.appendChild(details);return details;
 }
 function renderSelected(root,state){
- const list=root.querySelector('[data-rel-list]');list.innerHTML=state.items.map((x,i)=>`<div class="tpfRelRow">${button(x)}<span>${esc(x.dni||displayPhone(x.phone))}</span><button type="button" class="secondary" data-rel-remove="${i}" aria-label="Desvincular ${esc(x.name)}">Quitar vínculo</button></div>`).join('');
- root.querySelector('[data-rel-count]').textContent=state.items.length?` (${state.items.length})`:'';
+ const list=root.querySelector('[data-rel-list]');list.innerHTML=state.items.map((x,i)=>`<div class="tpfRelRow"><div class="tpfRelLinkedIdentity"><strong>${esc(displayName(x.name))}</strong><span>${esc(x.dni||displayPhone(x.phone))}</span></div><div class="tpfRelLinkedActions"><button type="button" class="secondary" data-rel-open="${esc(x.record_id)}">Abrir ficha</button><button type="button" class="secondary" data-rel-edit-contact="${esc(x.record_id)}">Editar</button><button type="button" class="secondary" data-rel-remove="${i}" aria-label="Desvincular ${esc(x.name)}">Quitar vínculo</button></div></div>`).join('');
+ root.querySelector('[data-rel-count]').textContent=String(state.items.length);
 }
 function contactId(){const modal=$('tpfContactsCreateBack');return clean(modal?.dataset.editId||(modal?.dataset.tpfProfileEditing&&typeof currentContact!=='undefined'?currentContact?.id:''));}
 function newHolderData(values){
@@ -85,7 +85,7 @@ P.fillContact=function(data){
  const p=data?.TPF_TITULAR||{},state={items:links(data?.TPF_RELACIONES),original:p,query:0};forms.set(root,state);
  const legacy=compact(root,p.same===false?'Titular anterior: '+(p.holder_name||'Ver datos'):'Opciones de destinatario');
  if(p.same!==false)legacy.hidden=true;
- const section=document.createElement('div');section.innerHTML=`<label class="tpf-party-check"><input type="checkbox" data-rel-enabled><span>Ver / añadir titulares asociados<span data-rel-count></span></span></label><div data-rel-panel hidden><div data-rel-list></div><button type="button" class="secondary" data-rel-add>+ Añadir titular</button><div data-rel-searchbox hidden><label>Buscar contacto existente<input type="search" data-rel-search placeholder="Nombre, teléfono o DNI" autocomplete="off"></label><div data-rel-results aria-live="polite"></div><small>Si aún no tiene ficha, créala en Contactos y después vincúlala aquí. No se crean duplicados automáticamente.</small></div></div>`;
+ const section=document.createElement('details');section.className='tpfEditorRelations';section.innerHTML=`<summary>Titulares asociados <span data-rel-count></span></summary><div data-rel-panel><div data-rel-list></div><button type="button" class="secondary" data-rel-add>+ Añadir titular</button><div data-rel-searchbox hidden><label>Buscar contacto existente<input type="search" data-rel-search placeholder="Nombre, teléfono o DNI" autocomplete="off"></label><div data-rel-results aria-live="polite"></div><small>Si aún no tiene ficha, créala en Contactos y después vincúlala aquí. No se crean duplicados automáticamente.</small></div></div>`;
  root.prepend(section);renderSelected(root,state);
  const searchBox=root.querySelector('[data-rel-searchbox]');searchBox.querySelector('small').textContent='Busca una ficha existente o crea un titular nuevo aquí.';
  searchBox.insertAdjacentHTML('beforeend',`<button type="button" class="secondary" data-rel-new>+ Crear nuevo titular</button><div data-rel-newform hidden><div class="tpf-party-grid"><label>Nombre<input data-rel-newfield="first" autocomplete="off"></label><label>Apellidos<input data-rel-newfield="last" autocomplete="off"></label><label>DNI / NIF<input data-rel-newfield="dni" autocomplete="off"></label><label>Teléfono (opcional)<input data-rel-newfield="phone" inputmode="tel" autocomplete="off"></label><label>Correo electrónico (opcional)<input data-rel-newfield="email" type="email" autocomplete="off"></label></div><p>Crear titular guarda una ficha nueva. Después guarda el contacto principal para confirmar el vínculo. Si cancelas la edición, la nueva ficha seguirá en Contactos.</p><button type="button" class="primary" data-rel-create>Crear titular y añadir</button><button type="button" class="secondary" data-rel-cancelnew>Cancelar nuevo titular</button><div data-rel-createmsg role="status" aria-live="polite"></div></div>`);
@@ -105,7 +105,6 @@ P.fillContact=function(data){
   }catch(error){msg.textContent=(error.message||'No se pudo crear el titular.')+(attempt.issued?' Antes de volver a crear, comprueba en el buscador si ya existe.':'');}
   finally{state.creating=false;if(active())controls.forEach((x,i)=>x.disabled=disabled[i]);}
  };
- root.addEventListener('change',e=>{if(e.target.matches('[data-rel-enabled]'))root.querySelector('[data-rel-panel]').hidden=!e.target.checked;});
  root.addEventListener('click',e=>{
   if(state.creating){e.preventDefault();e.stopPropagation();return;}
   if(e.target.closest('[data-rel-add]')){root.querySelector('[data-rel-searchbox]').hidden=false;root.querySelector('[data-rel-search]').focus();}
@@ -257,8 +256,9 @@ async function prepareOpportunity(payload){
  payload.record_id=h.record_id;payload.client_name=h.name;payload.phone=m.phone||null;
  return party;
 }
-document.addEventListener('click',e=>{const b=e.target.closest?.('[data-rel-open]');if(!b)return;e.preventDefault();e.stopPropagation();if(b.closest('#tpfContactParty')){window.alert('Guarda o cancela la edición y abre el titular desde la ficha del contacto.');return;}openLink(b.dataset.relOpen);},true);
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-rel-open]');if(!b)return;e.preventDefault();e.stopPropagation();if(b.closest('#tpfContactParty')){window.TPFContactEditor?.visitContact(b.dataset.relOpen);return;}openLink(b.dataset.relOpen);},true);
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-rel-edit-contact]');if(!b||!b.closest('#tpfContactParty'))return;e.preventDefault();e.stopPropagation();window.TPFContactEditor?.visitContact(b.dataset.relEditContact,true);},true);
 const css=document.createElement('style');css.textContent='.tpfRelRow{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}.tpfRelLink{color:#2563eb!important;text-transform:none!important}.tpfRelCard{margin-top:12px}.tpfRelCard>.tpfRelLink{background:transparent!important;border:0!important;padding:0!important;text-align:left;font-size:16px;font-weight:700}.tpfRelLegacy summary,.tpfRelSummary summary{cursor:pointer;font-weight:600;font-size:14px}.tpfRelLegacy{margin-top:8px}.tpfRelResult{display:flex!important;flex-direction:column;align-items:flex-start;width:100%;text-align:left;margin:5px 0}.tpf-party [data-rel-panel],.tpf-party [data-rel-choices]{margin-top:12px}.tpf-party [data-rel-list]{margin-bottom:8px}.tpf-party [data-rel-searchbox]{margin-top:12px}.tpf-party [data-rel-results]{max-height:220px;overflow:auto}.tpf-party[hidden]{display:none!important}';document.head.appendChild(css);
 window.addEventListener('tpf:contact-updated',e=>{const state=opportunity;if(!state||state.loading||$('oppDetailModal')?.classList.contains('hidden'))return;const ids=[state.ownerId,...state.items.map(x=>x.record_id),...state.managers.map(x=>x.id)];if(!e.detail?.id||ids.includes(clean(e.detail.id)))loadOpportunity(state);});
-window.TPFContactRelations={opportunityContacts,opportunityPreview,prepareOpportunity,applyContactData,identity,links,match,searchRecords,record};
+window.TPFContactRelations={contactFingerprint:root=>JSON.stringify(forms.get(root)?.items||[]),opportunityContacts,opportunityPreview,prepareOpportunity,applyContactData,identity,links,match,searchRecords,record};
 })();
