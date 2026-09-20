@@ -1106,26 +1106,26 @@ body.tpfUnified #tpfSched3 .tpfS3primary{background:#0866ef;border-color:#0866ef
 
 /* Compact desktop inbox: two filter rows, actions before customer details. */
 @media(min-width:1051px){
-body.tpfUnified .waCleanWorkspace .waChatsSearchWrap{padding:10px 10px 6px!important}
-body.tpfUnified .waCleanWorkspace .waTabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important;padding:4px 10px 8px!important}
-body.tpfUnified .waCleanWorkspace .waTabs>button,body.tpfUnified .waCleanWorkspace .waCleanFilters>summary{font-size:10px!important;white-space:nowrap;padding:6px 2px!important;min-height:28px!important;text-align:center}
-body.tpfUnified .waCleanWorkspace .waCleanFilters{min-width:0}
-body.tpfUnified .waCleanWorkspace #waGlobalSearchStatus{padding:3px 10px 7px;font-size:11px;color:#2460aa}
-body.tpfUnified .waCleanWorkspace #waGlobalSearchStatus[hidden]{display:none}
-body.tpfUnified .waCleanWorkspace #waSideContactActions{margin:0 0 8px!important;gap:4px!important}
-body.tpfUnified .waCleanWorkspace #waSideContactActions>button{min-height:32px!important;padding:6px 4px!important;font-size:11px!important}
-body.tpfUnified .waCleanWorkspace #waSideNewOffer{grid-column:1;grid-row:1}
-body.tpfUnified .waCleanWorkspace #waSideDirectSale{grid-column:2;grid-row:1}
-body.tpfUnified .waCleanWorkspace #waCleanReview{grid-column:1/-1;grid-row:2}
-body.tpfUnified .waCleanWorkspace #waContactState[data-compact="true"]{display:none!important}
-body.tpfUnified .waCleanWorkspace #waSlaState,body.tpfUnified .waCleanWorkspace #waPersistState{display:inline-block;padding:2px 4px!important;margin:0 0 4px!important;font-size:10px!important}
-body.tpfUnified .waCleanWorkspace #tpfWaAliasCard{padding:7px!important;margin:4px 0!important}
-body.tpfUnified .waCleanWorkspace #tpfWaAliasCard summary{font-size:11px!important}
-body.tpfUnified .waCleanWorkspace #tpfWaAliasCard .tpfGoogleInlineStatus{font-size:10px!important;padding:2px 5px!important}
-body.tpfUnified .waCleanWorkspace .waFieldDisclosure{padding:3px 0!important}
-body.tpfUnified .waCleanWorkspace .waCleanDisclosure{padding:5px 0!important}
-body.tpfUnified .waCleanWorkspace .waFieldRow{padding:6px 0!important}
-body.tpfUnified .waCleanWorkspace .waCleanPerson{padding:7px!important;background:white;border:1px solid #e6ebf2!important;border-radius:7px}
-body.tpfUnified .waCleanWorkspace #waSideTags{display:flex!important;flex-wrap:wrap;gap:4px!important}
-body.tpfUnified .waCleanWorkspace #waSideTags .waGlobalTagChip{font-size:10px!important;margin:0!important;padding:4px 6px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waChatsSearchWrap{padding:10px 10px 6px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waTabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important;padding:4px 10px 8px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waTabs>button,body.tpfUnified #view-whatsapplive.waCleanWorkspace .waCleanFilters>summary{font-size:10px!important;white-space:nowrap;padding:6px 2px!important;min-height:28px!important;text-align:center}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waCleanFilters{min-width:0}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waGlobalSearchStatus{padding:3px 10px 7px;font-size:11px;color:#2460aa}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waGlobalSearchStatus[hidden]{display:none}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideContactActions{margin:0 0 8px!important;gap:4px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideContactActions>button{min-height:32px!important;padding:6px 4px!important;font-size:11px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideNewOffer{grid-column:1;grid-row:1}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideDirectSale{grid-column:2;grid-row:1}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waCleanReview{grid-column:1/-1;grid-row:2}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waContactState[data-compact="true"]{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSlaState,body.tpfUnified #view-whatsapplive.waCleanWorkspace #waPersistState{display:inline-block;padding:2px 4px!important;margin:0 0 4px!important;font-size:10px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #tpfWaAliasCard{padding:7px!important;margin:4px 0!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #tpfWaAliasCard summary{font-size:11px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #tpfWaAliasCard .tpfGoogleInlineStatus{font-size:10px!important;padding:2px 5px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waFieldDisclosure{padding:3px 0!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waCleanDisclosure{padding:5px 0!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waFieldRow{padding:6px 0!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waCleanPerson{padding:7px!important;background:white;border:1px solid #e6ebf2!important;border-radius:7px}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTags{display:flex!important;flex-wrap:wrap;gap:4px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTags .waGlobalTagChip{font-size:10px!important;margin:0!important;padding:4px 6px!important}
 }

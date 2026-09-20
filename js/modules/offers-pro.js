@@ -99,8 +99,9 @@ function ensureWhatsappOfferAction(){
   let direct=$('waSideDirectSale');
   if(!direct){direct=document.createElement('button');direct.id='waSideDirectSale';direct.type='button';direct.className='secondary';direct.textContent='⚡ Venta directa'}
   const desired=[open,edit,offer,direct];desired.forEach((button,index)=>{if(actions.children[index]!==button)actions.appendChild(button)});
-  offer.onclick=openWhatsappOffer;
-  direct.onclick=openWhatsappDirectSale;
+  // The document listener below owns these actions; a second onclick reopened offers after Close.
+  offer.onclick=null;
+  direct.onclick=null;
   const found=!!whatsappContact();
   actions.classList.toggle('hidden',!found);
   for(const button of desired)button.classList.toggle('hidden',!found);
