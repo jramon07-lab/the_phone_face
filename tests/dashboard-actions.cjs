@@ -33,6 +33,10 @@ const actions=sandbox.window.testActions,sleep=ms=>new Promise(resolve=>setTimeo
   await actions.openItem('opportunity','opp-1');
   assert.ok(calls.includes('open:opp-1'));assert.equal(loads,3);
 
+  let deleteCalls=0;sandbox.window.deleteOpp=async()=>{deleteCalls++;return false};
+  const beforeDelete=loads;
+  await actions.action('delete','opportunity','opp-1');
+  assert.equal(deleteCalls,1);assert.equal(loads,beforeDelete,'Deletion must not load the sales board before confirmation');
   const contactModal=element('tpfContactsCreateBack',true);
   selectors.set('.nav[data-view="database"]',{click(){calls.push('database');setTimeout(()=>{const button=element('tpfContactsAdd');button.click=()=>{calls.push('create-contact');setTimeout(()=>contactModal.classList.remove('hidden'),80)}},170)}});
   await actions.openNewContact();

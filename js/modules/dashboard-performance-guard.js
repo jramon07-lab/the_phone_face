@@ -3,7 +3,7 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const D={built:false,busy:false,actionBusy:false,lastLoad:0,data:null,activityAll:false,activityFilter:'commercial',upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0};
+const D={built:false,busy:false,actionBusy:false,lastLoad:0,revision:0,reloadPending:false,data:null,activityAll:false,activityFilter:'commercial',upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0};
 const WORK_STATE_KEY='tpf.home.worklist.v1';
 function restoreWorkState(){try{const saved=JSON.parse(window.sessionStorage.getItem(WORK_STATE_KEY)||'null');if(!saved)return;if(['priority','calls','followup','processing'].includes(saved.filter))D.filter=saved.filter;if(typeof saved.query==='string')D.query=saved.query;if(['10','25','50','all'].includes(saved.pageSize))D.pageSize=saved.pageSize;if(Number.isInteger(saved.page)&&saved.page>=0)D.page=saved.page}catch(_){}}
 function saveWorkState(){try{window.sessionStorage.setItem(WORK_STATE_KEY,JSON.stringify({filter:D.filter,query:D.query,pageSize:D.pageSize,page:D.page}))}catch(_){}}
@@ -192,14 +192,23 @@ async function action(name,type,id){
     if(type==='opportunity'){await prepareSales();await callAction('openOpportunityCard',id);await waitFor(()=>visible('oppDetailModal'),'No se pudo abrir el editor de la oportunidad. Puede haberse eliminado o no estar accesible.');}
     else if(type==='task')await callAction('editAlertTask',id);
   }else if(name==='delete'){
-    if(type==='opportunity'){await prepareSales();await callAction('deleteOpp',id);}
+    if(type==='opportunity'){await callAction('deleteOpp',id);return;}
     else if(type==='task')await callAction('deleteAlertTask',id);
     D.lastLoad=0;await load();
   }
 }
 
 async function fetchData(){const today=localDay(),month=today.slice(0,7),monthStart=`${month}-01`;const results=await Promise.all([queryWithTimeout(sb.from('sales_opportunities').select('*').order('updated_at',{ascending:false}).limit(1000)),queryWithTimeout(sb.from('sales_stages').select('*').eq('active',true).order('position')),queryWithTimeout(sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(500)),queryWithTimeout(sb.from('records').select('id',{count:'exact',head:true}).eq('source_sheet','BASE DE DATOS')),queryWithTimeout(sb.from('crm_audit_log').select('*').order('created_at',{ascending:false}).limit(40)),queryWithTimeout(sb.rpc('crm_get_month_goal',{p_month:monthStart}))]);const [oppR,stageR,taskR,countR,auditR,goalR]=results;return{opps:oppR.data||[],stages:stageR.data||[],tasks:taskR.data||[],contacts:Number(countR.count||0),activity:auditR.data||[],goal:Array.isArray(goalR.data)?goalR.data[0]||{}:goalR.data||{},today,month,monthStart,warnings:results.filter(r=>r.error).map(r=>r.error.message)}}
-async function load(){if(!appOpen()){return}build();if(!dashboardOpen())return;if(D.busy)return;if(Date.now()-D.lastLoad<350)return;D.lastLoad=Date.now();D.busy=true;const b=$('dashRefresh');if(b){b.disabled=true;b.setAttribute('aria-busy','true')}try{D.data=await fetchData();render()}catch(e){console.error('Inicio',e);if($('dashAlerts'))$('dashAlerts').innerHTML=`<div class="tdEmpty">${esc(e?.message||'No se pudo cargar el resumen.')}</div>`}finally{D.busy=false;if($('dashRefresh')){$('dashRefresh').disabled=false;$('dashRefresh').removeAttribute('aria-busy')}}}
+function removeConfirmed(type,id){
+ D.revision++;D.lastLoad=0;
+ if(D.data){const key=type==='opportunity'?'opps':'tasks';D.data[key]=D.data[key].filter(row=>String(row.id)!==String(id));if(dashboardOpen())render();}
+ if(D.busy)D.reloadPending=true;else setTimeout(load,0);
+}
+async function load(){if(!appOpen())return;build();if(!dashboardOpen())return;if(D.busy)return;if(Date.now()-D.lastLoad<350)return;D.lastLoad=Date.now();D.busy=true;const revision=D.revision,b=$('dashRefresh');if(b){b.disabled=true;b.setAttribute('aria-busy','true')}
+ try{const data=await fetchData();if(revision!==D.revision){D.reloadPending=true;return}D.data=data;render()}
+ catch(e){console.error('Inicio',e);if($('dashAlerts'))$('dashAlerts').innerHTML=`<div class="tdEmpty">${esc(e?.message||'No se pudo cargar el resumen.')}</div>`}
+ finally{D.busy=false;if($('dashRefresh')){$('dashRefresh').disabled=false;$('dashRefresh').removeAttribute('aria-busy')}if(D.reloadPending){D.reloadPending=false;D.lastLoad=0;setTimeout(load,0)}}}
+
 function render(){const d=D.data;if(!d)return;const map=new Map(d.stages.map(s=>[String(s.id),s])),won=d.opps.filter(o=>isWon(o,map)),open=d.opps.filter(o=>isOpen(o,map,d.today)),expired=d.opps.filter(o=>isExpired(o,map,d.today)),pending=d.tasks.filter(t=>status(t.status||'pending')==='pending'),todayTasks=pending.filter(t=>localDay(t.starts_at)===d.today),totalAmount=d.opps.reduce((n,o)=>n+Number(o.amount||0),0),forecast=open.reduce((n,o)=>n+Number(o.amount||0),0),conversion=d.opps.length?`${Math.round(won.length/d.opps.length*100)}%`:'0%';$('mOppTotal').textContent=open.length;$('mOppAmount').textContent=money(totalAmount);[['tdMetricOppTotal',d.opps.length],['tdMetricOppAmount',money(totalAmount)],['tdMetricOppOpen',open.length],['tdMetricOppExpired',expired.length],['tdMetricTasks',pending.length],['tdMetricTasksToday',todayTasks.length?`${todayTasks.length} para hoy`:'Ninguna para hoy'],['tdMetricContacts',d.contacts],['tdMetricConversion',conversion],['tdAnalysisOpen',open.length],['tdAnalysisForecast',money(forecast)],['tdAnalysisConversion',conversion]].forEach(([id,value])=>{$(id).textContent=value});renderPriority(d,map,pending);renderFunnel(d);renderCommercial(d,map,pending);renderPulse(d,map,pending,todayTasks,expired);renderFocus(d,map,pending);renderGoal(d,won,open);renderForecast(d,map);renderUpcoming(d,map,pending);renderActivity();$('tdGreeting').textContent=Number(new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'numeric',hourCycle:'h23'}).format(new Date()))<14?'Buenos días':'Buenas tardes';$('tdToday').textContent=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',weekday:'long',day:'numeric',month:'long'}).format(new Date());$('tdDataStatus').hidden=!d.warnings.length;$('tdDataStatus').textContent=d.warnings.length?'No se han podido cargar todos los datos. Pulsa Actualizar para volver a comprobarlos.':'';}
 function activeOpportunity(o,map){return !isWon(o,map)&&!isLost(o,map)&&!/^cancel|^reject/.test(status(o.status))}
 
@@ -375,6 +384,6 @@ function startWhenReady(){
   observer.observe(app,{attributes:true,attributeFilter:['class','hidden','style']});
   ready();
 }
-function install(){ensureCss();window.loadDashboard=load;document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))setTimeout(()=>{build();hideTemplateLeak();D.lastLoad=0;load()},120)},true);startWhenReady()}
+function install(){ensureCss();window.loadDashboard=load;window.addEventListener('tpf:opportunity-deleted',e=>removeConfirmed('opportunity',e.detail?.id));window.addEventListener('tpf:task-deleted',e=>removeConfirmed('task',e.detail?.id));document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))setTimeout(()=>{build();hideTemplateLeak();D.lastLoad=0;load()},120)},true);startWhenReady()}
 M.register('dashboard-performance-guard',{install});
 })();

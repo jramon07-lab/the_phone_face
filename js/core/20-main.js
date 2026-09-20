@@ -132,9 +132,13 @@ window.moveOpp=async(id,stage)=>{
   }
 };
 window.deleteOpp=async(id)=>{
-  if(!confirm("¿Eliminar esta oportunidad?"))return;
-  const {error}=await sb.rpc("delete_sales_opportunity",{opportunity_id:id});
-  if(error)alert(error.message);else loadSales();
+  if(!confirm("¿Eliminar esta oportunidad?"))return false;
+  try{
+    await deleteOpportunityVerified(id);
+    renderSales();
+    Promise.resolve(loadSales()).catch(error=>console.warn('Actualizar ventas tras borrar',error));
+    return true;
+  }catch(error){alert(error.message||'No se pudo eliminar la oportunidad.');return false;}
 };
 window.editOpp=async(id)=>{
   const o=(salesCache.opportunities||[]).find(x=>x.id===id);
@@ -2549,6 +2553,7 @@ window.deleteAlertTask=async(id)=>{
   }
   const {error}=await sb.from("agenda_items").delete().eq("id",id);
   if(error){alert(error.message);return}
+  window.dispatchEvent(new CustomEvent('tpf:task-deleted',{detail:{id}}));
   if(window.__taskOpenedFromAlerts){
     window.__taskOpenedFromAlerts=false;
     $("cpTaskDetailPage")?.classList.add("hidden");
