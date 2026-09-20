@@ -1,0 +1,112 @@
+/* Shared presentation for the CRM. No visibility, permission or business-state rules.
+   Loaded by both entry points; scoped to the existing desktop and mobile shells. */
+:root {
+  --crm-blue: #1667df;
+  --crm-ink: #20334d;
+  --crm-muted: #63758c;
+  --crm-line: #dfe7f1;
+  --crm-canvas: #f4f7fc;
+  --crm-soft: #f0f5fc;
+  --crm-radius: 16px;
+  --crm-shadow: 0 4px 18px rgba(30,55,90,.035);
+}
+body.tpfUnified { --blue:var(--crm-blue); --bg:var(--crm-canvas); --text:var(--crm-ink); --muted:var(--crm-muted); --line:var(--crm-line); }
+/* Shell: keep each existing scrolling owner and sidebar breakpoint. */
+.tpfUnified .referenceShell,.tpfUnified .referenceWorkspace { background:var(--crm-canvas); }
+.tpfUnified .referenceSidebar { background:#0b1d32; border-right:1px solid #1c3049; }
+.tpfUnified .referenceBrand { margin-bottom:22px; }
+.tpfUnified .referenceNav .nav { border-radius:9px; font-weight:550; }
+.tpfUnified .referenceNav .nav.active { background:var(--crm-blue); box-shadow:0 4px 12px #05132933; }
+.tpfUnified .referenceTopbar { border-color:var(--crm-line); background:#fff; }
+.tpfUnified .referenceWorkspace main { padding:24px 28px 32px; }
+.tpfUnified .referenceWorkspace main>section { min-width:0; }
+.tpfUnified .referenceWorkspace :is(h1,h2) { color:var(--crm-ink); letter-spacing:-.035em; line-height:1.2; }
+.tpfUnified .referenceWorkspace h2 { font-size:clamp(24px,2.2vw,32px); }
+.tpfUnified .referenceWorkspace h3 { color:var(--crm-ink); letter-spacing:-.015em; }
+/* The same surface, form and table language across all main modules. */
+.tpfUnified :is(.referenceWorkspace,.modalCard,.waTemplateCard,.opShell,.ccShell) .card {
+  border:1px solid var(--crm-line); border-radius:var(--crm-radius); box-shadow:var(--crm-shadow); background:#fff;
+}
+.tpfUnified :is(.referenceWorkspace,.modalCard,.waTemplateCard,.opShell,.ccShell) :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]),select,textarea) {
+  border-color:#d4dfed; border-radius:9px; color:var(--crm-ink);
+}
+.tpfUnified :is(.referenceWorkspace,.modalCard,.waTemplateCard,.opShell,.ccShell) :is(input,select,textarea):focus-visible {
+  outline:2px solid #77a8ee; outline-offset:2px;
+}
+.tpfUnified :is(.primary,.refBlue) { background:var(--crm-blue); border-radius:9px; box-shadow:0 2px 6px #1667df18; }
+.tpfUnified .secondary { background:#fff; color:#395473; border:1px solid #d5dfec; border-radius:9px; }
+.tpfUnified button:focus-visible,.tpfUnified [role=button]:focus-visible { outline:3px solid #7caef1; outline-offset:3px; }
+.tpfUnified button:disabled { cursor:default; }
+.tpfUnified .referenceWorkspace :is(table) { color:var(--crm-ink); }
+.tpfUnified .referenceWorkspace th { padding:13px 12px; background:#f1f5fb; color:#536780; font-size:12px; font-weight:650; border-bottom-color:var(--crm-line); }
+.tpfUnified .referenceWorkspace td { padding:13px 12px; border-bottom-color:#eaf0f7; line-height:1.5; }
+.tpfUnified .referenceWorkspace tbody tr:hover { background:#f8faff; }
+.tpfUnified .referenceWorkspace :is(.scroll,.card) { scrollbar-width:thin; scrollbar-color:#bbc9dc transparent; }
+/* Sales board and opportunity reading/editing. */
+.tpfUnified .salesBoardPage { background:var(--crm-canvas); }
+.tpfUnified .salesBoardTopbar { padding:18px 20px; background:#fff; border:1px solid var(--crm-line); border-radius:16px; margin-bottom:18px; }
+.tpfUnified .stage { border-radius:14px; border-color:var(--crm-line); background:#edf2f9; padding:10px; }
+.tpfUnified .stageHead { padding:8px 4px 12px; }
+.tpfUnified .stageTitle { font-size:14px; }
+.tpfUnified .stageMeta { font-size:12px; margin-top:4px; }
+.tpfUnified .opp { border-color:#dce5f0; border-radius:12px; padding:14px; margin:10px 0; box-shadow:0 3px 8px #1e375a05; }
+.tpfUnified .opp:hover { border-color:#a7c3eb; box-shadow:0 5px 14px #1e375a0c; }
+.tpfUnified .oppTitle { font-size:13px; line-height:1.5; }
+.tpfUnified .oppInfo { font-size:12px; gap:6px; }
+.tpfUnified .oppAmount { color:#235c9f; font-size:16px; }
+.tpfUnified .salesStat { border-radius:12px; border-color:var(--crm-line); padding:14px; }
+.tpfUnified #opportunityFullPage { background:var(--crm-canvas); }
+.tpfUnified #opportunityFullPage .oppFullCard { border-radius:16px; box-shadow:var(--crm-shadow); }
+.tpfUnified :is(.modalCard,.waTemplateCard,.waQuickModal) { border:1px solid var(--crm-line); border-radius:16px; box-shadow:0 22px 70px #11243d28; }
+.tpfUnified :is(.modalCard,.waTemplateCard) h3 { color:var(--crm-ink); }
+/* Contact: preserve protected fields, labels, linked holders and tab handlers. */
+.tpfUnified #contactModal.tpfContactReference { background:var(--crm-canvas); }
+.tpfUnified #contactModal.tpfContactReference :is(.cpData,.cpRight,.cpRefExpiry) { border-color:var(--crm-line); border-radius:16px; box-shadow:var(--crm-shadow); }
+.tpfUnified #contactModal.tpfContactReference .cpRefTabs { background:#fff; border-radius:16px 16px 0 0; }
+.tpfUnified #contactModal.tpfContactReference .cpQuick button { border-color:#d1ddeb; color:#335a87; border-radius:9px; }
+.tpfUnified #contactModal.tpfContactReference #contactWhatsapp { border-color:#acd9c6; color:#16825b; }
+.tpfUnified #contactModal.tpfContactReference .cpBadge { background:#eaf2ff; color:#2766b2; }
+.tpfUnified #contactModal.tpfContactReference .cpRefEdit { border-color:#cadbf3; border-radius:9px; background:#edf4ff; color:#195ebc; }
+.tpfUnified #contactModal.tpfContactReference #cpRefPanel { padding:20px; }
+/* Agenda and reminders retain their fullscreen forms and scroll containers. */
+.tpfUnified .agendaPro { --ap-blue:var(--crm-blue); --ap-line:var(--crm-line); --ap-soft:var(--crm-soft); }
+.tpfUnified .agendaHeader { padding:8px 0 16px; }
+.tpfUnified .agendaStats button { border-radius:14px; box-shadow:var(--crm-shadow); }
+.tpfUnified .agendaMain { border-radius:16px; }
+.tpfUnified .agendaItem { padding-top:16px; padding-bottom:16px; }
+.tpfUnified .agendaCalendarGrid { border-radius:14px; }
+.tpfUnified .agendaDay.today { background:#f0f6ff; }
+/* Messaging: no changes to sent/delivered/read indicators or message colors. */
+.tpfUnified .waLiveHeader { border-bottom:1px solid var(--crm-line); padding-bottom:16px; }
+.tpfUnified .waLiveLayout { border-color:var(--crm-line); border-radius:16px; box-shadow:var(--crm-shadow); }
+.tpfUnified :is(.waChatsSearchWrap,.waChatTop,.waComposer,.waSideSectionHead) { background:#fff; border-color:var(--crm-line); }
+.tpfUnified .waTabs { background:#f6f9fd; gap:4px; padding:8px; }
+.tpfUnified .waTabs button { border-radius:8px; color:#536780; }
+.tpfUnified .waTabs button.active { background:#e8f1ff; color:#155fbd; }
+.tpfUnified .waMiniStats span { background:#f0f5fc; color:#536780; border-radius:8px; }
+.tpfUnified .waSideSection { border-color:var(--crm-line); border-radius:12px; }
+/* Offers, templates, email, programmed messages and automation workspaces. */
+.tpfUnified :is(.opShell,.directSaleShell,.ccShell,.apDetailShell) { color:var(--crm-ink); }
+.tpfUnified :is(.opCard,.opPanel,.tv3Card,.tv3EditorCard,.ccCard,.ccKpi,.apDetailCard,.cpOfferCard) { border-color:var(--crm-line); border-radius:14px; box-shadow:var(--crm-shadow); }
+.tpfUnified :is(.opHead,.tv3Head,.tv3EditorHead,.tpfMailHead,.ccHead,.apDetailTop) { border-color:var(--crm-line); }
+.tpfUnified :is(.opTabs,.tv3Tabs,.wapFilterTabs) button { border-radius:9px; }
+.tpfUnified :is(.opTabs,.tv3Tabs,.wapFilterTabs) button.active { background:#eaf2ff; color:#185eb4; border-color:#bcd2f2; }
+.tpfUnified :is(.ccTableHead,.wapSectionHead) { background:#f1f5fb; color:#536780; }
+.tpfUnified :is(#view-settings,#view-users,#view-labels,#view-import,#view-search,#view-system,#view-trash,#view-automations)>.card { padding:24px; }
+/* Mobile app uses its own geometry; unify colors and surfaces only. */
+body.tpfUnifiedMobile { --m-purple:#1667df; --m-purple-2:#6fa8ff; }
+.tpfUnifiedMobile .m-primary { background:#1667df; box-shadow:0 3px 9px #1667df20; }
+.tpfUnifiedMobile .m-bottom-nav button.active { color:#6fa8ff; }
+.tpfUnifiedMobile .m-bottom-nav .m-nav-add { background:#1667df; box-shadow:0 5px 16px #1667df33; }
+@media(min-width:1024px) {
+  .tpfUnified #contactModal.tpfContactReference .cpQuick { flex-wrap:wrap; }
+  .tpfUnified #contactModal.tpfContactReference .cpColumns { gap:22px; }
+}
+@media(max-width:850px) {
+  .tpfUnified .referenceWorkspace main { padding:14px 12px 24px; }
+  .tpfUnified .salesBoardTopbar { padding:14px; }
+  .tpfUnified :is(#view-settings,#view-users,#view-labels,#view-import,#view-search,#view-system,#view-trash,#view-automations)>.card { padding:16px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .tpfUnified .opp { transition:none; }
+}
