@@ -4,10 +4,10 @@ const text=v=>String(v??'').trim();
 const name=v=>text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 function phone(v){let p=text(v).replace(/\D/g,'');if(p.startsWith('00'))p=p.slice(2);if(p.length===11&&p.startsWith('34'))p=p.slice(2);return p.length>=7?p:'';}
 function identity(row){const d=row?.data||{};return {id:text(row?.id),name:name(row?.fullName||d['NOMBRE Y APELLIDOS']||[d.NOMBRE,d.APELLIDOS].filter(Boolean).join(' ')||d.CLIENTE),phones:[...new Set([row?.phone,d['TELÉFONO'],d.TELEFONO,d.PHONE,d.MOVIL,d['TELÉFONO 2'],d['TELÉFONO 3'],d.TELEFONO_2,d.TELEFONO_3,...(row?.phones||[]).map(p=>p.number||p.value||p)].map(phone).filter(Boolean))]};}
-function index(contacts){const ids=new Map(),phones=new Map(),names=new Map(),managers=new Map();const add=(map,key,id)=>{if(!key)return;if(!map.has(key))map.set(key,new Set());map.get(key).add(id)};
- for(const row of contacts||[]){const c=identity(row);if(!c.id)continue;ids.set(c.id,row);add(names,c.name,c.id);c.phones.forEach(p=>add(phones,p,c.id));}
+function index(contacts){const ids=new Map(),phones=new Map(),names=new Map(),dnis=new Map(),managers=new Map();const add=(map,key,id)=>{if(!key)return;if(!map.has(key))map.set(key,new Set());map.get(key).add(id)};
+ for(const row of contacts||[]){const c=identity(row);if(!c.id)continue;ids.set(c.id,row);add(dnis,text(row.data?.['DNI / NIF']||row.data?.DNI||row.dni).toUpperCase().replace(/[^A-Z0-9]/g,''),c.id);add(names,c.name,c.id);c.phones.forEach(p=>add(phones,p,c.id));}
  for(const row of contacts||[]){for(const link of row.data?.TPF_RELACIONES?.managed_contacts||row.relations?.managed_contacts||[]){const id=text(link.record_id);if(ids.has(id)&&id!==text(row.id))add(managers,id,text(row.id));}}
- return {ids,phones,names,managers};
+ return {ids,phones,names,dnis,managers};
 }
 function owner(row,lookup,kind='task'){
  const explicit=text(kind==='task'?row.related_record_id:(row.record_id||row.contact_id));
@@ -17,9 +17,22 @@ function owner(row,lookup,kind='task'){
  const candidates=p?lookup.phones.get(p):lookup.names.get(n);
  return candidates?.size===1?[...candidates][0]:'';
 }
+// Display associations only. Never changes record ownership or message recipients.
+function opportunityContacts(row,lookup){
+ const who=owner(row,lookup,'opportunity'),ids=new Set();if(who)ids.add(who);
+ for(const id of lookup.managers.get(who)||[])ids.add(id);
+ const party=row.contract_party;
+ if(party?.same===false&&who){
+  for(const field of ['holder_dni','contact_dni']){
+   const dni=text(party[field]).toUpperCase().replace(/[^A-Z0-9]/g,''),matches=dni&&lookup.dnis?.get(dni);
+   if(matches?.size===1){const id=[...matches][0];ids.add(id);if(field==='holder_dni')for(const manager of lookup.managers.get(id)||[])ids.add(manager);}
+  }
+ }
+ return ids;
+}
 function isTask(row){return !row.whatsapp_enabled&&name(row.title)!=='whatsapp programado';}
 function related(rows,contacts,id,kind='task'){
- const lookup=index(contacts),target=text(id);return (rows||[]).filter(row=>{if(kind==='task'&&!isTask(row))return false;const who=owner(row,lookup,kind);return who===target||(kind==='opportunity'&&lookup.managers.get(who)?.has(target));});
+ const lookup=index(contacts),target=text(id);return (rows||[]).filter(row=>{if(kind==='task'&&!isTask(row))return false;if(kind==='opportunity')return opportunityContacts(row,lookup).has(target);return owner(row,lookup,kind)===target;});
 }
 const cache=new WeakMap();
 async function load(client){const previous=cache.get(client);if(previous&&Date.now()-previous.time<15000)return previous.promise;
@@ -27,5 +40,5 @@ async function load(client){const previous=cache.get(client);if(previous&&Date.n
  cache.set(client,{promise,time:Date.now()});try{return await promise;}catch(e){cache.delete(client);throw e;}
 }
 function invalidate(client){cache.delete(client);}
-return {phone,identity,index,owner,related,isTask,load,invalidate};
+return {phone,identity,index,owner,opportunityContacts,related,isTask,load,invalidate};
 });

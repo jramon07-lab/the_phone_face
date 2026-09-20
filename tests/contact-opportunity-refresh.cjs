@@ -33,7 +33,7 @@ async function run(){
   const context=vm.createContext({window,CustomEvent,console,Array,
     document:{getElementById(){return {}},querySelector(){return null},querySelectorAll(){return rows},addEventListener(){}},
     setTimeout(fn){timers.push(fn)},setInterval(){},
-    sb:{from(table){queries++;const q={select(){return q},eq(){return q},then(resolve,reject){return Promise.resolve(table==='records'?{data:contacts}:queryRows).then(v=>resolve(Array.isArray(v)?{data:v}:v),reject)}};return q},rpc:async()=>board},
+    sb:{from(table){queries++;const q={select(){return q},eq(){return q},order(){return q},range(){return q},then(resolve,reject){return Promise.resolve(table==='records'?{data:contacts}:queryRows).then(v=>resolve(Array.isArray(v)?{data:v}:v),reject)}};return q},rpc:async()=>board},
     salesCache:{},renderSales(){},$:()=>({innerHTML:''}),esc:v=>v,
   });
   vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);
@@ -57,6 +57,10 @@ async function run(){
   finishOld(initial);
   await oldLoad;
   assert.match(cells[0].innerHTML,/1 oportunidad/,'Late query restored the deleted opportunity');
+  queryRows={error:{message:'Simulated contacts failure'}};
+  await timers[0]();
+  assert.match(cells[0].innerHTML,/1 oportunidad/,'Failed direct query cleared the count');
+  assert.match(cells[0].innerHTML,/Actualización pendiente/);
   board={error:{message:'Simulated failure'}};
   await context.loadSales();
   assert.match(cells[0].innerHTML,/1 oportunidad/,'Failed refresh cleared the count');
@@ -66,6 +70,9 @@ async function run(){
   window.dispatchEvent(new CustomEvent('tpf:contacts-loaded',{detail:{records:[{...contacts[0],data:{NOMBRE:'Uno',TPF_RELACIONES:{managed_contacts:[{record_id:'c2'},{record_id:'c2'}]}}},contacts[1]]}}));
   assert.match(cells[0].innerHTML,/1 oportunidad/,'Managed holder opportunity missing or duplicated');
   assert.match(cells[1].innerHTML,/1 oportunidad/,'Holder lost own opportunity');
+  window.dispatchEvent(new CustomEvent('tpf:opportunity-deleted',{detail:{id:'o3'}}));
+  assert.equal(cells[0].innerHTML,'<small>Sin oportunidades</small>');
+  assert.equal(cells[1].innerHTML,'<small>Sin oportunidades</small>');
   console.log('PASS: deletion count, closing date, unrelated contact, stale query, failed refresh, final deletion');
 }
 run().catch(e=>{console.error(e);process.exitCode=1});

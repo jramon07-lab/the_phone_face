@@ -473,6 +473,8 @@ async function deleteOpportunityVerified(id){
     throw new Error("La oportunidad sigue existiendo después del borrado.");
   }
 
+  window.__tpfSalesReadRevision=(window.__tpfSalesReadRevision||0)+1;
+  window.dispatchEvent(new CustomEvent('tpf:opportunity-deleted',{detail:{id}}));
   // Retirada inmediata de caché para que no reaparezca mientras refresca.
   if(salesCache?.opportunities){
     salesCache.opportunities=salesCache.opportunities.filter(o=>String(o.id)!==String(id));

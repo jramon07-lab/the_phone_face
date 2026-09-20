@@ -738,7 +738,9 @@ window.filterSalesByStage=(stageId)=>{
 };
 
 async function loadSales(){
+ const revision=window.__tpfSalesReadRevision=(window.__tpfSalesReadRevision||0)+1;
  const {data,error}=await sb.rpc("sales_board");
+ if(revision!==window.__tpfSalesReadRevision)return;
  if(error){$("salesBoard").innerHTML=esc(error.message);return}
  salesCache={stages:data?.stages||[],opportunities:data?.opportunities||[],fields:data?.fields||[]};
  window.dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:salesCache.opportunities}}));
