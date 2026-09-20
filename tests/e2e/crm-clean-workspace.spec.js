@@ -53,11 +53,14 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('#tpfContactsResultCount')).toHaveText('0 resultados');
   await page.locator('#tpfContactsSearch').fill('');
   await expect(page.locator('#tpfContactsRows tr').first()).toBeVisible();
+  await page.locator('#tpfContactsRows .tpfContactActions').first().locator('button').last().click();
+  await expect(page.locator('.tpfMoreMenu [data-list-schedule]')).toBeVisible();
+  await expect(page.locator('.tpfMoreMenu [data-tpf-contact-offer]')).toBeVisible();
+  await page.locator('.tpfContactsTitle').click();
   await evidence(page,'00-contactos-normal');
   await page.locator('#tpfContactsExpand').click();
   await expect(page.locator('#tpfContactsApp')).toHaveClass(/tpfContactsFull/);
   await evidence(page,'00-contactos-completo');
-  await page.locator('#tpfContactsExpand').click();
   await expect(page.locator('.tpfOppOpen').first()).toBeVisible({timeout:30000});
   await page.locator('.tpfOppOpen').first().click();
   const picker=page.locator('.tpfOpportunityPicker');
@@ -80,6 +83,11 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(picker).toBeVisible();
   await picker.locator('[data-picker-close]').click();
   await expect(picker).toHaveCount(0);
+  await page.locator('#tpfContactsRows .tpfContactNameBtn').first().click();
+  await expect(page.locator('#contactModal')).toBeVisible();
+  await page.locator('#contactClose').click();
+  await expect(page.locator('#contactModal')).toBeHidden();
+  await page.locator('#tpfContactsExpand').click();
   await page.locator('.nav[data-view="sales"]').first().click();
   await expect(page.locator('#view-sales')).toBeVisible();
   await expect(page.locator('#salesSearch')).toBeVisible();
