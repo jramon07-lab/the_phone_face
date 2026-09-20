@@ -3,13 +3,14 @@ test.setTimeout(180000);
 test.use({ viewport: { width: 1440, height: 900 }, screenshot: 'off', trace: 'off', video: 'off' });
 
 async function evidence(page, name) {
-  // Keep layout evidence, without publishing customer identities or notes.
-  await page.screenshot({ path: test.info().outputPath(name + '.png'), mask: [
-    page.locator('#salesBoard .oppInfo, #salesBoard .oppTitle, #salesListRows .salesIdentity, #salesListRows .salesContact'),
-    page.locator('#contactModal .cpData, #cpProfileIdentityText, #contactName, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div'),
-    page.locator('#oppDetailModal input, #oppDetailModal textarea, #oppDetailModal .crmOpportunitySummary dd, #oppDetailModal .tpfRelPersonBody, #oppDetailModal .tpfRelRecipient, #oppDetailModal [data-crm-contact-body]'),
-    page.locator('#tpfContactsCreateBack input, #tpfContactsCreateBack textarea, #tpfContactsCreateBack .tpfContactsModalHead .small, #tpfContactParty, .referenceUser')
-  ] });
+  // Capture only the active surface; masks on background panels can obscure a modal.
+  let root = page.locator('#view-sales');
+  for (const selector of ['#contactModal .contactProfile','#oppDetailModal .opportunityModalCard','#tpfContactsCreateBack .tpfContactsModal']) {
+    const candidate = page.locator(selector);
+    if (await candidate.isVisible()) root = candidate;
+  }
+  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div, .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta').filter({visible:true});
+  await root.screenshot({ path: test.info().outputPath(name + '.png'), mask: [personal], maskColor: '#dce5ef' });
 }
 async function insideViewport(locator, page) {
   await expect(locator).toBeVisible();
@@ -63,6 +64,8 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
     test.info().annotations.push({ type: 'coverage-gap', description: 'Sin oportunidades/contactos en demo; dossier y editor no comprobados.' });
     return;
   }
+  const copy=page.locator('#salesBoard .tpfCopyButton').first();
+  if(await copy.count()){await copy.click();await expect(page.locator('#oppDetailModal')).toBeHidden();await expect(page.locator('#contactModal')).toBeHidden();}
   await opportunity.click();
   await expect(page.locator('#oppDetailModal')).toBeVisible();
   await insideViewport(page.locator('#oppModalSave'), page);
@@ -81,6 +84,7 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await page.locator('.tpfSummaryTrigger').first().click();
   await expect(page.locator('.tpfSummaryBody').first()).toBeVisible();
   await page.locator('.tpfSummaryTrigger').first().click();
+  await expect(page.locator('#contactSave')).toBeHidden();
   await evidence(page, '06-contacto');
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactsCreateBack.tpfContactEditor')).toBeVisible();

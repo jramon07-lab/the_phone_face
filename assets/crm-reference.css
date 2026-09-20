@@ -563,3 +563,11 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalActions
 }
 @media(max-width:1100px){body.tpfUnified #view-sales .salesBoardTopActions{width:100%!important;margin-left:0!important}body.tpfUnified #view-sales .tpfSalesSearch{max-width:none!important}}
 @media(max-height:650px){body.tpfUnified #view-sales .salesSummaryPanel{max-height:24dvh!important}body.tpfUnified #view-sales .salesBoardTopbar{padding-block:7px!important}}
+body.tpfUnified #view-sales #salesBoard .tpfSalesNotes{margin-top:8px;padding-top:7px;border-top:1px solid #edf1f6;font-size:11px;color:#687c97}
+body.tpfUnified #view-sales #salesBoard .tpfSalesNotes summary{cursor:pointer;font-weight:500;line-height:1.6}
+body.tpfUnified #view-sales #salesBoard .tpfSalesNotes>div{white-space:pre-wrap;overflow-wrap:anywhere;color:#425977;line-height:1.6;padding-top:7px;max-height:180px;overflow:auto}
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference:not(.tpf-contact-editing) #contactSave{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{grid-template-columns:58px minmax(0,1fr)!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{grid-column:1 / -1!important;grid-row:3!important;justify-content:flex-start!important}
+}

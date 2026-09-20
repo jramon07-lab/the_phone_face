@@ -704,7 +704,7 @@ function renderSales(){
           ${o.client_name?`<div><span class="label">Cliente:</span> <button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button></div>`:""}
           ${o.phone?`<div><span class="label">Teléfono:</span> ${esc(o.phone)}</div>`:""}
           ${o.expected_date?`<div><span class="label">Fecha:</span> ${esc(fmtDateOnly(o.expected_date))}</div>`:""}
-          ${o.notes?`<div><span class="label">Notas:</span> ${esc(o.notes)}</div>`:""}
+          ${o.notes?`<details class="tpfSalesNotes" onclick="event.stopPropagation()"><summary>Notas de la oportunidad</summary><div>${esc(o.notes)}</div></details>`:""}
         </div>
         <div class="oppFooter">
           <span class="oppAmount">${esc(fmtMoney(o.amount||0))}</span>
