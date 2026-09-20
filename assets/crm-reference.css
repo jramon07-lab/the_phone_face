@@ -992,7 +992,7 @@ body.tpfUnified .waCleanWorkspace .waChatRow{padding:12px 10px!important;gap:9px
 body.tpfUnified .waCleanWorkspace .waChatRow .waAvatar{width:38px!important;height:38px!important;flex:0 0 38px!important}
 body.tpfUnified .waCleanWorkspace .waChatActive{height:100%!important;display:flex;flex-direction:column;min-height:0!important}
 body.tpfUnified .waCleanWorkspace .waChatActive.hidden{display:none!important}
-body.tpfUnified .waCleanWorkspace .waChatTop{flex:0 0 auto!important;padding:10px 12px!important;gap:8px!important;flex-wrap:wrap!important;min-height:64px!important}
+body.tpfUnified .waCleanWorkspace .waChatTop{height:auto!important;max-height:none!important;flex:0 0 auto!important;padding:10px 12px!important;gap:8px!important;flex-wrap:wrap!important;min-height:64px!important}
 body.tpfUnified .waCleanWorkspace .waChatPerson{min-width:0!important;flex:1 1 160px!important}
 body.tpfUnified .waCleanWorkspace #waChatName{font-size:15px!important;line-height:1.25!important}
 body.tpfUnified .waCleanWorkspace .waChatTopActions{display:flex!important;gap:5px!important;flex-wrap:wrap!important;max-width:100%!important}
@@ -1019,7 +1019,8 @@ body.tpfUnified .waCleanWorkspace #waCleanReview{grid-column:2;grid-row:2}
 body.tpfUnified .waCleanWorkspace #waSideContactActions button{padding:9px 5px!important;font-size:12px!important;min-width:0!important}
 body.tpfUnified .waCleanWorkspace #waSideOpenContact,body.tpfUnified .waCleanWorkspace #waSideEditContact{font-size:11px!important;border:0!important;background:transparent!important;padding:5px!important}
 body.tpfUnified .waCleanWorkspace .waSideSection{padding:10px 0!important;border:0!important;border-top:1px solid #e6ebf2!important;border-radius:0!important;margin:0!important;box-shadow:none!important}
-body.tpfUnified .waCleanWorkspace .waSideSectionHead{gap:6px!important;margin:0!important}
+body.tpfUnified .waCleanWorkspace .waSideSectionHead{gap:6px!important;margin:0!important;padding:2px 0!important}
+body.tpfUnified .waCleanWorkspace #waAddTagSide{width:auto!important;min-width:0!important;padding:5px 8px!important;font-size:12px!important}
 body.tpfUnified .waCleanWorkspace .waSideHeadActions{display:flex;align-items:center;gap:5px}
 body.tpfUnified .waCleanWorkspace .waSideHeadActions button{height:28px!important;width:28px!important;padding:0!important}
 body.tpfUnified .waCleanWorkspace .waCleanFoldToggle{border:0!important;background:transparent!important;color:#193456!important;font-size:13px!important;font-weight:700!important;padding:7px 0!important;text-align:left!important;flex:1}

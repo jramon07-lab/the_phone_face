@@ -1,5 +1,5 @@
 const {test,expect}=require('@playwright/test');
-test.setTimeout(240000);test.use({viewport:{width:1440,height:950},screenshot:'off',trace:'off',video:'off'});
+test.setTimeout(240000);test.use({viewport:{width:1440,height:950},actionTimeout:15000,screenshot:'off',trace:'off',video:'off'});
 async function shot(page,name){const root=page.locator('#view-whatsapplive');await root.screenshot({path:test.info().outputPath(name+'.png'),mask:[root.locator('#waLiveChats,#waMessages,#waSideName,#waSideNickname,#waSideAvatar,#waSideIdentity,#waChatName,#waChatNickname,#waChatPhone,#waChatAvatar,#waCleanRelationRows,#waCleanOfferRows,#tpfWaAliasCard p,#waSideTags,#waSideNotes,#waInternalNote,#waActivityTimeline')],maskColor:'#dce5ef'});}
 async function fits(page,selector){const box=await page.locator(selector).boundingBox();expect(box).toBeTruthy();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.y).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(page.viewportSize().width+1);expect(box.y+box.height).toBeLessThanOrEqual(page.viewportSize().height+1);}
 test('WhatsApp sidebar, native actions and composer fit normal and fullscreen',async({page,request})=>{
