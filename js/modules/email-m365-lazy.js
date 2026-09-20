@@ -12,6 +12,7 @@ function showMail(){
   return true;
 }
 function loadMail(){
+  if(document.getElementById('view-email')){loaded=true;showMail();return;}
   if(loaded){showMail();return;}
   if(loading)return;
   loading=true;

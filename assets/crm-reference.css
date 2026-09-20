@@ -114,3 +114,26 @@ body.tpfUnified #view-dashboard.tpfDashPro .tdGoalRing{background:conic-gradient
 body.tpfUnified #view-dashboard.tpfDashPro .tdGoalRing span{color:#657791}
 @media(max-width:1200px){body.tpfUnified .waLiveLayout{grid-template-columns:240px minmax(280px,1fr)}.crmOpportunityLayout{grid-template-columns:minmax(0,1fr) 240px}}
 @media(max-width:850px){.crmOpportunityLayout,.crmSettingsLayout{grid-template-columns:1fr}.crmOpportunityAside{position:static;grid-row:1}.crmOpportunitySummary dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.crmOpportunitySummary dt{margin:0}.crmSettingsNav{position:static;flex-direction:row;overflow:auto;max-width:100%}.crmSettingsNav a{white-space:nowrap}.crmSettingsContent>.card{padding:16px!important}body.tpfUnified #oppDetailModal .opportunityModalCard{width:calc(100vw - 20px)!important;padding:16px!important}body.tpfUnified #opportunityFullPage #oppFullContent{display:flex;flex-direction:column}body.tpfUnified #opportunityFullPage #oppFullContent>*{width:100%}body.tpfUnified .tpfContactsApp{padding:16px 12px!important}body.tpfUnified .waLiveLayout{grid-template-columns:1fr}}
+/* Verified corrections: contrast and room for the fixed application navigation. */
+body.tpfUnified .referenceSidebar .referenceNav .nav b{color:inherit!important}
+body.tpfUnified #oppDetailModal{z-index:61000!important}
+@media(min-width:851px){body.tpfUnified #oppDetailModal{left:252px!important;width:calc(100% - 252px)!important;padding:20px!important}body.tpfUnified #oppDetailModal .opportunityModalCard{width:100%!important;max-width:1180px!important}body.tpfUnified.sidebarCollapsed #oppDetailModal{left:0!important;width:100%!important}}
+body.tpfUnified #oppDetailModal .opportunityModalHeader h2{font-size:27px!important;letter-spacing:-.6px}
+body.tpfUnified #oppDetailModal .modalCloseX{font-size:14px!important;padding:9px 13px!important}
+body.tpfUnified #view-dashboard.tpfDashPro .tdSalesHero{background:transparent;grid-template-columns:1fr 1fr 1fr 1.4fr;gap:12px}
+body.tpfUnified #view-dashboard.tpfDashPro .tdSalesHero>div{padding:14px 16px;border-radius:9px}
+body.tpfUnified #view-dashboard.tpfDashPro .tdHeroNumber>b{font-size:27px;margin:5px 0}
+body.tpfUnified #view-dashboard.tpfDashPro .tdPulse{padding:14px 16px;border-radius:9px;min-height:92px}
+body.tpfUnified #view-dashboard.tpfDashPro .tdCard{border-radius:9px;padding:18px}
+body.tpfUnified .tpfMonthlyHead{background:transparent!important;color:#152e57!important;border-bottom:1px solid #e0e8f2}
+body.tpfUnified .tpfMonthlyHead small{color:#657791!important}
+body.tpfUnified .tpfMonthlyHead .tpfMonthlyCloseX{background:white;color:#31557d;border-color:#d5e0ee;border-radius:7px}
+@media(max-width:850px){body.tpfUnified #view-dashboard.tpfDashPro .tdSalesHero{grid-template-columns:repeat(2,minmax(0,1fr))}}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick #cpNewOffer{background:#0863ec!important;border-color:#0863ec!important;color:white!important}
+body.tpfUnified #view-sales .salesBoardTitleGroup h2{font-size:28px!important;letter-spacing:-.7px}
+body.tpfUnified #view-sales .stageTitle{font-size:14px!important}
+body.tpfUnified #view-sales :is(.stageMeta,.oppInfo){font-size:12px!important;line-height:1.55}
+body.tpfUnified #view-sales .oppTitle{font-size:13px!important;line-height:1.5}
+body.tpfUnified #view-sales .oppInfo .salesClientLink{font-size:13px!important;font-weight:600}
+body.tpfUnified #view-sales .oppFooter select{font-size:12px!important}
+body.tpfUnified #view-sales .oppAmount{font-size:18px!important}
