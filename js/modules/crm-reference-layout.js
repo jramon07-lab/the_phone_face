@@ -126,14 +126,4 @@ function opportunity(){
  new MutationObserver(opened).observe(modal,{attributes:true,attributeFilter:['class']});opened();
 }
 opportunity();
-const settings=$('view-settings');
-if(settings){
- const layout=document.createElement('div');layout.className='crmSettingsLayout';
- const nav=document.createElement('nav');nav.className='crmSettingsNav';nav.setAttribute('aria-label','Secciones de configuración');
- const content=document.createElement('div');content.className='crmSettingsContent';layout.append(nav,content);
- const cards=[...settings.children].filter(n=>n.classList.contains('card'));if(cards.length>1){cards[0].after(layout);cards.slice(1).forEach(n=>content.append(n));}
- let scheduled=false;
- function refresh(){scheduled=false;if(!layout.isConnected)return;[...settings.children].filter(n=>n!==cards[0]&&n.classList.contains('card')).forEach(n=>content.append(n));const sections=[...content.children].filter(n=>n.matches('.card'));const signature=sections.map(n=>n.querySelector('h2,h3')?.textContent||'').join('|');if(nav.dataset.signature===signature)return;nav.dataset.signature=signature;nav.replaceChildren();sections.forEach((section,i)=>{const title=section.querySelector('h2,h3');if(!title)return;if(!section.id)section.id='crm-settings-section-'+i;const a=document.createElement('a');a.href='#'+section.id;a.textContent=title.textContent;a.addEventListener('click',e=>{e.preventDefault();section.scrollIntoView({behavior:'auto',block:'start'});});nav.append(a);});}
- new MutationObserver(()=>{if(!scheduled){scheduled=true;requestAnimationFrame(refresh);}}).observe(settings,{childList:true,subtree:true});refresh();
-}
 })();

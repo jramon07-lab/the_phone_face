@@ -173,6 +173,36 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
     await expect.poll(() => report.googleConnected, { timeout: 15000 }).toBe(true);
     report.telegramConfigured = await page.locator('#notifyTelegramChatId').evaluate(el => /^-?\d+$/.test(el.value.trim()));
     expect(report.telegramConfigured, 'Telegram debe tener un destino configurado; esto no prueba la entrega').toBe(true);
+    // Presentation-only navigation: existing inputs keep their identity and values.
+    const telegramBefore = await page.locator('#notifyTelegramChatId').inputValue();
+    await page.locator('#view-settings-notifications-tab').click();
+    await expect(page.locator('#notifySave')).toBeVisible();
+    await expect(page.locator('#agendaGlobalSave')).toBeVisible();
+    await expect(card).toBeHidden();
+    await page.locator('#view-settings-search-tab').click();
+    await expect(page.locator('#settingsSearchSave')).toBeVisible();
+    await page.locator('#view-settings-connections-tab').click();
+    await expect(card).toBeVisible();
+    expect(await page.locator('#notifyTelegramChatId').inputValue()).toBe(telegramBefore);
+    await expect(page.locator('.nav[data-view="system"]').first()).toBeVisible();
+    await page.locator('.nav[data-view="system"]').first().click();
+    await expect(page.locator('#tpfOperationalChecks')).toBeVisible();
+    await expect(page.locator('#tpfModuleStatusCard')).toBeHidden();
+    await expect(page.locator('#tpfSystemAttention')).toContainText('incidencias activas', {timeout:20000});
+    await expect(page.locator('#tpfFollowupConsistency')).toContainText('envíos pendientes');
+    for (const [tab, target] of [['incidents','tpfIncidentRegistry'],['followups','tpfFollowupRegistry'],['backups','tpfDriveBackupCard'],['advanced','tpfModuleStatusCard'],['overview','tpfOperationalChecks']]) {
+      await page.locator('#view-system-'+tab+'-tab').click();
+      await expect(page.locator('#'+target)).toBeVisible();
+      expect(await page.locator('#'+target).count()).toBe(1);
+    }
+    await page.locator('#view-system-incidents-tab').click();
+    await page.locator('#tpfIncidentVersion').selectOption('current');
+    await page.locator('#tpfIncidentVersion').selectOption('other');
+    await page.locator('#tpfIncidentVersion').selectOption('all');
+    await page.locator('#view-system-overview-tab').click();
+    await page.setViewportSize({width:700,height:900});
+    await expect(page.locator('#view-system-overview-tab')).toBeVisible();
+    await expect.poll(() => page.locator('#view-system .tpfAdminTabs').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     await expect.poll(() => report.pendingReads.length, { timeout: 20000 }).toBe(0);
     assertReadHealth(report);
   } finally { reportScope(report, 'PC'); }
