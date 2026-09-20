@@ -969,3 +969,81 @@ body.tpfUnified .tpfOpportunityPicker .tpfPickerScroll td{font-size:14px}
 body.tpfUnified .tpfOpportunityPicker [data-picker-open]{font-size:13px;min-height:34px;padding:6px 10px}
 body.tpfUnified .tpfMoreMenu{width:220px;max-height:calc(100dvh - 16px);overflow:auto}
 body.tpfUnified .tpfMoreMenu button{font-size:14px!important;min-height:40px}
+
+/* WhatsApp desktop workspace: three independent scrolling panes. */
+@media(min-width:1051px){
+body.tpfUnified #view-whatsapplive.waCleanWorkspace{min-height:0!important;overflow:hidden!important;padding:0!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLivePage{min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveHeader{flex:0 0 auto!important;min-height:56px!important;padding:8px 12px!important;gap:10px!important;flex-wrap:wrap!important}
+body.tpfUnified .waCleanWorkspace .waLiveTitle h2{font-size:25px!important;line-height:1.1!important}
+body.tpfUnified .waCleanWorkspace .waLiveTitle small{font-size:10px!important}
+body.tpfUnified .waCleanWorkspace .waLiveHeaderActions{gap:6px!important;flex-wrap:wrap!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveLayout{flex:1!important;min-height:0!important;display:grid!important;grid-template-columns:clamp(230px,19vw,280px) minmax(260px,1fr) 300px!important;overflow:hidden!important;width:100%!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace.waClientHidden .waLiveLayout{grid-template-columns:clamp(230px,19vw,280px) minmax(260px,1fr)!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace.waClientHidden .waContactPane{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waContactPane{display:block!important;width:auto!important;min-width:0!important;max-width:none!important;padding:12px!important;overflow:auto!important}
+body.tpfUnified .waCleanWorkspace .waChatsPane{min-width:0!important;display:flex!important;flex-direction:column!important}
+body.tpfUnified .waCleanWorkspace .waChatsSearchWrap{padding:12px!important}
+body.tpfUnified .waCleanWorkspace .waChatsSearchWrap input{font-size:13px!important;padding:10px!important;width:100%!important;box-sizing:border-box}
+body.tpfUnified .waCleanWorkspace .waTabs{overflow:visible!important;display:flex!important;flex-wrap:wrap!important;gap:4px!important;padding:6px 10px!important;flex:0 0 auto!important}
+body.tpfUnified .waCleanWorkspace .waTabs button{font-size:11px!important;padding:7px 8px!important;min-width:0!important}
+body.tpfUnified .waCleanWorkspace .waLiveChats{flex:1!important;overflow-y:auto!important;min-height:0!important}
+body.tpfUnified .waCleanWorkspace .waChatRow{padding:12px 10px!important;gap:9px!important}
+body.tpfUnified .waCleanWorkspace .waChatRow .waAvatar{width:38px!important;height:38px!important;flex:0 0 38px!important}
+body.tpfUnified .waCleanWorkspace .waChatActive{height:100%!important;display:flex;flex-direction:column;min-height:0!important}
+body.tpfUnified .waCleanWorkspace .waChatActive.hidden{display:none!important}
+body.tpfUnified .waCleanWorkspace .waChatTop{flex:0 0 auto!important;padding:10px 12px!important;gap:8px!important;flex-wrap:wrap!important;min-height:64px!important}
+body.tpfUnified .waCleanWorkspace .waChatPerson{min-width:0!important;flex:1 1 160px!important}
+body.tpfUnified .waCleanWorkspace #waChatName{font-size:15px!important;line-height:1.25!important}
+body.tpfUnified .waCleanWorkspace .waChatTopActions{display:flex!important;gap:5px!important;flex-wrap:wrap!important;max-width:100%!important}
+body.tpfUnified .waCleanWorkspace .waChatTopActions>button{font-size:11px!important;padding:8px!important}
+body.tpfUnified .waCleanWorkspace #waMessages{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;padding:18px!important}
+body.tpfUnified .waCleanWorkspace .waMsg{max-width:min(85%,520px)!important;font-size:14px!important;line-height:1.45!important}
+body.tpfUnified .waCleanWorkspace .waComposer{display:flex!important;align-items:flex-end!important;gap:6px!important;flex:0 0 auto!important;padding:12px!important;margin:0!important;min-height:70px!important;box-sizing:border-box}
+body.tpfUnified .waCleanWorkspace .waComposerTool{width:30px!important;flex:0 0 30px!important;height:40px!important;font-size:19px!important;padding:0!important}
+body.tpfUnified .waCleanWorkspace .waComposerTextWrap{flex:1!important;min-width:0!important}
+body.tpfUnified .waCleanWorkspace #waComposerText{display:block!important;box-sizing:border-box!important;min-height:44px!important;max-height:140px!important;width:100%!important;padding:11px!important;font-size:14px!important;line-height:20px!important;overflow-y:auto!important}
+body.tpfUnified .waCleanWorkspace .waSendBtn{width:42px!important;height:42px!important;flex:0 0 42px!important}
+body.tpfUnified .waCleanWorkspace .waComposerMsg:empty{display:none!important}
+body.tpfUnified .waCleanWorkspace .waContactHeader{padding:4px 0 12px!important;gap:10px!important}
+body.tpfUnified .waCleanWorkspace #waSideAvatar{width:44px!important;height:44px!important;flex:0 0 44px!important}
+body.tpfUnified .waCleanWorkspace #waSideName{font-size:17px!important;line-height:1.25!important;color:#175cd3!important;cursor:pointer}
+body.tpfUnified .waCleanWorkspace #waSideNickname{font-size:12px!important}
+body.tpfUnified .waCleanWorkspace #waSidePhone{display:none!important}
+body.tpfUnified .waCleanWorkspace .waSideIdentity>div{padding:10px 0!important;gap:8px!important}
+body.tpfUnified .waCleanWorkspace #waSideContactActions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:12px 0!important}
+body.tpfUnified .waCleanWorkspace #waSideContactActions.hidden{display:none!important}
+body.tpfUnified .waCleanWorkspace #waSideNewOffer{grid-column:1/-1;grid-row:1}
+body.tpfUnified .waCleanWorkspace #waSideDirectSale{grid-column:1;grid-row:2}
+body.tpfUnified .waCleanWorkspace #waCleanReview{grid-column:2;grid-row:2}
+body.tpfUnified .waCleanWorkspace #waSideContactActions button{padding:9px 5px!important;font-size:12px!important;min-width:0!important}
+body.tpfUnified .waCleanWorkspace #waSideOpenContact,body.tpfUnified .waCleanWorkspace #waSideEditContact{font-size:11px!important;border:0!important;background:transparent!important;padding:5px!important}
+body.tpfUnified .waCleanWorkspace .waSideSection{padding:10px 0!important;border:0!important;border-top:1px solid #e6ebf2!important;border-radius:0!important;margin:0!important;box-shadow:none!important}
+body.tpfUnified .waCleanWorkspace .waSideSectionHead{gap:6px!important;margin:0!important}
+body.tpfUnified .waCleanWorkspace .waSideHeadActions{display:flex;align-items:center;gap:5px}
+body.tpfUnified .waCleanWorkspace .waSideHeadActions button{height:28px!important;width:28px!important;padding:0!important}
+body.tpfUnified .waCleanWorkspace .waCleanFoldToggle{border:0!important;background:transparent!important;color:#193456!important;font-size:13px!important;font-weight:700!important;padding:7px 0!important;text-align:left!important;flex:1}
+body.tpfUnified .waCleanWorkspace .waCleanFoldToggle:before{content:'›';display:inline-block;margin-right:8px}
+body.tpfUnified .waCleanWorkspace .waCleanFoldToggle[aria-expanded=true]:before{content:'⌄'}
+body.tpfUnified .waCleanWorkspace .waCleanFoldBody[hidden]{display:none!important}
+body.tpfUnified .waCleanWorkspace .waCleanFoldBody{padding-top:10px}
+body.tpfUnified .waCleanWorkspace #waSideOpps .waSideItem{padding:10px!important;margin:6px 0!important;font-size:12px!important}
+body.tpfUnified .waCleanWorkspace #waSideOpps .waSideItem b{font-size:13px!important}
+body.tpfUnified .waCleanWorkspace #waSideTags{display:flex!important;flex-wrap:wrap!important;gap:5px!important}
+body.tpfUnified .waCleanWorkspace .waCleanDisclosure{border-top:1px solid #e6ebf2;padding:10px 0;font-size:13px}
+body.tpfUnified .waCleanWorkspace .waCleanDisclosure>summary{cursor:pointer;padding:7px 0;font-weight:700;color:#193456}
+body.tpfUnified .waCleanWorkspace .waCleanDisclosureBody{padding-top:10px;display:grid;gap:8px}
+body.tpfUnified .waCleanWorkspace .waCleanPerson{display:block;width:100%;text-align:left;font-size:12px;margin:5px 0}
+body.tpfUnified .waCleanWorkspace .waCleanOfferRow{padding:10px 0;border-bottom:1px solid #eef2f6}
+body.tpfUnified .waCleanWorkspace .waCleanOfferRow small{display:block;color:#667085;margin-top:5px}
+body.tpfUnified .waCleanWorkspace #tpfWaAliasCard{padding:10px!important;font-size:12px!important;margin:8px 0!important}
+body.tpfUnified .waCleanWorkspace #tpfWaAliasCard h4{font-size:13px!important}
+body.tpfUnified .waCleanWorkspace .waCleanMore{position:relative;font-size:12px}
+body.tpfUnified .waCleanWorkspace .waCleanMore>summary{list-style:none;cursor:pointer;padding:8px 10px;border:1px solid #dce5f1;border-radius:8px;background:white}
+body.tpfUnified .waCleanWorkspace .waCleanMore>div{position:absolute;right:0;top:100%;z-index:90;min-width:180px;max-width:250px;padding:6px;background:#fff;border:1px solid #dce5f1;border-radius:10px;box-shadow:0 12px 28px #102a5620;display:grid;gap:3px}
+body.tpfUnified .waCleanWorkspace .waCleanMore>div>button{width:100%!important;text-align:left!important}
+body.tpfUnified .waCleanWorkspace .waCleanFilters>div{left:0;right:auto}
+body.tpfUnified #view-whatsapplive.waCleanFullscreen{position:fixed!important;inset:0!important;height:100dvh!important;width:100vw!important;z-index:150!important;background:#fff!important;margin:0!important}
+}
+
+@media(min-width:1051px){body.tpfWaWorkspaceOnly .sidebar,body.tpfWaWorkspaceOnly .topbar,body.tpfWaWorkspaceOnly #sidebarToggle{display:none!important}body.tpfWaWorkspaceOnly .referenceWorkspace main{margin-left:0!important;width:100%!important}}

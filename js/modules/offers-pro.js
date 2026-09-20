@@ -143,6 +143,7 @@ async function loadCatalog(){
   catalog=(offers.data||[]).map(o=>({...o,line_options:(lines.data||[]).filter(l=>String(l.offer_id)===String(o.id))}));return catalog;
 }
 function statusLabel(status){return({draft:'Borrador',queued:'Preparando envío',following:'Seguimiento activo',paused:'Seguimiento pausado',accepted:'Pendiente de tramitar',processed:'Tramitado',won:'Ganada',lost:'Perdida',archived:'Antigua',cancelled:'Finalizada',error:'Error de envío'})[status]||status}
+window.TPFWhatsappOfferSummary=async function(id){const r=await sb.from('crm_offer_instances').select('operator,offer_name,total_price,status').eq('contact_id',id).order('created_at',{ascending:false});if(r.error)throw r.error;return (r.data||[]).map(x=>({title:x.operator+' · '+x.offer_name,amount:money(x.total_price),status:statusLabel(x.status)}));};
 async function loadInstances(contactId){
   if(!contactId)return;const {data,error}=await sb.from('crm_offer_instances').select('id,opportunity_id,operator,offer_name,total_price,status,sent_at,created_at').eq('contact_id',contactId).order('created_at',{ascending:false});
   if(error){if(String(error.message||'').includes('crm_offer_instances'))return;throw error}
