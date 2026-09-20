@@ -76,6 +76,8 @@ async function visitContact(id,edit=false){
  const current=session;
  const proceed=async()=>{
   if(session!==current||!open())return;
+  try{await window.TPFContactRelations?.record?.(id);}catch(error){if(session===current&&open()){const msg=$('tpfContactsCreateMsg');if(msg)msg.textContent='La ficha vinculada ya no está disponible. Puede haberse eliminado o haber cambiado tus permisos.';}return;}
+  if(session!==current||!open())return;
   current.root.querySelector('.tpfEditorLeaveNotice')?.remove();discardBaseline();
   $('tpfContactsCreateCancel')?.click();
   if(!current.root.classList.contains('hidden'))return;

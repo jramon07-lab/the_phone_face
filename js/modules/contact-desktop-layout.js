@@ -160,11 +160,13 @@
  }
  if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
  window.addEventListener('tpf:contact-updated',fitContactText);
+ const linkRow=document.createElement('div');linkRow.className='tpfContactLinkRow';
+ function ensureLinkRow(){if(linkRow.parentElement!==profile)tabs.before(linkRow);}
  let googleObserved=null;
  function compactGoogle(){
   const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
   const i=sections.indexOf(card);if(i>=0)sections.splice(i,1);delete card.dataset.cpRefPane;
-  if(card.parentElement!==profile||card.nextElementSibling!==tabs)tabs.before(card);
+  ensureLinkRow();if(card.parentElement!==linkRow)linkRow.append(card);
   if(card!==googleObserved){googleObserved=card;new MutationObserver(compactGoogle).observe(card,{childList:true});}
   if(card.querySelector(':scope > details'))return;
   const heading=card.querySelector(':scope > h4');if(!heading)return;
@@ -181,7 +183,7 @@
  function arrangeSecondary(){
   if(!mounted)return;
   const relations=$('tpfContactPartySummary');
-  if(relations){const next=$('tpfGoogleInlineCard')?.parentElement===profile?$('tpfGoogleInlineCard'):tabs;moveSecondary(relations,profile,next);}
+  if(relations){ensureLinkRow();const google=$('tpfGoogleInlineCard');moveSecondary(relations,linkRow,google?.parentElement===linkRow?google:null);}
   const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
   if(info.parentElement!==left)left.append(info);
   for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner')])moveSecondary(node,info.lastElementChild);
@@ -225,7 +227,7 @@
   }else if(!on&&mounted){
    restoreSummaryGroups();restoreSecondary();mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
-   sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===profile)right.prepend($('tpfGoogleInlineCard'));
+   sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===linkRow)right.prepend($('tpfGoogleInlineCard'));linkRow.remove();
    tabs.remove();followHeading.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
   }
   syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();arrangeSecondary();refreshRecent();fitContactText();

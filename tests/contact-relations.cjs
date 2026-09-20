@@ -9,7 +9,7 @@ let rows=[manager,father],duringRead=null;
 context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){if(key==='id')id=v;return this;},order(){return this;},async range(){return {data:[]};},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
 // Test-only access to private state; the published module has no test hooks.
 const source=fs.readFileSync(path.join(base,'js/modules/contact-relations.js'),'utf8');
-vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={beginOpportunityEdit,cancelOpportunityEdit,markOpportunityEdit,defaultLinkedHolder,createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={editorItems,refreshEditorLinks,beginOpportunityEdit,cancelOpportunityEdit,markOpportunityEdit,defaultLinkedHolder,createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
 vm.runInContext(fs.readFileSync(path.join(base,'js/modules/opportunity-contact-context.js'),'utf8'),context);
 const R=context.TPFContactRelations,fixture=context.__fixture;
 function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',opportunityId:'',items:manager.data.TPF_RELACIONES.managed_contacts,managers:[],selected:'',loading:false,...overrides};fixture.set(s);fields.oppModalOpenContact.dataset.recordId=s.ownerId;fields.oppModalId.value=s.opportunityId;return s;}
@@ -25,6 +25,13 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  const previousSb=context.sb;
  context.sb={from(){return {select(){return this;},eq(k,v){assert.equal(k,'source_sheet');assert.equal(v,'BASE DE DATOS');return this;},async in(k,ids){assert.equal(k,'id');assert.equal(ids.length,2);return {data:[father]};}};}};
  const holders=await fixture.currentHolders([{record_id:'father',name:'STALE'},{record_id:'deleted'}]);assert.equal(holders.length,1);assert.equal(holders[0].name,'Torcuato García González');
+ const root=fields.tpfContactParty,display={textContent:'',innerHTML:'',append(){}},count={},add={};root.querySelector=q=>q==='[data-rel-list]'?display:q==='[data-rel-count]'?count:add;
+ const editor={items:[{record_id:'father',name:'STALE'},{record_id:'deleted',name:'Deleted contact'}]};fixture.form(editor);
+ const before=R.contactFingerprint(root);await fixture.refreshEditorLinks(root,editor);
+ assert.equal(fixture.editorItems(editor).length,1);assert.equal(fixture.editorItems(editor)[0].name,'Torcuato García González');assert.equal(count.textContent,'1');assert(!display.innerHTML.includes('Deleted contact'));assert.equal(R.contactFingerprint(root),before,'read-only validation must not create a dirty draft');
+ const cleaned={};R.applyContactData(cleaned,'manager');assert.equal(cleaned.TPF_RELACIONES.managed_contacts.length,1);
+ context.sb={from(){return {select(){return this;},eq(){return this;},async in(){return {error:new Error('offline')};}};}};
+ await fixture.refreshEditorLinks(root,editor);assert(editor.error);assert.equal(fixture.editorItems(editor).length,0);assert.throws(()=>R.applyContactData({},'manager'),/comprobar/);
  context.sb=previousSb;
  assert(source.includes('<details data-rel-holders${wasOpen?'));
  fixture.form({items:manager.data.TPF_RELACIONES.managed_contacts});const d={NOTAS:'Conservar',TPF_TITULAR:{same:false,holder_name:'Anterior'}};R.applyContactData(d,'manager');assert.equal(d.TPF_RELACIONES.managed_contacts.length,2);assert.equal(d.NOTAS,'Conservar');assert.equal(d.TPF_TITULAR.holder_name,'Anterior');

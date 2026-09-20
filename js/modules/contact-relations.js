@@ -55,9 +55,20 @@ function compact(root,label){
  for(const node of [...root.children])details.appendChild(node);
  root.appendChild(details);return details;
 }
+function editorItems(state){return state.loading||state.error?[]:state.items.filter(x=>!state.missing?.has(x.record_id)).map(x=>state.current?.get(x.record_id)||x);}
+async function refreshEditorLinks(root,state){
+ state.loading=true;state.error='';renderSelected(root,state);
+ try{const rows=await currentHolders(state.items);if(forms.get(root)!==state||!root.isConnected)return;state.current=new Map(rows.map(x=>[x.record_id,x]));state.missing=new Set(state.items.filter(x=>!state.current.has(x.record_id)).map(x=>x.record_id));}
+ catch(e){if(forms.get(root)!==state||!root.isConnected)return;state.error='No se pudieron comprobar los titulares. Reintenta antes de guardar.';}
+ state.loading=false;renderSelected(root,state);
+}
 function renderSelected(root,state){
- const list=root.querySelector('[data-rel-list]');list.innerHTML=state.items.map((x,i)=>`<div class="tpfRelRow"><div class="tpfRelLinkedIdentity"><strong>${esc(displayName(x.name))}</strong><span>${esc(x.dni||displayPhone(x.phone))}</span></div><div class="tpfRelLinkedActions"><button type="button" class="secondary" data-rel-open="${esc(x.record_id)}">Abrir ficha</button><button type="button" class="secondary" data-rel-edit-contact="${esc(x.record_id)}">Editar</button><button type="button" class="secondary" data-rel-remove="${i}" aria-label="Desvincular ${esc(x.name)}">Quitar vínculo</button></div></div>`).join('');
- root.querySelector('[data-rel-count]').textContent=String(state.items.length);
+ const list=root.querySelector('[data-rel-list]');list.innerHTML=editorItems(state).map(x=>{const i=state.items.findIndex(item=>item.record_id===x.record_id);return `<div class="tpfRelRow"><div class="tpfRelLinkedIdentity"><strong>${esc(displayName(x.name))}</strong><span>${esc(x.dni||displayPhone(x.phone))}</span></div><div class="tpfRelLinkedActions"><button type="button" class="secondary" data-rel-open="${esc(x.record_id)}">Abrir ficha</button><button type="button" class="secondary" data-rel-edit-contact="${esc(x.record_id)}">Editar</button><button type="button" class="secondary" data-rel-remove="${i}" aria-label="Desvincular ${esc(x.name)}">Quitar vínculo</button></div></div>`;}).join('');
+ root.querySelector('[data-rel-count]').textContent=state.loading?'…':String(editorItems(state).length);
+ if(state.loading)list.textContent='Comprobando titulares…';
+ else if(state.error){list.textContent=state.error;const retry=document.createElement('button');retry.type='button';retry.className='secondary';retry.textContent='Reintentar';retry.onclick=()=>refreshEditorLinks(root,state);list.append(retry);}
+ else if(!editorItems(state).length)list.textContent='No hay titulares vinculados disponibles.';
+ root.querySelector('[data-rel-add]').disabled=!!(state.loading||state.error);
 }
 function contactId(){const modal=$('tpfContactsCreateBack');return clean(modal?.dataset.editId||(modal?.dataset.tpfProfileEditing&&typeof currentContact!=='undefined'?currentContact?.id:''));}
 function newHolderData(values){
@@ -90,7 +101,7 @@ P.fillContact=function(data){
  const legacy=compact(root,p.same===false?'Titular anterior: '+(p.holder_name||'Ver datos'):'Opciones de destinatario');
  if(p.same!==false)legacy.hidden=true;
  const section=document.createElement('details');section.className='tpfEditorRelations';section.innerHTML=`<summary>Titulares asociados <span data-rel-count></span></summary><div data-rel-panel><div data-rel-list></div><button type="button" class="secondary" data-rel-add>+ Añadir titular</button><div data-rel-searchbox hidden><label>Buscar contacto existente<input type="search" data-rel-search placeholder="Nombre, teléfono o DNI" autocomplete="off"></label><div data-rel-results aria-live="polite"></div><small>Si aún no tiene ficha, créala en Contactos y después vincúlala aquí. No se crean duplicados automáticamente.</small></div></div>`;
- root.prepend(section);renderSelected(root,state);
+ root.prepend(section);refreshEditorLinks(root,state);
  const searchBox=root.querySelector('[data-rel-searchbox]');searchBox.querySelector('small').textContent='Busca una ficha existente o crea un titular nuevo aquí.';
  searchBox.insertAdjacentHTML('beforeend',`<button type="button" class="secondary" data-rel-new>+ Crear nuevo titular</button><div data-rel-newform hidden><div class="tpf-party-grid"><label>Nombre<input data-rel-newfield="first" autocomplete="off"></label><label>Apellidos<input data-rel-newfield="last" autocomplete="off"></label><label>DNI / NIF<input data-rel-newfield="dni" autocomplete="off"></label><label>Teléfono (opcional)<input data-rel-newfield="phone" inputmode="tel" autocomplete="off"></label><label>Correo electrónico (opcional)<input data-rel-newfield="email" type="email" autocomplete="off"></label></div><p>Crear titular guarda una ficha nueva. Después guarda el contacto principal para confirmar el vínculo. Si cancelas la edición, la nueva ficha seguirá en Contactos.</p><button type="button" class="primary" data-rel-create>Crear titular y añadir</button><button type="button" class="secondary" data-rel-cancelnew>Cancelar nuevo titular</button><div data-rel-createmsg role="status" aria-live="polite"></div></div>`);
  let attempt={issued:false};
@@ -120,7 +131,7 @@ P.fillContact=function(data){
   timer=setTimeout(async()=>{try{const rows=await searchRecords(q,()=>root.isConnected&&token===state.query);if(!root.isConnected||token!==state.query)return;state.results=rows.filter(x=>x.record_id!==contactId()&&!state.items.some(y=>x.record_id===y.record_id));out.innerHTML=state.results.length?state.results.map(x=>`<button type="button" class="secondary tpfRelResult" data-rel-pick="${esc(x.record_id)}"><b>${esc(x.name||'Sin nombre')}</b><small>${esc(x.dni)} · ${esc(displayPhone(x.phone))}</small></button>`).join(''):'No hay coincidencias disponibles.';}catch(err){if(token===state.query)out.textContent=err.message||'No se pudo buscar. Inténtalo otra vez.';}},300);
  });
 };
-function applyContactData(data,id){const state=forms.get($('tpfContactParty'));if(!state)throw Error('Vuelve a abrir el contacto para cargar sus titulares.');if(state.creating)throw Error('Espera a que termine la creación del titular.');if(state.items.some(x=>x.record_id===clean(id||contactId())))throw Error('Un contacto no puede vincularse consigo mismo.');data.TPF_RELACIONES={version:1,managed_contacts:state.items.map(x=>({...x}))};}
+function applyContactData(data,id){const state=forms.get($('tpfContactParty'));if(!state)throw Error('Vuelve a abrir el contacto para cargar sus titulares.');if(state.creating)throw Error('Espera a que termine la creación del titular.');if(state.loading)throw Error('Espera a que se comprueben los titulares.');if(state.error)throw Error(state.error);if(state.items.some(x=>x.record_id===clean(id||contactId())))throw Error('Un contacto no puede vincularse consigo mismo.');data.TPF_RELACIONES={version:1,managed_contacts:editorItems(state).map(x=>({...x}))};}
 P.search=function(c){return [original.search(c),...links(c?.data?.TPF_RELACIONES||c?.TPF_RELACIONES).map(x=>[x.name,x.dni,x.phone].join(' '))].join(' ');};
 P.hint=function(c={},records){
  const linked=links(c.data?.TPF_RELACIONES||c.TPF_RELACIONES);
@@ -138,7 +149,7 @@ P.renderProfile=function(c){
  box.dataset.relKey=key;box.dataset.relContact=clean(c.id);
  const token=++profileToken,p=c.data?.TPF_TITULAR||{},items=links(c.data?.TPF_RELACIONES);
  const legacy=p.same===false?`<details><summary>${esc(p.holder_name)} · Titular anterior</summary>${original.summary(p,c)}<small>Datos conservados. Para abrir su ficha, vincula el contacto existente desde Editar datos.</small></details>`:'';
- box.innerHTML=`<section class="tpf-party tpfRelSummary"><button type="button" class="tpfRelationsManage" data-rel-manage-profile>Gestionar</button><details data-rel-holders${wasOpen?' open':''}><summary><b>Titulares y gestores</b><span class="tpfRelationCounts"><span data-rel-total>${items.length+(p.same===false?1:0)}</span> titulares · <span data-rel-managers-total>…</span> gestores</span></summary><div class="tpfRelationsContent"><h4>Titulares asociados</h4><div data-rel-cards>${items.length?'Comprobando titulares…':''}</div>${legacy}<div data-rel-managedby></div><small>Añade o desvincula titulares desde Gestionar.</small></div></details></section>`;
+ box.innerHTML=`<section class="tpf-party tpfRelSummary"><details data-rel-holders${wasOpen?' open':''}><summary><b>Titulares y gestores</b><span class="tpfRelationCounts"><span data-rel-total>${items.length+(p.same===false?1:0)}</span> titulares · <span data-rel-managers-total>…</span> gestores</span></summary><div class="tpfRelationsContent"><button type="button" class="tpfRelationsManage" data-rel-manage-profile>Gestionar</button><h4>Titulares asociados</h4><div data-rel-cards>${items.length?'Comprobando titulares…':''}</div>${legacy}<div data-rel-managedby></div><small>Añade o desvincula titulares desde Gestionar.</small></div></details></section>`;
  box.querySelector("[data-rel-manage-profile]").onclick=()=>$("tpfContactEditToggle")?.click();
  const active=()=>token===profileToken&&box.isConnected;
  const refresh=async()=>{try{
