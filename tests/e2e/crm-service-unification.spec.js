@@ -72,7 +72,7 @@ function safeLabel(request) {
 }
 
 async function installReadOnlyGuard(context, page, origin) {
-  const report = { blockedWrites: 0, blockedByEndpoint: {}, unknownReads: new Set(), failedReads: new Set(), pageErrors: 0, greenAuthorized: false, googleConnected: false, telegramConfigured: false, pendingReads: new Set() };
+  const report = { blockedWrites: 0, blockedByEndpoint: {}, unknownReads: new Set(), failedReads: new Set(), pageErrors: 0, greenAuthorized: false, googleConnected: false, telegramConfigured: false, pendingReads: [] };
   const blocked = new WeakSet();
   await context.route('**/*', async route => {
     const request = route.request(), kind = classify(request, origin);
@@ -87,7 +87,7 @@ async function installReadOnlyGuard(context, page, origin) {
       // Return an explicit failure, never a fake successful read or write.
       return route.fulfill({ status: 409, headers: { 'Access-Control-Allow-Origin': origin }, contentType: 'application/json', body: JSON.stringify({ ok: false, code: 'READ_ONLY_VALIDATION', message: 'Operación bloqueada por la validación de solo lectura.' }) });
     }
-    if (kind === 'read') report.pendingReads.add(request);
+    if (kind === 'read') report.pendingReads.push(request);
     const headers = { ...request.headers() };
     delete headers['x-vercel-protection-bypass'];
     delete headers['x-vercel-set-bypass-cookie'];
@@ -95,9 +95,9 @@ async function installReadOnlyGuard(context, page, origin) {
     await route.continue({ headers });
   });
   page.on('pageerror', () => { report.pageErrors += 1; });
-  page.on('requestfinished', request => { report.pendingReads.delete(request); });
+  page.on('requestfinished', request => { report.pendingReads = report.pendingReads.filter(item => item !== request); });
   page.on('requestfailed', request => {
-    report.pendingReads.delete(request);
+    report.pendingReads = report.pendingReads.filter(item => item !== request);
     if (!blocked.has(request) && classify(request, origin) === 'read' && request.failure()?.errorText !== 'net::ERR_ABORTED') {
       report.failedReads.add(`${safeLabel(request)}:network`);
     }
@@ -173,7 +173,7 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
     await expect.poll(() => report.googleConnected, { timeout: 15000 }).toBe(true);
     report.telegramConfigured = await page.locator('#notifyTelegramChatId').evaluate(el => /^-?\d+$/.test(el.value.trim()));
     expect(report.telegramConfigured, 'Telegram debe tener un destino configurado; esto no prueba la entrega').toBe(true);
-    await expect.poll(() => report.pendingReads.size, { timeout: 20000 }).toBe(0);
+    await expect.poll(() => report.pendingReads.length, { timeout: 20000 }).toBe(0);
     assertReadHealth(report);
   } finally { reportScope(report, 'PC'); }
 });
@@ -200,7 +200,7 @@ test.describe('Móvil de solo lectura', () => {
       await expect.poll(() => report.greenAuthorized, { timeout: 20000 }).toBe(true);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
       expect(overflow, 'La página móvil no debe desbordar el ancho de pantalla').toBe(false);
-      await expect.poll(() => report.pendingReads.size, { timeout: 20000 }).toBe(0);
+      await expect.poll(() => report.pendingReads.length, { timeout: 20000 }).toBe(0);
       assertReadHealth(report);
     } finally { reportScope(report, 'móvil'); }
   });

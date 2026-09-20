@@ -8,6 +8,10 @@ const name=()=>document.getElementById('contactName')?.value||'este cliente';
 const providerName=p=>p==='onedrive'?'OneDrive':'Google Drive';
 function linkUrl(l){if(l?.provider==='google_drive'&&/^[\w-]{10,200}$/.test(l.folder_id))return 'https://drive.google.com/drive/folders/'+l.folder_id;return '';}
 function fileUrl(f){try{const u=new URL(f.webViewLink);if(u.protocol==='https:'&&['drive.google.com','docs.google.com'].includes(u.hostname))return u.href;}catch(_){}return '';}
+function connectionOrigin(value){
+ try{const u=new URL(String(value||''));if(u.protocol==='https:'&&!u.username&&!u.password&&!u.hash&&u.pathname==='/api/crm-documents'&&u.searchParams.getAll('action').length===1&&u.searchParams.get('action')==='callback'&&[...u.searchParams.keys()].every(key=>key==='action'))return u.origin;}catch(_){}
+ throw Error('No hay una dirección válida para conectar Google Drive. Revisa la configuración de Documentos.');
+}
 async function call(action,body){const targetId=id;const session=await sb.auth.getSession(),token=session.data?.session?.access_token;if(!token)throw Error('Inicia sesión de nuevo.');const q=new URLSearchParams({action,contactId:targetId});if(body&&action==='search')q.set('q',body.q);if(body&&action==='list'&&body.page)q.set('page',body.page);const write=['link','upload','authorize','trash'].includes(action),r=await fetch('/api/crm-documents?'+q,{method:write?'POST':'GET',headers:{Authorization:'Bearer '+token,...(write?{'Content-Type':'application/json'}:{})},...(write?{body:JSON.stringify({...body,contactId:targetId})}:{})}),d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'No se pudo completar la operación.');return d;}
 function message(value){const el=host.querySelector('[data-doc-message]');if(el)el.textContent=value;}
 function render(){
@@ -27,7 +31,7 @@ function render(){
  ${next?'<button type="button" data-doc-more>Ver más archivos</button>':''}
  <p class="small">Si falta la carpeta, se busca o crea automáticamente en 01 Clientes al guardar o preparar documentos. WhatsApp utiliza la misma carpeta. Las coincidencias dudosas requieren elegir. OneDrive todavía sin conectar.</p>`;
  host.querySelectorAll('[data-doc-trash]').forEach(b=>b.onclick=()=>{const f=files.find(f=>f.id===b.dataset.docTrash);if(!f||!confirm('¿Enviar «'+f.name+'» a la papelera de Google Drive?'))return;run(async()=>{const e=epoch;await call('trash',{fileId:f.id,fileName:f.name,expectedLink:link,confirmed:true});if(e!==epoch)return;files=files.filter(x=>x.id!==f.id);render();message('Archivo enviado a la papelera de Google Drive.');});});
- const connectGoogle=()=>run(async()=>{const branch='https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app';if(location.origin!==branch){message('Para conectar, abre el enlace fijo de la rama.');const a=document.createElement('a');a.href=branch+'/';a.textContent='Abrir enlace fijo';host.querySelector('[data-doc-message]').append(' ',a);return;}const d=await call('authorize',{});location.assign(d.url);});
+ const connectGoogle=()=>run(async()=>{const origin=connectionOrigin(status?.callback);if(location.origin!==origin){message('Para conectar Google Drive, abre esta dirección del CRM.');const a=document.createElement('a');a.href=origin+'/';a.textContent='Abrir CRM para conectar Google Drive';host.querySelector('[data-doc-message]').append(' ',a);return;}const d=await call('authorize',{});location.assign(d.url);});
  host.querySelector('[data-doc-connect]')?.addEventListener('click',connectGoogle);
  host.querySelector('[data-doc-reconnect]')?.addEventListener('click',connectGoogle);
  host.querySelector('[data-doc-choose]')?.addEventListener('click',choose);
