@@ -99,6 +99,8 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('[data-tpf-summary-group="opportunities"] .tpfSummaryChip')).toHaveCount(2);
   await expect(page.locator('[data-tpf-summary-group="tasks"] .tpfSummaryChip')).toHaveCount(2);
   await expect(page.locator('#tpfContactPartySummary')).toBeVisible();
+  await expect(page.locator('[data-tpf-summary-group="opportunities"] #cpSideNewOpp')).toBeVisible();
+  await expect(page.locator('[data-tpf-summary-group="tasks"] #cpSideNewTask')).toBeVisible();
   const relationBox=await page.locator('#tpfContactPartySummary').boundingBox();
   expect(relationBox.y).toBeGreaterThanOrEqual(dataBox.y+dataBox.height);
   const opportunities=page.locator('[data-tpf-summary-group="opportunities"]');
@@ -118,6 +120,13 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(0);
   await page.locator('[data-task-filter="pending"]').click();
   await expect(page.locator('#cpTasks > [data-task-status="completed"]:visible')).toHaveCount(0);
+  const pendingCount=await page.locator('#cpTasks > [data-task-status="pending"]').count();
+  await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(Math.min(2,pendingCount));
+  await page.locator('#cpRefTab-tareas').click();
+  await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(pendingCount);
+  await page.locator('#cpRefTab-resumen').click();
+  await opportunities.locator('.tpfSummaryTrigger').click();
+  await tasks.locator('.tpfSummaryTrigger').click();
   // Existing fields and copy actions stay aligned without modifying saved values.
   const phone=await page.locator('#contactPhone').boundingBox();
   const phoneCopy=page.locator('label[for="contactPhone"] .tpfCopyButton');
@@ -129,6 +138,9 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await opportunities.locator('.tpfSummaryTrigger').click();
   await tasks.locator('.tpfSummaryTrigger').click();
   await evidence(page, '06-contacto');
+  await page.locator('[data-tpf-summary-group="offers"] .tpfSummaryTrigger').click();
+  await evidence(page,'06-contacto-ofertas');
+  await page.locator('[data-tpf-summary-group="offers"] .tpfSummaryTrigger').click();
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactsCreateBack.tpfContactEditor')).toBeVisible();
   await expect(page.locator('#tpfCreateNotes')).toHaveAttribute('readonly', '');

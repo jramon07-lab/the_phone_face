@@ -45,3 +45,12 @@ Validation must distinguish local regression checks from browser execution and v
 The initial functional check did not establish visual fidelity. The follow-up widens the contact data column, puts the original CRM/Google/WhatsApp disclosure above all six tabs, presents summary counts as colored badges (with full counts inside the disclosure), and aligns compact editor fields in two columns. The original data nodes, copy actions, note protections and save handlers are preserved. Recent activity and all quick actions remain available.
 
 The preview browser gate now measures data width (>400px at 1440px), disclosure position above tabs, three work badges, editor height (<730px), footer visibility at 1440×900 and 1100×700, and note unlock/cancel preservation. Real screenshots were compared against the approved reference. This verifies the covered flows, not every CRM integration.
+
+## Refinamiento aprobado: ficha compacta y trabajo separado
+
+- Columna de datos aproximada a un tercio, con copia a la derecha y altura de notas/observaciones ajustada al texto (con desplazamiento si es largo).
+- Relaciones originales bajo los datos; Gestionar abre el editor compartido. No se inventan relaciones ni se duplican vínculos bajo otro nombre.
+- Oportunidades y tareas en desplegables independientes. Filas compactas mantienen sus acciones originales; Detalles conserva cliente, notas, autoría y eliminación.
+- Tareas con filtros Pendientes / Completadas; el resumen muestra hasta dos del filtro seleccionado y la pestaña Tareas muestra todas.
+- Se conservan las tarjetas de ofertas, sus comprobaciones, acciones y automatizaciones.
+- Solo rama de pruebas. La imagen generada es referencia visual; la evidencia del navegador se obtiene mediante el workflow crm-clean-workspace, sin guardar ni enviar datos.

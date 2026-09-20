@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('js/modules/contact-desktop-layout.js','utf8');
+const code=source.slice(source.indexOf(' function filterTasks(){'),source.indexOf(" window.addEventListener('tpf:contact-open',()=>{taskFilter="));
+const card=status=>({dataset:{taskStatus:status},filtered:false,classList:{toggle(name,value){this.owner.filtered=value;}}});
+const cards=['completed','completed','pending','pending','pending'].map(card);cards.forEach(c=>c.classList.owner=c);
+const buttons=['pending','completed'].map(key=>({dataset:{taskFilter:key},textContent:'',setAttribute(name,value){this[name]=value;}}));
+const context={mounted:true,selected:'resumen',taskFilter:'pending',taskEmpty:{},taskFilters:{querySelectorAll:()=>buttons},$:()=>({querySelectorAll:()=>cards})};
+vm.createContext(context);vm.runInContext(code,context);
+context.filterTasks();assert.deepEqual(cards.map(c=>c.filtered),[true,true,false,false,true]);assert.equal(buttons[0].textContent,'Pendientes (3)');assert.equal(context.taskEmpty.hidden,true);
+context.selected='tareas';context.filterTasks();assert.deepEqual(cards.map(c=>c.filtered),[true,true,false,false,false]);
+context.taskFilter='completed';context.filterTasks();assert.deepEqual(cards.map(c=>c.filtered),[false,false,true,true,true]);assert.equal(buttons[1]['aria-pressed'],'true');
+context.mounted=false;context.filterTasks();assert(cards.every(c=>!c.filtered));
+cards.splice(0);context.mounted=true;context.filterTasks();assert.equal(context.taskEmpty.hidden,false);assert.equal(context.taskEmpty.textContent,'No hay tareas completadas.');
+console.log('PASS: task filters with completed rows first, summary limit, full task tab, mobile restoration and empty state. No network or writes.');

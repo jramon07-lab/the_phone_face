@@ -70,8 +70,10 @@
   block.querySelector('.tpfSummaryTrigger').setAttribute('aria-label',block.querySelector('.tpfSummaryTitle').textContent+'. '+text);
 
  }
+ const summaryActions=new Map();
  function restoreSummaryGroups(){
   const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
+  for(const [button,title] of summaryActions){title.append(button);}summaryActions.clear();
   [...root.querySelectorAll('[data-cp-ref-pane]')].forEach(section=>panel.appendChild(section));
   root.remove();
  }
@@ -87,7 +89,12 @@
   const body=document.createElement('div');body.className='tpfSummaryBody';
   items.filter(Boolean).forEach(item=>body.appendChild(item));
   trigger.addEventListener('click',()=>{const open=block.dataset.tpfOpen!=='true';block.dataset.tpfOpen=String(open);trigger.setAttribute('aria-expanded',String(open));});
-  block.append(trigger,body);root.appendChild(block);setSummaryMetric(block,summaryMetrics(key));return block;
+  const head=document.createElement('div');head.className='tpfSummaryHeading';head.append(trigger);
+  if(key==='opportunities'||key==='tasks'){
+   const title=items[0]?.querySelector('.cpSideTitle'),button=title?.querySelector('button');
+   if(button){summaryActions.set(button,title);button.classList.add('tpfSummaryCreate');button.setAttribute('aria-label',key==='tasks'?'Nueva tarea':'Nueva oportunidad');head.append(button);}
+  }
+  block.append(head,body);root.appendChild(block);setSummaryMetric(block,summaryMetrics(key));return block;
  }
  function applySummaryGroups(){
   if(!mounted||selected!=='resumen'){restoreSummaryGroups();return;}
@@ -170,7 +177,7 @@
   selected=key;right.dataset.cpRefSelected=key;
   tabs.querySelectorAll('button').forEach(b=>{const on=b.dataset.cpRefTab===key;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;if(on&&focus)b.focus();});
   panel.setAttribute('aria-labelledby','cpRefTab-'+key);
-  applySummaryGroups();refreshSummaryMetrics();
+  applySummaryGroups();refreshSummaryMetrics();filterTasks();
  }
  tabs.addEventListener('click',e=>{const b=e.target.closest('[data-cp-ref-tab]');if(b)select(b.dataset.cpRefTab);});
  tabs.addEventListener('keydown',e=>{
@@ -196,7 +203,7 @@
    left.appendChild(expiry);
    modal.classList.add('tpfContactReference');select(selected);
   }else if(!on&&mounted){
-   mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
+   restoreSummaryGroups();mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
    sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===profile)right.prepend($('tpfGoogleInlineCard'));
    tabs.remove();followHeading.remove();panel.remove();recent.remove();expiry.remove();edit.remove();

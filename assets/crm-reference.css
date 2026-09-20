@@ -709,3 +709,15 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>lab
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpOpportunities>.oppUnifiedCard:nth-child(n+3){display:none!important}
 }
 @media(max-width:1023px){.tpfTaskFilters,.tpfTaskFilterEmpty{display:none!important}.tpfWorkDetails>summary{font-size:12px}}
+
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks>.cpTaskWrap:nth-child(n+3){display:grid!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpTasks>.cpTaskWrap.tpfTaskFiltered:nth-child(n){display:none!important}
+}
+
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryHeading{display:flex;align-items:center;gap:4px;padding-right:10px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryHeading .tpfSummaryTrigger{flex:1;min-width:0;border:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryCreate{flex:none;width:30px!important;height:30px!important;min-height:30px!important;padding:0!important;margin:0!important;font-size:20px!important;color:#0863ec!important;background:#edf3ff!important;border:0!important;border-radius:6px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference :is([data-tpf-summary-group="opportunities"],[data-tpf-summary-group="tasks"]) .cpSideTitle{display:none!important}
+}
