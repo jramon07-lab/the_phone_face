@@ -173,6 +173,8 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   const phoneCopy=page.locator('label[for="contactPhone"] .tpfCopyButton');
   if(await phoneCopy.isVisible()){
     const copyBox=await phoneCopy.boundingBox();expect(copyBox.x).toBeGreaterThan(phone.x+phone.width-65);
+    const pencilBox=await page.locator('[data-inline-field="contactPhone"]').boundingBox();
+    expect(copyBox.x+copyBox.width).toBeLessThanOrEqual(pencilBox.x+1);
     await phoneCopy.click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
   }
   // Every field edits independently; no real contact data is saved in this check.
@@ -184,7 +186,12 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
     await expect(editor).toBeEditable();
     await editor.fill(id==='contactEmail'?'prueba@example.com':'Prueba sin guardar');
     await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
-    if(id==='contactNotes')await evidence(page,'06-edicion-individual-notas');
+    if(id==='contactNotes'){
+      const box=await editor.boundingBox(), card=await page.locator('.cpData').boundingBox();
+      expect(box.x).toBeGreaterThan(card.x+80);
+      expect(box.x+box.width).toBeLessThanOrEqual(card.x+card.width);
+      await evidence(page,'06-edicion-individual-notas');
+    }
     await page.locator('[data-inline-cancel]').click();
     await expect(editor).toHaveCount(0);
     await expect(native).toHaveValue(original);

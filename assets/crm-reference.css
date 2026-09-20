@@ -849,3 +849,8 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>lab
 #contactModal .tpfInlineContactMessage{font-size:12px;line-height:1.4;color:#a13f22;margin:7px 0 0}
 #contactModal .tpfInlineContactMessage:empty{display:none}
 @media(min-width:1024px){#contactModal .cpData>#contactPhone,#contactModal .cpData>#contactDni,#contactModal .cpData>#contactObservations,#contactModal .cpData>#contactNotes,#contactModal .cpData>#contactBank,#contactModal .cpData>#contactEmail{padding-right:58px!important}}
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>.tpfInlineContactEdit{grid-column:2!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label.tpfInlineEditableLabel>.tpfCopyButton{right:29px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for="contactNotes"].tpfInlineEditableLabel:has(+textarea[readonly])::after{content:none!important}
+}
