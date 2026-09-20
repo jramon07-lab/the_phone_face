@@ -47,6 +47,8 @@ function refresh(){
  }).catch(()=>{if(token===revision)$('waCleanRelationRows').textContent='No se pudieron cargar las relaciones. Vuelve a abrir el chat para reintentarlo.';});
  window.TPFWhatsappOfferSummary(id).then(rows=>{if(token!==revision)return;const root=$('waCleanOfferRows');root.replaceChildren();$('waCleanOffers').firstChild.textContent='Ofertas y seguimiento · '+rows.length;for(const x of rows.slice(0,4)){const row=document.createElement('div');row.className='waCleanOfferRow';const title=document.createElement('b');title.textContent=x.title;const meta=document.createElement('small');meta.textContent=x.amount+' · '+x.status;row.append(title,meta);root.append(row);}if(!rows.length)root.textContent='Sin ofertas para este contacto.';}).catch(()=>{if(token===revision)$('waCleanOfferRows').textContent='No se pudieron cargar las ofertas.';});
 }
-document.addEventListener('click',e=>{if(e.target.closest?.('.nav[data-view="whatsapplive"]'))setTimeout(install,0);});
-if(!view.classList.contains('hidden'))install();
+function enter(){if(view.classList.contains('hidden')||$('app')?.classList.contains('hidden'))return;install();schedule();}
+// Navigation may stop click propagation; observe the actual view transition.
+new MutationObserver(enter).observe(view,{attributes:true,attributeFilter:['class']});
+enter();
 })();
