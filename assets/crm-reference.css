@@ -814,12 +814,12 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>lab
 /* Independent compact relationship and source disclosures below the identity. */
 @media(min-width:1024px){
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:0 20px 10px;align-items:start}
- body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow>#tpfContactPartySummary{min-width:0;margin:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow>#tpfContactPartySummary{order:0!important;min-width:0;margin:0!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow .tpfRelSummary{margin:0!important;border-radius:8px!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow .tpfRelSummary>details>summary{padding:10px 12px!important;min-height:46px;font-size:12px!important;gap:8px}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow .tpfRelationsManage{position:static;float:right;margin-top:8px}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow .tpfRelationsContent{display:flow-root}
- body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard{margin:0!important;padding:0!important;border:1px solid #dfe7f2!important;border-radius:8px!important;min-width:0}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard{order:1!important;margin:0!important;padding:0!important;border:1px solid #dfe7f2!important;border-radius:8px!important;min-width:0}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard details>summary{padding:10px 12px!important;min-height:46px;box-sizing:border-box;flex-wrap:wrap;gap:8px;font-size:12px!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard summary::before{content:'›';font-size:20px;color:#2b67b4}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard details[open]>summary::before{content:'⌄'}
