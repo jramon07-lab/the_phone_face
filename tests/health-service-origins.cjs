@@ -7,7 +7,7 @@ try{
   for(const key of ['CRM_STABLE_ORIGIN','CRM_GOOGLE_CONTACTS_ORIGIN','GOOGLE_DRIVE_BACKUP_REDIRECT_URI','CRM_DOCUMENTS_ORIGIN'])delete process.env[key];
   let result=run();
   assert.equal(result.service_origins.telegram,result.service_origins.canonical);
-  assert.match(result.service_origins.google_drive_documents,/git-4c8eb2/,'Report the real legacy default until the OAuth callback has been migrated');
+  assert.equal(result.service_origins.google_drive_documents,result.service_origins.canonical,'Document authorization uses the registered canonical callback');
   process.env.GOOGLE_DRIVE_BACKUP_REDIRECT_URI='https://backup.example/api/crm-backup?action=callback&token=never-expose-this';
   process.env.CRM_STABLE_ORIGIN='https://user:private@telegram.example';
   process.env.CRM_DOCUMENTS_ORIGIN='not-a-url';

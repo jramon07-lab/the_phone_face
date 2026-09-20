@@ -17,7 +17,7 @@ global.fetch=async(url,options={})=>{calls.push({url,options});
  if(url.includes('/drive/v3/files?'))return response({files:[{id:'file_test',name:'Factura.pdf'}]});
  throw Error('Unexpected network call: '+url);
 };
-async function invoke(action,body={},method,extraHeaders={}){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry','trash'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app',...extraHeaders},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456'},body:{contactId:rid,...body}},res);return result;}
+async function invoke(action,body={},method,extraHeaders={}){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry','trash'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-fotos-y.vercel.app',...extraHeaders},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456'},body:{contactId:rid,...body}},res);return result;}
 (async()=>{
  assert.equal(T.folderId('https://drive.google.com/drive/u/0/folders/'+fid),fid);
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));

@@ -3,7 +3,7 @@ const SB=String(process.env.SUPABASE_URL||'https://overfzbjtpjqxzbujezg.supabase
 const KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
 const PUBLIC=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
 const CID=process.env.GOOGLE_DRIVE_CLIENT_ID||'',SECRET=process.env.GOOGLE_DRIVE_CLIENT_SECRET||'',ENC=process.env.CRM_BACKUP_ENCRYPTION_KEY||'';
-const ORIGIN=process.env.CRM_DOCUMENTS_ORIGIN||'https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app';
+const ORIGIN=process.env.CRM_DOCUMENTS_ORIGIN||'https://the-phone-face-app-whatsapp-fotos-y.vercel.app';
 const CALLBACK=ORIGIN+'/api/crm-documents?action=callback';
 const PROVIDER='google_drive_documents',FOLDER='application/vnd.google-apps.folder';
 const UPLOAD_MIMES=new Set(['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/rtf','text/plain','image/jpeg','image/png','image/webp','image/heic','image/heif']);

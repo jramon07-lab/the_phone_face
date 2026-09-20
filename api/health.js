@@ -20,7 +20,7 @@ module.exports=function(req,res){
       telegram:telegramOrigin(process.env.CRM_STABLE_ORIGIN),
       google_contacts:origin(process.env.CRM_GOOGLE_CONTACTS_ORIGIN||CANONICAL_ORIGIN),
       google_drive_backups:origin(process.env.GOOGLE_DRIVE_BACKUP_REDIRECT_URI||CANONICAL_ORIGIN),
-      google_drive_documents:origin(process.env.CRM_DOCUMENTS_ORIGIN||'https://the-phone-face-app-whatsapp-git-4c8eb2-jramon-07-2402s-projects.vercel.app')
+      google_drive_documents:origin(process.env.CRM_DOCUMENTS_ORIGIN||'https://the-phone-face-app-whatsapp-fotos-y.vercel.app')
     },
     timestamp:new Date().toISOString()
   });
