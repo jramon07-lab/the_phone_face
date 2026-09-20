@@ -207,3 +207,65 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedT
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryMetric{font-size:11px!important;line-height:1.5!important}
 }
 @media(max-width:850px){body.tpfUnified .crmOpportunityLayout{grid-template-columns:1fr}body.tpfUnified .opModal{padding:6px!important}body.tpfUnified .opModal .opShell{max-height:calc(100dvh - 12px)!important}}
+
+/* Unified working surfaces: sales, contact dossier, opportunity and offer. */
+body.tpfUnified :is(#view-sales,#contactModal,#oppDetailModal,#opOfferModal){--work-ink:#18324e;--work-muted:#697b90;--work-line:#dde5ee;color:var(--work-ink)}
+body.tpfUnified :is(#view-sales,#contactModal,#oppDetailModal,#opOfferModal) :is(button,input,select,textarea):focus-visible{outline:3px solid #90bcff!important;outline-offset:2px}
+body.tpfUnified #view-sales .salesBoardTopbar{background:#fff!important;border-bottom:1px solid var(--work-line)!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow:hover{background:#f7faff!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow:has(.salesListCheck:checked){background:#eaf3ff!important}
+body.tpfUnified #view-sales select[data-stage-tone]{border:1px solid transparent!important;background:#f0f3f7!important;color:#45566b!important}
+body.tpfUnified #view-sales select[data-stage-tone="future"]{background:#f0ebfc!important;color:#6845a1!important}
+body.tpfUnified #view-sales select[data-stage-tone="current"]{background:#e7f0ff!important;color:#235bb2!important}
+body.tpfUnified #view-sales select[data-stage-tone="followup"]{background:#fff4dd!important;color:#896015!important}
+body.tpfUnified #view-sales select[data-stage-tone="pending"]{background:#fff0e7!important;color:#a8521c!important}
+body.tpfUnified #view-sales select[data-stage-tone="processed"]{background:#e3f4f5!important;color:#216d74!important}
+body.tpfUnified #view-sales select[data-stage-tone="won"]{background:#e6f5eb!important;color:#277145!important}
+body.tpfUnified #view-sales select[data-stage-tone="lost"]{background:#fcebed!important;color:#a43a4b!important}
+body.tpfUnified #view-sales .salesListDateInput{background:transparent!important}
+body.tpfUnified #view-sales .salesListRow.tpfListExpired .salesListDateInput{color:#ab4051!important;background:#fff6f6!important}
+body.tpfUnified #view-sales .salesListRow.tpfListToday .salesListDateInput{color:#815810!important;background:#fff8e6!important}
+body.tpfUnified #view-sales .stage{background:#edf2f8!important;border:1px solid #dfe7ef!important;border-radius:12px!important}
+body.tpfUnified #view-sales .opp{background:#fff!important;box-shadow:0 2px 5px #243e5a08!important;border:1px solid #e0e7ef!important;border-radius:9px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{background:#fff!important;border-bottom:1px solid var(--work-line)!important;margin-bottom:16px!important;padding-top:12px!important;padding-bottom:16px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button{min-height:34px!important;padding:7px 11px!important;font-size:12px!important;background:#fff}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label{font-size:10px!important;text-transform:uppercase!important;letter-spacing:.065em!important;font-weight:650!important;margin-top:16px!important;color:#758399!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input{font-size:13px!important;min-height:28px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs{background:#fff!important;position:sticky;top:0;z-index:4}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button{min-height:44px!important;padding:10px 13px!important;font-size:12px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup{border:1px solid #e2e8f0!important;border-radius:10px!important;margin-bottom:12px!important;background:#fff!important;overflow:hidden}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup>summary{padding:13px 15px!important;background:#f8fafc!important;font-weight:650!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedCard{border-left:3px solid #93b8ef!important;background:#fff!important;box-shadow:none!important}
+body.tpfUnified #oppDetailModal .opportunityModalCard{padding:0!important;border:1px solid #dce5ef!important;box-shadow:0 24px 80px #14283f2b!important}
+body.tpfUnified #oppDetailModal .opportunityModalHeader{position:sticky;top:0;z-index:5;padding:18px 22px!important;background:#fff!important;border-bottom:1px solid var(--work-line)!important;margin:0!important}
+body.tpfUnified #oppDetailModal .opportunityModalHeader h2{font-size:23px!important}
+body.tpfUnified #oppDetailModal .crmOpportunityLayout{padding:18px!important;gap:18px!important}
+body.tpfUnified #oppDetailModal .opportunitySectionTitle{font-size:12px!important;letter-spacing:.03em!important;margin-bottom:14px!important;color:#344e6c!important}
+body.tpfUnified #oppDetailModal .opportunityGrid{gap:13px 16px!important}
+body.tpfUnified #oppDetailModal .opportunityGrid label{font-size:12px!important;color:#64758a!important}
+body.tpfUnified #oppDetailModal .opportunityGrid :is(input,select,textarea){border:1px solid #dce4ed!important;border-radius:7px!important;padding:9px 11px!important;background:#fcfdff!important;font-size:13px!important;color:#1d3550!important;box-sizing:border-box;max-width:100%}
+body.tpfUnified #oppDetailModal .crmOpportunityAside{top:95px}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary{border-top:3px solid #2874d9;background:#fff}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary h3{font-size:13px;margin:0 0 18px}
+body.tpfUnified #oppDetailModal [data-crm-summary="amount"]{font-size:28px;font-weight:750;color:#195cb1;letter-spacing:-1px}
+body.tpfUnified #oppDetailModal .opportunityActions{position:sticky!important;bottom:0!important;z-index:5;background:#fff!important;padding:12px 18px!important;border-top:1px solid var(--work-line)!important;margin:0!important;display:flex;gap:8px;flex-wrap:wrap}
+body.tpfUnified #opOfferModal .opShell{width:min(1180px,100%)!important;box-shadow:0 24px 80px #14283f30!important;border:1px solid #dce5ef!important}
+body.tpfUnified #opOfferModal .opHead{background:#fff!important;padding:16px 22px!important}
+body.tpfUnified #opOfferModal .opHead h2{font-size:23px!important;letter-spacing:-.5px;margin:0!important}
+body.tpfUnified #opOfferModal .opHead p{font-size:12px!important;color:#687c91!important;margin:5px 0 0!important}
+body.tpfUnified #opOfferModal .opTabs{position:sticky;top:-14px;z-index:3;background:#f5f8fc!important;padding:10px 0!important;gap:6px!important;border-bottom:1px solid #dce5ef;margin-bottom:16px}
+body.tpfUnified #opOfferModal .opTabs button{font-size:12px!important;padding:8px 13px!important;border-radius:7px!important}
+body.tpfUnified #opOfferModal .opGrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;align-items:start}
+body.tpfUnified #opOfferModal .opPanel{min-width:0;background:#fff!important;border:1px solid #dfe7ef!important;border-radius:10px!important;padding:16px!important}
+body.tpfUnified #opOfferModal .opSectionTitle{font-size:13px!important;color:#25496d!important;font-weight:700!important;margin-bottom:12px!important}
+body.tpfUnified #opOfferModal .opPreview{background:#edf7f2!important;border:1px solid #d4e9dc!important;border-radius:10px!important;font-size:13px!important;line-height:1.65!important;padding:16px!important}
+body.tpfUnified #opOfferModal :is(.opWelcome,.opMode label,.opBenefits){border-radius:8px!important;font-size:12px!important;padding:10px!important}
+body.tpfUnified #opOfferModal .opFinal{background:#eff5ff!important;border-radius:8px!important;padding:12px!important}
+body.tpfUnified #opOfferModal .opFinal input{font-size:23px!important;color:#1c60b8!important;font-weight:700!important;max-width:130px}
+body.tpfUnified #opOfferModal .opOfferFooter{flex:none;display:grid;grid-template-columns:1fr auto;align-items:center;gap:0 16px;background:#fff;border-top:1px solid #dce5ef;padding:12px 22px}
+body.tpfUnified #opOfferModal .opFooterPrice{display:flex;align-items:baseline;gap:12px;color:#728298;font-size:12px}
+body.tpfUnified #opOfferModal .opFooterPrice strong{font-size:25px;color:#195cb1;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+body.tpfUnified #opOfferModal .opOfferFooter .opActions{margin:0!important}
+body.tpfUnified #opOfferModal .opOfferFooter .opMsg{grid-column:1/-1;min-height:0;margin:0;font-size:12px}
+body.tpfUnified #opOfferModal .opOfferFooter .opMsg:not(:empty){padding-top:8px}
+@media(max-width:850px){body.tpfUnified #opOfferModal .opGrid{grid-template-columns:1fr!important}body.tpfUnified #oppDetailModal .crmOpportunityLayout{padding:12px!important}body.tpfUnified #oppDetailModal .crmOpportunityAside{position:static}body.tpfUnified #opOfferModal .opOfferFooter{padding:10px 12px;gap:6px}body.tpfUnified #opOfferModal .opFooterPrice{display:grid;gap:2px}body.tpfUnified #opOfferModal .opFooterPrice strong{font-size:20px}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{gap:6px!important}}
