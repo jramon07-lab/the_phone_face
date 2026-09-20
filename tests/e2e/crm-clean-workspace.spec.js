@@ -9,7 +9,7 @@ async function evidence(page, name) {
     const candidate = page.locator(selector);
     if (await candidate.isVisible()) root = candidate;
   }
-  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta').filter({visible:true});
+  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta, #tpfContactPartySummary [data-rel-cards], #tpfContactPartySummary [data-rel-managedby], .oppUnifiedTitle, .oppUnifiedClient, .oppUnifiedNotes, .cpAuthLine, .cpTaskButton b').filter({visible:true});
   await root.screenshot({ path: test.info().outputPath(name + '.png'), mask: [personal], maskColor: '#dce5ef' });
 }
 async function insideViewport(locator, page) {
@@ -90,10 +90,44 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('.tpfRecentActivity h3')).toBeVisible();
   await expect(page.locator('.tpfRecentActivity button')).toBeVisible();
   const dataBox=await page.locator('#contactModal .cpData').boundingBox();
-  expect(dataBox.width,'La columna de datos debe tener el ancho de la maqueta').toBeGreaterThan(400);
+  expect(dataBox.width).toBeGreaterThanOrEqual(320);
+  expect(dataBox.width).toBeLessThan(490);
+  const followBox=await page.locator('#contactModal .cpRight').boundingBox();
+  expect(followBox.width).toBeGreaterThan(dataBox.width*1.5);
   const googleBox=await page.locator('#tpfGoogleInlineCard').boundingBox(),tabsBox=await page.locator('.cpRefTabs').boundingBox();
   expect(googleBox.y+googleBox.height).toBeLessThanOrEqual(tabsBox.y+1);
-  await expect(page.locator('[data-tpf-summary-group="work"] .tpfSummaryChip')).toHaveCount(3);
+  await expect(page.locator('[data-tpf-summary-group="opportunities"] .tpfSummaryChip')).toHaveCount(2);
+  await expect(page.locator('[data-tpf-summary-group="tasks"] .tpfSummaryChip')).toHaveCount(2);
+  await expect(page.locator('#tpfContactPartySummary')).toBeVisible();
+  const relationBox=await page.locator('#tpfContactPartySummary').boundingBox();
+  expect(relationBox.y).toBeGreaterThanOrEqual(dataBox.y+dataBox.height);
+  const opportunities=page.locator('[data-tpf-summary-group="opportunities"]');
+  const tasks=page.locator('[data-tpf-summary-group="tasks"]');
+  await opportunities.locator('.tpfSummaryTrigger').click();
+  await tasks.locator('.tpfSummaryTrigger').click();
+  const row=page.locator('#cpOpportunities > .oppUnifiedCard').first();
+  if(await row.count()){
+    expect((await row.boundingBox()).height).toBeLessThan(170);
+    await expect(row.locator('select')).toBeVisible();
+    await expect(row.locator('.oppUnifiedActions button').first()).toBeVisible();
+    await row.locator('.tpfWorkDetails summary').click();
+    await expect(row.locator('.tpfWorkDetails .danger')).toBeVisible();
+    await row.locator('.tpfWorkDetails summary').click();
+  }
+  await page.locator('[data-task-filter="completed"]').click();
+  await expect(page.locator('#cpTasks > [data-task-status="pending"]:visible')).toHaveCount(0);
+  await page.locator('[data-task-filter="pending"]').click();
+  await expect(page.locator('#cpTasks > [data-task-status="completed"]:visible')).toHaveCount(0);
+  // Existing fields and copy actions stay aligned without modifying saved values.
+  const phone=await page.locator('#contactPhone').boundingBox();
+  const phoneCopy=page.locator('label[for="contactPhone"] .tpfCopyButton');
+  if(await phoneCopy.isVisible()){
+    const copyBox=await phoneCopy.boundingBox();expect(copyBox.x).toBeGreaterThan(phone.x+phone.width-35);
+    await phoneCopy.click();await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
+  }
+  await evidence(page,'06-contacto-trabajo');
+  await opportunities.locator('.tpfSummaryTrigger').click();
+  await tasks.locator('.tpfSummaryTrigger').click();
   await evidence(page, '06-contacto');
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactsCreateBack.tpfContactEditor')).toBeVisible();

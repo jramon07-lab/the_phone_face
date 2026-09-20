@@ -42,13 +42,14 @@
  function summaryText(node){return String(node?.textContent||'').toLowerCase();}
  function summaryMetrics(key){
   const opp=$('cpOpportunities'),tasks=$('cpTasks'),programs=$('cpWhatsappPrograms'),offers=$('cpOffersSection');
-  if(key==='work'){
-   const total=Number($('cpOppTotal')?.textContent||summaryCount(':scope > .oppUnifiedCard',opp))||0;
-   const open=Number($('cpOppOpen')?.textContent||0)||0,expired=Number($('cpOppExpired')?.textContent||0)||0;
+  if(key==='opportunities'){
+   return ($('cpOppTotal')?.textContent||'0')+' total · '+($('cpOppOpen')?.textContent||'0')+' abiertas · '+($('cpOppExpired')?.textContent||'0')+' vencidas';
+  }
+  if(key==='tasks'){
    const cards=[...tasks?.querySelectorAll(':scope > .cpTaskWrap')||[]];
-   const completed=cards.filter(x=>/completada|completado/.test(summaryText(x))).length;
-   const overdue=cards.filter(x=>/vencida|vencido/.test(summaryText(x))).length;
-   return 'Oportunidades: '+total+' total · '+open+' abiertas · '+expired+' vencidas  |  Tareas: '+cards.length+' total · '+Math.max(0,cards.length-completed)+' pendientes · '+overdue+' vencidas · '+completed+' completadas';
+   const completed=cards.filter(x=>x.dataset.taskStatus==='completed').length;
+   const overdue=cards.filter(x=>x.dataset.taskOverdue==='true').length;
+   return (cards.length-completed)+' pendientes · '+overdue+' vencidas · '+completed+' completadas';
   }
   if(key==='programs'){
    const total=summaryCount(':scope > .cpWaWrap',programs);
@@ -64,10 +65,10 @@
  function setSummaryMetric(block,text){
   const metric=block?.querySelector('.tpfSummaryMetric');if(!metric||metric.dataset.summary===text)return;
   metric.dataset.summary=text;const numbers=(text.match(/\d+/g)||[]).map(Number),key=block.dataset.tpfSummaryGroup;
-  const chips=key==='work'?[[numbers[1]||0,'abiertas','blue'],[numbers[2]||0,'vencidas','red'],[numbers[4]||0,'tareas','neutral']]:key==='programs'?[[numbers[0]||0,'','neutral']]:[[numbers[0]||0,'ofertas','blue'],[numbers[1]||0,'activas','green']];
-  metric.replaceChildren(...chips.map(([count,label,tone])=>{const chip=document.createElement('span');chip.className='tpfSummaryChip';chip.dataset.tone=tone;const word=count===1?({abiertas:'abierta',vencidas:'vencida',tareas:'tarea',ofertas:'oferta',activas:'activa'}[label]||label):label;chip.textContent=count+(word?' '+word:'');return chip;}));
+  const chips=key==='opportunities'?[[numbers[1]||0,'abiertas','blue'],[numbers[2]||0,'vencidas','red']]:key==='tasks'?[[numbers[0]||0,'pendientes','blue'],[numbers[1]||0,'vencidas','red']]:key==='programs'?[[numbers[0]||0,'','neutral']]:[[numbers[0]||0,'ofertas','blue'],[numbers[1]||0,'activas','green']];
+  metric.replaceChildren(...chips.map(([count,label,tone])=>{const chip=document.createElement('span');chip.className='tpfSummaryChip';chip.dataset.tone=tone;const word=count===1?({pendientes:'pendiente',abiertas:'abierta',vencidas:'vencida',tareas:'tarea',ofertas:'oferta',activas:'activa'}[label]||label):label;chip.textContent=count+(word?' '+word:'');return chip;}));
   block.querySelector('.tpfSummaryTrigger').setAttribute('aria-label',block.querySelector('.tpfSummaryTitle').textContent+'. '+text);
-  let detail=block.querySelector('.tpfSummaryCounts');if(!detail){detail=document.createElement('p');detail.className='tpfSummaryCounts';block.querySelector('.tpfSummaryBody').prepend(detail);}detail.textContent=text;
+
  }
  function restoreSummaryGroups(){
   const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
@@ -95,7 +96,8 @@
   if(!root.parentElement)panel.prepend(root);
   const opp=sections.find(s=>s.dataset.cpRefPane==='oportunidades'),tasks=sections.find(s=>s.dataset.cpRefPane==='tareas'),programs=sections.find(s=>s.dataset.cpRefPane==='programados');
   const offers=sections.find(s=>s.dataset.cpRefPane==='ofertas'),automation=sections.find(s=>s.dataset.cpRefPane==='automatizaciones');
-  makeSummaryGroup(root,'work','Oportunidades y tareas pendientes',[opp,tasks]);
+  makeSummaryGroup(root,'opportunities','Oportunidades',[opp]);
+  makeSummaryGroup(root,'tasks','Tareas',[tasks]);
   makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
   makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers,automation]);
  }
@@ -135,13 +137,19 @@
   if(!mounted||!data)return;
   const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
   const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
-  fields.forEach(node=>{const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',node.matches('textarea'));}});
+  fields.forEach((node,index)=>{node.style.gridRow=String(index+3);const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(index+3);label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',node.matches('textarea'));}});
   const current=[...data.children].filter(node=>fields.includes(node));
   if(current.every((node,i)=>node===fields[i]))return;
   const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
   fields.forEach(node=>{const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label)data.insertBefore(label,anchor);data.insertBefore(node,anchor);});
  }
  if(data)new MutationObserver(orderFields).observe(data,{childList:true});
+ function fitContactText(){
+  if(!mounted||modal.classList.contains('hidden'))return;
+  for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','36px');field.style.setProperty('--contact-text-height',Math.min(160,Math.max(36,field.scrollHeight+2))+'px');}
+ }
+ if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
+ window.addEventListener('tpf:contact-updated',fitContactText);
  let googleObserved=null;
  function compactGoogle(){
   const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
@@ -193,7 +201,7 @@
    sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===profile)right.prepend($('tpfGoogleInlineCard'));
    tabs.remove();followHeading.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
   }
-  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();refreshRecent();
+  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();refreshRecent();fitContactText();
  }
  document.addEventListener('click',e=>{
   if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
@@ -238,6 +246,34 @@
   more.addEventListener('click',()=>{if(key==='programados'){right.dataset.cpRefProgramsAll=right.dataset.cpRefProgramsAll==='true'?'false':'true';update();}else select(key,true);});
   new MutationObserver(update).observe(list,{childList:true});update();
  });
+ // Compact existing cards, preserving every native action and audit entry.
+ function compactWorkCards(){
+  if(!mounted)return;
+  for(const card of modal.querySelectorAll('#cpOpportunities > .oppUnifiedCard,#cpTasks > .cpTaskWrap')){
+   let detail=card.querySelector(':scope > .tpfWorkDetails');
+   if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent='Detalles';detail.append(title);card.append(detail);}
+   for(const node of card.querySelectorAll(':scope > .oppUnifiedClient,:scope > .oppUnifiedNotes,:scope > .cpAuthLine'))detail.append(node);
+   const remove=card.querySelector('.oppUnifiedActions > .danger,.cpTaskActions > .dangerText');if(remove)detail.append(remove);
+   const select=card.querySelector('.oppUnifiedStageControl select');if(select)select.setAttribute('aria-label','Cambiar estado de la oportunidad');
+  }
+  refreshSummaryMetrics();
+ }
+ let workTimer=0;
+ for(const id of ['cpOpportunities','cpTasks'])if($(id))new MutationObserver(()=>{clearTimeout(workTimer);workTimer=setTimeout(()=>{compactWorkCards();filterTasks();},0);}).observe($(id),{childList:true,subtree:true});
+ const taskFilters=document.createElement('div');taskFilters.className='tpfTaskFilters';taskFilters.setAttribute('aria-label','Estado de las tareas');
+ let taskFilter='pending';
+ for(const [key,label] of [['pending','Pendientes'],['completed','Completadas']]){const button=document.createElement('button');button.type='button';button.dataset.taskFilter=key;button.textContent=label;button.addEventListener('click',()=>{taskFilter=key;filterTasks();});taskFilters.append(button);}
+ $('cpTasks')?.before(taskFilters);
+ const taskEmpty=document.createElement('p');taskEmpty.className='tpfTaskFilterEmpty';$('cpTasks')?.after(taskEmpty);
+ function filterTasks(){
+  const cards=[...$('cpTasks')?.querySelectorAll(':scope > .cpTaskWrap')||[]];let shown=0;
+  cards.forEach(card=>{const match=(card.dataset.taskStatus==='completed')===(taskFilter==='completed');const hide=mounted&&(!match||(selected==='resumen'&&shown>=2));if(match)shown++;card.classList.toggle('tpfTaskFiltered',hide);});
+  taskFilters.querySelectorAll('button').forEach(button=>{const done=button.dataset.taskFilter==='completed',count=cards.filter(card=>(card.dataset.taskStatus==='completed')===done).length;const text=(done?'Completadas':'Pendientes')+' ('+count+')';if(button.textContent!==text)button.textContent=text;button.setAttribute('aria-pressed',String(button.dataset.taskFilter===taskFilter));});
+  taskEmpty.hidden=!mounted||shown>0;const text=taskFilter==='completed'?'No hay tareas completadas.':'No hay tareas pendientes.';if(taskEmpty.textContent!==text)taskEmpty.textContent=text;
+ }
+ window.addEventListener('tpf:contact-open',()=>{taskFilter='pending';compactWorkCards();filterTasks();});
+ tabs.addEventListener('click',filterTasks);tabs.addEventListener('keydown',filterTasks);
+ mq.addEventListener('change',()=>{compactWorkCards();filterTasks();});
  const schedule=$('cpScheduleWhatsapp'),oldScheduleText=schedule?.textContent;
  const refreshHeader=()=>{if(schedule)schedule.textContent=mounted?'Programar WhatsApp':oldScheduleText;};
  new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});

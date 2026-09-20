@@ -134,7 +134,8 @@ P.renderProfile=function(c){
  box.dataset.relKey=key;box.dataset.relContact=clean(c.id);
  const token=++profileToken,p=c.data?.TPF_TITULAR||{},items=links(c.data?.TPF_RELACIONES);
  const legacy=p.same===false?`<details><summary>${esc(p.holder_name)} · Titular anterior</summary>${original.summary(p,c)}<small>Datos conservados. Para abrir su ficha, vincula el contacto existente desde Editar datos.</small></details>`:'';
- box.innerHTML=`<section class="tpf-party tpfRelSummary"><details data-rel-holders${wasOpen?' open':''}><summary>Titulares asociados (<span data-rel-total>${items.length+(p.same===false?1:0)}</span>)</summary><div data-rel-cards>${items.length?'Comprobando titulares…':''}</div>${legacy}<small>Añade o desvincula titulares desde Editar datos.</small></details><div data-rel-managedby></div></section>`;
+ box.innerHTML=`<section class="tpf-party tpfRelSummary"><div class="tpfRelationsHeading"><h3>Titulares y gestores</h3><button type="button" data-rel-manage-profile>Gestionar</button></div><details data-rel-holders${wasOpen?' open':''}><summary>Titulares asociados (<span data-rel-total>${items.length+(p.same===false?1:0)}</span>)</summary><div data-rel-cards>${items.length?'Comprobando titulares…':''}</div>${legacy}<small>Añade o desvincula titulares desde Editar datos.</small></details><div data-rel-managedby></div></section>`;
+ box.querySelector("[data-rel-manage-profile]").onclick=()=>$("tpfContactEditToggle")?.click();
  const active=()=>token===profileToken&&box.isConnected;
  const refresh=async()=>{try{
   const holders=await currentHolders(items);if(!active())return;

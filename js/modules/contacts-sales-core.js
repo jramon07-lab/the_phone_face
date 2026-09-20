@@ -46,7 +46,7 @@ $("cpOpportunities").innerHTML=opps.length
    tasks=window.TPFRecordLinks.related(data,people,profileContact.id,'task');
  }catch(e){}
  if(currentContact!==profileContact)return;
- $("cpTasks").innerHTML=tasks.length?tasks.map(t=>`<div class="cpTaskWrap">
+ $("cpTasks").innerHTML=tasks.length?tasks.map(t=>`<div class="cpTaskWrap" data-task-status="${t.status==="completed"?"completed":"pending"}" data-task-overdue="${t.status!=="completed"&&!!t.starts_at&&new Date(t.starts_at).getTime()<Date.now()}">
   <button class="cpTask cpTaskButton" onclick="openContactTaskDetail('${t.id}')">
     <b>${esc(t.title||t.subject||"Recordatorio")}</b>
     <span>${t.starts_at?new Date(t.starts_at).toLocaleString("es-ES"):""}</span>
