@@ -26,10 +26,10 @@ function install(){
  const review=button('waCleanReview','＋ Revisión',async()=>{const c=contact();if(!c)return;try{await window.TPFContactReview.openForContact(c);}catch(e){alert(e.message||'No se pudo abrir la revisión.');}});card.insertBefore(review,$('waSideOpps').closest('.waSideSection'));
  for(const section of card.querySelectorAll('.waSideSection'))if(!section.querySelector('#waSideTags')&&!section.classList.contains('casCard'))fold(section);
  $('waAddTagSide').textContent='Gestionar';$('waComposerText').placeholder='Escribe un mensaje…';
- document.addEventListener('click',e=>{for(const d of view.querySelectorAll('.waCleanMore[open]'))if(!d.contains(e.target))d.open=false;const nav=e.target.closest('.nav');if(nav&&nav.dataset.view!=='whatsapplive'&&full)fullscreen(false);});
+ document.addEventListener('click',e=>{for(const d of view.querySelectorAll('.waCleanMore[open]'))if(!d.contains(e.target)||e.target.closest('button'))d.open=false;const nav=e.target.closest('.nav');if(nav&&nav.dataset.view!=='whatsapplive'&&full)fullscreen(false);});
  new MutationObserver(schedule).observe(card,{childList:true,subtree:true});
  new MutationObserver(schedule).observe(header,{childList:true});
- window.addEventListener('resize',fit);window.addEventListener('tpf:contact-updated',()=>{activeId='';schedule();});
+ window.addEventListener('tpf:sales-updated',()=>{activeId='';schedule();});window.addEventListener('resize',fit);window.addEventListener('tpf:contact-updated',()=>{activeId='';schedule();});
  document.addEventListener('click',e=>{if(e.target.closest('.nav[data-view="whatsapplive"],#waLiveChats'))setTimeout(refresh,150);});
  refresh();
 }
@@ -47,5 +47,6 @@ function refresh(){
  }).catch(()=>{if(token===revision)$('waCleanRelationRows').textContent='No se pudieron cargar las relaciones. Vuelve a abrir el chat para reintentarlo.';});
  window.TPFWhatsappOfferSummary(id).then(rows=>{if(token!==revision)return;const root=$('waCleanOfferRows');root.replaceChildren();$('waCleanOffers').firstChild.textContent='Ofertas y seguimiento · '+rows.length;for(const x of rows.slice(0,4)){const row=document.createElement('div');row.className='waCleanOfferRow';const title=document.createElement('b');title.textContent=x.title;const meta=document.createElement('small');meta.textContent=x.amount+' · '+x.status;row.append(title,meta);root.append(row);}if(!rows.length)root.textContent='Sin ofertas para este contacto.';}).catch(()=>{if(token===revision)$('waCleanOfferRows').textContent='No se pudieron cargar las ofertas.';});
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+document.addEventListener('click',e=>{if(e.target.closest?.('.nav[data-view="whatsapplive"]'))setTimeout(install,0);});
+if(!view.classList.contains('hidden'))install();
 })();
