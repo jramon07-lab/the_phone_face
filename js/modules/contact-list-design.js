@@ -22,7 +22,7 @@ function scheduleInMenu(root){
  const id=m.dataset.ownerId;if(!id)return;const b=document.createElement('button');b.type='button';b.dataset.listSchedule=id;b.textContent='Programar WhatsApp';b.onclick=e=>{e.stopPropagation();m.remove();const row=[...document.querySelectorAll('#tpfContactsRows tr')].find(r=>r.dataset.contactId===id);row?.querySelector('[data-action="schedule"]')?.click();};m.insertBefore(b,m.querySelector('.danger'));
 }
 function install(){mount();new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes){if(n.nodeType!==1)continue;if(n.id==='tpfContactsApp'||n.querySelector?.('#tpfContactsApp'))mount();scheduleInMenu(n);}}).observe(document.body,{childList:true,subtree:true});
- document.addEventListener('click',e=>{if(!e.target.closest?.('#tpfContactsTools,#tpfContactsMore'))closeMenu();if(e.target.closest?.('.nav'))toggleFull(false);});
+ document.addEventListener('click',e=>{if(!e.target.closest?.('#tpfContactsTools,#tpfContactsMore'))closeMenu();const nav=e.target.closest?.('.nav');if(nav&&nav.dataset.view!=='database')toggleFull(false);});
  window.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(menu&&!menu.hidden){e.preventDefault();e.stopImmediatePropagation();closeMenu();more.focus();return;}if(full&&!document.querySelector('.tpfOpportunityPicker')&&!$('contactModal')?.matches(':not(.hidden)')&&!$('oppDetailModal')?.matches(':not(.hidden)')){e.preventDefault();e.stopImmediatePropagation();toggleFull(false);}},true);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();

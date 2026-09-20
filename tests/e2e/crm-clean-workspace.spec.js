@@ -84,6 +84,7 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(picker).toBeVisible();
   await picker.locator('[data-picker-close]').click();
   await expect(picker).toHaveCount(0);
+  await expect(page.locator('#tpfContactsApp')).toHaveClass(/tpfContactsFull/);
   await page.locator('#tpfContactsRows .tpfContactNameBtn').first().click();
   await expect(page.locator('#contactModal')).toBeVisible();
   await page.locator('#contactClose').click();
