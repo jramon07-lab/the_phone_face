@@ -17,7 +17,9 @@ function opportunity(){
  const sections=[...card.querySelectorAll(':scope > .opportunitySection')];if(!sections.length)return;
  sections[0].before(layout);sections.forEach(n=>main.append(n));
  const notes=$('oppModalNotes'),notesLabel=notes.closest('label'),notesSection=document.createElement('section');notesSection.className='opportunitySection crmOpportunityNotes';
- const notesTitle=document.createElement('h3');notesTitle.className='opportunitySectionTitle';notesTitle.textContent='Notas internas';notesSection.append(notesTitle,notesLabel);main.append(notesSection);
+ const notesTitle=document.createElement('h3');notesTitle.className='opportunitySectionTitle';notesTitle.textContent='Notas internas';notesSection.append(notesTitle,notesLabel);main.insertBefore(notesSection,sections[1]||null);
+ const searchLabel=$('oppModalDni').closest('label'),picker=document.createElement('details');picker.className='crmOpportunityContactPicker full';picker.innerHTML='<summary>Buscar otro contacto vinculado</summary>';searchLabel.before(picker);picker.append(searchLabel);
+ $('oppModalClient').closest('label').firstChild.textContent='Contacto vinculado';
  notesLabel.firstChild.textContent='Tus anotaciones sobre esta oportunidad';notes.placeholder='Escribe aquí lo que necesitas recordar…';notes.rows=4;
  const activity=document.createElement('details');activity.className='crmOpportunityActivity';
  activity.innerHTML='<summary>Actividad y origen</summary><div class="crmOpportunityActivityBody"><p data-crm-origin hidden></p></div>';
@@ -38,6 +40,7 @@ function opportunity(){
   const stage=$('oppModalStage')?.selectedOptions?.[0]?.textContent||'Sin estado';
   const values={holder:info.loading?'Comprobando…':info.holder||$('oppModalClient')?.value||'Sin titular',dni:info.loading?'—':info.dni||'Sin indicar',manager:info.loading?'Comprobando…':info.manager||'El propio titular',recipient:info.loading?'Comprobando…':info.recipient||'Sin indicar',phone:info.loading?'—':window.TPFContactParty?.displayPhone(info.phone)||info.phone||'Sin teléfono',amount,date:$('oppModalDate')?.value?$('oppModalDate').value.split('-').reverse().join('/'):'Sin fecha',stage,notes:notes.value||'Aún no hay notas internas.'};
   for(const [key,value]of Object.entries(values))setText(summary.querySelector('[data-crm-summary="'+key+'"]'),value);
+  const recipientNode=summary.querySelector('[data-crm-summary="recipient"]'),sameRecipient=values.recipient===values.manager||values.recipient===values.holder;recipientNode.hidden=sameRecipient;recipientNode.previousElementSibling.hidden=sameRecipient;
   setText(header.querySelector('[data-crm-header="amount"]'),amount);setText(header.querySelector('[data-crm-header="stage"]'),stage);
   const tone=tones[stage.trim().toLowerCase()]||'neutral';summary.querySelector('[data-crm-summary="stage"]').dataset.tone=tone;header.querySelector('[data-crm-header="stage"]').dataset.tone=tone;
   const pending=fingerprint()!==baseline||!!info.pending;summary.querySelector('[data-crm-pending]').hidden=!pending;
@@ -46,7 +49,7 @@ function opportunity(){
   const origin=window.TPFOpportunityNotes?.split(notes.dataset.originalNotes||'').origin||'';const originNode=activity.querySelector('[data-crm-origin]');originNode.hidden=!origin;setText(originNode,origin?'Origen: '+origin:'');
   more.hidden=!$('oppModalId').value;
  }
- function opened(){const open=!modal.classList.contains('hidden');if(open&&(!wasOpen||openedId!==$('oppModalId').value)){openedId=$('oppModalId').value;baseline=fingerprint();activity.open=false;more.open=false;expand.setAttribute('aria-expanded','false');notePreview.classList.remove('expanded');expand.textContent='Ver completas';layout.scrollTop=0;}wasOpen=open;update();}
+ function opened(){const open=!modal.classList.contains('hidden');if(open&&(!wasOpen||openedId!==$('oppModalId').value)){openedId=$('oppModalId').value;baseline=fingerprint();activity.open=false;more.open=false;picker.open=!$('oppModalOpenContact').dataset.recordId;expand.setAttribute('aria-expanded','false');notePreview.classList.remove('expanded');expand.textContent='Ver completas';layout.scrollTop=0;}wasOpen=open;update();}
  card.addEventListener('input',update);card.addEventListener('change',update);window.addEventListener('tpf:opportunity-party-preview',update);
  new MutationObserver(opened).observe(modal,{attributes:true,attributeFilter:['class']});opened();
 }
