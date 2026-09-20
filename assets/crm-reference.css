@@ -1,0 +1,116 @@
+/* Faithful reference workspace. Existing controls and status semantics remain owned by modules. */
+body.tpfUnified{--crm-blue:#0863ec;--crm-ink:#152e57;--crm-muted:#657791;--crm-line:#e0e8f2;--crm-canvas:#f5f8fc;--crm-radius:9px;font-family:Inter,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--crm-ink)}
+body.tpfUnified .referenceSidebar{background:linear-gradient(140deg,#fff,#f0f6fc)!important;color:#152e57!important;border-right:1px solid #e0e8f2!important;box-shadow:none!important}
+body.tpfUnified .referenceBrand strong{color:#152e57!important;font-size:15px!important;letter-spacing:-.3px}
+body.tpfUnified .referenceBrand small{color:#657791!important}
+body.tpfUnified .referencePhoneIcon{border-color:#0755bf!important;background:transparent!important;color:#0755bf!important}
+body.tpfUnified .referencePhoneIcon i{background:#0755bf!important}
+body.tpfUnified .referenceSidebar .referenceNav{padding-bottom:80px!important}
+body.tpfUnified .referenceSidebar .referenceNav .nav{color:#294566!important;font-size:13px!important;font-weight:500!important;gap:11px!important;border:0!important;background:transparent;box-shadow:none}
+body.tpfUnified .referenceSidebar .referenceNav .nav:hover{background:#e9f1fc!important}
+body.tpfUnified .referenceSidebar .referenceNav .nav.active{background:#0863ec!important;color:white!important;box-shadow:0 4px 9px #0967f329!important}
+body.tpfUnified .referenceSidebar .referenceNav .nav svg{width:19px;height:19px;display:block}
+body.tpfUnified .referenceUser{background:#f7faff!important;border:1px solid #e0e8f2!important;color:#152e57!important;box-shadow:none!important}
+body.tpfUnified .referenceUser :is(strong,small){color:#526985!important}
+body.tpfUnified .referenceAvatar{background:#0863ec!important;color:#fff!important}
+body.tpfUnified .referenceExit{background:white!important;color:#31557d!important;border:1px solid #d5e0ee!important}
+body.tpfUnified .referenceWorkspace main{padding:0!important;background:#f5f8fc!important}
+body.tpfUnified .referenceWorkspace main>section{max-width:1850px;margin-inline:auto}
+body.tpfUnified :is(.primary,.refBlue,.tpfContactsPrimary,.lmPrimary){background:#0863ec!important;border-color:#0863ec!important;color:white!important;border-radius:7px!important}
+body.tpfUnified :is(.referenceWorkspace,.modalCard,.opShell,.ccShell) .card{border-radius:9px;box-shadow:0 2px 4px #15375c03}
+body.tpfUnified :is(.tpfContactsHeader,.agendaHeader,.waLiveHeader,.tv3Head,.tpfMailHead,.ccHead,.lmHead){margin-bottom:20px!important;gap:16px;flex-wrap:wrap}
+body.tpfUnified :is(.tpfContactsTitle h2,.agendaHeader h2,.waLiveHeader h2,.tv3Head h2,.tpfMailHead h2,.ccHead h2,.lmHead h2){font-size:30px!important;line-height:1.2!important;letter-spacing:-1px!important;color:#152e57!important}
+body.tpfUnified :is(.tpfContactsHeader p,.agendaHeader p,.waLiveHeader p,.tv3Head p,.ccHead p,.lmHead p){color:#657791!important;font-size:13px!important;line-height:1.6}
+/* Contacts: broad worktable, separate filters and clear identity column. */
+body.tpfUnified #view-database.tpfContactsEnhanced{background:#f5f8fc!important;padding:0!important}
+body.tpfUnified .tpfContactsApp{padding:25px 26px!important;max-width:1850px!important}
+body.tpfUnified .tpfContactsStats{gap:12px}
+body.tpfUnified :is(.tpfContactsStat,.tpfContactsToolbar,.tpfContactsFilters,.tpfContactsTableCard){border-radius:9px!important;border-color:#e0e8f2!important;box-shadow:0 2px 4px #15375c03!important}
+body.tpfUnified .tpfContactsStat{padding:17px 18px!important}
+body.tpfUnified .tpfContactsStat b{font-size:28px!important;color:#152e57!important}
+body.tpfUnified .tpfContactsStat span{text-transform:none!important;letter-spacing:0!important;font-size:12px!important}
+body.tpfUnified .tpfContactsTable th{text-transform:none!important;letter-spacing:0!important;font-size:12px!important;background:#f1f5fa!important;padding:12px!important}
+body.tpfUnified .tpfContactsTable td{padding:14px 12px!important;font-size:13px!important}
+body.tpfUnified .tpfContactNameBtn{color:#185faf!important;font-weight:600!important}
+body.tpfUnified .tpfContactsPager{padding:14px!important;background:white!important}
+body.tpfUnified .tpfContactsTableScroll{max-height:calc(100dvh - 350px);min-height:280px}
+/* Contact profile has the same header, sidebar and tab surface as the reference. */
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference{background:#f5f8fc!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile{background:#f5f8fc!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpNav{font-size:13px!important;font-weight:500!important;color:#657791!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{background:#e4efff!important;color:#2161bd!important;border-radius:50%!important;width:58px;height:58px}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpProfileDisplayName{font-size:28px!important;letter-spacing:-.6px}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference :is(.cpData,.cpRight,.cpRefExpiry){border-radius:9px!important;border-color:#e0e8f2!important;box-shadow:0 2px 4px #15375c03!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{flex-wrap:wrap;gap:8px}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button{font-size:13px!important;border-color:#cfdded!important;color:#285385!important;border-radius:7px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button{flex:0 0 auto;padding:12px 17px;font-size:13px}
+/* Opportunity: main dossier and linked contact in a distinct right-hand column. */
+body.tpfUnified #opportunityFullPage .oppFullShell{max-width:1500px;padding:25px 26px 50px}
+body.tpfUnified #opportunityFullPage .oppFullCard{background:transparent;border:0;box-shadow:none;padding:0}
+body.tpfUnified #opportunityFullPage #oppFullContent{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:18px;align-items:start}
+body.tpfUnified #opportunityFullPage .oppReadHeader{grid-column:1/-1;margin:0;padding:0 0 18px}
+body.tpfUnified #opportunityFullPage .oppContactSummary{grid-column:2;grid-row:2 / span 2;flex-direction:column;align-items:flex-start;background:white;border:1px solid #e0e8f2;padding:22px;border-radius:9px;margin:0}
+body.tpfUnified #opportunityFullPage .oppContactLink{font-size:19px}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-column:1;margin:0;gap:12px}
+body.tpfUnified #opportunityFullPage .oppField{background:white;border-radius:9px;padding:19px}
+body.tpfUnified #opportunityFullPage .oppReadNotes{grid-column:1;margin:0;min-height:160px}
+body.tpfUnified #opportunityFullPage .oppUpdated{grid-column:1/-1}
+body.tpfUnified #opportunityFullPage #oppFullFollowupAudit{grid-column:1/-1;margin:0}
+/* Edit opportunity uses real inputs in a two-column page, with a live summary. */
+body.tpfUnified #oppDetailModal .opportunityModalCard{width:min(1180px,calc(100vw - 48px))!important;max-width:1180px!important;padding:24px!important;background:#f5f8fc!important;border-radius:12px!important;max-height:94dvh!important;overflow:auto!important}
+.crmOpportunityLayout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:20px;align-items:start}
+.crmOpportunityMain{min-width:0}
+.crmOpportunityMain .opportunitySection{background:white;border:1px solid #e0e8f2;border-radius:9px;padding:22px;margin-bottom:16px}
+.crmOpportunityAside{display:grid;gap:14px;position:sticky;top:0}
+.crmOpportunitySummary{background:#fff;border:1px solid #e0e8f2;border-radius:9px;padding:20px}
+.crmOpportunitySummary h3{margin:0 0 16px;font-size:16px}
+.crmOpportunitySummary dl{margin:0}
+.crmOpportunitySummary dt{font-size:11px;color:#657791;margin-top:17px;letter-spacing:.4px;text-transform:uppercase}
+.crmOpportunitySummary dd{margin:5px 0 0;color:#152e57;font-weight:600;overflow-wrap:anywhere}
+.crmOpportunitySummary dd[data-crm-summary="amount"]{font-size:27px;color:#0863ec}
+body.tpfUnified .opportunityActions{position:sticky;bottom:-24px;background:#fff;border-top:1px solid #e0e8f2;padding:16px;display:flex;flex-wrap:wrap;gap:8px;z-index:2}
+body.tpfUnified .opportunityGrid{gap:18px}
+body.tpfUnified .opportunityGrid label{font-size:12px;font-weight:600;color:#415e81}
+body.tpfUnified .opportunityGrid :is(input,select,textarea){margin-top:7px;padding:11px;border-radius:6px}
+/* Configuration has section navigation, without removing or hiding settings. */
+.crmSettingsLayout{display:grid;grid-template-columns:195px minmax(0,1fr);gap:22px;align-items:start}
+.crmSettingsNav{display:flex;flex-direction:column;gap:5px;position:sticky;top:18px;max-height:80dvh;overflow:auto}
+.crmSettingsNav a{display:block;padding:12px;border-radius:7px;color:#415e81;font-size:13px;text-decoration:none;line-height:1.4}
+.crmSettingsNav a:hover,.crmSettingsNav a:focus{background:#e7effc;color:#0863ec}
+.crmSettingsContent{min-width:0}
+.crmSettingsContent>.card{padding:24px!important;scroll-margin-top:20px}
+.crmSettingsContent h3{margin-top:0;font-size:18px}
+/* Shared list workspaces and editors, preserving their existing scroll owners. */
+body.tpfUnified .salesBoardTopbar{border:0;background:transparent;padding:0 0 18px;border-radius:0}
+body.tpfUnified .stage{flex-basis:246px;border-radius:9px;background:#edf2f8;padding:12px}
+body.tpfUnified .opp{border-radius:8px;padding:15px;box-shadow:0 2px 3px #12345505}
+body.tpfUnified .oppAmount{font-size:18px;color:#152e57}
+body.tpfUnified :is(.salesStat,.agendaStats button,.ccKpi,.tpfMonthlyStat){border-radius:9px!important;padding:17px!important;box-shadow:none!important;background:white}
+body.tpfUnified :is(.agendaMain,.agendaCalendarGrid,.waLiveLayout,.tv3Card,.tv3EditorCard,.lmCard,.tpfMailLayout,.ccCard,.apDetailCard,.opCard,.opPanel){border-radius:9px!important;border-color:#e0e8f2!important;box-shadow:0 2px 4px #15375c03!important}
+body.tpfUnified .waLiveLayout{grid-template-columns:280px minmax(300px,1fr) 270px}
+body.tpfUnified :is(.waChatsSearchWrap,.waChatTop,.waComposer){padding:16px}
+body.tpfUnified .waSideSection{padding:16px;border-radius:8px}
+body.tpfUnified :is(.tpfMonthlyTabs,.tv3Tabs,.tpfMailTabs,.wapFilterTabs){display:flex;gap:20px;background:transparent!important;border-bottom:1px solid #e0e8f2;padding:0 0 2px;overflow-x:auto}
+body.tpfUnified :is(.tpfMonthlyTabs,.tv3Tabs,.tpfMailTabs,.wapFilterTabs) button{border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;background:transparent!important;padding:12px 4px!important;white-space:nowrap;color:#657791}
+body.tpfUnified :is(.tpfMonthlyTabs,.tv3Tabs,.tpfMailTabs,.wapFilterTabs) button.active{border-bottom-color:#0863ec!important;color:#0863ec!important}
+body.tpfUnified .tpfMonthlyCard{border-radius:10px!important;background:#f5f8fc!important}
+body.tpfUnified .tpfMonthlyTableWrap{background:white;border:1px solid #e0e8f2;border-radius:9px}
+body.tpfUnified :is(.tpfContactsModal,.agendaCompactCard,.lmModal,.waTemplateCard){border-radius:12px!important;background:white;box-shadow:0 20px 70px #10254130!important}
+body.tpfUnified :is(.tpfContactsModalHead,.agendaCompactHead,.lmModalHead){padding:22px!important;background:#f8fbff;border-bottom:1px solid #e0e8f2}
+body.tpfUnified :is(.tpfContactsModalBody,.agendaCompactBody){padding:24px!important}
+body.tpfUnified :is(.tpfContactsModalActions,.agendaCompactFooter){padding:17px 24px!important;background:#f8fbff;border-top:1px solid #e0e8f2}
+body.tpfUnified :is(.opShell,.ccShell,.apDetailShell){background:#f5f8fc!important}
+body.tpfUnified .opHead{background:transparent!important;color:#152e57!important;border-bottom:1px solid #e0e8f2}
+body.tpfUnified .opHead h2{color:#152e57!important}
+body.tpfUnified :is(.lmGrid,.tv3Grid){gap:16px}
+body.tpfUnified :is(.avRow,.alertRow){padding:18px;border-bottom:1px solid #e0e8f2}
+/* Start page retains real metrics and every action, with the reference palette. */
+body.tpfUnified #view-dashboard.tpfDashPro{background:#f5f8fc!important;--td-blue:#0863ec;--td-ink:#152e57}
+body.tpfUnified #view-dashboard.tpfDashPro .tdSalesHero{background:#fff;color:#152e57;border-color:#e0e8f2;border-radius:9px;box-shadow:none}
+body.tpfUnified #view-dashboard.tpfDashPro .tdSalesHero>div+div{border-left-color:#e0e8f2}
+body.tpfUnified #view-dashboard.tpfDashPro :is(.tdHeroNumber,.tdHeroGoal)>span,body.tpfUnified #view-dashboard.tpfDashPro .tdHeroNumber small{color:#657791}
+body.tpfUnified #view-dashboard.tpfDashPro .tdGoalRing:before{background:#fff}
+body.tpfUnified #view-dashboard.tpfDashPro .tdGoalRing{background:conic-gradient(#0863ec var(--td-goal-progress),#e8effa 0)}
+body.tpfUnified #view-dashboard.tpfDashPro .tdGoalRing span{color:#657791}
+@media(max-width:1200px){body.tpfUnified .waLiveLayout{grid-template-columns:240px minmax(280px,1fr)}.crmOpportunityLayout{grid-template-columns:minmax(0,1fr) 240px}}
+@media(max-width:850px){.crmOpportunityLayout,.crmSettingsLayout{grid-template-columns:1fr}.crmOpportunityAside{position:static;grid-row:1}.crmOpportunitySummary dl{display:grid;grid-template-columns:1fr 1fr;gap:8px}.crmOpportunitySummary dt{margin:0}.crmSettingsNav{position:static;flex-direction:row;overflow:auto;max-width:100%}.crmSettingsNav a{white-space:nowrap}.crmSettingsContent>.card{padding:16px!important}body.tpfUnified #oppDetailModal .opportunityModalCard{width:calc(100vw - 20px)!important;padding:16px!important}body.tpfUnified #opportunityFullPage #oppFullContent{display:flex;flex-direction:column}body.tpfUnified #opportunityFullPage #oppFullContent>*{width:100%}body.tpfUnified .tpfContactsApp{padding:16px 12px!important}body.tpfUnified .waLiveLayout{grid-template-columns:1fr}}
