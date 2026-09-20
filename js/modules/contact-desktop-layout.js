@@ -31,6 +31,7 @@
  panels.forEach(([key,label])=>{
   const b=document.createElement('button');b.type='button';b.id='cpRefTab-'+key;b.dataset.cpRefTab=key;b.textContent=label;b.setAttribute('role','tab');b.setAttribute('aria-controls','cpRefPanel');tabs.appendChild(b);
  });
+ const followHeading=document.createElement('h2');followHeading.className='tpfFollowHeading';followHeading.textContent='Seguimiento del contacto';
  const panel=document.createElement('div');panel.id='cpRefPanel';panel.setAttribute('role','tabpanel');panel.tabIndex=0;
  const notes=document.createElement('section');notes.id='cpNotesPanel';notes.className='cpSideSection';right.appendChild(notes);
  const sections=[...right.children];sections.forEach(section=>{
@@ -61,7 +62,12 @@
   return rows.length+' oferta'+(rows.length===1?'':'s')+' · '+active+' activas · '+paused+' pausadas · '+processed+' tramitadas';
  }
  function setSummaryMetric(block,text){
-  const metric=block?.querySelector('.tpfSummaryMetric');if(metric&&metric.textContent!==text)metric.textContent=text;
+  const metric=block?.querySelector('.tpfSummaryMetric');if(!metric||metric.dataset.summary===text)return;
+  metric.dataset.summary=text;const numbers=(text.match(/\d+/g)||[]).map(Number),key=block.dataset.tpfSummaryGroup;
+  const chips=key==='work'?[[numbers[1]||0,'abiertas','blue'],[numbers[2]||0,'vencidas','red'],[numbers[4]||0,'tareas','neutral']]:key==='programs'?[[numbers[0]||0,'','neutral']]:[[numbers[0]||0,'ofertas','blue'],[numbers[1]||0,'activas','green']];
+  metric.replaceChildren(...chips.map(([count,label,tone])=>{const chip=document.createElement('span');chip.className='tpfSummaryChip';chip.dataset.tone=tone;chip.textContent=count+(label?' '+label:'');return chip;}));
+  block.querySelector('.tpfSummaryTrigger').setAttribute('aria-label',block.querySelector('.tpfSummaryTitle').textContent+'. '+text);
+  let detail=block.querySelector('.tpfSummaryCounts');if(!detail){detail=document.createElement('p');detail.className='tpfSummaryCounts';block.querySelector('.tpfSummaryBody').prepend(detail);}detail.textContent=text;
  }
  function restoreSummaryGroups(){
   const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
@@ -129,6 +135,7 @@
   if(!mounted||!data)return;
   const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
   const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
+  fields.forEach(node=>{const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',node.matches('textarea'));}});
   const current=[...data.children].filter(node=>fields.includes(node));
   if(current.every((node,i)=>node===fields[i]))return;
   const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
@@ -138,6 +145,8 @@
  let googleObserved=null;
  function compactGoogle(){
   const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
+  const i=sections.indexOf(card);if(i>=0)sections.splice(i,1);delete card.dataset.cpRefPane;
+  if(card.parentElement!==profile||card.nextElementSibling!==tabs)tabs.before(card);
   if(card!==googleObserved){googleObserved=card;new MutationObserver(compactGoogle).observe(card,{childList:true});}
   if(card.querySelector(':scope > details'))return;
   const heading=card.querySelector(':scope > h4');if(!heading)return;
@@ -175,13 +184,14 @@
   if(on&&!mounted){
    mounted=true;if(heading)heading.textContent='Ficha del cliente';
    columns.before(identity);
-   sections.forEach(s=>panel.appendChild(s));panel.appendChild(center);right.append(panel,recent);columns.before(tabs);
+   sections.forEach(s=>panel.appendChild(s));panel.appendChild(center);right.append(followHeading,panel,recent);columns.before(tabs);
    left.appendChild(expiry);
    modal.classList.add('tpfContactReference');select(selected);
   }else if(!on&&mounted){
    mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
-   sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
+   sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===profile)right.prepend($('tpfGoogleInlineCard'));
+   tabs.remove();followHeading.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
   }
   syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();refreshRecent();
  }

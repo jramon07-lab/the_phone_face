@@ -577,3 +577,58 @@ body.tpfUnified #view-sales #salesBoard .tpfSalesNotes>div{white-space:pre-wrap;
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{margin:0!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel{min-height:0!important}
 }
+
+/* Contact and editor proportions from the approved reference. */
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile{background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:minmax(360px,.9fr) minmax(0,1.1fr)!important;gap:20px!important;padding:0 24px 24px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>#tpfGoogleInlineCard{margin:0 24px!important;padding:12px 0!important;border:0!important;border-block:1px solid #e3eaf3!important;border-radius:0!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard summary{display:flex!important;align-items:center!important;gap:14px!important;min-height:24px;list-style:none;cursor:pointer}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard summary::after{content:'Ver detalles ›';margin-left:auto;color:#0863ec;font-size:12px;font-weight:400}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard details[open]>summary::after{content:'Cerrar detalles ⌃'}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard summary::-webkit-details-marker{display:none}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs{margin-bottom:20px!important;gap:24px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;width:100%!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button{width:100%!important;font-size:13px!important;min-height:40px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpLeft{display:flex!important;flex-direction:column!important;gap:12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpLeft>*{order:2!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpLeft>.cpData{order:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{display:grid!important;grid-template-columns:130px minmax(0,1fr)!important;column-gap:14px!important;row-gap:0!important;background:#f6f9fd!important;padding:20px!important;align-items:center!important;min-width:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>div{grid-column:1 / -1!important;min-width:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label{grid-column:1!important;align-self:center!important;margin:0!important;padding:12px 0!important;font-size:12px!important;line-height:1.5!important;font-weight:600!important;text-transform:none!important;letter-spacing:0!important;color:#29405f!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input{grid-column:2!important;margin:0!important;width:100%!important;min-width:0!important;height:44px!important;padding:8px 0!important;border:0!important;border-bottom:1px solid #e0e8f2!important;border-radius:0!important;font-size:13px!important;background:transparent!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label.tpfLongFieldLabel{grid-column:1 / -1!important;padding:12px 0 4px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{grid-column:1 / -1!important;margin:0!important;min-height:54px!important;height:64px!important;max-height:180px!important;padding:6px 0 12px!important;font-size:13px!important;line-height:1.55!important;background:transparent!important;border:0!important;border-bottom:1px solid #e0e8f2!important;border-radius:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar{margin:0 0 12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar h3{font-size:18px!important;letter-spacing:-.3px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfContactEditToggle{font-size:12px!important;padding:7px 10px!important;min-height:34px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfContactProtectedHint{font-size:11px!important;margin:0 0 8px!important;color:#77879e!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight{padding:20px!important;border:1px solid #e0e8f2!important;border-radius:10px!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfFollowHeading{display:block!important;font-size:18px!important;line-height:1.4!important;margin:0 0 18px!important;color:#18314f;font-weight:650}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight:not([data-cp-ref-selected="resumen"]) .tpfFollowHeading{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTrigger{padding:14px!important;grid-template-columns:minmax(0,1fr) 16px!important;min-height:88px!important;gap:10px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTitle{font-size:13px!important;line-height:1.5!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryMetric{display:flex!important;flex-wrap:wrap;gap:7px!important;align-items:center;line-height:1.3!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChip{display:inline-flex;align-items:center;padding:6px 9px;border-radius:7px;font-size:12px;font-weight:500;white-space:nowrap;background:#eff3f8;color:#4b607d}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChip[data-tone="blue"]{background:#eaf2ff;color:#0863ec}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChip[data-tone="red"]{background:#fff0f0;color:#bc3746}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChip[data-tone="green"]{background:#e7f7ec;color:#1a8047}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryCounts{font-size:11px;line-height:1.6;color:#6b7d94;margin:0 0 12px;grid-column:1 / -1}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity{margin-top:26px!important;padding:0!important;border:0!important;background:transparent!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity h3{font-size:17px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity>div:last-child{margin:16px 0 0 6px;padding-left:18px;border-left:1px solid #dce5f1}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity p{position:relative;border:0!important;font-size:12px!important;line-height:1.6!important;margin:0 0 18px!important;padding:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity p::before{content:'';position:absolute;width:9px;height:9px;border-radius:50%;background:#3888f6;left:-23px;top:5px}
+}
+@media(min-width:1400px){body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTrigger{grid-template-columns:minmax(0,1fr) auto 16px!important;gap:8px!important;min-height:70px!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryMetric{grid-column:2!important;grid-row:1!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChevron{grid-column:3!important;grid-row:1!important}}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModal{width:min(900px,100%)!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalHead{padding:13px 20px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalBody{padding:14px 20px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid{gap:8px 20px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label{display:grid!important;grid-template-columns:106px minmax(0,1fr)!important;align-items:center!important;position:relative!important;min-height:34px!important;font-size:12px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label>input{grid-column:2!important;height:32px!important;min-height:32px!important;margin:0!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label>.tpfCopyButton{position:absolute!important;left:77px!important;top:3px!important;margin:0!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfEditorNotes{margin-top:12px!important;padding-top:12px!important;gap:12px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfEditorNotes textarea{height:60px!important;min-height:60px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalActions{padding:10px 20px!important}
+@media(max-width:650px){body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label{grid-template-columns:100px minmax(0,1fr)!important}body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>label>.tpfCopyButton{left:72px!important}}

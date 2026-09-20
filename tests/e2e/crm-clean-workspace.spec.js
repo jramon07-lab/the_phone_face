@@ -9,7 +9,7 @@ async function evidence(page, name) {
     const candidate = page.locator(selector);
     if (await candidate.isVisible()) root = candidate;
   }
-  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div, .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta').filter({visible:true});
+  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta').filter({visible:true});
   await root.screenshot({ path: test.info().outputPath(name + '.png'), mask: [personal], maskColor: '#dce5ef' });
 }
 async function insideViewport(locator, page) {
@@ -89,11 +89,23 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('#contactSave')).toBeHidden();
   await expect(page.locator('.tpfRecentActivity h3')).toBeVisible();
   await expect(page.locator('.tpfRecentActivity button')).toBeVisible();
+  const dataBox=await page.locator('#contactModal .cpData').boundingBox();
+  expect(dataBox.width,'La columna de datos debe tener el ancho de la maqueta').toBeGreaterThan(400);
+  const googleBox=await page.locator('#tpfGoogleInlineCard').boundingBox(),tabsBox=await page.locator('.cpRefTabs').boundingBox();
+  expect(googleBox.y+googleBox.height).toBeLessThanOrEqual(tabsBox.y+1);
+  await expect(page.locator('[data-tpf-summary-group="work"] .tpfSummaryChip')).toHaveCount(3);
   await evidence(page, '06-contacto');
   await page.locator('#tpfContactEditToggle').click();
   await expect(page.locator('#tpfContactsCreateBack.tpfContactEditor')).toBeVisible();
   await expect(page.locator('#tpfCreateNotes')).toHaveAttribute('readonly', '');
   await expect(page.locator('#tpfCreateObs')).toHaveAttribute('readonly', '');
+  expect((await page.locator('#tpfContactsCreateBack .tpfContactsModal').boundingBox()).height,'El editor debe ser compacto a 1440px').toBeLessThan(730);
+  const note=page.locator('#tpfCreateNotes'),originalNote=await note.inputValue();
+  await page.locator('.tpfEditorNote:has(#tpfCreateNotes) [data-note-unlock]').click();
+  await expect(note).not.toHaveAttribute('readonly');
+  await page.locator('.tpfEditorNote:has(#tpfCreateNotes) [data-note-restore]').click();
+  await expect(note).toHaveAttribute('readonly','');
+  expect((await note.inputValue())===originalNote).toBeTruthy();
   for (const size of [{width:1440,height:900},{width:1100,height:700}]) {
     await page.setViewportSize(size);
     await insideViewport(page.locator('#tpfContactsCreateSave'), page);
