@@ -1,0 +1,12 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+const context={window:{},document:{},Intl,Date};vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/contact-opportunity-list.js','utf8'),context);
+const pick=context.window.TPFContactOpportunityList.selectRows;
+const rows=[{id:1,title:'Revisión',stage_id:'a',status:'open',expected_date:'2026-10-01',amount:9},{id:2,title:'Cambio',status:'won',expected_date:'2026-09-01',amount:52},{id:3,title:'Sin fecha',status:'open',amount:20}];const stages=new Map([['a',{name:'Próximo'}]]);
+assert.equal(pick(rows,'all','','date',stages).map(x=>x.id).join(','),'2,1,3');
+assert.equal(pick(rows,'open','','amount',stages).map(x=>x.id).join(','),'3,1');
+assert.equal(pick(rows,'closed','','date',stages).length,1);
+assert.equal(pick(rows,'all','proximo','date',stages)[0].id,1);
+assert.equal(pick(rows,'all','revision','date',stages)[0].id,1);
+assert.equal(pick(rows,'all','missing','date',stages).length,0);
+assert.equal(rows[0].id,1,'sorting does not mutate original data');
+console.log('Opportunity picker filters, accent search, real stage search, missing dates and sorting pass.');

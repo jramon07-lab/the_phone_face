@@ -4,12 +4,12 @@ test.use({ viewport: { width: 1440, height: 900 }, screenshot: 'off', trace: 'of
 
 async function evidence(page, name) {
   // Capture only the active surface; masks on background panels can obscure a modal.
-  let root = page.locator('#view-sales');
-  for (const selector of ['#contactModal .contactProfile','#oppDetailModal .opportunityModalCard','#tpfContactsCreateBack .tpfContactsModal']) {
+  let root = await page.locator('#view-database').isVisible()?page.locator('#view-database'):page.locator('#view-sales');
+  for (const selector of ['#contactModal .contactProfile','#oppDetailModal .opportunityModalCard','#tpfContactsCreateBack .tpfContactsModal','.tpfOpportunityPicker:not([hidden]) .tpfPickerPanel']) {
     const candidate = page.locator(selector);
     if (await candidate.isVisible()) root = candidate;
   }
-  const personal = root.locator('input, textarea, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta, #tpfContactPartySummary [data-rel-cards], #tpfContactPartySummary [data-rel-managedby], .oppUnifiedTitle, .oppUnifiedClient, .oppUnifiedNotes, .tpfOpportunityNotesPreview, .tpfProfilePartyCard, .cpAuthLine, .cpTaskButton b').filter({visible:true});
+  const personal = root.locator('input, textarea, .tpfContactIdentity, #tpfContactsRows td:nth-child(3), #tpfContactsRows td:nth-child(4), #tpfContactsRows td:nth-child(6), .tpfPickerIdentity, .tpfPickerScroll td:first-child, .oppTitle, .oppInfo, .salesIdentity, .salesContact, #cpProfileIdentityText, #cpAvatar, #tpfGoogleInlineCard p, #cpTimeline, .tpfRecentActivity > div:not(.tpfRecentHeading), .crmOpportunitySummary dd, .crmSummaryNotes p, .tpfRelPersonBody, .tpfRelRecipient, [data-crm-contact="name"], [data-crm-contact="nickname"], [data-crm-contact-body], .tpfContactsModalHead .small, #tpfEditorAvatar, #tpfContactParty, #contactCustomFields, #contactLabelsList, #contactMeta, #tpfContactPartySummary [data-rel-cards], #tpfContactPartySummary [data-rel-managedby], .oppUnifiedTitle, .oppUnifiedClient, .oppUnifiedNotes, .tpfOpportunityNotesPreview, .tpfProfilePartyCard, .cpAuthLine, .cpTaskButton b').filter({visible:true});
   await root.screenshot({ path: test.info().outputPath(name + '.png'), mask: [personal], maskColor: '#dce5ef' });
 }
 async function insideViewport(locator, page) {
@@ -33,6 +33,53 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
   await page.locator('#signin').click();
   await expect(page.locator('#app')).toBeVisible({ timeout: 30000 });
+  page.setDefaultTimeout(20000);
+  await page.locator('.nav[data-view="database"]').first().click();
+  await expect(page.locator('#tpfContactsRows tr').first()).toBeVisible({timeout:30000});
+  await expect(page.locator('#tpfContactsMore')).toBeVisible();
+  const statsBox=await page.locator('.tpfContactsStats').boundingBox();expect(statsBox.height).toBeLessThan(65);
+  await page.locator('#tpfContactsMore').click();
+  await expect(page.locator('#tpfContactsTools')).toBeVisible();
+  await expect(page.locator('#tpfContactsFields')).toBeVisible();
+  await expect(page.locator('#tpfContactsVerifyAll')).toBeVisible();
+  await expect(page.locator('#tpfContactsExport')).toBeVisible();
+  await evidence(page,'00-contactos-menu');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#tpfContactsTools')).toBeHidden();
+  await page.locator('#tpfContactsFiltersToggle').click();
+  await expect(page.locator('#tpfFilterDni')).toBeVisible();
+  await page.locator('#tpfContactsFiltersClose').click();
+  await page.locator('#tpfContactsSearch').fill('zzzz-sin-contactos-xyz');
+  await expect(page.locator('#tpfContactsResultCount')).toHaveText('0 resultados');
+  await page.locator('#tpfContactsSearch').fill('');
+  await expect(page.locator('#tpfContactsRows tr').first()).toBeVisible();
+  await evidence(page,'00-contactos-normal');
+  await page.locator('#tpfContactsExpand').click();
+  await expect(page.locator('#tpfContactsApp')).toHaveClass(/tpfContactsFull/);
+  await evidence(page,'00-contactos-completo');
+  await page.locator('#tpfContactsExpand').click();
+  await expect(page.locator('.tpfOppOpen').first()).toBeVisible({timeout:30000});
+  await page.locator('.tpfOppOpen').first().click();
+  const picker=page.locator('.tpfOpportunityPicker');
+  await expect(picker).toBeVisible();
+  await expect(picker.locator('tbody tr').first()).toBeVisible();
+  await picker.locator('[data-picker-search]').fill('zzzz-no-match');
+  await expect(picker.locator('.tpfPickerEmpty')).toBeVisible();
+  await picker.locator('[data-picker-search]').fill('');
+  await picker.locator('[data-picker-filter="closed"]').click();
+  await picker.locator('[data-picker-filter="all"]').click();
+  await evidence(page,'00-oportunidades-contacto');
+  await picker.locator('[data-picker-expand]').click();
+  await expect(picker.locator('.tpfPickerPanel')).toHaveClass(/expanded/);
+  await insideViewport(picker.locator('[data-picker-close]'),page);
+  await picker.locator('[data-picker-expand]').click();
+  await picker.locator('[data-picker-open]').first().click();
+  await expect(page.locator('#oppDetailModal')).toBeVisible();
+  await expect(picker).toBeHidden();
+  await page.locator('#oppModalClose').click();
+  await expect(picker).toBeVisible();
+  await picker.locator('[data-picker-close]').click();
+  await expect(picker).toHaveCount(0);
   await page.locator('.nav[data-view="sales"]').first().click();
   await expect(page.locator('#view-sales')).toBeVisible();
   await expect(page.locator('#salesSearch')).toBeVisible();
@@ -232,4 +279,13 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   }
   await page.locator('#tpfContactsCreateCancel').click();
   await expect(page.locator('#tpfContactsCreateBack')).toBeHidden();
+  // Layout-only stress check: temporary DOM labels; never writes customer labels.
+  const labelLayout=await page.locator('#contactLabelsList').evaluate(box=>{
+    const added=[];
+    for(let i=0;i<12;i++){const chip=document.createElement('span');chip.className='contactLabelChip';chip.innerHTML='<span>ETIQUETA DE PRUEBA '+i+'</span><button class="contactLabelChipRemove" type="button">×</button>';box.append(chip);added.push(chip);}
+    const parent=box.getBoundingClientRect(),rects=added.map(x=>x.getBoundingClientRect());
+    const result={wrap:rects.at(-1).top>rects[0].top,contained:rects.every(r=>r.left>=parent.left-1&&r.right<=parent.right+1&&r.bottom<=parent.bottom+1),overflow:getComputedStyle(box).overflow};
+    added.forEach(x=>x.remove());return result;
+  });
+  expect(labelLayout.wrap).toBeTruthy();expect(labelLayout.contained).toBeTruthy();expect(labelLayout.overflow).toBe('visible');
 });

@@ -854,3 +854,90 @@ body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsFormGrid>lab
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label.tpfInlineEditableLabel>.tpfCopyButton{right:29px!important}
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for="contactNotes"].tpfInlineEditableLabel:has(+textarea[readonly])::after{content:none!important}
 }
+
+/* Compact contacts list; native actions and fields retain their original handlers. */
+body.tpfUnified #tpfContactsApp{padding:20px!important;position:relative}
+body.tpfUnified #tpfContactsApp .tpfContactsHeader{margin-bottom:6px!important;flex-wrap:nowrap!important;align-items:center;gap:12px}
+body.tpfUnified #tpfContactsApp .tpfContactsTitle h2{font-size:25px!important;margin:0!important}
+body.tpfUnified #tpfContactsApp .tpfContactsTitle p{display:none}
+body.tpfUnified #tpfContactsApp .tpfContactsHeaderActions{position:relative;display:flex;gap:8px;align-items:center}
+body.tpfUnified #tpfContactsApp .tpfContactsHeaderActions>button{height:36px;padding:7px 12px!important;font-size:12px!important;white-space:nowrap}
+body.tpfUnified #tpfContactsApp .tpfContactsStats{display:flex!important;flex-wrap:wrap;gap:6px 18px!important;margin:0 0 18px!important}
+body.tpfUnified #tpfContactsApp .tpfContactsStat{display:flex;flex-direction:row-reverse;align-items:baseline;gap:5px;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}
+body.tpfUnified #tpfContactsApp .tpfContactsStat b,body.tpfUnified #tpfContactsApp .tpfContactsStat span{font-size:12px!important;line-height:1.5;color:#61738d!important;margin:0!important}
+body.tpfUnified #tpfContactsApp .tpfContactsStat b{color:#203959!important;font-weight:650}
+#tpfContactsTools{position:absolute;right:0;top:44px;z-index:80010;width:240px;padding:7px;background:#fff;border:1px solid #dce4f0;border-radius:10px;box-shadow:0 15px 40px #10254125}
+#tpfContactsTools[hidden]{display:none!important}
+body.tpfUnified #tpfContactsTools>button,body.tpfUnified #tpfContactsTools .tpfContactsExportWrap>button{display:block!important;width:100%!important;border:0!important;background:#fff!important;box-shadow:none!important;text-align:left!important;color:#253d60!important;padding:10px!important;font-size:12px!important;border-radius:6px!important;white-space:normal!important}
+body.tpfUnified #tpfContactsTools button:hover{background:#f0f5fd!important}
+#tpfContactsTools .tpfContactsExportMenu{right:0;top:36px;z-index:80011}
+body.tpfUnified #tpfContactsApp .tpfContactsToolbar{padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important;gap:9px;margin-bottom:12px;flex-wrap:wrap}
+body.tpfUnified #tpfContactsApp .tpfContactsSearch input{height:38px;background:white!important;font-size:13px}
+body.tpfUnified #tpfContactsApp .tpfContactsToolbar button{height:38px;font-size:12px!important}
+#tpfContactsStatus:empty{display:none}
+#tpfContactsStatus{flex-basis:100%;font-size:12px}
+#tpfContactsResultCount{white-space:nowrap;font-size:12px;color:#64748b}
+body.tpfUnified #tpfContactsApp .tpfContactsTable{min-width:930px!important;table-layout:auto}
+body.tpfUnified #tpfContactsApp .tpfContactsTable th{padding:10px!important;font-size:11px!important;white-space:normal!important;background:#f6f8fc!important}
+body.tpfUnified #tpfContactsApp .tpfContactsTable td{padding:10px!important;font-size:12px!important;line-height:1.5}
+body.tpfUnified #tpfContactsApp .tpfContactsTable :is(th,td):nth-child(5){display:none}
+body.tpfUnified #tpfContactsApp .tpfContactsTable td:nth-child(6){min-width:190px;max-width:310px}
+body.tpfUnified #tpfContactsApp .tpfLabelChip{white-space:normal;overflow-wrap:anywhere;max-width:100%;font-size:10px;padding:3px 7px;margin:2px 3px 2px 0;line-height:1.45}
+body.tpfUnified #tpfContactsApp .tpfContactIdentity{min-width:190px;gap:8px}
+body.tpfUnified #tpfContactsApp .tpfContactAvatar{width:32px;height:32px;flex-basis:32px}
+body.tpfUnified #tpfContactsApp .tpfContactNameBtn{font-size:12px!important;max-width:240px;white-space:normal;line-height:1.4;color:#245991!important}
+body.tpfUnified #tpfContactsApp .tpfContactActionsCell{min-width:80px!important}
+body.tpfUnified #tpfContactsApp .tpfContactActions [data-action="schedule"]{display:none!important}
+body.tpfUnified #tpfContactsApp .tpfContactActions [data-action="whatsapp"]{color:#07845d!important;border-color:#b5dfcf!important}
+body.tpfUnified #tpfContactsApp .tpfContactActions button{width:30px;height:30px;min-width:30px}
+body.tpfUnified #tpfContactsApp .tpfOppCell{min-width:140px;max-width:190px}
+body.tpfUnified #tpfContactsApp .tpfOppCell b{font-size:12px;color:#235cba}
+body.tpfUnified #tpfContactsApp .tpfOppCell small{font-size:11px;font-weight:400;color:#6b7c94}
+body.tpfUnified #tpfContactsApp .tpfContactsTableScroll{max-height:calc(100dvh - 245px);min-height:180px}
+body.tpfUnified #tpfContactsApp .tpfContactsPager{padding:10px 12px!important;font-size:11px}
+body.tpfUnified #tpfContactsApp.tpfContactsFull{position:fixed;inset:0;z-index:80000;max-width:none!important;background:#f5f8fc;overflow:auto;height:100dvh}
+body.tpfUnified #tpfContactsApp .tpfContactsFilters.tpfFiltersDrawer{position:fixed!important;top:140px!important;right:25px!important;max-height:calc(100dvh - 165px)!important;z-index:80020!important}
+body.tpfUnified #tpfContactsApp.tpfContactsFull .tpfContactsTableScroll{max-height:calc(100dvh - 195px)}
+/* The picker shows actual pipeline stages, not repeated contact names. */
+.tpfOpportunityPicker{z-index:99000!important;background:#12203980!important;padding:24px!important}
+.tpfOpportunityPicker[hidden]{display:none!important}
+.tpfPickerPanel{width:min(1160px,100%);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;background:#fff;border:1px solid #e0e6ef;border-radius:14px;box-shadow:0 26px 85px #10254135;overflow:hidden;color:#172d4e}
+.tpfPickerPanel.expanded{width:100%;height:calc(100dvh - 48px)}
+.tpfPickerPanel header{display:flex;justify-content:space-between;gap:16px;padding:24px 26px 10px;flex:none}
+.tpfPickerEyebrow{font-size:10px;font-weight:650;color:#58769e;letter-spacing:.06em}
+.tpfPickerPanel h2{font-size:24px;letter-spacing:-.5px;line-height:1.3;margin:6px 0 14px;color:#132c50}
+.tpfPickerIdentity{display:flex;gap:10px;align-items:center;font-size:14px}
+.tpfPickerIdentity small{display:block;margin-top:3px;color:#738099;font-size:12px}
+.tpfPickerAvatar{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:50%;background:#eaf2ff;color:#2866c8;font-weight:650}
+.tpfPickerActions{display:flex;gap:7px;align-items:flex-start}
+.tpfPickerPanel button{cursor:pointer;background:#fff;border:1px solid #dce5f0;border-radius:7px;padding:8px 10px;color:#325780;font:inherit;font-size:12px}
+.tpfPickerPanel button:hover{background:#edf4ff;color:#0863ec}
+.tpfPickerPanel button:focus-visible,.tpfPickerPanel input:focus-visible,.tpfPickerPanel select:focus-visible{outline:2px solid #6097ef;outline-offset:2px}
+.tpfPickerMetrics{display:flex;flex-wrap:wrap;gap:10px 22px;padding:8px 26px 16px;font-size:12px;color:#60728c}
+.tpfPickerMetrics .is-overdue{color:#b94545}
+.tpfPickerToolbar{display:flex;align-items:center;gap:10px;padding:0 26px;flex:none;flex-wrap:wrap}
+.tpfPickerTabs{display:flex;gap:7px;margin-right:auto}
+.tpfPickerPanel .tpfPickerTabs button{border:0;border-bottom:2px solid transparent;border-radius:0;padding:12px 10px;background:transparent}
+.tpfPickerPanel .tpfPickerTabs .active{color:#0863ec;border-bottom-color:#0863ec;font-weight:650}
+.tpfPickerTabs span{margin-left:4px;background:#eef3fa;border-radius:5px;padding:2px 4px;font-size:10px}
+.tpfPickerToolbar input{width:220px;min-width:100px;height:34px;font-size:12px;margin:0;border:1px solid #dce5f0;border-radius:7px;padding:7px 10px}
+.tpfPickerToolbar select{width:150px;height:34px;font-size:12px;margin:0;border:1px solid #dce5f0;border-radius:7px}
+.tpfPickerScroll{margin:0 26px;overflow:auto;min-height:0;flex:1;border:1px solid #e4eaf2;border-radius:8px}
+.tpfPickerScroll table{border-collapse:collapse;width:100%;min-width:650px}
+.tpfPickerScroll th{position:sticky;top:0;background:#f6f8fc;font-size:11px;font-weight:600;color:#637893;text-align:left;padding:11px 12px;z-index:1}
+.tpfPickerScroll td{padding:10px 12px;border-top:1px solid #edf0f5;font-size:12px;vertical-align:middle;line-height:1.5}
+.tpfPickerScroll td:first-child{width:36%}
+.tpfPickerScroll tr:hover td{background:#f7faff}
+.tpfPickerPanel .tpfPickerTitle{border:0;padding:0;background:transparent;text-align:left;color:#1c3d6a;font-weight:650;font-size:13px}
+.tpfPickerScroll td small{display:block;color:#71819a;font-size:11px;margin-top:3px}
+.tpfPickerScroll td .tpfPickerOverdue{display:inline-block;margin-left:7px;color:#bb4545;background:#fff1f1;border-radius:5px;padding:1px 5px;font-size:10px}
+.tpfPickerStage{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;background:#edf4ff;color:#2762b7;white-space:nowrap}
+.tpfPickerStage.future{background:#f1edff;color:#7052b8}.tpfPickerStage.pending{background:#fff4dc;color:#916326}.tpfPickerStage.closed{background:#eef3f5;color:#586b7a}
+.tpfPickerMoney{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.tpfPickerScroll th:nth-child(4){text-align:right}
+.tpfPickerScroll td:last-child{white-space:nowrap;text-align:right}
+.tpfPickerScroll td:last-child button{border:0;background:transparent;color:#3269bc;font-size:11px;padding:5px}
+.tpfPickerPanel footer{display:flex;gap:10px;justify-content:space-between;padding:14px 26px;font-size:11px;color:#74849b;flex:none}
+.tpfPickerEmpty{padding:24px;text-align:center;color:#71819a;font-size:13px}
+.tpfPickerPanel .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:720px){body.tpfUnified #tpfContactsApp .tpfContactsHeader{flex-wrap:wrap!important}body.tpfUnified #tpfContactsApp .tpfContactsHeaderActions{margin-left:0}body.tpfUnified #tpfContactsApp .tpfContactsStats{margin-top:9px!important}.tpfOpportunityPicker{padding:8px!important}.tpfPickerPanel{max-height:calc(100dvh - 16px)}.tpfPickerPanel header{padding:15px;flex-wrap:wrap}.tpfPickerPanel h2{font-size:20px}.tpfPickerMetrics{padding:5px 15px 12px}.tpfPickerToolbar{padding:0 15px 10px}.tpfPickerToolbar input{flex:1}.tpfPickerScroll{margin:0 15px}.tpfPickerPanel footer{padding:12px 15px}.tpfPickerPanel.expanded{height:calc(100dvh - 16px)}}
