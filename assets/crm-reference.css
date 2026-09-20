@@ -270,77 +270,108 @@ body.tpfUnified #opOfferModal .opOfferFooter .opMsg{grid-column:1/-1;min-height:
 body.tpfUnified #opOfferModal .opOfferFooter .opMsg:not(:empty){padding-top:8px}
 @media(max-width:850px){body.tpfUnified #opOfferModal .opGrid{grid-template-columns:1fr!important}body.tpfUnified #oppDetailModal .crmOpportunityLayout{padding:12px!important}body.tpfUnified #oppDetailModal .crmOpportunityAside{position:static}body.tpfUnified #opOfferModal .opOfferFooter{padding:10px 12px;gap:6px}body.tpfUnified #opOfferModal .opFooterPrice{display:grid;gap:2px}body.tpfUnified #opOfferModal .opFooterPrice strong{font-size:20px}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{gap:6px!important}}
 
-/* Opportunity dossier: one scroll region, clear identities, personal notes. */
-body.tpfUnified #oppDetailModal .opportunityModalCard{display:flex!important;flex-direction:column!important;height:min(850px,calc(100dvh - 40px))!important;max-height:calc(100dvh - 40px)!important;overflow:hidden!important}
-body.tpfUnified #oppDetailModal .opportunityModalHeader{position:relative!important;flex:none!important;padding:14px 20px!important;align-items:center!important}
-body.tpfUnified #oppDetailModal .opportunityEyebrow{font-size:10px!important;letter-spacing:.12em!important;color:#73839a!important;margin-bottom:4px!important}
-body.tpfUnified #oppDetailModal .opportunityModalHeader h2{font-size:22px!important;line-height:1.25!important;margin:0!important}
-body.tpfUnified #oppDetailModal .crmOpportunityHeaderMetrics{display:flex;gap:12px;align-items:center;margin-top:8px}
-body.tpfUnified #oppDetailModal .crmOpportunityHeaderMetrics strong{font-size:15px;color:#1c4f88;font-variant-numeric:tabular-nums}
-body.tpfUnified #oppDetailModal [data-tone]{display:inline-flex;align-items:center;width:fit-content;padding:4px 9px;border-radius:5px;background:#eaf0f7;color:#3d5b7b;font-size:11px;font-weight:650}
-body.tpfUnified #oppDetailModal [data-tone="followup"]{background:#fff3da;color:#885c14}
+/* Opportunity dossier: compact working fields, separate contact context. */
+body.tpfUnified #oppDetailModal{background:#f5f7fb!important;padding:16px!important}
+body.tpfUnified #oppDetailModal .opportunityModalCard{display:flex!important;flex-direction:column!important;width:100%!important;max-width:1560px!important;height:calc(100dvh - 32px)!important;max-height:calc(100dvh - 32px)!important;padding:0!important;overflow:hidden!important;border-radius:10px!important;box-shadow:0 3px 16px #243f6208!important}
+body.tpfUnified #oppDetailModal .opportunityModalHeader{position:relative!important;flex:none!important;padding:16px 20px!important;align-items:center!important}
+body.tpfUnified #oppDetailModal .opportunityEyebrow{font-size:10px!important;letter-spacing:.09em!important;color:#73839a!important;margin-bottom:4px!important}
+body.tpfUnified #oppDetailModal .opportunityModalHeader h2{font-size:23px!important;line-height:1.25!important;margin:0!important}
+body.tpfUnified #oppDetailModal .crmOpportunityHeaderMetrics{display:flex;gap:10px;align-items:center;margin-top:7px}
+body.tpfUnified #oppDetailModal .crmOpportunityHeaderMetrics strong{font-size:14px;color:#1e426b;font-variant-numeric:tabular-nums}
+body.tpfUnified #oppDetailModal [data-tone]{display:inline-flex;align-items:center;width:fit-content;padding:4px 9px;border-radius:6px;background:#eaf0f7;color:#3d5b7b;font-size:11px;font-weight:650;white-space:nowrap}
+body.tpfUnified #oppDetailModal [data-tone="followup"]{background:#fff1cd;color:#885814}
 body.tpfUnified #oppDetailModal [data-tone="future"]{background:#f0eafd;color:#6743a5}
 body.tpfUnified #oppDetailModal [data-tone="pending"]{background:#fff0e4;color:#9c521b}
 body.tpfUnified #oppDetailModal [data-tone="won"],body.tpfUnified #oppDetailModal [data-tone="processed"]{background:#e5f5ee;color:#256d50}
 body.tpfUnified #oppDetailModal [data-tone="lost"]{background:#fcebec;color:#9b3d49}
-body.tpfUnified #oppDetailModal .crmOpportunityLayout{flex:1;min-height:0!important;overflow:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable;grid-template-columns:minmax(0,1fr) 250px!important;gap:16px!important;padding:16px!important;align-items:start!important}
-body.tpfUnified #oppDetailModal .crmOpportunityAside{position:sticky!important;top:0!important;min-width:0}
-body.tpfUnified #oppDetailModal .crmOpportunitySummary{padding:16px!important;border:1px solid #dce5f0!important;border-top:3px solid #3879ce!important;border-radius:9px!important}
-body.tpfUnified #oppDetailModal .crmOpportunitySummary h3{font-size:12px!important;margin:0 0 10px!important;color:#637b96!important}
-body.tpfUnified #oppDetailModal .crmSummaryAmount{font-size:28px!important;font-weight:750!important;color:#194d87!important;letter-spacing:-.7px;margin-bottom:8px}
-body.tpfUnified #oppDetailModal .crmOpportunitySummary dl{margin:15px 0 0!important}
-body.tpfUnified #oppDetailModal .crmOpportunitySummary dt{font-size:10px!important;font-weight:550!important;letter-spacing:.025em!important;color:#7c8ca0!important;margin-top:12px!important;text-transform:none!important}
-body.tpfUnified #oppDetailModal .crmOpportunitySummary dd{font-size:12px!important;font-weight:650!important;color:#243d59!important;line-height:1.45!important;margin:3px 0 0!important;overflow-wrap:anywhere;user-select:text}
-body.tpfUnified #oppDetailModal .crmOpportunityMain .opportunitySection{padding:14px!important;margin:0 0 12px!important;border-color:#e2e8f0!important}
-body.tpfUnified #oppDetailModal .opportunityGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:11px 14px!important}
-body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalStage){grid-column:1/-1}
-body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalDni){grid-column:1/-1}
-body.tpfUnified #oppDetailModal .opportunityGrid :is(input,select){min-height:34px!important;height:34px!important;padding:6px 9px!important}
-body.tpfUnified #oppDetailModal .opportunityContactSearchLabel .small{font-size:10px!important}
-body.tpfUnified #oppDetailModal #tpfOpportunityParty{padding:12px!important;margin:0!important;border:1px solid #e0e7f0!important;border-top:1px solid #e0e7f0!important;background:#f8fafd!important;border-radius:8px!important}
-body.tpfUnified #oppDetailModal .tpfRelHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
-body.tpfUnified #oppDetailModal .tpfRelHeading h3{font-size:11px!important;color:#496482!important;margin:0!important}
-body.tpfUnified #oppDetailModal .tpfRelHeading button{font-size:10px!important;padding:4px 7px!important;min-height:28px!important;background:#fff!important;border:1px solid #dce5ef!important;border-radius:6px!important}
-body.tpfUnified #oppDetailModal .tpfRelIdentityGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-body.tpfUnified #oppDetailModal .tpfRelIdentityGrid>div{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
-body.tpfUnified #oppDetailModal .tpfRelCaption{font-size:10px;color:#788a9e}
-body.tpfUnified #oppDetailModal .tpfRelIdentityGrid :is(strong,button){font-size:12px!important;font-weight:650!important;overflow-wrap:anywhere;text-align:left}
-body.tpfUnified #oppDetailModal .tpfRelIdentityGrid .tpfRelLink{padding:0!important;border:0!important;background:transparent!important;min-height:20px!important}
-body.tpfUnified #oppDetailModal .tpfRelIdentityGrid small{font-size:10px!important;margin:0!important}
+body.tpfUnified #oppDetailModal .crmOpportunityLayout{display:grid!important;flex:1;min-height:0!important;overflow:auto!important;overscroll-behavior:contain;scrollbar-gutter:stable;grid-template-columns:minmax(0,1.85fr) minmax(295px,1fr)!important;gap:14px!important;padding:16px!important;align-items:start!important}
+body.tpfUnified #oppDetailModal .crmOpportunityAside{position:static!important;display:grid;gap:14px;min-width:0}
+body.tpfUnified #oppDetailModal :is(.crmOpportunitySummary,.crmOpportunityContact){background:#fff;padding:16px!important;border:1px solid #dce5f0!important;border-radius:8px!important;min-width:0}
+body.tpfUnified #oppDetailModal :is(.crmOpportunitySummary,.crmOpportunityContact)>h3{font-size:15px!important;font-weight:650!important;line-height:1.3!important;margin:0 0 15px!important;color:#213950!important;letter-spacing:0!important;text-transform:none!important}
+body.tpfUnified #oppDetailModal .crmSummaryTop{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+body.tpfUnified #oppDetailModal .crmSummaryAmount{font-size:27px!important;font-weight:750!important;color:#19334f!important;letter-spacing:-.6px}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary dl{display:grid!important;grid-template-columns:minmax(100px,.95fr) minmax(0,1fr)!important;gap:11px 9px!important;margin:17px 0 0!important}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary dt{font-size:11px!important;font-weight:500!important;letter-spacing:0!important;color:#6b7c92!important;margin:0!important;text-transform:none!important;line-height:1.5}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary dd{font-size:12px!important;font-weight:600!important;color:#253f5d!important;line-height:1.5!important;margin:0!important;overflow-wrap:anywhere;user-select:text}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary dd small{display:block;color:#78879c;font-size:11px;font-weight:400;margin-top:2px;line-height:1.4}
+body.tpfUnified #oppDetailModal .crmOpportunityMain .opportunitySection{padding:16px!important;margin:0 0 14px!important;border-color:#dfe6ef!important;border-radius:8px!important}
+body.tpfUnified #oppDetailModal .opportunitySectionTitle{font-size:15px!important;text-transform:none!important;font-weight:650!important;letter-spacing:0!important;margin:0 0 12px!important;color:#213950!important}
+body.tpfUnified #oppDetailModal .opportunityGrid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:13px 12px!important}
+body.tpfUnified #oppDetailModal .opportunityGrid>label{margin:0!important;padding:0!important;line-height:1.4!important;align-self:start!important;grid-column:auto!important}
+body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalTitle){grid-column:1/-1!important}
+body.tpfUnified #oppDetailModal .opportunityGrid :is(input,select){min-height:36px!important;height:36px!important;padding:7px 9px!important;margin:5px 0 0!important;font-size:12px!important;background:#fff!important}
+body.tpfUnified #oppDetailModal #tpfOpportunityParty{padding:0!important;margin:0!important;border:0!important;background:transparent!important;border-radius:0!important}
+body.tpfUnified #oppDetailModal .tpfRelHeading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}
+body.tpfUnified #oppDetailModal .tpfRelHeading h3{font-size:15px!important;color:#213950!important;margin:0!important;font-weight:650!important}
+body.tpfUnified #oppDetailModal .tpfRelHeading button{font-size:11px!important;padding:5px 8px!important;min-height:30px!important;background:#f9fbff!important;border:1px solid #dce6f5!important;color:#2565b2!important;border-radius:6px!important}
+body.tpfUnified #oppDetailModal .tpfRelIdentityGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+body.tpfUnified #oppDetailModal .tpfRelPerson{border:1px solid #dfe6ef;border-radius:7px;padding:12px;min-width:0}
+body.tpfUnified #oppDetailModal .tpfRelCaption{display:block;font-size:11px;font-weight:600;color:#46617d;margin-bottom:10px}
+body.tpfUnified #oppDetailModal .tpfRelPersonBody{display:flex;align-items:flex-start;gap:10px}
+body.tpfUnified #oppDetailModal .tpfRelPersonBody>div{min-width:0;flex:1}
+body.tpfUnified #oppDetailModal .tpfRelAvatar{display:flex;flex:none;align-items:center;justify-content:center;border-radius:50%;width:34px;height:34px;background:#e5efff;color:#2868c5;font-size:12px;font-weight:600}
+body.tpfUnified #oppDetailModal .tpfRelPerson:nth-child(2) .tpfRelAvatar{background:#f9e8ef;color:#ad4c76}
+body.tpfUnified #oppDetailModal .tpfRelPerson strong{display:block;font-size:12px!important;font-weight:650!important;overflow-wrap:anywhere;user-select:text;color:#203a56!important;line-height:1.4}
+body.tpfUnified #oppDetailModal .tpfRelNickname{display:block;font-size:11px!important;color:#70839a;line-height:1.45;margin-top:3px;user-select:text;overflow-wrap:anywhere}
+body.tpfUnified #oppDetailModal .tpfRelPerson small{display:block;font-size:11px!important;line-height:1.5;margin:7px 0!important;user-select:text;overflow-wrap:anywhere}
+body.tpfUnified #oppDetailModal .tpfRelIdentityGrid .tpfRelLink{padding:0!important;border:0!important;background:transparent!important;min-height:22px!important;font-size:11px!important;font-weight:500!important;color:#206ac7!important}
+body.tpfUnified #oppDetailModal .tpfRelRecipient{margin-top:12px;background:#eef5ff;border:1px solid #dceafa;border-radius:6px;padding:10px 12px;font-size:11px;line-height:1.5;color:#315c8c;overflow-wrap:anywhere}
 body.tpfUnified #oppDetailModal [data-rel-editor]{border-top:1px solid #dde6f0;margin-top:12px;padding-top:12px}
-body.tpfUnified #oppDetailModal [data-rel-editor][hidden]{display:none!important}
-body.tpfUnified #oppDetailModal [data-rel-editor] label[hidden]{display:none!important}
-body.tpfUnified #oppDetailModal .crmOpportunityNotes label{display:grid;gap:8px;font-size:11px;color:#77869a}
-body.tpfUnified #oppDetailModal #oppModalNotes{width:100%!important;box-sizing:border-box;min-height:110px;resize:vertical;border:1px solid #dce5ee!important;border-radius:7px!important;padding:11px!important;font-size:13px!important;line-height:1.55!important;color:#263f5c!important;background:#fcfdff!important}
-body.tpfUnified #oppDetailModal .crmSummaryNotes{margin-top:15px;padding-top:12px;border-top:1px solid #e7edf4}
-body.tpfUnified #oppDetailModal .crmSummaryNotes h4{font-size:11px;color:#506b88;margin:0 0 6px}
-body.tpfUnified #oppDetailModal .crmSummaryNotes p{font-size:12px;color:#51657d;line-height:1.55;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;user-select:text}
+body.tpfUnified #oppDetailModal [data-rel-editor] :is(input,select){width:100%;box-sizing:border-box;min-height:36px;font-size:12px;margin-top:5px}
+body.tpfUnified #oppDetailModal [data-rel-editor] input[type="checkbox"]{width:15px;min-height:15px;margin:0}
+body.tpfUnified #oppDetailModal .crmOpportunityNotes label{display:block;font-size:11px;color:#7a8b9f;margin:0!important;font-weight:400}
+body.tpfUnified #oppDetailModal #oppModalNotes{display:block;width:100%!important;box-sizing:border-box;min-height:85px;margin-top:10px!important;resize:vertical;border:1px solid #dce5ee!important;border-radius:6px!important;padding:10px!important;font-size:12px!important;line-height:1.6!important;color:#263f5c!important;background:#fff!important}
+body.tpfUnified #oppDetailModal .crmSummaryNotes{margin-top:16px;padding-top:13px;border-top:1px solid #e7edf4}
+body.tpfUnified #oppDetailModal .crmSummaryNotes h4{font-size:12px;color:#34506d;margin:0 0 7px;font-weight:600}
+body.tpfUnified #oppDetailModal .crmSummaryNotes p{font-size:12px;color:#5a6e88;line-height:1.6;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;user-select:text}
 body.tpfUnified #oppDetailModal .crmSummaryNotes p.expanded{display:block;max-height:210px;overflow:auto}
 body.tpfUnified #oppDetailModal .crmSummaryNotes button{margin-top:7px;font-size:11px;border:0;background:transparent;color:#2168be;padding:0}
 body.tpfUnified #oppDetailModal .crmSummaryPending{font-size:10px;background:#fff6de;color:#88631d;padding:7px 9px;border-radius:5px;margin:12px 0 0}
+body.tpfUnified #oppDetailModal .crmContextIdentity{display:grid;gap:3px;margin-bottom:13px}
+body.tpfUnified #oppDetailModal .crmContextIdentity strong{font-size:13px;color:#243c5b;overflow-wrap:anywhere}
+body.tpfUnified #oppDetailModal .crmContextIdentity>span{font-size:12px;color:#7a8ba1;overflow-wrap:anywhere}
+body.tpfUnified #oppDetailModal .crmContextIdentity>small{font-size:10px;color:#6f89a8}
+body.tpfUnified #oppDetailModal .crmContextTabs{display:flex;border-bottom:1px solid #e8edf4;margin:0 0 13px;gap:10px}
+body.tpfUnified #oppDetailModal .crmContextTabs button{border:0;border-radius:0;background:transparent;color:#718099;padding:4px 0 8px;font-size:10px}
+body.tpfUnified #oppDetailModal .crmContextTabs button[aria-pressed="true"]{border-bottom:2px solid #2d70c9;color:#2264b7}
+body.tpfUnified #oppDetailModal .crmContextText{padding:10px 12px;background:#f6f8fc;border-radius:6px;margin:0 0 10px}
+body.tpfUnified #oppDetailModal .crmContextText h4{font-size:11px;color:#354f70;margin:0 0 6px;font-weight:600;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
+body.tpfUnified #oppDetailModal .crmContextText h4 small{font-size:9px;font-weight:400;color:#8c9aad}
+body.tpfUnified #oppDetailModal .crmContextText p{font-size:12px;line-height:1.6;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:170px;overflow:auto;user-select:text;color:#52657f}
+body.tpfUnified #oppDetailModal .crmContextOpen{padding:4px 0;min-height:25px;border:0;background:transparent;color:#236ac4;font-size:11px;line-height:1.5;text-align:left}
+body.tpfUnified #oppDetailModal :is([data-crm-contact-state],.crmContextExtras){color:#7d8fa4;font-size:11px;line-height:1.5}
+body.tpfUnified #oppDetailModal .crmContextExtras{border-top:1px solid #e4ebf3;padding-top:12px;margin-top:12px}
+body.tpfUnified #oppDetailModal .crmContextExtras h4{font-size:11px;color:#425b77;font-weight:600;margin:0 0 8px}
+body.tpfUnified #oppDetailModal .crmContextTags{display:flex;gap:5px;flex-wrap:wrap}
+body.tpfUnified #oppDetailModal .crmContextTags span{border-radius:5px;background:#eef4fc;border:1px solid #dfe9f7;padding:3px 7px;font-size:10px;color:#426a9d}
+body.tpfUnified #oppDetailModal .crmContextTasks{margin-top:12px;border-top:1px solid #e4ebf3;padding-top:10px}
+body.tpfUnified #oppDetailModal .crmContextTasks>summary{cursor:pointer;font-size:11px;color:#315780;font-weight:600}
+body.tpfUnified #oppDetailModal .crmContextTasks p{font-size:10px;line-height:1.5;margin:9px 0}
+body.tpfUnified #oppDetailModal .crmContextTask{display:grid;gap:4px;font-size:11px;border-bottom:1px solid #eaf0f5;padding:9px 0}
+body.tpfUnified #oppDetailModal .crmContextTask strong{color:#416181;overflow-wrap:anywhere;font-weight:500}
 body.tpfUnified #oppDetailModal .crmOpportunityActivity{background:#fff;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:0}
-body.tpfUnified #oppDetailModal .crmOpportunityActivity>summary{font-size:12px;font-weight:600;padding:12px 14px;cursor:pointer;color:#516b88}
-body.tpfUnified #oppDetailModal .crmOpportunityActivityBody{padding:0 14px 12px}
-body.tpfUnified #oppDetailModal .crmOpportunityActivityBody>p{font-size:12px;color:#456483;margin:0 0 9px;line-height:1.5}
-body.tpfUnified #oppDetailModal #oppMetaInfo{font-size:10px!important;color:#7b8a9b!important;padding:0!important;margin:0!important;line-height:1.7!important}
+body.tpfUnified #oppDetailModal .crmOpportunityActivity>summary{font-size:13px;font-weight:600;padding:14px 16px;cursor:pointer;color:#405d7c}
+body.tpfUnified #oppDetailModal .crmOpportunityActivityBody{padding:0 16px 14px}
+body.tpfUnified #oppDetailModal .crmOpportunityActivityBody>p{font-size:12px;color:#456483;margin:0 0 9px;line-height:1.5;border-left:2px solid #4486d9;padding-left:10px}
+body.tpfUnified #oppDetailModal #oppMetaInfo{font-size:11px!important;color:#7b8a9b!important;padding:0!important;margin:0!important;line-height:1.7!important}
 body.tpfUnified #oppDetailModal .opportunityActions{flex:none!important;position:relative!important;bottom:auto!important;padding:11px 16px!important;align-items:center!important;flex-wrap:nowrap!important}
-body.tpfUnified #oppDetailModal #oppModalClose[hidden],body.tpfUnified #oppDetailModal [data-crm-expand][hidden],body.tpfUnified #oppDetailModal [data-crm-pending][hidden],body.tpfUnified #oppDetailModal .crmOpportunityMore[hidden]{display:none!important}
-body.tpfUnified #oppDetailModal #oppModalSave{margin-left:auto!important;white-space:nowrap;padding:9px 18px!important;font-size:12px!important}
-body.tpfUnified #oppDetailModal .crmOpportunitySaveState{font-size:11px;color:#8090a3;margin-left:6px}
+body.tpfUnified #oppDetailModal #oppModalSave{margin-left:auto!important;white-space:nowrap;padding:10px 18px!important;font-size:12px!important}
+body.tpfUnified #oppDetailModal .crmOpportunitySaveState{font-size:11px;color:#8090a3;margin-left:auto}
 body.tpfUnified #oppDetailModal .crmOpportunitySaveState.pending{color:#90641a}
-body.tpfUnified #oppDetailModal .crmOpportunityMore{position:relative;flex:none}
-body.tpfUnified #oppDetailModal .crmOpportunityMore>summary{list-style:none;cursor:pointer;font-size:11px;padding:7px 9px;border:1px solid #dce5ef;border-radius:6px;color:#516883;background:#fff}
-body.tpfUnified #oppDetailModal .crmOpportunityMore>summary::-webkit-details-marker{display:none}
-body.tpfUnified #oppDetailModal .crmOpportunityMore>div{position:absolute;bottom:calc(100% + 8px);left:0;z-index:8;min-width:180px;padding:5px;background:white;border:1px solid #e0e7f0;border-radius:8px;box-shadow:0 8px 30px #142e4a25}
-body.tpfUnified #oppDetailModal #oppModalDelete{margin:0!important;white-space:nowrap;background:#fff!important;color:#ae3949!important;border:0!important;width:100%;text-align:left;font-size:12px!important}
-@media(max-width:1000px){body.tpfUnified #oppDetailModal .crmOpportunityLayout{grid-template-columns:minmax(0,1fr) 215px!important;gap:12px!important;padding:12px!important}}
-@media(max-width:850px){body.tpfUnified #oppDetailModal .crmOpportunityLayout{display:flex!important;flex-direction:column!important}body.tpfUnified #oppDetailModal .crmOpportunityAside{position:static!important;order:2;width:100%}body.tpfUnified #oppDetailModal .crmOpportunityMain{width:100%}body.tpfUnified #oppDetailModal .crmOpportunitySummary dl{display:grid!important;grid-template-columns:130px 1fr!important;gap:7px!important}body.tpfUnified #oppDetailModal .crmOpportunitySummary :is(dt,dd){margin:0!important}body.tpfUnified #oppDetailModal .crmOpportunitySummary dl dd{grid-column:2}body.tpfUnified #oppDetailModal .crmOpportunitySaveState{display:none}body.tpfUnified #oppDetailModal .opportunityModalCard{height:calc(100dvh - 16px)!important;max-height:calc(100dvh - 16px)!important}body.tpfUnified #oppDetailModal .opportunityModalHeader{padding:12px 14px!important}}
-@media(max-width:480px){body.tpfUnified #oppDetailModal .opportunityGrid{grid-template-columns:1fr!important}body.tpfUnified #oppDetailModal .tpfRelIdentityGrid{grid-template-columns:1fr;gap:10px}body.tpfUnified #oppDetailModal .opportunityModalHeader h2{font-size:18px!important}body.tpfUnified #oppDetailModal .tpfRelHeading{flex-wrap:wrap}}
-body.tpfUnified #oppDetailModal .opportunityGrid>label{margin:0!important;padding:0!important;line-height:1.35!important;align-self:start!important}
-body.tpfUnified #oppDetailModal .opportunityGrid>label :is(input,select){margin:5px 0 0!important}
-body.tpfUnified #oppDetailModal .crmOpportunityContactPicker{border-top:1px solid #e8edf4;padding-top:8px;margin:0!important}
-body.tpfUnified #oppDetailModal .crmOpportunityContactPicker>summary{cursor:pointer;color:#4475aa;font-size:11px;line-height:1.4}
-body.tpfUnified #oppDetailModal .crmOpportunityContactPicker>label{display:block;margin:10px 0 2px!important}
-body.tpfUnified #oppDetailModal .crmOpportunityContactPicker .small{font-size:10px!important}
-body.tpfUnified #oppDetailModal .crmOpportunitySummary [hidden]{display:none!important}
-@media(min-width:1025px){body.tpfUnified #oppDetailModal .opportunityGrid{grid-template-columns:repeat(6,minmax(0,1fr))!important}body.tpfUnified #oppDetailModal .opportunityGrid>label{grid-column:span 3!important}body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalTitle){grid-column:1/-1!important}body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalAmount),body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalDate),body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalStage){grid-column:span 2!important}}
+body.tpfUnified #oppDetailModal #oppModalDelete{display:inline-flex;align-items:center;gap:7px;flex:none;width:auto!important;margin:0!important;padding:7px 3px!important;white-space:nowrap;background:transparent!important;color:#a94e58!important;border:0!important;text-align:left;font-size:11px!important;font-weight:500!important}
+body.tpfUnified #oppDetailModal #oppModalDelete svg{width:15px;height:15px}
+body.tpfUnified #oppDetailModal #oppModalDelete:hover{background:#fff1f3!important;color:#9b2634!important}
+body.tpfUnified #oppDetailModal .crmOpportunityContactPicker{border-top:1px solid #e8edf4;padding-top:10px;margin-top:12px!important}
+body.tpfUnified #oppDetailModal .crmOpportunityContactPicker>summary{cursor:pointer;color:#567aa2;font-size:11px;line-height:1.5}
+body.tpfUnified #oppDetailModal .crmOpportunityLinkedFields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:13px}
+body.tpfUnified #oppDetailModal .crmOpportunityLinkedFields>label{display:block;margin:0;font-size:11px;color:#5c7190}
+body.tpfUnified #oppDetailModal .crmOpportunityLinkedFields>label:last-child{grid-column:1/-1}
+body.tpfUnified #oppDetailModal .crmOpportunityLinkedFields :is(input,select){width:100%;height:36px;box-sizing:border-box;border:1px solid #dce5ee;border-radius:6px;padding:7px 9px;font-size:12px;margin-top:6px;background:#fff}
+body.tpfUnified #oppDetailModal .crmOpportunityContactPicker .small{font-size:10px!important;line-height:1.5}
+body.tpfUnified #oppDetailModal [hidden]{display:none!important}
+body.tpfUnified #oppDetailModal .tpfRelCopy{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;width:24px;height:24px;min-height:24px;padding:3px;margin-left:3px;background:transparent;border:0;color:#6e84a1}
+body.tpfUnified #oppDetailModal .tpfRelCopy svg{width:13px;height:13px}
+body.tpfUnified #oppDetailModal .tpfRelCopy:hover{background:#e8f0fa}
+@media(max-width:1100px){body.tpfUnified #oppDetailModal .crmOpportunityLayout{grid-template-columns:minmax(0,1fr) 280px!important;gap:12px!important;padding:12px!important}body.tpfUnified #oppDetailModal .tpfRelPersonBody{display:block}body.tpfUnified #oppDetailModal .tpfRelAvatar{display:none}}
+@media(max-width:850px){body.tpfUnified #oppDetailModal{padding:8px!important}body.tpfUnified #oppDetailModal .crmOpportunityLayout{display:flex!important;flex-direction:column!important}body.tpfUnified #oppDetailModal .crmOpportunityAside{order:2;width:100%}body.tpfUnified #oppDetailModal .crmOpportunityMain{width:100%}body.tpfUnified #oppDetailModal .crmOpportunitySaveState{display:none}body.tpfUnified #oppDetailModal .opportunityModalCard{height:calc(100dvh - 16px)!important;max-height:calc(100dvh - 16px)!important}body.tpfUnified #oppDetailModal .opportunityModalHeader{padding:12px 14px!important}body.tpfUnified #oppDetailModal .tpfRelPersonBody{display:flex}body.tpfUnified #oppDetailModal .tpfRelAvatar{display:flex}}
+@media(max-width:480px){body.tpfUnified #oppDetailModal .opportunityGrid{grid-template-columns:1fr 1fr!important}body.tpfUnified #oppDetailModal .opportunityGrid>label:has(#oppModalStage){grid-column:1/-1!important}body.tpfUnified #oppDetailModal .tpfRelIdentityGrid{grid-template-columns:1fr;gap:10px}body.tpfUnified #oppDetailModal .opportunityModalHeader h2{font-size:18px!important}body.tpfUnified #oppDetailModal .tpfRelHeading{flex-wrap:wrap}body.tpfUnified #oppDetailModal .crmOpportunityLinkedFields{grid-template-columns:1fr}body.tpfUnified #oppDetailModal .opportunityActions{padding:10px!important}body.tpfUnified #oppDetailModal #oppModalSave{padding:9px 12px!important}}

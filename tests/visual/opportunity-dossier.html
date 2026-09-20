@@ -1,6 +1,6 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificación de ficha · Datos ficticios</title>
 <link rel="stylesheet" href="/assets/app.css"><link rel="stylesheet" href="/assets/opportunity-detail.css"><link rel="stylesheet" href="/assets/crm-unified.css"><link rel="stylesheet" href="/assets/crm-reference.css">
-<style>body{margin:0;background:#eef3f8}.fixtureNotice{padding:25px 20px;width:215px;font:13px/1.6 Arial;color:#536980}.fixtureNotice strong{display:block;color:#254f80;font-size:17px;margin-bottom:18px}.fixtureNotice button{display:block;margin-top:15px}</style></head><body class="tpfUnified"><aside class="fixtureNotice"><strong>THE PHONE FACE</strong>Verificación visual<br>Datos ficticios<br>Sin conexión a clientes ni envíos<button id="fixtureReopen">Abrir ficha de ejemplo</button><button id="fixtureStored">Contrato guardado</button></aside><div id="oppDetailModal" class="modalBack hidden">
+<style>body{margin:0;background:#eef3f8}.fixtureNotice{padding:25px 20px;width:215px;font:13px/1.6 Arial;color:#536980}.fixtureNotice strong{display:block;color:#254f80;font-size:17px;margin-bottom:18px}.fixtureNotice button{display:block;margin-top:15px}</style></head><body class="tpfUnified"><aside class="fixtureNotice"><strong>THE PHONE FACE</strong>Verificación visual<br>Datos ficticios<br>Sin conexión a clientes ni envíos<button id="fixtureReopen">Abrir ficha de ejemplo</button><button id="fixtureStored">Contrato guardado</button><p id="fixtureStatus" role="status"></p></aside><div id="oppDetailModal" class="modalBack hidden">
   <div class="modalCard opportunityModalCard" onclick="event.stopPropagation()">
     <div class="opportunityModalHeader">
       <div>
@@ -60,12 +60,18 @@
   </div>
 </div>
 
-<script src="/js/modules/contact-party.js"></script><script src="/js/modules/opportunity-notes.js"></script>
+<script src="/js/modules/contact-party.js"></script><script src="/js/modules/opportunity-contact-context.js"></script><script src="/js/modules/opportunity-notes.js"></script>
 <script>
 // This fixture executes the production presentation modules using read-only example records.
-const records=[{id:'demo-manager',data:{'NOMBRE Y APELLIDOS':'María José Demo','TELÉFONO':'600000001',TPF_RELACIONES:{managed_contacts:[{record_id:'demo-holder',name:'José Antonio Demo'}]}}},{id:'demo-holder',data:{'NOMBRE Y APELLIDOS':'José Antonio Demo','TELÉFONO':'','DNI / NIF':'DEMO'}}];
-const sb={from(table){if(table!=='records')throw Error('Fixture: only example record reads');let id,ids,inverse=false;return {select(){return this},eq(k,v){if(k==='id')id=v;return this},contains(){inverse=true;return this},async limit(){return {data:[]}},async in(k,v){ids=v;return {data:records.filter(r=>ids.includes(r.id))}},async maybeSingle(){return {data:records.find(r=>r.id===id)}}}}};
-function openContact(){document.querySelector('.fixtureNotice').textContent='Enlace de contacto pulsado. Esta verificación solo usa datos ficticios.';}
+const records=[{id:'demo-manager',data:{'NOMBRE Y APELLIDOS':'María José Demo','TELÉFONO':'600000001',APODO:'Mujer de José Antonio',NOTAS:'Consultar con José Antonio antes de tramitar cambios.',OBSERVACIONES:'Prefiere que contactemos por la mañana.',TPF_RELACIONES:{managed_contacts:[{record_id:'demo-holder',name:'José Antonio Demo'}]}}},{id:'demo-holder',data:{'NOMBRE Y APELLIDOS':'José Antonio Demo','TELÉFONO':'','DNI / NIF':'00000000T',NOTAS:'Confirmar con él la dirección de instalación.',OBSERVACIONES:'Titular del contrato.'}}];
+const sb={
+ async rpc(name,args){if(name!=='crm_get_contact_labels')throw Error('Fixture forbids writes');return {data:args.p_contact_id==='demo-manager'?[{id:'demo-label-1',name:'Vodafone'},{id:'demo-label-2',name:'Cliente'}]:[]};},
+ from(table){let id;
+  if(table==='agenda_items')return {select(){return this},eq(k,v){if(k==='related_record_id')id=v;return this},or(){return this},order(){return this},async limit(){return {data:id==='demo-manager'?[{id:'demo-task',title:'Confirmar dirección',starts_at:'2026-09-22T08:00:00Z',related_record_id:id}]:[],count:id==='demo-manager'?1:0}}};
+  if(table!=='records')throw Error('Fixture forbids writes');
+  return {select(){return this},eq(k,v){if(k==='id')id=v;return this},contains(){return this},async limit(){return {data:[]}},async in(k,ids){return {data:records.filter(r=>ids.includes(r.id))}},async maybeSingle(){return {data:records.find(r=>r.id===id)}}};
+ }};
+function openContact(id){document.getElementById('fixtureStatus').textContent='Ficha abierta en esta verificación: '+id;}
 </script><script src="/js/modules/contact-relations.js"></script><script src="/js/modules/crm-reference-layout.js"></script><script>
 const byId=id=>document.getElementById(id);
 function showExample(saved){
@@ -74,11 +80,11 @@ function showExample(saved){
  byId('oppModalId').value=saved?'saved-demo':'draft-demo';byId('oppModalTitle').value='CAMBIO VODAFONE';byId('oppModalHeading').textContent='CAMBIO VODAFONE';byId('oppModalClient').value='María José Demo';byId('oppModalPhone').value='600000001';byId('oppModalOpenContact').dataset.recordId='demo-manager';byId('oppModalAmount').value='27';byId('oppModalDate').value='2026-09-22';byId('oppModalStage').innerHTML='<option value="follow">Seguimiento</option><option value="pending">Pendiente de tramitar</option><option value="won">Ganado</option>';
  TPFOpportunityNotes.fill(byId('oppModalNotes'),'Oferta creada desde el configurador\n\nLlamar el martes por la mañana.\nConfirmar la dirección de instalación con el titular.');
  byId('oppCustomFieldsView').innerHTML='<div class="oppCustomItem"><span>Operador</span><strong>Vodafone</strong></div>';byId('oppMetaInfo').textContent='Creada: 20/09/2026 · Estado guardado: Seguimiento';
- TPFContactParty.mountOpportunity(saved?{same:false,holder_name:'José Antonio Demo',holder_dni:'DEMO',contact_name:'María José Demo',contact_phone:'600000001',recipient_name:'María José Demo',recipient_phone:'600000001'}:null);
+ TPFContactParty.mountOpportunity(saved?{same:false,holder_name:'José Antonio Demo',holder_dni:'00000000T',contact_name:'María José Demo',contact_phone:'600000001',recipient_name:'María José Demo',recipient_phone:'600000001'}:null);
  byId('oppDetailModal').classList.remove('hidden');
  },0);
 }
 byId('oppModalCloseX').onclick=()=>byId('oppDetailModal').classList.add('hidden');byId('oppModalClose').onclick=byId('oppModalCloseX').onclick;
-byId('oppModalSave').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se guardan datos reales.';};byId('oppModalDelete').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se elimina ningún registro.';};
+byId('oppModalSave').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se guardan datos reales.';};byId('oppModalDelete').onclick=()=>{if(confirm('¿Eliminar definitivamente esta oportunidad de ejemplo?'))byId('fixtureStatus').textContent='Eliminación simulada. No se elimina ningún registro.';};
 byId('fixtureReopen').onclick=()=>showExample(false);byId('fixtureStored').onclick=()=>showExample(true);showExample(false);
 </script></body></html>

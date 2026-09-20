@@ -10,47 +10,94 @@ function opportunity(){
  const modal=$('oppDetailModal'),card=modal?.querySelector('.opportunityModalCard');if(!card||card.querySelector('.crmOpportunityLayout'))return;
  const layout=document.createElement('div');layout.className='crmOpportunityLayout';
  const main=document.createElement('div');main.className='crmOpportunityMain';
- const aside=document.createElement('aside');aside.className='crmOpportunityAside';aside.setAttribute('aria-label','Resumen de la oportunidad');
+ const aside=document.createElement('aside');aside.className='crmOpportunityAside';aside.setAttribute('aria-label','Resumen e información del contacto');
  const summary=document.createElement('section');summary.className='crmOpportunitySummary';
- summary.innerHTML='<h3>Resumen de la oportunidad</h3><div class="crmSummaryAmount" data-crm-summary="amount"></div><span class="crmSummaryStage" data-crm-summary="stage"></span><dl><dt>Titular del contrato</dt><dd data-crm-summary="holder"></dd><dt>DNI / NIF</dt><dd data-crm-summary="dni"></dd><dt>Gestionado por</dt><dd data-crm-summary="manager"></dd><dt>WhatsApp dirigido a</dt><dd data-crm-summary="recipient"></dd><dt>Teléfono WhatsApp</dt><dd data-crm-summary="phone"></dd><dt>Fecha prevista</dt><dd data-crm-summary="date"></dd></dl><div class="crmSummaryNotes"><h4>Notas internas</h4><p data-crm-summary="notes"></p><button type="button" class="secondary" data-crm-expand hidden aria-expanded="false">Ver completas</button></div><p class="crmSummaryPending" data-crm-pending hidden>Pendiente de guardar</p>';
- aside.append(summary);layout.append(main,aside);
+ summary.innerHTML='<h3>Resumen de la oportunidad</h3><div class="crmSummaryTop"><div class="crmSummaryAmount" data-crm-summary="amount"></div><span class="crmSummaryStage" data-crm-summary="stage"></span></div><dl><dt>Titular del contrato</dt><dd><span data-crm-summary="holder"></span><small data-crm-summary="holderNickname"></small></dd><dt>DNI / NIF</dt><dd data-crm-summary="dni"></dd><dt>Gestionado por</dt><dd><span data-crm-summary="manager"></span><small data-crm-summary="managerNickname"></small></dd><dt>WhatsApp dirigido a</dt><dd data-crm-summary="recipient"></dd><dt>Teléfono WhatsApp</dt><dd data-crm-summary="phone"></dd><dt>Fecha prevista</dt><dd data-crm-summary="date"></dd></dl><div class="crmSummaryNotes"><h4>Notas de la oportunidad</h4><p data-crm-summary="notes"></p><button type="button" class="secondary" data-crm-expand hidden aria-expanded="false">Ver completas</button></div><p class="crmSummaryPending" data-crm-pending hidden>Pendiente de guardar</p>';
+ const contactCard=document.createElement('section');contactCard.className='crmOpportunityContact';contactCard.setAttribute('aria-label','Información del contacto');
+ contactCard.innerHTML='<h3>Información del contacto</h3><div class="crmContextTabs" data-crm-contact-tabs></div><div class="crmContextIdentity"><strong data-crm-contact="name"></strong><span data-crm-contact="nickname"></span><small data-crm-contact="role"></small></div><p data-crm-contact-state></p><div data-crm-contact-body hidden><section class="crmContextText"><h4>Observaciones del contacto <small>Solo lectura</small></h4><p data-crm-contact="observations"></p></section><section class="crmContextText"><h4>Notas de su ficha <small>Solo lectura</small></h4><p data-crm-contact="notes"></p></section><button type="button" class="crmContextOpen">Abrir ficha del contacto ↗</button><div class="crmContextExtras" data-crm-contact-extras></div></div>';
+ aside.append(summary,contactCard);layout.append(main,aside);
  const sections=[...card.querySelectorAll(':scope > .opportunitySection')];if(!sections.length)return;
  sections[0].before(layout);sections.forEach(n=>main.append(n));
  const notes=$('oppModalNotes'),notesLabel=notes.closest('label'),notesSection=document.createElement('section');notesSection.className='opportunitySection crmOpportunityNotes';
- const notesTitle=document.createElement('h3');notesTitle.className='opportunitySectionTitle';notesTitle.textContent='Notas internas';notesSection.append(notesTitle,notesLabel);main.insertBefore(notesSection,sections[1]||null);
- const searchLabel=$('oppModalDni').closest('label'),picker=document.createElement('details');picker.className='crmOpportunityContactPicker full';picker.innerHTML='<summary>Buscar otro contacto vinculado</summary>';searchLabel.before(picker);picker.append(searchLabel);
- $('oppModalClient').closest('label').firstChild.textContent='Contacto vinculado';
- notesLabel.firstChild.textContent='Tus anotaciones sobre esta oportunidad';notes.placeholder='Escribe aquí lo que necesitas recordar…';notes.rows=4;
+ const notesTitle=document.createElement('h3');notesTitle.className='opportunitySectionTitle';notesTitle.textContent='Notas de esta oportunidad';notesSection.append(notesTitle,notesLabel);main.insertBefore(notesSection,sections[1]||null);
+ notesLabel.firstChild.textContent='Anotaciones sobre esta venta';notes.placeholder='Escribe aquí lo que necesitas recordar sobre esta oportunidad…';notes.rows=3;
+ const parties=document.createElement('section');parties.className='opportunitySection crmOpportunityParties';
+ const partySlot=document.createElement('div');partySlot.id='crmOpportunityPartySlot';parties.append(partySlot);notesSection.after(parties);
+ const existingParty=$('tpfOpportunityParty');if(existingParty)partySlot.append(existingParty);
+ const picker=document.createElement('details');picker.className='crmOpportunityContactPicker';picker.innerHTML='<summary>Contacto vinculado / buscar otro</summary><div class="crmOpportunityLinkedFields"></div>';parties.append(picker);
+ for(const id of ['oppModalClient','oppModalPhone','oppModalDni'])picker.lastElementChild.append($(id).closest('label'));
+ $('oppModalClient').closest('label').firstChild.textContent='Nombre del contacto vinculado';
  const activity=document.createElement('details');activity.className='crmOpportunityActivity';
  activity.innerHTML='<summary>Actividad y origen</summary><div class="crmOpportunityActivityBody"><p data-crm-origin hidden></p></div>';
  main.append(activity);const meta=$('oppMetaInfo');if(meta)activity.querySelector('div').append(meta);
  const header=card.querySelector('.opportunityModalHeader'),badges=document.createElement('div');badges.className='crmOpportunityHeaderMetrics';badges.innerHTML='<strong data-crm-header="amount"></strong><span data-crm-header="stage"></span>';header.querySelector('div').append(badges);
- const footer=card.querySelector('.opportunityActions'),more=document.createElement('details');more.className='crmOpportunityMore';more.innerHTML='<summary>Más opciones</summary><div></div>';more.querySelector('div').append($('oppModalDelete'));footer.prepend(more);
+ const footer=card.querySelector('.opportunityActions'),deleteButton=$('oppModalDelete');footer.prepend(deleteButton);deleteButton.classList.add('crmOpportunityDelete');
+ deleteButton.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>');
  $('oppModalClose').hidden=true;
  const status=document.createElement('span');status.className='crmOpportunitySaveState';status.setAttribute('role','status');footer.insertBefore(status,$('oppModalSave'));
  const fields=['oppModalTitle','oppModalClient','oppModalPhone','oppModalAmount','oppModalDate','oppModalStage','oppModalNotes'];
- const fingerprint=()=>JSON.stringify(fields.map(id=>$(id)?.value||''));let baseline='',wasOpen=false,openedId='';
+ const fingerprint=()=>JSON.stringify(fields.map(id=>$(id)?.value||''));let baseline='',wasOpen=false,openedId='',selectedContact='',contactSignature='',extrasKey='',generation=0;
+ const extrasCache=new Map();
  const setText=(node,value)=>{if(node&&node.textContent!==String(value))node.textContent=String(value);};
  const tones={'próximo':'future','este mes':'current','seguimiento':'followup','pendiente de tramitar':'pending','tramitado':'processed','ganado':'won','perdido':'lost'};
  const expand=summary.querySelector('[data-crm-expand]'),notePreview=summary.querySelector('[data-crm-summary="notes"]');
  expand.onclick=()=>{const expanded=expand.getAttribute('aria-expanded')!=='true';expand.setAttribute('aria-expanded',String(expanded));notePreview.classList.toggle('expanded',expanded);expand.textContent=expanded?'Ver menos':'Ver completas';};
+ const contextOpen=contactCard.querySelector('.crmContextOpen');
+ contextOpen.onclick=()=>{if(selectedContact&&typeof window.openContact==='function')window.openContact(selectedContact);};
+ function paintExtras(data){
+  const out=contactCard.querySelector('[data-crm-contact-extras]');out.replaceChildren();
+  const labelTitle=document.createElement('h4');labelTitle.textContent='Etiquetas del contacto';out.append(labelTitle);
+  const tags=document.createElement('div');tags.className='crmContextTags';out.append(tags);
+  if(data.labelsError)tags.textContent='No se pudieron cargar las etiquetas.';
+  else if(!data.labels.length)tags.textContent='Sin etiquetas';
+  else for(const label of data.labels){const tag=document.createElement('span');tag.textContent=label.name;tags.append(tag);}
+  const taskBox=document.createElement('details');taskBox.className='crmContextTasks';
+  const taskHeading=document.createElement('summary');taskHeading.textContent=data.tasksError?'Tareas pendientes · No disponibles':'Tareas pendientes · '+data.taskCount;taskBox.append(taskHeading);
+  const help=document.createElement('p');help.textContent=data.tasksError?'No se pudieron cargar las tareas.':'Tareas vinculadas a esta ficha.';taskBox.append(help);
+  for(const task of data.tasks){const row=document.createElement('div');row.className='crmContextTask';const title=document.createElement('strong');title.textContent=task.title||'Tarea';const date=document.createElement('span');date.textContent=task.starts_at?new Date(task.starts_at).toLocaleString('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Sin fecha';row.append(title,date);taskBox.append(row);}
+  const open=document.createElement('button');open.type='button';open.textContent='Ver tareas en su ficha ↗';open.className='crmContextOpen';open.onclick=contextOpen.onclick;taskBox.append(open);out.append(taskBox);
+  if(data.labelsError||data.tasksError){const retry=document.createElement('button');retry.type='button';retry.className='crmContextOpen';retry.textContent='Reintentar';retry.onclick=()=>{extrasCache.delete(selectedContact);extrasKey='';update();};out.append(retry);}
+ }
+ async function updateExtras(id){
+  const key=openedId+'|'+id;if(extrasKey===key)return;extrasKey=key;const token=generation;
+  const out=contactCard.querySelector('[data-crm-contact-extras]');out.textContent='Cargando etiquetas y tareas…';
+  try{
+   let request=extrasCache.get(id);if(!request){request=window.TPFOpportunityContext.loadExtras(sb,id);extrasCache.set(id,request);}
+   const data=await request;if(token!==generation||extrasKey!==key||modal.classList.contains('hidden'))return;paintExtras(data);
+  }catch(e){if(token!==generation||extrasKey!==key)return;paintExtras({labels:[],tasks:[],taskCount:0,labelsError:true,tasksError:true});}
+ }
+ function updateContact(info,people){
+  const contacts=people.contacts||[],signature=contacts.map(x=>x.id).join('|');
+  if(!contacts.some(x=>x.id===selectedContact))selectedContact=contacts[0]?.id||'';
+  const tabs=contactCard.querySelector('[data-crm-contact-tabs]');
+  if(signature!==contactSignature){contactSignature=signature;tabs.replaceChildren();if(contacts.length>1)for(const person of contacts){const button=document.createElement('button');button.type='button';button.textContent=person.role;button.dataset.contactContext=person.id;button.onclick=()=>{selectedContact=person.id;update();};tabs.append(button);}}
+  tabs.hidden=contacts.length<2;for(const button of tabs.children)button.setAttribute('aria-pressed',String(button.dataset.contactContext===selectedContact));
+  const current=contacts.find(x=>x.id===selectedContact),state=contactCard.querySelector('[data-crm-contact-state]'),body=contactCard.querySelector('[data-crm-contact-body]');
+  state.hidden=!!current;body.hidden=!current;
+  setText(state,info.error?'No se pudieron cargar los datos del contacto.':info.loading?'Comprobando la ficha vinculada…':'Vincula un contacto para consultar sus notas y observaciones.');
+  for(const key of ['name','nickname','role','notes','observations'])setText(contactCard.querySelector('[data-crm-contact="'+key+'"]'),current?.[key]||(key==='notes'?'Sin notas en su ficha.':key==='observations'?'Sin observaciones.':''));
+  contactCard.querySelector('[data-crm-contact="nickname"]').hidden=!current?.nickname;
+  if(current)updateExtras(current.id);else{extrasKey='';contactCard.querySelector('[data-crm-contact-extras]').replaceChildren();}
+ }
  function update(){
   if(modal.classList.contains('hidden'))return;
-  const info=window.TPFContactRelations?.opportunityPreview()||{},amountInput=$('oppModalAmount')?.value,amount=amountInput!==''&&Number.isFinite(Number(amountInput))?Number(amountInput).toLocaleString('es-ES',{style:'currency',currency:'EUR'}):'Sin importe';
+  const info=window.TPFContactRelations?.opportunityPreview()||{},people=window.TPFContactRelations?.opportunityContacts()||{contacts:[]},amountInput=$('oppModalAmount')?.value,amount=amountInput!==''&&Number.isFinite(Number(amountInput))?Number(amountInput).toLocaleString('es-ES',{style:'currency',currency:'EUR'}):'Sin importe';
   const stage=$('oppModalStage')?.selectedOptions?.[0]?.textContent||'Sin estado';
-  const values={holder:info.loading?'Comprobando…':info.holder||$('oppModalClient')?.value||'Sin titular',dni:info.loading?'—':info.dni||'Sin indicar',manager:info.loading?'Comprobando…':info.manager||'El propio titular',recipient:info.loading?'Comprobando…':info.recipient||'Sin indicar',phone:info.loading?'—':window.TPFContactParty?.displayPhone(info.phone)||info.phone||'Sin teléfono',amount,date:$('oppModalDate')?.value?$('oppModalDate').value.split('-').reverse().join('/'):'Sin fecha',stage,notes:notes.value||'Aún no hay notas internas.'};
+  const values={holder:info.loading?'Comprobando…':info.holder||$('oppModalClient')?.value||'Sin titular',holderNickname:people.holder?.nickname||'',dni:info.loading?'—':info.dni||'Sin indicar',manager:info.loading?'Comprobando…':info.manager||'El propio titular',managerNickname:people.manager?.nickname||'',recipient:info.loading?'Comprobando…':info.recipient||'Sin indicar',phone:info.loading?'—':window.TPFContactParty?.displayPhone(info.phone)||info.phone||'Sin teléfono',amount,date:$('oppModalDate')?.value?$('oppModalDate').value.split('-').reverse().join('/'):'Sin fecha',stage,notes:notes.value||'Aún no hay notas de esta oportunidad.'};
   for(const [key,value]of Object.entries(values))setText(summary.querySelector('[data-crm-summary="'+key+'"]'),value);
+  for(const key of ['holderNickname','managerNickname'])summary.querySelector('[data-crm-summary="'+key+'"]').hidden=!values[key];
   const recipientNode=summary.querySelector('[data-crm-summary="recipient"]'),sameRecipient=values.recipient===values.manager||values.recipient===values.holder;recipientNode.hidden=sameRecipient;recipientNode.previousElementSibling.hidden=sameRecipient;
   setText(header.querySelector('[data-crm-header="amount"]'),amount);setText(header.querySelector('[data-crm-header="stage"]'),stage);
   const tone=tones[stage.trim().toLowerCase()]||'neutral';summary.querySelector('[data-crm-summary="stage"]').dataset.tone=tone;header.querySelector('[data-crm-header="stage"]').dataset.tone=tone;
   const pending=fingerprint()!==baseline||!!info.pending;summary.querySelector('[data-crm-pending]').hidden=!pending;
   setText(status,info.error?'No se pudieron comprobar los titulares':info.loading?'Comprobando titulares…':pending?'Cambios sin guardar':$('oppModalId').value?'Sin cambios pendientes':'Nueva oportunidad');
   status.classList.toggle('pending',pending);expand.hidden=notes.value.length<180&&notes.value.split('\n').length<4;
-  const origin=window.TPFOpportunityNotes?.split(notes.dataset.originalNotes||'').origin||'';const originNode=activity.querySelector('[data-crm-origin]');originNode.hidden=!origin;setText(originNode,origin?'Origen: '+origin:'');
-  more.hidden=!$('oppModalId').value;
+  const origin=window.TPFOpportunityNotes?.split(notes.dataset.originalNotes||'').origin||'';const originNode=activity.querySelector('[data-crm-origin]');originNode.hidden=!origin;setText(originNode,origin||'');
+  deleteButton.hidden=!$('oppModalId').value;updateContact(info,people);
  }
- function opened(){const open=!modal.classList.contains('hidden');if(open&&(!wasOpen||openedId!==$('oppModalId').value)){openedId=$('oppModalId').value;baseline=fingerprint();activity.open=false;more.open=false;picker.open=!$('oppModalOpenContact').dataset.recordId;expand.setAttribute('aria-expanded','false');notePreview.classList.remove('expanded');expand.textContent='Ver completas';layout.scrollTop=0;}wasOpen=open;update();}
+ function opened(){const open=!modal.classList.contains('hidden');if(open&&(!wasOpen||openedId!==$('oppModalId').value)){openedId=$('oppModalId').value;baseline=fingerprint();generation++;selectedContact='';extrasKey='';extrasCache.clear();activity.open=false;picker.open=!$('oppModalOpenContact').dataset.recordId;expand.setAttribute('aria-expanded','false');notePreview.classList.remove('expanded');expand.textContent='Ver completas';layout.scrollTop=0;}if(!open&&wasOpen){generation++;extrasKey='';}wasOpen=open;update();}
  card.addEventListener('input',update);card.addEventListener('change',update);window.addEventListener('tpf:opportunity-party-preview',update);
+ window.addEventListener('tpf:contact-updated',()=>{extrasCache.clear();extrasKey='';generation++;update();});
  new MutationObserver(opened).observe(modal,{attributes:true,attributeFilter:['class']});opened();
 }
 opportunity();
