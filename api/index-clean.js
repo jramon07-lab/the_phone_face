@@ -38,6 +38,7 @@ module.exports=async function(req,res){
     const environment=String(process.env.VERCEL_ENV||'development');
     const shortCommit=commit.slice(0,8);
     const stable=environment==='production';
+    if(stable)html=html.replace('<title>🟠 Phone Face · Pruebas</title>','<title>🟠 Phone Face CRM</title>');
     html=html.replace('</head>',`<meta name="tpf-crm-mode" content="${stable?'stable':'test'}">\n</head>`);
 
     html=html.replace(/function waDefaultTemplates\(\)\{return \[[\s\S]*?\]\}/,'function waDefaultTemplates(){return []}');
