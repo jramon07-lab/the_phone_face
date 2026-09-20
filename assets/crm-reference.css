@@ -488,3 +488,78 @@ button.tpfCopyButton[hidden]{display:none!important}button.tpfCopyButton svg{wid
 @media(max-width:700px){button.tpfCopyButton{width:30px!important;height:30px!important;min-height:30px!important}}
 
 body.tpfUnified #oppDetailModal #oppModalDelete[hidden]{display:none!important}
+
+/* Approved clean workspace: presentation only; normal and expanded views share controls. */
+body.tpfUnified #view-sales .salesBoardTopbar{height:auto!important;min-height:64px!important;display:flex!important;flex-wrap:wrap!important;gap:10px!important;padding:12px 16px!important}
+body.tpfUnified #view-sales .salesBoardTitleGroup{flex:0 0 auto!important}
+body.tpfUnified #view-sales .tpfSalesSearch{flex:1 1 220px!important;width:auto!important;max-width:420px!important;min-width:180px!important;height:36px!important;margin:0!important;border:1px solid #dce4ef!important;border-radius:7px!important;padding:8px 12px!important;background:#f8fafc!important;font-size:13px!important}
+body.tpfUnified #view-sales .salesBoardTopActions{margin-left:auto!important;gap:7px!important;flex-wrap:wrap!important}
+body.tpfUnified #view-sales .salesBoardTopActions button{min-height:35px!important;font-size:12px!important;padding:7px 11px!important}
+body.tpfUnified #view-sales .salesSummaryAccordion{flex:none!important;margin:0 16px 10px!important}
+body.tpfUnified #view-sales .salesSummaryPanel{max-height:32dvh;overflow:auto!important}
+body.tpfUnified #view-sales .tpfCleanFiltersBody .salesOptionsGrid{display:flex!important;flex-direction:column-reverse!important;gap:22px!important}
+body.tpfUnified #view-sales .tpfCleanFiltersBody .salesOptionSection h3{font-size:13px!important;margin:0 0 10px!important}
+body.tpfUnified #view-sales .tpfCleanFiltersBody .salesOptionSection .row{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+body.tpfUnified #view-sales .tpfCleanFiltersBody select{max-width:100%!important;width:100%!important;margin:0!important}
+body.tpfUnified #view-sales .salesBoardViewport{flex:1 1 0!important;min-height:0!important}
+body.tpfUnified #view-sales #salesBoard>.stage{flex:1 0 270px!important;width:270px!important;min-width:270px!important;max-width:360px!important;background:#f1f4f8!important;border-color:#e5eaf1!important}
+body.tpfUnified #view-sales #salesBoard>.stage .stageHead{position:sticky!important;top:-8px!important;z-index:2!important;background:#f1f4f8!important;padding:12px!important}
+body.tpfUnified #view-sales #salesBoard>.stage .stageTitle{font-size:13px!important;font-weight:650!important}
+body.tpfUnified #view-sales #salesBoard .opp{height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important;padding:13px!important;margin:10px 0!important;box-shadow:0 1px 3px #142d4c08!important}
+body.tpfUnified #view-sales #salesBoard .oppTop{display:flex!important;align-items:flex-start!important;gap:8px!important}
+body.tpfUnified #view-sales #salesBoard .oppTitle{flex:1!important;min-width:0!important;margin:0!important;padding:0!important;min-height:0!important;text-align:left!important;border:0!important;background:transparent!important;box-shadow:none!important;font-size:13px!important;line-height:1.45!important;font-weight:650!important;color:#223956!important;white-space:normal!important;overflow-wrap:anywhere!important;-webkit-line-clamp:unset!important;cursor:pointer}
+body.tpfUnified #view-sales #salesBoard .oppTitle:hover{text-decoration:underline;color:#0863ec!important}
+body.tpfUnified #view-sales #salesBoard .oppInfo{font-size:12px!important;line-height:1.55!important;max-height:none!important}
+body.tpfUnified #view-sales #salesBoard .oppInfo>div{white-space:normal!important;overflow-wrap:anywhere!important}
+body.tpfUnified #view-sales #salesBoard .salesClientLink{font-size:12px!important;line-height:1.5!important;white-space:normal!important;color:#2867b1!important}
+body.tpfUnified #view-sales #salesBoard .oppFooter{border-top:1px solid #edf1f6!important;padding-top:10px!important;margin-top:10px!important;display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+body.tpfUnified #view-sales #salesListRows .salesListTitle{font-size:12px!important;letter-spacing:0!important;color:#284564!important}
+body.tpfUnified #view-sales #salesListRows .salesClientLink{font-weight:500!important;color:#2867b1!important;font-size:12px!important}
+body.tpfUnified #view-sales #salesListRows .salesIdentity .salesListTitle{order:-1!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow{padding-block:11px!important;min-height:68px!important}
+body.tpfUnified #view-sales #salesListRows .tpfSalesDni{font-size:11px!important}
+body.tpfUnified #oppDetailModal{inset:0!important;width:100%!important;max-width:none!important;box-sizing:border-box!important;align-items:center!important;justify-content:center!important;background:rgba(28,43,64,.35)!important}
+body.tpfUnified #oppDetailModal .opportunityModalCard{max-width:1600px!important;margin:auto!important}
+body.tpfUnified #oppDetailModal .tpfRelIdentityGrid.tpfRelSamePerson{grid-template-columns:1fr!important}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary [hidden]{display:none!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalActions{position:relative;z-index:2;flex-shrink:0!important}
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpTop{min-height:50px!important;padding:10px 24px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{padding:8px 24px 18px!important;margin-bottom:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpProfileDisplayName{font-size:25px!important;font-weight:650!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpProfileNickname{font-size:13px!important;color:#728098!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{gap:8px!important;margin-top:12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button{min-height:36px!important;padding:8px 12px!important;font-size:12px!important;font-weight:550!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpRefTabs{margin:0 24px 18px!important;border-radius:0!important;position:static!important;gap:12px!important;background:transparent!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button{flex:0 0 auto!important;min-height:46px!important;padding:10px 8px!important;font-size:13px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:minmax(280px,320px) minmax(0,1fr)!important;gap:20px!important;padding:0 24px 30px!important;align-items:start!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{padding:18px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRefEdit{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfContactEditToggle{display:inline-flex!important;min-width:0!important;min-height:30px!important;padding:5px 8px!important;font-size:11px!important;white-space:nowrap!important;border:1px solid #dce6f3!important;border-radius:6px!important;color:#2867b1!important;background:#fff!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar{gap:6px!important;align-items:center!important;margin-bottom:12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar h3{font-size:14px!important;font-weight:650!important;line-height:1.4!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label{font-size:11px!important;color:#75849a!important;margin-top:12px!important;line-height:1.4!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input{font-size:13px!important;min-width:0!important;min-height:30px!important;width:100%!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{font-size:12px!important;line-height:1.6!important;min-height:68px!important;width:100%!important;padding:8px!important;border:1px solid #e4ebf4!important;border-radius:6px!important;background:#f8fafc!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight{background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected="resumen"] #cpRefPanel{padding:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard{padding:12px 15px!important;border:1px solid #e3eaf3!important;border-radius:9px!important;margin:0 0 14px!important;background:#fff!important;font-size:12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard :is(h4,summary){font-size:13px!important;line-height:1.5!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfGoogleInlineCard p{font-size:12px!important;line-height:1.55!important;margin-block:7px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfGoogleInlineStatus{font-size:10px!important;padding:3px 7px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryAccordion{gap:12px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup{margin:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTrigger{grid-template-columns:minmax(0,1fr) 20px!important;gap:5px 12px!important;padding:16px!important;min-height:74px!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTitle{font-size:14px!important;font-weight:600!important;grid-column:1!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryMetric{font-size:11px!important;line-height:1.6!important;grid-column:1!important;justify-self:start!important;text-align:left!important;color:#79879b!important;font-weight:400!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryChevron{grid-column:2!important;grid-row:1 / span 2!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup[data-tpf-open="false"] .tpfSummaryBody{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity{margin-top:18px;padding:16px;background:#fff;border:1px solid #e3eaf3;border-radius:9px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity h3{margin:0;font-size:14px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity button{padding:5px 8px;font-size:11px;min-height:28px}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity p{font-size:12px;line-height:1.6;color:#657791;border-top:1px solid #edf1f6;padding-top:10px;margin:10px 0 0;white-space:pre-line;overflow-wrap:anywhere}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight:not([data-cp-ref-selected="resumen"]) .tpfRecentActivity{display:none!important}
+}
+@media(max-width:1100px){body.tpfUnified #view-sales .salesBoardTopActions{width:100%!important;margin-left:0!important}body.tpfUnified #view-sales .tpfSalesSearch{max-width:none!important}}
+@media(max-height:650px){body.tpfUnified #view-sales .salesSummaryPanel{max-height:24dvh!important}body.tpfUnified #view-sales .salesBoardTopbar{padding-block:7px!important}}

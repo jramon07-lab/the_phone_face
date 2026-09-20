@@ -199,7 +199,7 @@
     let bar=byId('tpfContactEditBar');
     if(!bar){
       const h=data.querySelector('h3');bar=document.createElement('div');bar.id='tpfContactEditBar';bar.className='tpfContactEditBar';
-      const title=document.createElement('h3');title.textContent='Datos';
+      const title=document.createElement('h3');title.textContent='Datos del contacto';
       const actions=document.createElement('div');actions.className='tpfContactEditActions';
       const b=document.createElement('button');b.id='tpfContactEditToggle';b.type='button';b.className='secondary';b.textContent='Editar datos';
       const saveLocal=document.createElement('button');saveLocal.id='tpfContactSaveLocal';saveLocal.type='button';saveLocal.className='primary';saveLocal.textContent='Guardar cambios';

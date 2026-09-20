@@ -112,6 +112,39 @@
  if(docs){
   docs.innerHTML='<div class="cpRefDrive"><strong>Google Drive</strong><span class="cpPendingBadge">Pendiente de conectar</span></div><div class="cpRefDocActions"><button type="button" disabled>Subir archivos</button><button type="button" disabled>Escanear / Crear PDF</button><button type="button" disabled>Abrir en Drive</button></div><div class="cpRefDocumentEmpty"><span class="cpRefDocumentIcon" aria-hidden="true">▤</span><h3 id="cpDocumentsTitle">Documentos del cliente</h3><p>La conexión con Google Drive todavía está pendiente.</p><p>Podrás vincular una carpeta existente y reunir aquí los PDF y fotografías de este cliente.</p><span>Subida de archivos y escaneo de DNI: pendientes</span></div>';
  }
+ // Read-only activity preview; actions remain in the original history pane.
+ const recent=document.createElement('section');recent.className='tpfRecentActivity';
+ const recentHead=document.createElement('header'),recentTitle=document.createElement('h3'),recentMore=document.createElement('button'),recentBody=document.createElement('div');
+ recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',()=>select('historial',true));
+ recentHead.append(recentTitle,recentMore);recent.append(recentHead,recentBody);
+ function refreshRecent(){
+  const entries=[...$('cpTimeline')?.children||[]].slice(0,3).map(node=>{const copy=node.cloneNode(true);copy.querySelectorAll('button,input,select,textarea').forEach(control=>control.remove());return copy.textContent.trim();}).filter(Boolean);
+  const texts=entries.length?entries:['Sin actividad reciente.'];const key=JSON.stringify(texts);
+  if(recentBody.dataset.content===key)return;recentBody.dataset.content=key;
+  recentBody.replaceChildren(...texts.map(text=>{const line=document.createElement('p');line.textContent=text;return line;}));
+ }
+ if($('cpTimeline'))new MutationObserver(refreshRecent).observe($('cpTimeline'),{childList:true,subtree:true,characterData:true});
+ const data=left.querySelector('.cpData');
+ function orderFields(){
+  if(!mounted||!data)return;
+  const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
+  const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
+  const current=[...data.children].filter(node=>fields.includes(node));
+  if(current.every((node,i)=>node===fields[i]))return;
+  const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
+  fields.forEach(node=>{const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label)data.insertBefore(label,anchor);data.insertBefore(node,anchor);});
+ }
+ if(data)new MutationObserver(orderFields).observe(data,{childList:true});
+ let googleObserved=null;
+ function compactGoogle(){
+  const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
+  if(card!==googleObserved){googleObserved=card;new MutationObserver(compactGoogle).observe(card,{childList:true});}
+  if(card.querySelector(':scope > details'))return;
+  const heading=card.querySelector(':scope > h4');if(!heading)return;
+  const details=document.createElement('details'),summary=document.createElement('summary'),status=card.querySelector(':scope > .tpfGoogleInlineStatus');
+  const title=document.createElement('b');title.textContent=heading.textContent;summary.appendChild(title);if(status)summary.appendChild(status);heading.remove();
+  details.appendChild(summary);details.append(...card.childNodes);card.appendChild(details);
+ }
  const expiry=document.createElement('section');expiry.className='cpRefExpiry';expiry.innerHTML='<h3>Caducidad del DNI</h3><span class="cpPendingBadge">Pendiente</span><p>Lectura y confirmación de la fecha todavía no disponibles.</p>';
  const edit=document.createElement('button');edit.type='button';edit.className='cpRefEdit';edit.textContent='Editar datos';
  edit.addEventListener('click',()=>{$('tpfContactEditToggle')?.click();});
@@ -142,15 +175,15 @@
   if(on&&!mounted){
    mounted=true;if(heading)heading.textContent='Ficha del cliente';
    columns.before(identity);
-   sections.forEach(s=>panel.appendChild(s));panel.appendChild(center);right.append(tabs,panel);
-   left.prepend(edit);left.appendChild(expiry);
+   sections.forEach(s=>panel.appendChild(s));panel.appendChild(center);right.append(panel,recent);columns.before(tabs);
+   left.appendChild(expiry);
    modal.classList.add('tpfContactReference');select(selected);
   }else if(!on&&mounted){
    mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
    identityAnchor.after(identity);centerAnchor.after(center);
-   sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();expiry.remove();edit.remove();
+   sections.forEach(s=>right.appendChild(s));tabs.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
   }
-  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();
+  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();refreshRecent();
  }
  document.addEventListener('click',e=>{
   if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
@@ -178,7 +211,7 @@
  mq.addEventListener('change',sync);
  // Only direct section insertions matter; message/content mutations must not retrigger layout.
  let summaryTimer=0;
- const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();},0);});
+ const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();compactGoogle();},0);});
  sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
  // No se actualiza ningún "botón de llamada" aquí: el diseño de referencia no
  // define updateCall. Invocarlo al abrir una ficha lanzaba un ReferenceError y

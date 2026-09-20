@@ -1,0 +1,77 @@
+name: Validar diseño CRM en pruebas
+
+on:
+  push:
+    branches:
+      - test/estable-clon-20260919-v2
+    paths:
+      - 'assets/crm-reference.css'
+      - 'js/modules/contact-*.js'
+      - 'js/modules/contacts-sales*.js'
+      - 'js/modules/crm-reference-layout.js'
+      - 'js/modules/sales-list-ui.js'
+      - 'tests/e2e/crm-clean-workspace.spec.js'
+      - '.github/workflows/crm-clean-workspace.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: crm-browser-shared-test-account-v3
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  clean-workspace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_PREVIEW_URL: https://the-phone-face-app-whatsapp-git-1957ce-jramon-07-2402s-projects.vercel.app
+      E2E_EXPECTED_COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Esperar la versión exacta de pruebas
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          node <<'NODE'
+          (async () => {
+            const expected = process.env.E2E_EXPECTED_COMMIT;
+            const url = new URL('/api/health', process.env.VERCEL_PREVIEW_URL);
+            const headers = { 'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET };
+            for (let attempt = 0; attempt < 40; attempt++) {
+              try {
+                const response = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+                if (response.ok) {
+                  const health = await response.json();
+                  if (health.commit === expected && health.branch === 'test/estable-clon-20260919-v2' && health.environment === 'preview') {
+                    console.log('Preview exacta confirmada:', expected);
+                    return;
+                  }
+                }
+              } catch (_) {}
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+            throw new Error('La preview no corresponde al commit que se debe probar. No se prueba estable ni una versión anterior.');
+          })().catch(error => { console.error(error.message); process.exitCode = 1; });
+          NODE
+      - name: Comprobar diseño y controles sin guardar datos
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CRM_TEST_EMAIL: ${{ secrets.CRM_TEST_EMAIL }}
+          CRM_TEST_PASSWORD: ${{ secrets.CRM_TEST_PASSWORD }}
+        run: npx playwright test tests/e2e/crm-clean-workspace.spec.js --workers=1 --retries=0
+      - name: Guardar evidencia si falla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-clean-workspace-evidence
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

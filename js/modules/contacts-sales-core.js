@@ -697,7 +697,7 @@ function renderSales(){
       ${stageOpps.length?stageOpps.map(o=>`<div class="opp" data-opp-id="${o.id}" onclick="openOpportunityCard('${o.id}')" title="Abrir ficha">
         <div class="oppTop">
           <input type="checkbox" class="salesOppCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)">
-          <div class="oppTitle">${esc(o.title)}</div>
+          <button type="button" class="oppTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title)}</button>
           <button class="oppMenu" onclick="event.stopPropagation();openOpportunityCard('${o.id}')" title="Abrir ficha">•••</button>
         </div>
         <div class="oppInfo">
