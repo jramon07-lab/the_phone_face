@@ -8,7 +8,7 @@ const marker="M.register('whatsapp-performance-max',{install});";
 assert.ok(source.includes(marker),'No se encontró el registro del módulo');
 const testSource=source.replace(marker,`window.__waPerformanceTest={
   waPerformanceMatches,waPerformanceFilterRows,waPerformanceVisibleAvatarIds,
-  waPerformanceLoadAvatar,waPerformancePage,waAvatarRetry
+  waPerformanceLoadAvatar,waPerformancePage,waAvatarRetry,waLoadCrmSearch,waSearchContact
 };${marker}`);
 
 function eventTarget(){
@@ -55,7 +55,7 @@ const state={
   chats:Array.from({length:161},(_,index)=>({id:`34600${String(index).padStart(6,'0')}@c.us`,name:`Cliente ${index}`}))
 };
 const context={
-  console,
+  console,addEventListener(){},
   waLiveState:state,
   renderWhatsAppChats:originalRender,
   _waRenderChatsBase:originalRender,
@@ -120,6 +120,16 @@ async function run(){
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'contacts',''),x=>x.id),['contact@c.us']);
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'unread',''),x=>x.id),['unread']);
 
+  assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'unread','Archivado'),x=>x.id),['archived'],'search must span archived even from unread');
+  assert.equal(state.filter,'all','global search must not mutate the active filter');
+  assert.equal(api.waPerformanceMatches({id:'34600123456@c.us',name:'Normal'},'cliente 456'),false,'mixed text must not match only its digits');
+  let pages=0;
+  context.sb={from(){return {select(){return this},in(){return this},order(){return this},async range(from){pages++;return {data:from===0?Array.from({length:500},(_,i)=>({id:String(i),data:{'TELÉFONO':'610'+String(i).padStart(6,'0'),APODO:'Persona '+i}})):[{id:'target',data:{'TELÉFONO':'695661409','NOMBRE Y APELLIDOS':'José Ramón',APODO:'Mío Personal'}}]};}}}};
+  await api.waLoadCrmSearch();
+  assert.equal(pages,2,'nickname index must paginate beyond first batch');
+  assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'Sin vincular'},'mio personal'),true,'CRM nickname must work without local saved identity and without accent');
+  assert.equal(api.waPerformanceMatches({id:'34695661409@c.us',name:'Sin vincular'},'jose ramon'),true);
+  delete context.sb;
   context.renderWhatsAppChats();flushFrames();
   assert.equal(rowCount(),40,'la primera pintura debe estar acotada');
   assert.match(list.innerHTML,/waLiveLoadMore[^>]*>Mostrar más \(121\)<\/button>/);

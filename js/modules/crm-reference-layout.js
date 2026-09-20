@@ -9,11 +9,12 @@ const nav=document.querySelector('.referenceNav');if(nav){icons();new MutationOb
 function dockTestBadge(){
  const badge=$('tpfTestMode');if(!badge)return;
  const editor=$('tpfContactsCreateBack'),opp=$('oppDetailModal');
- const target=editor&&!editor.classList.contains('hidden')?editor.querySelector('.tpfContactsModalHead'):opp&&!opp.classList.contains('hidden')?opp.querySelector('.opportunityModalHeader'):null;
+ const wa=$('view-whatsapplive');const waHead=wa&&!wa.classList.contains('hidden')&&wa.classList.contains('waCleanWorkspace')?wa.querySelector('.waLiveHeaderActions'):null;
+ const target=editor&&!editor.classList.contains('hidden')?editor.querySelector('.tpfContactsModalHead'):opp&&!opp.classList.contains('hidden')?opp.querySelector('.opportunityModalHeader'):waHead;
  if(target){if(badge.parentElement!==target)target.insertBefore(badge,target.lastElementChild);if(!badge.classList.contains('tpfTestModeDocked'))badge.classList.add('tpfTestModeDocked');badge.title='CRM de pruebas · WhatsApp limitado al teléfono de pruebas';}
  else{if(badge.parentElement!==document.body)document.body.append(badge);badge.classList.remove('tpfTestModeDocked');}
 }
-new MutationObserver(records=>{if(records.some(r=>['oppDetailModal','tpfContactsCreateBack'].includes(r.target.id)||[...(r.addedNodes||[])].some(n=>n.id==='tpfTestMode')))dockTestBadge();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});dockTestBadge();
+new MutationObserver(records=>{if(records.some(r=>['oppDetailModal','tpfContactsCreateBack','view-whatsapplive'].includes(r.target.id)||[...(r.addedNodes||[])].some(n=>n.id==='tpfTestMode')))dockTestBadge();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});dockTestBadge();
 function opportunity(){
  const modal=$('oppDetailModal'),card=modal?.querySelector('.opportunityModalCard');if(!card||card.querySelector('.crmOpportunityLayout'))return;
  const layout=document.createElement('div');layout.className='crmOpportunityLayout';

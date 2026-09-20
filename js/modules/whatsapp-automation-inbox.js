@@ -112,7 +112,7 @@
     updateAutomaticCount();
   }
   function decorateAutomaticRows(){
-    if(liveState()?.filter!=='automatic')return;
+    if(liveState()?.filter!=='automatic'||String(document.getElementById('waLiveSearch')?.value||'').trim())return;
     const empty=document.querySelector('#waLiveChats .waLiveEmpty');
     if(empty)empty.textContent='No hay mensajes automáticos pendientes.';
     document.querySelectorAll('#waLiveChats .waChatRow .waChatMeta').forEach(meta=>{
@@ -137,7 +137,8 @@
       const state=liveState();
       if(!state)return base.apply(this,args);
       const chats=state.chats,filter=state.filter||'all';
-      if(filter==='automatic'){
+      const searching=!!String(document.getElementById('waLiveSearch')?.value||'').trim();
+      if(searching){ /* Search spans manual, archived and automatic conversations. */ }else if(filter==='automatic'){
         state.chats=(chats||[]).filter(isAutomaticWaiting);state.filter='all';
       }else if(filter!=='archived'){
         state.chats=(chats||[]).filter(chat=>!isAutomaticWaiting(chat));

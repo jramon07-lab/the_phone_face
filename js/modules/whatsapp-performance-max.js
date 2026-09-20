@@ -27,12 +27,25 @@ function waPerformanceUnanswered(chat){
   const chatId=chat&&typeof chat==='object'?chat.id:chat;
   return typeof waIsUnanswered==='function'&&waIsUnanswered(chatId);
 }
+// In-memory CRM search index: no identity/verification writes and no persisted personal data.
+let waCrmSearchByPhone=new Map(),waCrmSearchAt=0,waCrmSearchLoading=false,waCrmSearchFailed=false,waCrmSearchVersion=0;
+function waSearchPhone(value){let p=waPerformanceDigits(value);if(p.startsWith('0034'))p=p.slice(2);if(p.length===9)p='34'+p;return p;}
+function waSearchContact(row){const d=row?.data||{},field=(...keys)=>keys.map(k=>String(d[k]??'').trim()).find(Boolean)||'';return {id:String(row.id),phone:waSearchPhone(field('TELÉFONO','TELEFONO','TEL','MÓVIL','MOVIL','PHONE')),name:field('NOMBRE Y APELLIDOS','CLIENTE','CLIENTE FINAL')||[field('NOMBRE'),field('APELLIDOS','APELLIDO')].filter(Boolean).join(' '),nickname:field('APODO','Apodo','ALIAS')};}
+async function waLoadCrmSearch(){
+ if(waCrmSearchLoading||Date.now()-waCrmSearchAt<60000||typeof sb==='undefined')return;
+ waCrmSearchLoading=true;waCrmSearchFailed=false;const version=waCrmSearchVersion,next=new Map();
+ try{for(let offset=0;;offset+=500){const r=await sb.from('records').select('id,data').in('source_sheet',['BASE DE DATOS','DATA','CONTACTOS']).order('id',{ascending:true}).range(offset,offset+499);if(r.error)throw r.error;for(const row of r.data||[]){const c=waSearchContact(row);if(c.phone){const entries=next.get(c.phone)||[];entries.push(c);next.set(c.phone,entries);}}if((r.data||[]).length<500)break;}if(version===waCrmSearchVersion){waCrmSearchByPhone=next;waSearchIndex.clear();waCrmSearchAt=Date.now();}}
+ catch(_){waCrmSearchFailed=true;waCrmSearchAt=Date.now();}
+ finally{waCrmSearchLoading=false;window.renderWhatsAppChats?.();}
+}
+function waCrmSearchContacts(chat){if(String(chat?.id||'').includes('@g.us'))return [];return waCrmSearchByPhone.get(waSearchPhone(String(chat?.id||'').split('@')[0]))||[];}
 function waPerformanceSearchEntry(chat){
   const id=String(chat?.id||''),meta=waPerformanceMeta(id),tags=Array.isArray(meta.tags)?meta.tags:[];
   const identity=typeof window.tpfWhatsappDisplayIdentity==='function'?window.tpfWhatsappDisplayIdentity(chat):null;
-  const signature=[chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,id,...tags].map(String).join('\u0000');
+  const crm=waCrmSearchContacts(chat),crmText=crm.flatMap(c=>[c.name,c.nickname]);
+  const signature=[...crmText,chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,id,...tags].map(String).join('\u0000');
   const cached=waSearchIndex.get(id);if(cached?.signature===signature)return cached;
-  const entry={signature,text:[chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,id,...tags].map(waPerformanceText).join(' '),phone:null};
+  const entry={signature,text:[...crmText,chat?.name,chat?.chatName,chat?.contactName,identity?.name,identity?.nickname,id,...tags].map(waPerformanceText).join(' '),phone:null};
   waSearchIndex.set(id,entry);return entry;
 }
 function waPerformanceMatches(chat,query){
@@ -40,7 +53,7 @@ function waPerformanceMatches(chat,query){
   if(!textQuery)return true;
   const entry=waPerformanceSearchEntry(chat);
   if(entry.text.includes(textQuery))return true;
-  const phoneQuery=waPerformanceDigits(query);
+  const phoneQuery=/^[+\d\s().-]+$/.test(query)?waPerformanceDigits(query):'';
   // Un término alfabético produce ""; nunca debe convertir includes("") en una coincidencia universal.
   if(!phoneQuery)return false;
   if(entry.phone===null)entry.phone=String(typeof waNormalizePhone==='function'?waNormalizePhone(chat?.id||''):chat?.id||'');
@@ -49,6 +62,7 @@ function waPerformanceMatches(chat,query){
 function waPerformanceFilterRows(chats,filter,query){
   let rows=[...(Array.isArray(chats)?chats:[])];
   const f=String(filter||'all');
+  if(String(query||'').trim())return rows.filter(c=>waPerformanceMatches(c,query));
   if(f==='groups')rows=rows.filter(c=>String(c?.id||'').includes('@g.us'));
   if(f==='contacts')rows=rows.filter(c=>String(c?.id||'').includes('@c.us'));
   if(f==='unread')rows=rows.filter(c=>waPerformanceUnread(c)>0);
@@ -202,12 +216,14 @@ function waPerformanceRenderRow(chat){
   const meta=waPerformanceMeta(chat.id);
   const identity=typeof window.tpfWhatsappDisplayIdentity==='function'?window.tpfWhatsappDisplayIdentity(chat):null;
   const name=identity?.name||chat.name||(typeof waNormalizePhone==='function'?waNormalizePhone(chat.id):'')||'WhatsApp';
-  const nickname=identity?.nickname||'';
+  const crm=waCrmSearchContacts(chat);
+  const nickname=crm.length===1?crm[0].nickname:identity?.nickname||'';
   const initials=typeof waInitials==='function'?waInitials(name):String(name).slice(0,2).toUpperCase();
   const avatar=waLiveState.avatars?.[String(chat.id||'')]||'';
   const avStyle=avatar?` style="background-image:url('${esc(avatar)}')"`:'';
   const unread=waPerformanceUnread(chat);
   const extras=[];
+  if(String(document.getElementById('waLiveSearch')?.value||'').trim()){if(meta.archived)extras.push('<span class="waMiniFlag">Archivado</span>');if(window.TPFAutomationInbox?.isAutomaticWaiting(chat))extras.push('<span class="waMiniFlag">Automático</span>');}
   if(meta.pinned)extras.push('📌');
   if(meta.favorite)extras.push('★');
   if(waPerformanceUnanswered(chat))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
@@ -240,6 +256,7 @@ function waPerformanceBindList(box){
 }
 
 function install(){
+ if(typeof sb!=='undefined')sb.auth?.onAuthStateChange?.((event)=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){waCrmSearchVersion++;waCrmSearchByPhone.clear();waSearchIndex.clear();waCrmSearchAt=0;}});
   try{
     // Las funciones del CRM se publican en window. Consultarlas ahí evita
     // depender de la resolución implícita de nombres globales de cada navegador.
@@ -296,6 +313,8 @@ function install(){
         if(keyChanged){waPerformancePage.key=key;waPerformancePage.limit=CHAT_PAGE_SIZE}
         const rows=waPerformanceFilterRows(waLiveState.chats,filter,query);
         waPerformancePage.total=rows.length;
+        const status=document.getElementById('waGlobalSearchStatus');if(status){status.hidden=!query;status.textContent=waCrmSearchLoading?'Buscando también por apodo…':waCrmSearchFailed?'Apodos CRM no disponibles · vuelve a intentar':rows.length+' resultados · todos los filtros';}
+        if(query)waLoadCrmSearch();
         const visible=rows.slice(0,waPerformancePage.limit);
         const box=document.getElementById('waLiveChats');if(!box)return;
         waPerformanceBindList(box);
@@ -320,6 +339,7 @@ function install(){
       if(typeof _waRenderChatsBase==='function')search.removeEventListener('input',_waRenderChatsBase);
       search.addEventListener('input',()=>{clearTimeout(waSearchTimer);waSearchTimer=setTimeout(()=>window.renderWhatsAppChats?.(),220)});
     }
+    window.addEventListener('tpf:contact-updated',()=>{waCrmSearchVersion++;waCrmSearchAt=0;waCrmSearchByPhone.clear();waSearchIndex.clear();window.renderWhatsAppChats?.();});
     window.addEventListener('tpf:wa-identity-updated',()=>{
       waSearchIndex.clear();
       window.renderWhatsAppChats?.();

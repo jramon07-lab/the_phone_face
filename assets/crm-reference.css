@@ -1103,3 +1103,29 @@ body.tpfUnified #tpfSched3 textarea{min-height:85px!important;max-height:170px}
 body.tpfUnified #tpfSched3 .tpfS3f{border-top:1px solid #dce5ef}
 body.tpfUnified #tpfSched3 .tpfS3primary{background:#0866ef;border-color:#0866ef}
 @media(min-width:1051px){body.tpfUnified .waFieldsReady .waFieldPeek{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;margin-top:3px}body.tpfUnified .waFieldsReady details[open]>.waFieldPeek,body.tpfUnified .waFieldsReady details[open]>summary>.waFieldPeek{display:none}}
+
+/* Compact desktop inbox: two filter rows, actions before customer details. */
+@media(min-width:1051px){
+body.tpfUnified .waCleanWorkspace .waChatsSearchWrap{padding:10px 10px 6px!important}
+body.tpfUnified .waCleanWorkspace .waTabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important;padding:4px 10px 8px!important}
+body.tpfUnified .waCleanWorkspace .waTabs>button,body.tpfUnified .waCleanWorkspace .waCleanFilters>summary{font-size:10px!important;white-space:nowrap;padding:6px 2px!important;min-height:28px!important;text-align:center}
+body.tpfUnified .waCleanWorkspace .waCleanFilters{min-width:0}
+body.tpfUnified .waCleanWorkspace #waGlobalSearchStatus{padding:3px 10px 7px;font-size:11px;color:#2460aa}
+body.tpfUnified .waCleanWorkspace #waGlobalSearchStatus[hidden]{display:none}
+body.tpfUnified .waCleanWorkspace #waSideContactActions{margin:0 0 8px!important;gap:4px!important}
+body.tpfUnified .waCleanWorkspace #waSideContactActions>button{min-height:32px!important;padding:6px 4px!important;font-size:11px!important}
+body.tpfUnified .waCleanWorkspace #waSideNewOffer{grid-column:1;grid-row:1}
+body.tpfUnified .waCleanWorkspace #waSideDirectSale{grid-column:2;grid-row:1}
+body.tpfUnified .waCleanWorkspace #waCleanReview{grid-column:1/-1;grid-row:2}
+body.tpfUnified .waCleanWorkspace #waContactState[data-compact="true"]{display:none!important}
+body.tpfUnified .waCleanWorkspace #waSlaState,body.tpfUnified .waCleanWorkspace #waPersistState{display:inline-block;padding:2px 4px!important;margin:0 0 4px!important;font-size:10px!important}
+body.tpfUnified .waCleanWorkspace #tpfWaAliasCard{padding:7px!important;margin:4px 0!important}
+body.tpfUnified .waCleanWorkspace #tpfWaAliasCard summary{font-size:11px!important}
+body.tpfUnified .waCleanWorkspace #tpfWaAliasCard .tpfGoogleInlineStatus{font-size:10px!important;padding:2px 5px!important}
+body.tpfUnified .waCleanWorkspace .waFieldDisclosure{padding:3px 0!important}
+body.tpfUnified .waCleanWorkspace .waCleanDisclosure{padding:5px 0!important}
+body.tpfUnified .waCleanWorkspace .waFieldRow{padding:6px 0!important}
+body.tpfUnified .waCleanWorkspace .waCleanPerson{padding:7px!important;background:white;border:1px solid #e6ebf2!important;border-radius:7px}
+body.tpfUnified .waCleanWorkspace #waSideTags{display:flex!important;flex-wrap:wrap;gap:4px!important}
+body.tpfUnified .waCleanWorkspace #waSideTags .waGlobalTagChip{font-size:10px!important;margin:0!important;padding:4px 6px!important}
+}
