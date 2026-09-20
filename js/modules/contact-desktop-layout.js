@@ -315,7 +315,7 @@
  }
  moreMenu.addEventListener('click',e=>{if(e.target.closest('button'))closeMore();});
  document.addEventListener('click',e=>{if(!moreMenu.contains(e.target))closeMore();});
- moreMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeMore();moreMenu.querySelector('summary').focus();}});
+ moreMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMore();moreMenu.querySelector('summary').focus();}});
  window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=false;info.open=false;});
  new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});
  if(quick)new MutationObserver(refreshHeader).observe(quick,{childList:true,subtree:true});

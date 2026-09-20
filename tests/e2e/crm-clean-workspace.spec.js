@@ -125,6 +125,7 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await evidence(page,'06-menu-acciones');
   await menu.locator('summary').press('Escape');
   await expect(menu).not.toHaveAttribute('open');
+  await expect(page.locator('#contactModal')).toBeVisible();
   await expect(page.locator('.cpData .contactLabelsBox')).toHaveCount(0);
   await expect(page.locator('.tpfStandaloneLabels #contactManageLabels')).toHaveText('+ Añadir etiqueta');
   const automation=page.locator('#cpAutomationStatus');

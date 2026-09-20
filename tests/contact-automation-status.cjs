@@ -31,7 +31,7 @@ assert.equal(flowSteps[1].details[0][1],'Cliente Vodafone','resuelve el nombre d
 assert.equal(flowSteps[3].title,'Preparar revisión de renovación con el operador','traduce la acción técnica de renovación');
 assert.match(source,/contains\('context',\{contact_id:id\}\)/,'filtra por identificador del contacto');
 assert.match(source,/#contactModal \.cpRight/,'inserta el contador en la ficha');
-assert.match(source,/offers\.before\(section\)/,'mantiene el contador encima de ofertas aunque esa sección cargue después');
+assert.match(source,/offers\.after\(section\)/,'mantiene el contador debajo de ofertas aunque esa sección cargue después');
 assert.match(source,/waAutomationStatus/,'inserta el contador en WhatsApp');
 assert.match(source,/data-cas-toggle/,'permite plegar el resumen de automatizaciones');
 assert.match(source,/casExecution[^`]*<summary|<details class="casExecution/,'agrupa cada ejecución en un desplegable');
