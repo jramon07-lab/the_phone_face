@@ -45,16 +45,20 @@ async function copy(value){
  try{ok=document.execCommand('copy');}finally{field.remove();previous?.focus?.({preventScroll:true});}
  return ok;
 }
+function notify(ok){
+ let status=document.getElementById('tpfCopyStatus');if(!status){status=document.createElement('span');status.id='tpfCopyStatus';status.className='tpfCopyStatus';status.setAttribute('role','status');document.body.append(status);}status.textContent=ok?'Texto copiado':'No se pudo copiar';
+ clearTimeout(notify.timer);notify.timer=setTimeout(()=>{status.textContent='';},1800);
+}
 window.addEventListener('click',async event=>{
  const button=event.target.closest?.('.tpfCopyButton'),entry=button&&buttons.get(button);if(!entry)return;
  event.preventDefault();event.stopImmediatePropagation();
  const value=valueOf(entry.target);if(empty(value))return;button.disabled=true;
  const ok=await copy(value);button.disabled=false;button.dataset.copied=String(ok);button.title=ok?'Copiado':'No se pudo copiar. Selecciona el dato para copiarlo.';button.setAttribute('aria-label',button.title);
- let status=document.getElementById('tpfCopyStatus');if(!status){status=document.createElement('span');status.id='tpfCopyStatus';status.className='tpfCopyStatus';status.setAttribute('role','status');document.body.append(status);}status.textContent=ok?'Copiado':'No se pudo copiar';
- setTimeout(()=>{if(button.isConnected){delete button.dataset.copied;button.title='Copiar '+entry.label;button.setAttribute('aria-label',button.title);}status.textContent='';},1800);
+ notify(ok);
+ setTimeout(()=>{if(button.isConnected){delete button.dataset.copied;button.title='Copiar '+entry.label;button.setAttribute('aria-label',button.title);}},1800);
 },true);
 new MutationObserver(records=>{if(records.some(record=>record.type==='childList'&&(targets.has(record.target)||[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&!node.matches?.('.tpfCopyButton,.tpfCopyStatus')))||record.type==='attributes'&&record.target.matches?.('.modalBack,.tpfContactsModalBack,#contactModal')))schedule();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 document.addEventListener('input',schedule,true);
 for(const event of ['tpf:contact-open','tpf:contact-updated','tpf:contacts-rendered','tpf:opportunity-party-preview'])window.addEventListener(event,schedule);
-window.TPFCopyData={valueOf,empty,copy};scan();
+window.TPFCopyData={valueOf,empty,copy,notify};scan();
 })();

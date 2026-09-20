@@ -13,7 +13,7 @@ function client(data,{race=false,error=false}={}){
  const c=client(base),result=await saveField({contactId:'1',fieldId:'contactPhone',original:'600111222',value:'600333444'},c);
  assert.equal(result.data.TELÉFONO,'600333444');assert.equal(result.data.NOTAS,base.NOTAS);assert.equal(result.data.OTHER,base.OTHER);assert.deepEqual(result.data.HOLDERS,base.HOLDERS);
  assert(c.calls.some(([k,v])=>k==='data'&&v===JSON.stringify(base)),'Optimistic compare protects concurrent changes');
- for(const [fieldId,original,value,pattern] of [['contactPhone','600111222','abc',/teléfono/],['contactEmail','a@b.es','bad',/correo/],['contactNotes','Texto protegido','',/borrado/],['contactPhone','old','600333444',/otro dispositivo/]]){
+ for(const [fieldId,original,value,pattern] of [['contactPhone','600111222','abc',/teléfono/],['contactEmail','a@b.es','bad',/correo/],['contactPhone','old','600333444',/otro dispositivo/]]){
   const m=client(base);await assert.rejects(saveField({contactId:'1',fieldId,original,value},m),pattern);assert(!m.calls.some(x=>x[0]==='update'));
  }
  await assert.rejects(saveField({contactId:'1',fieldId:'contactPhone',original:'600111222',value:'600333444'},client(base,{race:true})),/No se ha sobrescrito/);
@@ -21,6 +21,9 @@ function client(data,{race=false,error=false}={}){
  await assert.rejects(saveField({contactId:'1',fieldId:'contactPhone',original:'600111222',value:'600333444'},client(null)),/no está disponible/);
  const noop=client(base);await saveField({contactId:'1',fieldId:'contactPhone',original:'600111222',value:'600111222'},noop);assert(!noop.calls.some(x=>x[0]==='update'));
  assert.equal(prepare(base,'contactNotes','Texto protegido',' Línea 1\nLínea 2 ').NOTAS,' Línea 1\nLínea 2 ');
+ assert.equal(prepare(base,'contactNotes','Texto protegido','').NOTAS,'');
+ assert.equal(prepare({OBSERVACIONES:'Antes',OBSERVACION:'Antes'},'contactObservations','Antes','').OBSERVACION,'');
+ assert.throws(()=>prepare({NOTAS:'Otro PC'},'contactNotes','Texto protegido',''),/otro dispositivo/);
  const aliases=prepare({DNI:'old'},'contactDni','old','new');assert.equal(aliases.DNI,'new');assert.equal(aliases['DNI / NIF'],'new');
  const identity={NOMBRE:'María',APELLIDOS:'López','NOMBRE Y APELLIDOS':'María López',NOTAS:'protegida',TPF_RELACIONES:{managed_contacts:[{id:'2'}]}};
  const renamed=prepare(identity,'contactName',JSON.stringify(['María','López']),JSON.stringify(['María José','López Ruiz']));assert.equal(renamed['NOMBRE Y APELLIDOS'],'María José López Ruiz');assert.equal(renamed.NOTAS,'protegida');assert.equal(renamed.TPF_RELACIONES,identity.TPF_RELACIONES);

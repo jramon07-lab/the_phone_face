@@ -30,7 +30,6 @@ function prepare(data,id,original,value){
  if(id==='contactEmail'&&value&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))throw Error('Revisa el correo electrónico.');
  if(id==='contactPhone'&&value&&!/^\+?[\d\s().-]{6,25}$/.test(value))throw Error('Revisa el teléfono.');
  if(id==='contactPhone'&&value&&(value.replace(/\D/g,'').length<6||value.replace(/\D/g,'').length>15))throw Error('Revisa el teléfono.');
- if(config.multiline&&original.trim()&&!value.trim())throw Error('Este campo contiene texto. Corrígelo o cancela para evitar un borrado accidental.');
  const latest=read(data,config);
  if(latest!==original&&latest!==value)throw Error('Este campo ha cambiado en otro dispositivo. Copia tu texto y vuelve a abrir la ficha antes de guardar.');
  const next={...data};

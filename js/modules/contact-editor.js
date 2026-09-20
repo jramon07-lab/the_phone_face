@@ -8,7 +8,6 @@ let session=null;
 function readStored(data,key){const names=key==='NOTAS'?['NOTAS','NOTES']:['OBSERVACIONES','OBSERVACION','Observaciones'];for(const name of names)if(data?.[name]!=null)return text(data[name]);return '';}
 function resolveText(original,current,locked,latest,label){
  if(locked||current===original)return latest;
- if(original.trim()&&!current.trim())throw Error('No puedes dejar '+label.toLowerCase()+' vacías. Corrige el texto o cancela su edición.');
  if(latest.trim()!==original.trim()&&latest!==current)throw Error(label+' han cambiado en otro dispositivo. Copia tu texto y vuelve a abrir la ficha antes de guardar.');
  return current;
 }

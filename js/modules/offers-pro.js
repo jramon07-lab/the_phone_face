@@ -50,11 +50,11 @@ async function directOfferContext(contact){
   const result=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_RELACIONES:{managed_contacts:[{record_id:id}]}}).limit(2);
   if(result.error)throw result.error;
   const managers=result.data||[];
-  if(!managers.length)return {id,recipientId:id,name:ownName,phone:ownPhone,ownerName:ownName};
+  if(!managers.length)return {id,recipientId:id,name:contactValue(contact,'NOMBRE')||firstName(ownName),phone:ownPhone,ownerName:ownName};
   if(managers.length>1)throw new Error('Esta ficha tiene más de una persona gestora. Revisa la relación antes de enviar una oferta para no mandarla al teléfono equivocado.');
   const manager=managers[0],managerName=contactDisplayName(manager),managerPhone=contactPhone(manager);
-  if(!managerPhone)return {id,recipientId:id,name:ownName,phone:ownPhone,ownerName:ownName};
-  return {id,recipientId:manager.id,name:firstName(managerName),phone:managerPhone,ownerName:ownName,managedRecipient:true};
+  if(!managerPhone)return {id,recipientId:id,name:contactValue(contact,'NOMBRE')||firstName(ownName),phone:ownPhone,ownerName:ownName};
+  return {id,recipientId:manager.id,name:contactValue(manager,'NOMBRE')||firstName(managerName),phone:managerPhone,ownerName:ownName,managedRecipient:true};
 }
 const isAdmin=()=>{try{return !!perms?.is_admin}catch(_){return false}};
 
@@ -176,10 +176,12 @@ async function openConfigurator(){
   const c=offerContact();if(!c?.id)return alert('No se ha encontrado el contacto de esta oportunidad.');ensureUi();previewCustomer=offerName();$('opOfferModal').classList.remove('hidden');$('opCustomer').textContent=offerContext?.managedRecipient?`Cliente: ${offerContext.ownerName} · WhatsApp: ${previewCustomer||'Contacto'}`:`Cliente: ${previewCustomer||'Contacto'}`;$('opContent').innerHTML='<div class="opEmpty">Cargando ofertas…</div>';
   try{await loadCatalog();activeOperator=operatorList().find(op=>catalog.some(o=>o.active&&o.operator===op))||operatorList()[0];selected=null;quantities={};finalPriceManual=false;shopGift=false;permanenceRefund=false;permanenceAmount='';welcomeOffer=false;secondOfferAfterCurrent=false;offerMode='followup';offerSendTiming='now';offerScheduledLocal=nextHalfHourLocal();offerRequestKey=crypto.randomUUID();renderTabs();renderConfigurator()}catch(e){$('opContent').innerHTML=`<div class="opEmpty">No se pudo cargar el catálogo.<br>${esc(e?.message||e)}</div>`}
 }
-function openOfferForOpportunity(context){
+async function openOfferForOpportunity(context){
  const id=String(context?.contactId||context?.id||'').trim();
  if(!id)return alert('Vincula primero esta oportunidad a un contacto.');
- offerContext={id,name:String(context?.name||'').trim(),phone:String(context?.phone||'').trim()};
+ const result=await sb.from('records').select('id,data').eq('id',id).single();
+ if(result.error)throw result.error;
+ offerContext=await directOfferContext(result.data);
  return openConfigurator();
 }
 window.openOfferComposerForOpportunity=openOfferForOpportunity;

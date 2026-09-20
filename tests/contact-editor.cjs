@@ -19,7 +19,7 @@ const untouched=editor.readText({NOTAS:'Nota más reciente desde otro PC',OBSERV
 assert.equal(untouched.NOTAS,'Nota más reciente desde otro PC','Editing a phone must preserve the latest locked notes');
 assert.equal(untouched.OBSERVACIONES,'Observación más reciente');
 nodes.tpfCreateNotes.readOnly=false;nodes.tpfCreateNotes.value='';
-assert.throws(()=>editor.readText({NOTAS:'Nota guardada',OBSERVACIONES:'Observación guardada'}),/vacías/);
+assert.equal(editor.readText({NOTAS:'Nota guardada',OBSERVACIONES:'Observación guardada'}).NOTAS,'');
 nodes.tpfCreateNotes.value='Nueva anotación';
 assert.throws(()=>editor.readText({NOTAS:'Modificada por otro usuario'}),/otro dispositivo/);
 assert.equal(editor.readText({NOTAS:'Nota guardada'}).NOTAS,'Nueva anotación');
@@ -44,4 +44,4 @@ assert.equal(editor.resolveText('original','modificada',false,'modificada','Nota
 const list=fs.readFileSync('js/modules/contacts-list-ui.js','utf8'),profile=fs.readFileSync('js/modules/contact-profile.js','utf8');
 assert(list.indexOf('TPFContactEditor?.readText(previous)')<list.indexOf(".update({data}).eq('id',editing)"));
 assert(profile.indexOf('TPFContactEditor?.readText(q.data?.data||{})')<profile.indexOf(".update({data:d}).eq('id',s.id)"));
-console.log('PASS contact editor: locks, lossless save, blank-note guard, concurrent changes, exact dirty state, associations, labels and create reset.');
+console.log('PASS contact editor: locks, lossless save, intentional blank notes, concurrent changes, exact dirty state, associations, labels and create reset.');
