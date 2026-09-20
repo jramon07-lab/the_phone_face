@@ -184,28 +184,43 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
     await page.locator('#view-settings-connections-tab').click();
     await expect(card).toBeVisible();
     expect(await page.locator('#notifyTelegramChatId').inputValue()).toBe(telegramBefore);
-    await expect(page.locator('.nav[data-view="system"]').first()).toBeVisible();
-    await page.locator('.nav[data-view="system"]').first().click();
-    await expect(page.locator('#tpfOperationalChecks')).toBeVisible();
-    await expect(page.locator('#tpfModuleStatusCard')).toBeHidden();
-    await expect(page.locator('#tpfSystemAttention')).toContainText('incidencias activas', {timeout:20000});
-    await expect(page.locator('#tpfFollowupConsistency')).toContainText('envíos pendientes');
-    for (const [tab, target] of [['incidents','tpfIncidentRegistry'],['followups','tpfFollowupRegistry'],['backups','tpfDriveBackupCard'],['advanced','tpfModuleStatusCard'],['overview','tpfOperationalChecks']]) {
-      await page.locator('#view-system-'+tab+'-tab').click();
-      await expect(page.locator('#'+target)).toBeVisible();
-      expect(await page.locator('#'+target).count()).toBe(1);
-    }
-    await page.locator('#view-system-incidents-tab').click();
-    await page.locator('#tpfIncidentVersion').selectOption('current');
-    await page.locator('#tpfIncidentVersion').selectOption('other');
-    await page.locator('#tpfIncidentVersion').selectOption('all');
-    await page.locator('#view-system-overview-tab').click();
+    // The demo account has no administrator permission. Do not elevate it.
+    await expect(page.locator('#sideRole')).toHaveText('Usuario');
+    await expect(page.locator('.nav[data-view="system"]').first()).toBeHidden();
     await page.setViewportSize({width:700,height:900});
-    await expect(page.locator('#view-system-overview-tab')).toBeVisible();
-    await expect.poll(() => page.locator('#view-system .tpfAdminTabs').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    await expect.poll(() => page.locator('#view-settings .tpfAdminTabs').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     await expect.poll(() => report.pendingReads.length, { timeout: 20000 }).toBe(0);
     assertReadHealth(report);
   } finally { reportScope(report, 'PC'); }
+});
+
+// Isolated UI fixture: no login, real data or administrative permission changes.
+test('Apartados administrativos: tarjetas dinámicas, teclado y controles conservados (datos sintéticos)', async ({page, context}) => {
+  const fs=require('node:fs'), path=require('node:path');
+  await context.route('**/*', route=>route.abort());
+  await page.setContent(`<section id="view-settings"><div class="card"><h2>Configuración</h2></div><div class="card" id="fixtureConnection"><input id="fixtureValue" value="sin cambios"></div><div class="card searchConfigCard">Buscador</div><div class="card"><button id="notifySave">Guardar</button></div></section><section id="view-system"><div class="card systemStatusCard">Cabecera</div><div class="card" id="tpfOperationalChecks">Resumen</div><div class="card" id="tpfModuleStatusCard">Diagnóstico</div><div class="card" id="tpfIncidentRegistry">Incidencias</div><div class="card" id="tpfFollowupRegistry">Seguimientos</div><div class="card" id="tpfDriveBackupCard">Copias</div></section>`);
+  await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'../../assets/crm-reference.css'),'utf8')});
+  await page.evaluate(()=>{window.originalControl=document.getElementById('fixtureValue');window.savedClicks=0;document.getElementById('notifySave').onclick=()=>window.savedClicks++});
+  await page.addScriptTag({content:fs.readFileSync(path.join(__dirname,'../../js/modules/admin-sections.js'),'utf8')});
+  await page.locator('#view-settings-notifications-tab').click();
+  await page.locator('#notifySave').click();
+  expect(await page.evaluate(()=>window.savedClicks)).toBe(1);
+  expect(await page.evaluate(()=>window.originalControl===document.getElementById('fixtureValue'))).toBe(true);
+  await expect(page.locator('#fixtureValue')).toHaveValue('sin cambios');
+  for(const [tab,target] of [['incidents','tpfIncidentRegistry'],['followups','tpfFollowupRegistry'],['backups','tpfDriveBackupCard'],['advanced','tpfModuleStatusCard'],['overview','tpfOperationalChecks']]){
+    await page.locator('#view-system-'+tab+'-tab').click();
+    await expect(page.locator('#'+target)).toBeVisible();
+    expect(await page.locator('#'+target).count()).toBe(1);
+  }
+  await expect(page.locator('#tpfModuleStatusCard')).toBeHidden();
+  await page.evaluate(()=>{const card=document.createElement('div');card.id='tpfMaintenanceCard';card.className='card';card.textContent='Mantenimiento';document.getElementById('tpfOperationalChecks').after(card)});
+  await expect(page.locator('#view-system-advanced #tpfMaintenanceCard')).toHaveCount(1);
+  await page.locator('#view-system-overview-tab').focus();
+  await page.keyboard.press('End');
+  await expect(page.locator('#view-system-advanced-tab')).toBeFocused();
+  await expect(page.locator('#tpfMaintenanceCard')).toBeVisible();
+  await page.setViewportSize({width:700,height:900});
+  await expect.poll(()=>page.locator('#view-system .tpfAdminTabs').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
 });
 
 test.describe('Móvil de solo lectura', () => {
