@@ -34,6 +34,8 @@ async function tags(){
 }
 function refresh(){
  if(!$('waFieldDetails'))return;let c=current();if(session&&(chatId()!==session.chatId||(c&&String(c.id)!==session.contactId)))close();if(!c&&session)c=session.record;
+ const open=$('waSideOpenContact');if(open)open.style.setProperty('display','none','important');
+ const nick=$('waSideNickname'),emptyNick=$('waFieldEmptyNickname');if(emptyNick)emptyNick.hidden=!c?.id||!!nick?.textContent.trim();
  for(const el of view.querySelectorAll('.waFieldsBlock,#waFieldIdentityEditors,[data-wa-edit="contactName"],[data-wa-edit="contactNickname"]'))el.hidden=!c?.id;
  const next=JSON.stringify([c?.id,c?.data,api()?.allowed()]);if(next!==signature){signature=next;for(const el of view.querySelectorAll('[data-wa-field]')){const f=api().fields[el.dataset.waField],value=api().read(c?.data,f);el.querySelector('.waFieldValue').textContent=value||'Sin añadir';el.querySelector('.waFieldCopy').hidden=!value;el.querySelector('.waFieldPencil').hidden=!api().allowed();}for(const id of ['contactName','contactNickname'])view.querySelector('[data-wa-edit="'+id+'"]')?.toggleAttribute('hidden',!c?.id||!api().allowed());}
  for(const peek of view.querySelectorAll('[data-peek]')){const v=api().read(c?.data,api().fields[peek.dataset.peek]).replace(/\s+/g,' ').slice(0,70);if(peek.textContent!==v)peek.textContent=v;}compactOpportunities();tags();
@@ -43,7 +45,7 @@ function install(){if($('waFieldDetails')||!view.classList.contains('waCleanWork
  view.classList.add('waFieldsReady');const identity=$('waSideIdentity'),block=document.createElement('div');block.id='waFieldDetails';block.className='waFieldsBlock';identity.after(block);row('contactPhone',block);row('contactDni',block);
  const more=disclosure('Más datos','waFieldMore');row('contactEmail',more);row('contactBank',more);block.append(more);
  for(const [id,title]of [['contactObservations','Observaciones'],['contactNotes','Notas de ficha']]){const d=disclosure(title,'waField-'+id);row(id,d);if(id==='contactNotes'){const hint=document.createElement('small');hint.textContent='Edición protegida';d.append(hint);}const peek=document.createElement('small');peek.className='waFieldPeek';peek.dataset.peek=id;d.firstChild.append(peek);block.append(d);}
- const editor=document.createElement('div');editor.id='waFieldIdentityEditors';$('waSideName').parentElement.append(editor);$('waSideName').after(editButton('contactName'));const nick=$('waSideNickname');(nick||$('waSideName')).after(editButton('contactNickname'));
+ const editor=document.createElement('div');editor.id='waFieldIdentityEditors';$('waSideName').parentElement.append(editor);$('waSideName').after(editButton('contactName'));const nick=$('waSideNickname'),emptyNick=document.createElement('span');emptyNick.id='waFieldEmptyNickname';emptyNick.textContent='Añadir apodo';(nick||$('waSideName')).after(emptyNick);emptyNick.after(editButton('contactNickname'));
  const tagsSection=$('waSideTags')?.closest('.waSideSection');if(tagsSection)$('waCleanRelations').after(tagsSection);
  const notes=$('waSideNotes')?.closest('.waSideSection');if(notes)notes.classList.add('waNativeNotes');
  new MutationObserver(schedule).observe($('waContactCard'),{childList:true,subtree:true});refresh();

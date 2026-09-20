@@ -11,6 +11,7 @@ let found=false;for(let i=0;i<Math.min(15,await page.locator('#waLiveChats .waCh
 await expect(page.locator('#waCleanReview')).toBeVisible();await expect(page.locator('#waCleanRelations')).toBeVisible();await page.locator('#waCleanRelations summary').click();await expect(page.locator('#waCleanRelationRows')).not.toHaveText(/Cargando/,{timeout:15000});await page.locator('#waCleanRelations summary').click();
 await page.locator('#waCleanOffers summary').click();await expect(page.locator('#waCleanOfferRows')).not.toHaveText(/Cargando/,{timeout:15000});await page.locator('#waCleanOffers summary').click();
 await expect(page.locator('#waSideEditContact')).toBeHidden();
+await expect(page.locator('#waSideOpenContact')).toBeHidden();
 for(const [field,section] of [['contactName',null],['contactNickname',null],['contactPhone',null],['contactDni',null],['contactEmail','#waFieldMore'],['contactBank','#waFieldMore'],['contactObservations','#waField-contactObservations'],['contactNotes','#waField-contactNotes']]){
  if(section&&!(await page.locator(section).getAttribute('open')!==null))await page.locator(section+' > summary').click();
  await page.locator('[data-wa-edit="'+field+'"]').click();await expect(page.locator('.waFieldEditor')).toBeVisible();
@@ -20,7 +21,7 @@ for(const [field,section] of [['contactName',null],['contactNickname',null],['co
 for(const s of ['#waFieldMore','#waField-contactObservations','#waField-contactNotes'])if(await page.locator(s).getAttribute('open')!==null)await page.locator(s+' > summary').click();
 await page.locator('#waContactPanel').evaluate(el=>el.scrollTop=0);
 await expect(page.locator('[data-wa-tab="archived"]')).toBeVisible();
-await page.locator('.waCleanFilters summary').click();await expect(page.locator('.waCleanFilters [popover]')).toBeVisible();await shot(page,'wa-filters');await page.locator('[data-wa-tab="groups"]').click();await expect(page.locator('[data-wa-tab="groups"]')).toHaveClass(/active/);await page.locator('[data-wa-tab="all"]').click();
+await page.locator('.waCleanFilters summary').click();await expect(page.locator('.waCleanFilters [popover]')).toBeVisible();await shot(page,'wa-filters');await fits(page,'.waCleanFilters [popover]');await page.locator('.waCleanFilters [popover]').screenshot({path:test.info().outputPath('wa-filter-options.png')});await page.locator('[data-wa-tab="groups"]').click();await expect(page.locator('[data-wa-tab="groups"]')).toHaveClass(/active/);await page.locator('[data-wa-tab="all"]').click();
 await page.locator('#waScheduleBtn').click();await expect(page.locator('#tpfSched3')).toBeVisible();
 for(const height of [950,700]){await page.setViewportSize({width:1440,height});await fits(page,'#tpfS3save');await page.locator('.tpfS3b').evaluate(el=>el.scrollTop=el.scrollHeight);await fits(page,'#tpfS3save');}
 await page.locator('#tpfSched3').screenshot({path:test.info().outputPath('wa-schedule.png'),mask:[page.locator('#tpfS3phone,#tpfS3msg,#tpfS3contact')],maskColor:'#dce5ef'});
