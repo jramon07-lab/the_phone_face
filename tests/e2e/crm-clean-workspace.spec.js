@@ -101,9 +101,11 @@ test('normal, fullscreen, contact tabs and protected editor retain their control
   await expect(page.locator('#tpfContactPartySummary')).toBeVisible();
   await expect(page.locator('[data-tpf-summary-group="opportunities"] #cpSideNewOpp')).toBeVisible();
   await expect(page.locator('[data-tpf-summary-group="tasks"] #cpSideNewTask')).toBeVisible();
-  const relationBox=await page.locator('#tpfContactPartySummary').boundingBox();
-  expect(Math.abs(relationBox.y-googleBox.y)).toBeLessThanOrEqual(2);
-  expect(relationBox.x+relationBox.width).toBeLessThan(googleBox.x);
+  await expect.poll(async()=>{
+    const relationBox=await page.locator('#tpfContactPartySummary').boundingBox();
+    const sourceBox=await page.locator('#tpfGoogleInlineCard').boundingBox();
+    return !!relationBox&&!!sourceBox&&Math.abs(relationBox.y-sourceBox.y)<=2&&relationBox.x+relationBox.width<sourceBox.x;
+  }).toBe(true);
   const relations=page.locator('#tpfContactPartySummary [data-rel-holders]');
   await expect(relations).not.toHaveAttribute('open');
   await relations.locator(':scope > summary').click();
