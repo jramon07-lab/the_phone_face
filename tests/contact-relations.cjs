@@ -9,7 +9,8 @@ let rows=[manager,father],duringRead=null;
 context.sb={from(table){assert.equal(table,'records');let id;return {select(){return this;},eq(key,v){if(key==='id')id=v;return this;},order(){return this;},async range(){return {data:[]};},async maybeSingle(){if(duringRead)duringRead();return {data:rows.find(r=>r.id===id)||null};}};}};
 // Test-only access to private state; the published module has no test hooks.
 const source=fs.readFileSync(path.join(base,'js/modules/contact-relations.js'),'utf8');
-vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={defaultLinkedHolder,createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+vm.runInContext(source.replace('window.TPFContactRelations={','window.__fixture={beginOpportunityEdit,cancelOpportunityEdit,markOpportunityEdit,defaultLinkedHolder,createHolder,newHolderData,holderCard,currentHolders,displayName,set:s=>{opportunity=s;},form:s=>forms.set($("tpfContactParty"),s)};window.TPFContactRelations={'),context);
+vm.runInContext(fs.readFileSync(path.join(base,'js/modules/opportunity-contact-context.js'),'utf8'),context);
 const R=context.TPFContactRelations,fixture=context.__fixture;
 function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',opportunityId:'',items:manager.data.TPF_RELACIONES.managed_contacts,managers:[],selected:'',loading:false,...overrides};fixture.set(s);fields.oppModalOpenContact.dataset.recordId=s.ownerId;fields.oppModalId.value=s.opportunityId;return s;}
 (async()=>{
@@ -32,6 +33,10 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  state({selected:'father',chooseOther:true});payload={record_id:'manager'};p=await R.prepareOpportunity(payload);assert.equal(payload.record_id,'father');assert.equal(payload.client_name,'Torcuato García González');assert.equal(p.recipient_name,'Carmen');assert.equal(p.recipient_phone,'600000001');assert.equal(p.holder_phone,'600000002');
  state({ownerId:'father',managers:[manager]});payload={record_id:'father'};const fromFather=await R.prepareOpportunity(payload);assert.equal(fromFather.recipient_phone,'600000001');assert.equal(payload.record_id,'father');
  state({historical:true,previous:p,ownerId:'father'});fields.oppModalClient.value='Torcuato';assert.equal(await R.prepareOpportunity({}),p);fields.oppModalClient.value='Carmen';
+ const savedParty={same:false,holder_name:'Torcuato García González',holder_dni:'TEST',holder_phone:'600000002',contact_name:'Carmen',contact_phone:'600000001',recipient_name:'Carmen',recipient_phone:'600000001'};
+ const savedState=state({historical:true,previous:savedParty,owner:father,ownerId:'father',items:[],managers:[manager]});fixture.beginOpportunityEdit(savedState);assert.equal(await R.prepareOpportunity({}),savedParty,'Opening the linkage editor must preserve the saved contract');
+ savedState.managerId='self';fixture.markOpportunityEdit(savedState);let changed={};let selfParty=await R.prepareOpportunity(changed);assert.equal(selfParty.recipient_name,'Torcuato García González');assert.equal(selfParty.recipient_phone,'600000002');assert.equal(changed.record_id,'father');assert.equal(R.opportunityPreview().phone,'600000002');
+ fixture.cancelOpportunityEdit(savedState);assert.equal(savedState.historical,true);assert.equal(await R.prepareOpportunity({}),savedParty,'Cancel must restore the saved holder and recipient');
  state({selected:'legacy',previous:{same:false,holder_name:'Anterior',recipient:'contact'}});p=await R.prepareOpportunity({});assert.equal(p.holder_name,'Anterior');assert.equal(p.recipient_name,'Carmen');
  state({chooseOther:true});await assert.rejects(()=>R.prepareOpportunity({}),/Selecciona el titular/);
  state({loading:true});await assert.rejects(()=>R.prepareOpportunity({}),/Espera/);

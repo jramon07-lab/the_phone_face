@@ -85,6 +85,6 @@ function showExample(saved){
  },0);
 }
 byId('oppModalCloseX').onclick=()=>byId('oppDetailModal').classList.add('hidden');byId('oppModalClose').onclick=byId('oppModalCloseX').onclick;
-byId('oppModalSave').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se guardan datos reales.';};byId('oppModalDelete').onclick=()=>{if(confirm('¿Eliminar definitivamente esta oportunidad de ejemplo?'))byId('fixtureStatus').textContent='Eliminación simulada. No se elimina ningún registro.';};
+byId('oppModalSave').onclick=()=>{byId('oppMetaInfo').textContent='Verificación: no se guardan datos reales.';};byId('oppModalDelete').onclick=()=>{byId('fixtureStatus').textContent='Esta vista de ejemplo no elimina registros.';};
 byId('fixtureReopen').onclick=()=>showExample(false);byId('fixtureStored').onclick=()=>showExample(true);showExample(false);
-</script></body></html>
+</script><script src="/js/modules/copyable-data.js"></script></body></html>

@@ -13,7 +13,10 @@ function merge(original,internal){
  if(next===parts.internal)return raw;
  return parts.origin?parts.origin+(next?'\n\n'+next:''):next;
 }
-function fill(input,value){if(!input)return;input.dataset.originalNotes=String(value??'');input.value=split(value).internal;}
-function read(input){return input?merge(input.dataset.originalNotes||'',input.value):'';}
-W.TPFOpportunityNotes={split,merge,fill,read};
+function protect(input,on=true){if(!input)return;input.readOnly=on;input.dataset.notesProtected=String(on);input.setAttribute?.('aria-readonly',String(on));}
+function fill(input,value){if(!input)return;input.dataset.originalNotes=String(value??'');input.value=split(value).internal;protect(input);}
+function restore(input){if(!input)return;input.value=split(input.dataset.originalNotes||'').internal;protect(input);}
+function validate(input){return input&&input.dataset.notesProtected!=='true'&&split(input.dataset.originalNotes||'').internal.trim()&&!String(input.value||'').trim()?'Las notas guardadas no se pueden dejar vacías. Puedes corregirlas o añadir información.':'';}
+function read(input){return input?(input.dataset.notesProtected==='true'?input.dataset.originalNotes||'':merge(input.dataset.originalNotes||'',input.value)):'';}
+W.TPFOpportunityNotes={split,merge,fill,read,protect,restore,validate};
 })();

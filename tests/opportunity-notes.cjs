@@ -9,7 +9,8 @@ for(const value of [origin,origin+'.',origin+'\nNota personal',origin+'\n\nNota 
  const parts=N.split(value);assert(parts.origin);assert.equal(N.merge(value,parts.internal),value,'Opening and saving unchanged notes must be lossless');
 }
 const input={value:'',dataset:{}};N.fill(input,origin+'\n\nLlamar mañana');assert.equal(input.value,'Llamar mañana');assert.equal(N.read(input),origin+'\n\nLlamar mañana');
+assert.equal(input.readOnly,true);input.value='Borrado accidental';assert.equal(N.read(input),origin+'\n\nLlamar mañana','Locked notes must not be overwritten');N.restore(input);assert.equal(input.value,'Llamar mañana');N.protect(input,false);
 input.value='Nueva anotación\nRespetar saltos';assert.equal(N.read(input),origin+'\n\nNueva anotación\nRespetar saltos');
-input.value='';assert.equal(N.read(input),origin,'Clearing personal notes preserves the recorded origin');
-N.fill(input,'');input.value='Nota de otra oportunidad';assert.equal(N.read(input),'Nota de otra oportunidad','Switching opportunities clears the old origin');
+input.value='';assert.match(N.validate(input),/no se pueden dejar vacías/);N.restore(input);assert.equal(N.read(input),origin+'\n\nLlamar mañana');assert.equal(input.readOnly,true);
+N.fill(input,'');N.protect(input,false);input.value='Nota de otra oportunidad';assert.equal(N.read(input),'Nota de otra oportunidad','Switching opportunities clears the old origin');
 console.log('PASS: lossless note separation, explicit edits, clear, multiline and switched opportunities.');

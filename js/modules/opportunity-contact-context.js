@@ -29,7 +29,7 @@ function people(state){
  }else{
   const selected=items.find(x=>x.id===state.selected);
   holder=state.selected==='legacy'?null:selected||own;
-  manager=selected||state.selected==='legacy'?own:managers.length===1?managers[0]:managers.find(x=>x.id===state.managerId)||null;
+  manager=selected||state.selected==='legacy'?own:state.managerId==='self'?null:managers.length===1?managers[0]:managers.find(x=>x.id===state.managerId)||null;
  }
  const contacts=[];
  for(const [person,role]of [[manager,'Contacto / gestor'],[holder,'Titular del contrato'],[own,'Contacto vinculado']]){
@@ -47,5 +47,27 @@ async function loadExtras(client,id){
  const tasks=results[1].status==='fulfilled'&&!results[1].value.error?results[1].value:null;
  return {labels:(labels?.data||[]).map(x=>({id:text(x.id||x.label_id),name:text(x.name||x.label_name)})).filter(x=>x.name),labelsError:!labels,tasks:tasks?.data||[],taskCount:tasks?.count??tasks?.data?.length??0,tasksError:!tasks};
 }
-window.TPFOpportunityContext={contact,people,loadExtras};
+let editingContact=false;
+async function editContact(id,focusId){
+ const modal=document.getElementById('oppDetailModal'),editor=document.getElementById('tpfContactsCreateBack');
+ if(editingContact)throw Error('Espera a que se abra el editor.');
+ if(!modal||modal.classList.contains('hidden'))throw Error('Abre primero la oportunidad.');
+ const allowed=window.TPFContactRelations?.opportunityContacts()?.contacts||[];
+ if(!allowed.some(x=>x.id===text(id)))throw Error('No se pudo identificar esta ficha. Vuelve a abrir la oportunidad.');
+ if(!window.TPFContactsList?.edit||!editor)throw Error('El editor de contactos no está disponible.');
+ if(!editor.classList.contains('hidden'))throw Error('Termina la edición del contacto que ya está abierto.');
+ const opportunityId=document.getElementById('oppModalId').value;
+ editingContact=true;
+ try{
+  await window.TPFContactsList.edit(text(id));
+  if(editor.classList.contains('hidden')||editor.dataset.editId!==text(id))throw Error('No se pudo abrir el editor. Comprueba tu permiso para editar contactos.');
+  if(modal.classList.contains('hidden')||document.getElementById('oppModalId').value!==opportunityId){document.getElementById('tpfContactsCreateCancel')?.click();return;}
+  editor.classList.add('tpfOpportunityContactEditor');
+  const previousInert=modal.inert;modal.inert=true;
+  const observer=new MutationObserver(()=>{if(editor.classList.contains('hidden')){observer.disconnect();editor.classList.remove('tpfOpportunityContactEditor');modal.inert=previousInert;}});
+  observer.observe(editor,{attributes:true,attributeFilter:['class']});
+  const focus=document.getElementById(focusId||'tpfCreateFirst');if(focus&&editor.contains(focus))focus.focus();
+ }finally{editingContact=false;}
+}
+window.TPFOpportunityContext={contact,people,loadExtras,editContact};
 })();

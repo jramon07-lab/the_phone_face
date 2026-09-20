@@ -15,7 +15,7 @@ function capture(){
 }
 function mark(n){return {...(history.state||{}),[MARK]:{session,index:n}};}
 function update(){if(current){const s=capture();if(s.key===current.key){current=s;entries.set(position,s);}}}
-function dirty(){for(const [el,value] of edited){if(!visible(el)){edited.delete(el);continue;}if(fieldValue(el)!==value)return true;}return false;}
+function dirty(){for(const [el,value] of edited){if(!visible(el)){if(!el.closest('[data-tpf-suspended]'))edited.delete(el);continue;}if(fieldValue(el)!==value)return true;}return false;}
 function fieldValue(el){return el.type==='checkbox'||el.type==='radio'?String(el.checked):el.type==='file'?[...(el.files||[])].map(f=>f.name+':'+f.size).join('|'):el.value;}
 function editorFor(el){const layer=topLayer();if(layer?.el.contains(el))return layer.el;return el.closest?.('#contactModal.tpf-contact-editing,#cpNoteForm');}
 function remember(e){const el=e.target;if(!el?.matches?.('input,textarea,select')||el.disabled||el.readOnly||!editorFor(el))return;if(!edited.has(el))edited.set(el,fieldValue(el));}
@@ -48,6 +48,7 @@ async function restore(target){
  for(let i=0;layer&&layer.key!==target.layer&&i<12;i++){
   if(!await closeLayer(layer))throw Error('Termina o cancela la operación abierta antes de volver.');layer=topLayer();
  }
+ if(target.layer==='oppDetailModal'&&$('oppDetailModal')?.getAttribute?.('data-tpf-suspended')==='contact'){$('contactClose')?.click();await new Promise(r=>setTimeout(r,0));}
  let now=capture();
  // Never replay an editor opener or a save/send click with Forward. If its
  // form was closed, return to the safe parent rather than resurrect a draft.
