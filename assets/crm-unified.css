@@ -110,3 +110,16 @@ body.tpfUnifiedMobile { --m-purple:#1667df; --m-purple-2:#6fa8ff; }
 @media(prefers-reduced-motion:reduce) {
   .tpfUnified .opp { transition:none; }
 }
+/* Legacy fullscreen messaging styles affect the shared main element. Give
+   ordinary pages their own inset, without altering the chat or board scrollers. */
+.tpfUnified .referenceWorkspace>main>section:is(#view-alerts,#view-search,#view-database,#view-import,#view-agenda,#view-whatsapp,#view-wa-templates-v3,#view-email,#view-labels,#view-settings,#view-automations,#view-users,#view-system,#view-trash) { padding:24px!important; }
+.tpfUnified:not(.tpfBoardOnly) .salesBoardPage { padding:24px; }
+@media(min-width:851px){
+  body.tpfUnified .referenceSidebar .referenceNav { overflow-y:auto!important; scrollbar-width:thin; scrollbar-color:#3d526b transparent; }
+  body.tpfUnified .referenceSidebar .referenceNav .nav { min-height:34px!important; padding:8px 10px!important; line-height:1.25!important; }
+  body.tpfUnified .referenceSidebar .referenceNav .nav b { display:inline-flex; flex:0 0 20px; justify-content:center; margin-right:4px; }
+}
+@media(max-width:850px){
+  .tpfUnified .referenceWorkspace>main>section:is(#view-alerts,#view-search,#view-database,#view-import,#view-agenda,#view-whatsapp,#view-wa-templates-v3,#view-email,#view-labels,#view-settings,#view-automations,#view-users,#view-system,#view-trash) { padding:12px!important; }
+  .tpfUnified:not(.tpfBoardOnly) .salesBoardPage { padding:12px; }
+}

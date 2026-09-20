@@ -85,13 +85,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260920-inicio-11';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260920-inicio-12';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-inicio-11';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-inicio-12';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdPageIntro"><span class="tdPageEyebrow">THE PHONE FACE · INICIO</span><h1>Inicio</h1><div class="tdDate"><span id="tdGreeting">Tu centro de ventas</span><span aria-hidden="true">·</span><span id="tdToday"></span></div></div><div class="tdCommandActions"><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
@@ -360,7 +360,21 @@ function closeGoal(){$('tdGoalModal').classList.add('hidden')}
 async function saveGoal(){const b=$('tdGoalSave');b.disabled=true;$('tdGoalMsg').textContent='Guardando…';try{const r=await queryWithTimeout(sb.rpc('crm_set_month_goal',{p_month:D.data?.monthStart||`${localDay().slice(0,7)}-01`,p_target_amount:Math.max(0,Number($('tdGoalAmountInput').value||0)),p_target_opportunities:Math.max(0,Math.floor(Number($('tdGoalCountInput').value||0)))}));if(r.error)throw r.error;closeGoal();D.lastLoad=0;await load()}catch(e){$('tdGoalMsg').textContent=e?.message||'No se pudo guardar el objetivo.'}finally{b.disabled=false}}
 
 function hideTemplateLeak(){if(dashboardOpen())$('view-wa-templates-v3')?.classList.add('hidden')}
-function startWhenReady(){let attempts=0;const timer=setInterval(()=>{attempts++;if(appOpen()){clearInterval(timer);build();hideTemplateLeak();if(dashboardOpen())load()}else if(attempts>=240)clearInterval(timer)},250)}
+function startWhenReady(){
+  const app=$('app');
+  if(!app){document.addEventListener('DOMContentLoaded',startWhenReady,{once:true});return}
+  let observer=null,started=false;
+  function ready(){
+    if(started||!appOpen())return;
+    started=true;observer?.disconnect();
+    build();hideTemplateLeak();if(dashboardOpen())load();
+  }
+  // Login can take arbitrarily long. Observe the shell instead of expiring
+  // after 60 seconds and leaving the old dashboard visible until navigation.
+  observer=new MutationObserver(ready);
+  observer.observe(app,{attributes:true,attributeFilter:['class','hidden','style']});
+  ready();
+}
 function install(){ensureCss();window.loadDashboard=load;document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))setTimeout(()=>{build();hideTemplateLeak();D.lastLoad=0;load()},120)},true);startWhenReady()}
 M.register('dashboard-performance-guard',{install});
 })();

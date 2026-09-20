@@ -20,3 +20,18 @@ El despliegue es exclusivamente preview. No equivale a un rediseño estructural 
 ## Paso a estable
 
 Comparar con el HEAD estable vigente e incorporar solo los cambios aprobados. No promover toda la rama de pruebas sin revisar sus diferencias. Mantener identificados el commit previo y la versión a revertir. No autorizado ni realizado en esta entrega.
+
+## Revisión autenticada posterior
+
+Se abrió una sesión que la interfaz identifica como Ramón/Administrador. Todas las comprobaciones fueron de lectura, apertura y cancelación; no se guardaron cambios en clientes ni se enviaron mensajes.
+
+- Inicio: filtro Seguimientos, selector Todas (17/17) y apertura de analítica.
+- Contactos: carga de 1282 registros, búsqueda, apertura y las seis pestañas de ficha; formulario de alta y cancelación.
+- Ventas: tablero/lista, formulario nuevo y existente, cierre de mes y pestaña de ofertas pendientes; cancelación sin pasar ventas a Ganado.
+- Agenda: carga, apertura del formulario de tarea y cancelación.
+- Ofertas: apertura de configurador, opciones de operador y cancelación sin envío.
+- Navegación: Avisos, Buscador, Importar Excel, WhatsApp, Plantillas, Programados, Etiquetas, Configuración, Automatizaciones, Usuarios, Sistema y Papelera. No equivale a ejecutar todas sus acciones.
+- Correo muestra Microsoft 365 no conectado; no se validó envío/recepción.
+- Detectado y corregido: Inicio quedaba antiguo si el inicio de sesión tardaba más de 60 segundos. Sustituido el sondeo con caducidad por observación del estado visible de la aplicación. Regresión nueva `dashboard-delayed-login.cjs` pasa.
+- Ajustados márgenes de páginas y menú desplazable tras inspección visual: estilos heredados de WhatsApp anulaban el padding de main.
+- Siguen pendientes: operaciones de escritura controladas, integraciones externas de extremo a extremo, revisión en móvil físico. No se certifica todo el CRM.
