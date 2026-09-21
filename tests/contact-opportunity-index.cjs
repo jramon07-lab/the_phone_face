@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+let count=0;const window={TPFModules:{register(){}},TPFRecordLinks:{index(){return {}},opportunityContacts(o){count++;return new Set([o.record_id,'manager']);}}};
+const source=fs.readFileSync('js/modules/contacts-final-fix.js','utf8');
+vm.runInNewContext(source.replace("M.register('contacts-final-fix',","window.test={set(c,o){contacts=c;opps=o;},opportunityIndex,get(){return byContact;}};M.register('contacts-final-fix',"),{window,document:{},console});
+const contacts=[{id:'holder'},{id:'manager'}],opps=Array.from({length:2000},(_,i)=>({id:String(i),record_id:'holder'}));
+window.test.set(contacts,opps);window.test.opportunityIndex();
+assert.equal(count,2000);assert.equal(window.test.get().get('manager').length,2000);
+for(let i=0;i<50;i++)window.test.opportunityIndex();assert.equal(count,2000,'unchanged redraws reuse the index');
+window.test.set(contacts,opps.slice(1));window.test.opportunityIndex();
+assert.equal(window.test.get().get('holder').length,1999,'deletions rebuild counts');
+console.log('Opportunity association index reused until contacts or opportunities change');

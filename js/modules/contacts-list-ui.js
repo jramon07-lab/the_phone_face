@@ -110,7 +110,7 @@ function bindUi(){
  byId('tpfFilterSource').addEventListener('change',e=>{state.filters.source=e.target.value;state.page=1;applyAndRender();});
  byId('tpfFilterLabelToggle').onclick=()=>{const panel=byId('tpfFilterLabelPanel'),open=panel.classList.toggle('hidden')===false;byId('tpfFilterLabelToggle').setAttribute('aria-expanded',String(open));if(open)byId('tpfFilterLabelSearch').focus();};
  byId('tpfFilterLabelSearch').oninput=renderLabelOptions;
- byId('tpfFilterLabelChoices').onclick=async e=>{const pick=e.target.closest('[data-label-id]');if(!pick)return;const id=pick.dataset.labelId||'';const selected=new Set(state.filters.labels||[]);if(!id)selected.clear();else if(selected.has(id))selected.delete(id);else selected.add(id);state.filters.labels=[...selected];state.page=1;renderLabelOptions();applyAndRender();if(state.filters.labels.length&&!state.labelsAllLoaded){setStatus('Cargando etiquetas de contactos…');await loadAllContactLabels();setStatus('');}renderLabelOptions();applyAndRender();};
+ byId('tpfFilterLabelChoices').onclick=async e=>{const pick=e.target.closest('[data-label-id]');if(!pick)return;const id=pick.dataset.labelId||'';const selected=new Set(state.filters.labels||[]);if(!id)selected.clear();else if(selected.has(id))selected.delete(id);else selected.add(id);state.filters.labels=[...selected];state.page=1;renderLabelOptions();applyAndRender();if(state.filters.labels.length&&!state.labelsAllLoaded){setStatus('Cargando etiquetas de contactos…');try{await loadAllContactLabels();setStatus('');}catch(error){setStatus('No se pudieron cargar las etiquetas. Vuelve a seleccionar para reintentar.',true);}}renderLabelOptions();applyAndRender();};
  byId('tpfFilterSelectedLabels').onclick=e=>{const remove=e.target.closest('[data-remove-label]');if(!remove)return;state.filters.labels=(state.filters.labels||[]).filter(id=>id!==remove.dataset.removeLabel);state.page=1;renderLabelOptions();applyAndRender();};
  [['tpfFilterOppStatus','oppStatus'],['tpfFilterCloseFrom','closeFrom'],['tpfFilterCloseTo','closeTo']].forEach(([id,key])=>byId(id)?.addEventListener('change',e=>{state.filters[key]=e.target.value;state.page=1;applyAndRender();}));
  byId('tpfContactsRefresh').onclick=()=>loadContacts(true);
@@ -145,7 +145,7 @@ async function loadGlobalLabels(){
  try{let rows;if(typeof window.crmLoadLabels==='function')rows=await window.crmLoadLabels();else if(typeof crmLoadLabels==='function')rows=await crmLoadLabels();else{const r=await sb.rpc('crm_list_labels');if(r.error)throw r.error;rows=r.data;}state.labels=Array.isArray(rows)?rows:[];}catch(e){state.labels=[];console.warn('Etiquetas contactos',e);}renderLabelOptions();return state.labels;
 }
 async function getContactLabels(id){
- if(state.labelsByContact.has(id))return state.labelsByContact.get(id);let rows=[];try{if(typeof window.crmGetContactLabels==='function')rows=await window.crmGetContactLabels(id);else if(typeof crmGetContactLabels==='function')rows=await crmGetContactLabels(id);else{const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:id});if(r.error)throw r.error;rows=r.data;}rows=Array.isArray(rows)?rows:[];}catch(e){rows=[];}state.labelsByContact.set(id,rows);return rows;
+ if(state.labelsByContact.has(id))return state.labelsByContact.get(id);const cache=state.labelsByContact;let rows=[];try{if(typeof window.crmGetContactLabels==='function')rows=await window.crmGetContactLabels(id);else if(typeof crmGetContactLabels==='function')rows=await crmGetContactLabels(id);else{const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:id});if(r.error)throw r.error;rows=r.data;}rows=Array.isArray(rows)?rows:[];}catch(e){rows=[];}if(state.labelsByContact===cache&&!state.labelsAllLoaded)cache.set(id,rows);return state.labelsByContact.get(id)||rows;
 }
 let contactsLoad=null,contactsReloadPending=false,editRequest=0;
 function loadContacts(force=false){
@@ -160,7 +160,7 @@ function loadContacts(force=false){
    const [rows,,opportunities]=await Promise.all([fetchAllContacts(),loadGlobalLabels(),fetchOpportunities()]);
    // A save/delete during this request requires a NEW read, not this stale response.
    if(contactsReloadPending)continue;
-   state.rows=rows;if(salesRevision===state.salesRevision)state.opportunities=opportunities;state.labelsByContact.clear();state.labelsAllLoaded=false;state.selected=new Set([...state.selected].filter(id=>rows.some(r=>r.id===id)));
+   state.rows=rows;if(salesRevision===state.salesRevision)state.opportunities=opportunities;state.labelsByContact=new Map();state.labelsAllLoaded=false;state.labelsLoadPromise=null;state.selected=new Set([...state.selected].filter(id=>rows.some(r=>r.id===id)));
    if(state.filters.labels.length)await loadAllContactLabels();renderSources();applyAndRender();setStatus('');
    window.dispatchEvent(new CustomEvent('tpf:contacts-loaded',{detail:{records:rows}}));
   }while(contactsReloadPending);}
@@ -202,7 +202,28 @@ function renderList(){
 }
 async function hydrateVisibleLabels(rows){const missing=rows.filter(r=>!state.labelsByContact.has(r.id));if(!missing.length)return;await Promise.all(missing.map(r=>getContactLabels(r.id)));if(currentPageRows().some(r=>missing.some(m=>m.id===r.id)))renderListNoHydrate();}
 function renderListNoHydrate(){const rows=currentPageRows(),tbody=byId('tpfContactsRows'),cards=byId('tpfContactsCards');if(!tbody||!cards)return;const scroll=tbody.parentElement?.parentElement?.scrollTop||0;tbody.querySelectorAll('tr').forEach(tr=>{const id=tr.dataset.contactId,cell=tr.children[5];if(cell)cell.innerHTML=labelsHtml(id);});cards.querySelectorAll('[data-contact-id]').forEach(card=>{const box=card.querySelector('.tpfContactCardLabels');if(box)box.innerHTML=labelsHtml(card.dataset.contactId);});if(tbody.parentElement?.parentElement)tbody.parentElement.parentElement.scrollTop=scroll;}
-async function loadAllContactLabels(){if(state.labelsAllLoaded)return;if(state.labelsLoadPromise)return state.labelsLoadPromise;state.labelsLoadPromise=(async()=>{let cursor=0;const workers=Array.from({length:Math.min(8,Math.max(1,state.rows.length))},async()=>{while(cursor<state.rows.length){const r=state.rows[cursor++];if(!state.labelsByContact.has(r.id))await getContactLabels(r.id);}});await Promise.all(workers);state.labelsAllLoaded=true;})();try{await state.labelsLoadPromise;}finally{state.labelsLoadPromise=null;}}
+async function loadAllContactLabels(){
+ if(state.labelsAllLoaded)return;
+ if(state.labelsLoadPromise)return state.labelsLoadPromise;
+ const rows=state.rows,cache=state.labelsByContact;
+ const request=(async()=>{
+  const labels=new Map(state.labels.map(x=>[String(labelId(x)),x]));
+  const loaded=new Map(rows.map(r=>[r.id,[]]));
+  for(let from=0;;from+=500){
+   const result=await sb.from('crm_contact_labels').select('contact_id,label_id').order('contact_id').order('label_id').range(from,from+499);
+   if(result.error)throw result.error;
+   const chunk=result.data||[];
+   for(const item of chunk){const label=labels.get(String(item.label_id));if(label&&loaded.has(item.contact_id))loaded.get(item.contact_id).push(label);}
+   if(chunk.length<500)break;
+  }
+  // An older request must not replace labels after contacts have been reloaded.
+  if(state.rows!==rows||state.labelsByContact!==cache)return;
+  for(const [id,labels] of loaded)cache.set(id,labels);
+  state.labelsAllLoaded=true;
+ })();
+ state.labelsLoadPromise=request;
+ try{await request;}finally{if(state.labelsLoadPromise===request)state.labelsLoadPromise=null;}
+}
 // Exporting one filtered contact must not wait for labels from the entire CRM.
 // Keep the full loader for the label filter, but only hydrate rows that the
 // operator is actually exporting.
