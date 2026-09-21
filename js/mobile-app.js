@@ -1522,10 +1522,13 @@ function crmInteractiveText(message){
       return !query||haystack.includes(query)||(queryDigits.length>=3&&digits(haystack).includes(queryDigits));
     });
   }
+  function mobileWaContactMatches(chatId){
+    if(String(chatId||'').includes('@')&&!/@c\.us$/i.test(String(chatId||'')))return [];
+    const number=contactPhoneNumber(mobileWaNormalizePhone(chatId));if(!number)return [];
+    return state.contacts.filter(contact=>contactPhones(contact).some(phone=>phone.number===number));
+  }
   function mobileWaFindContact(chatId){
-    if(String(chatId||'').includes('@')&&!/@c\.us$/i.test(String(chatId||'')))return null;
-    const number=contactPhoneNumber(mobileWaNormalizePhone(chatId));if(!number)return null;
-    const matches=state.contacts.filter(contact=>contactPhones(contact).some(phone=>phone.number===number));
+    const matches=mobileWaContactMatches(chatId);
     const current=route(),origin=current.query.get('fromContact');
     if(current.parts[0]==='whatsapp-chat'&&safeDecode(current.parts[1])===String(chatId)&&origin){const selected=matches.find(contact=>String(contact.id)===origin);if(selected)return selected;}
     return matches.length===1?matches[0]:null;
@@ -1660,6 +1663,8 @@ function crmInteractiveText(message){
     const id=String(chat.id||''),group=id.includes('@g.us'),lid=id.includes('@lid');if(group)return '<span>Los grupos no se vinculan a una ficha.</span>';if(lid)return '<span>Este chat no muestra un teléfono verificable.</span>';
     const contact=mobileWaFindContact(chat.id);
     if(contact)return `<span>${esc(contact.fullName)}${contact.dni?` · DNI: ${esc(contact.dni)}`:''}</span><button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver ficha</button>`;
+    const matches=mobileWaContactMatches(chat.id);
+    if(matches.length>1)return `<div><p>${matches.length} fichas comparten este teléfono. Elige cuál quieres gestionar:</p>${matches.map(row=>`<button class="m-secondary" style="display:block;width:100%;margin-top:8px" data-action="route" data-route="whatsapp-chat/${esc(encodeURIComponent(chat.id))}?fromContact=${esc(encodeURIComponent(row.id))}" type="button">${esc(row.fullName)}${row.dni?` · DNI: ${esc(row.dni)}`:''}</button>`).join('')}</div>`;
     if(has('can_create_database')&&has('can_view_database'))return `<span>No está en Contactos</span><button class="m-secondary" data-action="wa-create-contact" data-chat-id="${esc(chat.id)}" type="button">Crear contacto</button>`;
     return '<span>No está vinculado a Contactos.</span>';
   }
@@ -1820,6 +1825,7 @@ function crmInteractiveText(message){
   }
   function startContactFromMobileWa(chatId){
     if(!has('can_create_database')||!has('can_view_database')||!/@c\.us$/i.test(String(chatId||'')))return;const chat=mobileWaSelectedChat(chatId),phone=mobileWaNormalizePhone(chat.id),shownPhone=phone.startsWith('34')&&phone.length===11?phone.slice(2):phone;
+    if(mobileWaContactMatches(chatId).length){toast('Este teléfono ya está en Contactos. Elige su ficha en la conversación.','error');go(`whatsapp-chat/${encodeURIComponent(chatId)}`);return;}
     const rawName=clean(chat.name)&&!/^\+?\d+$/.test(clean(chat.name))?chat.name:'',name=splitFullName(rawName);resetDraft();state.draft.contact={...state.draft.contact,first:name.first,last:name.last,phone:shownPhone};go('detected');
   }
   function stopMobileWaRefresh(){if(mobileWaRefreshTimer){clearTimeout(mobileWaRefreshTimer);mobileWaRefreshTimer=null;}}
