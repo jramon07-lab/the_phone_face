@@ -125,6 +125,7 @@ function reportScope(report, device) {
   console.log('SERVICE_READONLY_SUMMARY', JSON.stringify({
     device, blockedWrites: report.blockedWrites, blockedByEndpoint: report.blockedByEndpoint,
     unknownReads: [...report.unknownReads], failedReads: [...report.failedReads],
+    pendingReads: report.pendingReads.map(safeLabel),
     pageErrors: report.pageErrors, greenAuthorized: report.greenAuthorized, googleConnected: report.googleConnected, telegramConfigured: report.telegramConfigured,
     messagesSent: 0, businessWritesAllowed: 0, deliveryAndRunnersTested: false
   }));
