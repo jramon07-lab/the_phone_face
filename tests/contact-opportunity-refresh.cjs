@@ -31,7 +31,7 @@ async function run(){
   const window=new EventTarget();
   window.TPFModules={register(name,def){def.install()}};
   const context=vm.createContext({window,CustomEvent,console,Array,
-    document:{getElementById(){return {}},querySelector(){return null},querySelectorAll(){return rows},addEventListener(){}},
+    document:{getElementById(){return {classList:{contains(){return false}}}},querySelector(){return null},querySelectorAll(){return rows},addEventListener(){}},
     setTimeout(fn){timers.push(fn)},setInterval(){},
     sb:{from(table){queries++;const q={select(){return q},eq(){return q},order(){return q},range(){return q},then(resolve,reject){return Promise.resolve(table==='records'?{data:contacts}:queryRows).then(v=>resolve(Array.isArray(v)?{data:v}:v),reject)}};return q},rpc:async()=>board},
     salesCache:{},renderSales(){},$:()=>({innerHTML:''}),esc:v=>v,
