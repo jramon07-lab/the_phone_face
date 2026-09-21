@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm');
+let install,reads=0,hidden=false;
+const watchers=[],frames=[],timers=[],events={};
+const box={querySelectorAll:()=>[]},view={classList:{contains:()=>hidden}};
+const document={hidden:false,body:{},getElementById:id=>id==='tpfWaReceivedDocumentsCss'?{}:id==='waMessages'?box:id==='view-whatsapplive'?view:null,addEventListener:(name,fn)=>events[name]=fn};
+const ctx={document,console,Set,Date,JSON,URLSearchParams,waLiveState:{selected:{id:'test@c.us'},history:Array.from({length:1000},(_,i)=>({idMessage:String(i),timestamp:i,outgoing:false}))},window:{TPFModules:{register:(n,m)=>install=m.install},waMessageTimestamp:m=>m.timestamp,waMediaInfo:()=>{reads++;return {kind:'text',type:'textMessage'}},waMessageText:()=> 'test'},MutationObserver:class{constructor(fn){this.fn=fn;}observe(target,options){watchers.push({target,options,fn:this.fn});}},requestAnimationFrame:fn=>frames.push(fn),setTimeout:fn=>timers.push(fn)};
+vm.runInNewContext(fs.readFileSync('js/modules/whatsapp-received-documents.js','utf8'),ctx);install();
+assert.equal(watchers.length,2);assert(!watchers.some(w=>w.target===document.body));
+const chat=watchers.find(w=>w.target===box),visibility=watchers.find(w=>w.target===view);
+const flush=()=>{while(frames.length)frames.shift()();};
+hidden=true;for(let i=0;i<100;i++)chat.fn();timers.forEach(fn=>fn());flush();assert.equal(reads,0,'Hidden WhatsApp must not process history');
+hidden=false;visibility.fn();for(let i=0;i<100;i++)chat.fn();assert.equal(frames.length,1,'Coalesce all pending changes');flush();assert.equal(reads,1000);
+chat.fn();hidden=true;flush();assert.equal(reads,1000,'Check visibility again when frame runs');
+hidden=false;document.hidden=true;chat.fn();flush();assert.equal(reads,1000);
+document.hidden=false;events.visibilitychange();flush();assert.equal(reads,2000,'Refresh when returning to visible chat');
+console.log('PASS: scoped observers, hidden views/tabs skipped, coalesced updates, resume refresh; no network or data writes.');

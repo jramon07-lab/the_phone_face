@@ -76,6 +76,16 @@ async function act(target){
  finally{target.disabled=false;pending.delete(key);}
 }
 function style(){if($('tpfWaReceivedDocumentsCss'))return;const s=document.createElement('style');s.id='tpfWaReceivedDocumentsCss';s.textContent='#view-whatsapplive .tpfWaDocumentActions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;margin-top:7px}.tpfWaDocAction{border:1px solid #cbd5e1;background:#fff;color:#175cd3;border-radius:8px;padding:7px 10px;font:600 12px/1.1 system-ui;cursor:pointer}.tpfWaDocAction:disabled{opacity:.55;cursor:wait}.tpfWaDocMenu{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin:7px 0;padding:8px;background:#fff;border:1px solid #d7dee8;border-radius:10px;box-shadow:0 5px 18px #102a4c22}.tpfWaDocMenu .tpfWaDocAction{text-align:left;color:#17243c;border:0;background:#f7f9fc}.tpfWaDocMenu .tpfWaDocAction:hover{background:#eaf3ff}.tpfWaDocumentNotice{position:fixed;z-index:100000;right:20px;bottom:20px;max-width:min(380px,calc(100vw - 40px));padding:12px 15px;border-radius:10px;background:#17243c;color:#fff;box-shadow:0 10px 30px #0003;font:14px/1.35 system-ui}.tpfWaDocumentNotice.ok{background:#147a46}.tpfWaDocumentNotice.error{background:#b42318}@media(max-width:700px){.tpfWaDocumentNotice{right:12px;bottom:84px}.tpfWaDocAction{min-height:36px}}';document.head.appendChild(s);}
-function install(){style();document.addEventListener('click',e=>{const target=e.target.closest?.('[data-wa-doc-action]');if(target){e.preventDefault();e.stopPropagation();act(target);}},true);const watch=new MutationObserver(()=>requestAnimationFrame(decorate));watch.observe(document.body,{childList:true,subtree:true});setTimeout(decorate,800);}
+function install(){
+ style();document.addEventListener('click',e=>{const target=e.target.closest?.('[data-wa-doc-action]');if(target){e.preventDefault();e.stopPropagation();act(target);}},true);
+ const box=$('waMessages'),view=$('view-whatsapplive');let queued=false;
+ const visible=()=>!document.hidden&&!view?.classList.contains('hidden');
+ const schedule=()=>{if(queued||!visible())return;queued=true;requestAnimationFrame(()=>{queued=false;if(visible())decorate();});};
+ // Observe only the chat: changes elsewhere in the CRM must not rescan its history.
+ if(box)new MutationObserver(schedule).observe(box,{childList:true,subtree:true});
+ if(view)new MutationObserver(schedule).observe(view,{attributes:true,attributeFilter:['class']});
+ document.addEventListener('visibilitychange',schedule);
+ setTimeout(schedule,800);
+}
 M.register('whatsapp-received-documents',{install});
 })();
