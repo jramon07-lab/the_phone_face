@@ -59,8 +59,12 @@ function loadEdge(slug, options = {}) {
       return chain;
     }
   };
+  class TestDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [options.now || '2026-09-25T08:30:00Z'])); }
+    static now() { return new Date(options.now || '2026-09-25T08:30:00Z').getTime(); }
+  }
   const context = {
-    Request, Response, Headers, Date, JSON, console,
+    Request, Response, Headers, Date: TestDate, JSON, console,
     createClient: () => sb,
     Deno: {
       env: { get: key => key === 'SUPABASE_URL' ? 'https://isolated.invalid' : 'fake-service-key' },
@@ -176,7 +180,7 @@ test('automation: existing accepted message is verified through history, never r
   const job = clone(automationJob);
   job.action_config.__delivery_receipt = { idMessage: 'accepted-before-migration', chatId: '34600000000@c.us' };
   const edge = loadEdge('crm-automation-runner', {
-    rows: [job], fetch: action => {
+    now: '2026-09-25T06:06:00Z', rows: [job], fetch: action => {
       assert.equal(action, 'history');
       return Response.json({ ok: true, messages: [{ idMessage: 'accepted-before-migration', statusMessage: 'delivered' }] });
     }

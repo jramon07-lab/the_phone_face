@@ -7,7 +7,8 @@ const root=require('node:path').resolve(__dirname,'..');
 const runner=fs.readFileSync(root+'/supabase/functions/crm-automation-runner/index.ts','utf8');
 const before=fs.readFileSync(root+'/db/proposals/automation_lifecycle_runner_before.ts','utf8');
 const transport=s=>s.slice(s.indexOf('async function greenStateAuthorized'),s.indexOf('async function resolveTemplate('));
-assert.equal(transport(runner),transport(before),'approved send transport must remain byte-identical');
+const unchangedTransport=transport(runner).replace('buttons:any[]=[],job:any=null','buttons:any[]=[]').replace('if(job&&await deferOutsideBusinessHours(job))return null;','');
+assert.equal(unchangedTransport,transport(before),'send transport preserved apart from the business-hours guard');
 let emitted=[],updates=[],guard={allow:true},fetches=0;
 const sb={rpc:async()=>({data:guard,error:null}),from(table){return {
  upsert:async row=>{emitted.push({...row,table});return {error:null}},

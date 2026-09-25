@@ -1,5 +1,20 @@
 const ZONE = "Europe/Madrid";
 
+// Check the actual sending time, including overdue jobs and provider retries.
+// Initial offers are explicitly sent by a person; reminders are automatic.
+export function automaticSendWindow(job:any,now:Date):Date|null {
+  if(!["__send_whatsapp","schedule_whatsapp","send_template"].includes(job.action_type))return null;
+  if(job.context?.trigger_type==="manual_offer"&&job.action_config?.offer_phase==="initial"&&Number(job.attempts||0)<=1)return null;
+  const p=madridParts(now),minute=p.hour*60+p.minute;
+  if(!isSunday(p)&&((minute>=600&&minute<840)||(!isSaturday(p)&&minute>=1050&&minute<1230)))return null;
+  if(isSunday(p)){
+    const monday=addLocalDays(p,1);
+    return localDate(monday.year,monday.month,monday.day,600);
+  }
+  // At closing time the next window starts later, never earlier in this minute.
+  return nextBusinessSendAt(new Date(now.getTime()+60000),0);
+}
+
 type MadridParts = { year:number; month:number; day:number; hour:number; minute:number };
 
 function madridParts(date:Date):MadridParts {
