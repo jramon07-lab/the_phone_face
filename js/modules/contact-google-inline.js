@@ -2345,6 +2345,7 @@
     waNameObserver = new MutationObserver(scheduleWhatsappNameRepair);
     observeWhatsappNameTargets();
   }
+  const boundGoogleChecks = new Map();
   async function refreshWhatsapp({ checkGoogle = true } = {}) {
     rememberWhatsapp();
     const token = ++waRefreshToken,
@@ -2436,9 +2437,21 @@
     const checkedAccount = fold(googleAccountEmail());
     let found = [],
       googleError = "";
+    // A saved Google binding can be checked cheaply without downloading the
+    // address book. Retry at most once per five minutes for this exact identity.
+    const boundKey = checkedAccount + "|" + verificationSignature(row) + "|" + safe(c.googleResource);
+    const directOnly = connected && !checkGoogle && /^people\/c[\w-]+$/.test(safe(c.googleResource)) &&
+      fold(c.googleAccount) === checkedAccount &&
+      (!boundGoogleChecks.has(boundKey) || Date.now() - boundGoogleChecks.get(boundKey) >= 300000);
+    if (directOnly) {
+      boundGoogleChecks.set(boundKey, Date.now());
+      checkGoogle = true;
+    }
     if (connected && checkGoogle) {
       try {
-        found = await cachedGoogle(c);
+        found = directOnly
+          ? [await googleApi(c.googleResource + "?personFields=names,nicknames,emailAddresses,phoneNumbers,userDefined,metadata")]
+          : await cachedGoogle(c);
       } catch (error) {
         googleError = error?.message || "No se pudo comprobar Google";
       }

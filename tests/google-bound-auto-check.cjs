@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modules/contact-google-inline.js','utf8');
+const start=source.indexOf('    const boundKey = checkedAccount'),end=source.indexOf('    if (connected && checkGoogle)',start);
+const code=source.slice(start,end)+'\nresult={directOnly,checkGoogle};';
+const context={boundGoogleChecks:new Map(),connected:true,checkGoogle:false,checkedAccount:'shop@example.test',c:{googleResource:'people/c123',googleAccount:'shop@example.test'},row:{},verificationSignature:()=> 'signature',fold:v=>String(v||'').toLowerCase(),safe:v=>String(v||''),Date};
+vm.createContext(context);vm.runInContext(code,context);assert.equal(context.result.directOnly,true);
+context.checkGoogle=false;vm.runInContext('{'+code+'}',context);assert.equal(context.result.directOnly,false,'repeat render must not repeat Google request');
+context.c.googleAccount='other@example.test';context.boundGoogleChecks.clear();vm.runInContext('{'+code+'}',context);assert.equal(context.result.directOnly,false,'never inspect another account binding automatically');
+context.c.googleAccount='shop@example.test';context.c.googleResource='';vm.runInContext('{'+code+'}',context);assert.equal(context.result.directOnly,false,'unbound contacts must not download the address book automatically');
+assert.match(source,/found = directOnly\s*\? \[await googleApi\(c.googleResource/);
+console.log('Bound contact checks are account scoped, throttled and never automatically scan the address book');

@@ -174,6 +174,22 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
     await expect.poll(() => report.googleConnected, { timeout: 15000 }).toBe(true);
     report.telegramConfigured = await page.locator('#notifyTelegramChatId').evaluate(el => /^-?\d+$/.test(el.value.trim()));
     expect(report.telegramConfigured, 'Telegram debe tener un destino configurado; esto no prueba la entrega').toBe(true);
+    // Read-only diagnosis of the newly created contact reported as unverified.
+    const contactCheck = await page.evaluate(async () => {
+      const result = await sb.from('records').select('id,data').eq('id','9bbc4eb2-4eac-40de-8ead-5c7c306ccc6a').single();
+      if(result.error) throw Error('No se pudo leer la ficha de diagnóstico');
+      const data=result.data.data, binding=data.TPF_GOOGLE_CONTACT;
+      const person=await googleApi(binding.resource_name+'?personFields=names,nicknames,phoneNumbers');
+      const phone=v=>String(v||'').replace(/\D/g,'').slice(-9);
+      return { googleExists:person.resourceName===binding.resource_name,
+        nameMatches:(person.names||[]).some(n=>n.givenName===data.NOMBRE&&n.familyName===data.APELLIDOS),
+        phoneMatches:(person.phoneNumbers||[]).some(n=>phone(n.canonicalForm||n.value)===phone(data['TELÉFONO'])),
+        verificationStored:!!data.TPF_CONTACT_VERIFIED };
+    });
+    console.log('REPORTED_CONTACT_READONLY_CHECK',JSON.stringify(contactCheck));
+    expect(contactCheck.googleExists).toBe(true);
+    expect(contactCheck.nameMatches).toBe(true);
+    expect(contactCheck.phoneMatches).toBe(true);
     // Presentation-only navigation: existing inputs keep their identity and values.
     const telegramBefore = await page.locator('#notifyTelegramChatId').inputValue();
     await page.locator('#view-settings-notifications-tab').click();
@@ -250,4 +266,24 @@ test.describe('Móvil de solo lectura', () => {
       assertReadHealth(report);
     } finally { reportScope(report, 'móvil'); }
   });
+});
+
+// Exercise the real browser MutationObserver, including its own DOM writes.
+test('Panel de ventas queda en reposo tras decorar y cambiar filtros', async ({page,context})=>{
+  const fs=require('node:fs');await context.route('**/*',route=>route.abort());
+  await page.setContent('<section id="view-sales"><button id="salesOptionsToggle"></button><div id="salesOptionsPanel" class="hidden"></div><div id="tpfDateStatus"></div><div id="salesBoard"></div></section>');
+  await page.evaluate(()=>{window.TPFModules={register:(_,module)=>window.fixtureModule=module};window.salesCache={opportunities:[]};window.fixtureChanges=0;new MutationObserver(()=>window.fixtureChanges++).observe(document.getElementById('view-sales'),{childList:true,subtree:true});});
+  await page.addScriptTag({content:fs.readFileSync('js/modules/contacts-sales.js','utf8')});
+  await page.evaluate(()=>window.fixtureModule.install());
+  await page.waitForTimeout(300);
+  const settled=await page.evaluate(()=>window.fixtureChanges);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(()=>window.fixtureChanges)).toBe(settled);
+  await page.evaluate(()=>document.getElementById('view-sales').classList.add('hidden'));
+  await page.waitForTimeout(100);
+  await page.evaluate(()=>document.getElementById('view-sales').classList.remove('hidden'));
+  await page.waitForTimeout(300);
+  const resumed=await page.evaluate(()=>window.fixtureChanges);
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(()=>window.fixtureChanges)).toBe(resumed);
 });
