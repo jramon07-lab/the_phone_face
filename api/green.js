@@ -501,16 +501,20 @@ export default async function handler(req, res) {
         return res.status(400).send("Faltan chatId o idMessage.");
       }
 
-      const data = await greenFetch("downloadFile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, idMessage })
-      });
-      const downloadUrl = String(data?.downloadUrl || "").trim();
-      if (!downloadUrl) return res.status(404).send("Archivo no disponible.");
-
-      const remote = await fetch(downloadUrl);
-      if (!remote.ok) return res.status(remote.status).send("No se pudo descargar el archivo.");
+      let remote = await require('../lib/green-saved-media').savedMedia(chatId,idMessage,id);
+      if (!remote) {
+        try {
+          const data = await greenFetch("downloadFile", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chatId, idMessage })
+          });
+          const downloadUrl = String(data?.downloadUrl || "").trim();
+          if (downloadUrl) remote = await fetch(downloadUrl);
+        } catch (error) {
+          console.error('GREEN_DOWNLOAD_UNAVAILABLE', { greenStatus:error?.status||null });
+        }
+      }
+      if (!remote?.ok) return res.status(502).json({ok:false,error:'WhatsApp no ha podido recuperar este archivo. Prueba a descargarlo desde el móvil o pide que lo reenvíen.'});
 
       const bytes = Buffer.from(await remote.arrayBuffer());
       const contentType = remote.headers.get("content-type") || "application/octet-stream";

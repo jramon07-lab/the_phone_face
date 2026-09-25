@@ -18,7 +18,7 @@ async function download(url,name){
  const target=new URL(url,location.href);
  if(target.origin!==location.origin||target.pathname!=='/api/green')throw Error('Descarga no válida.');
  const response=await window.fetch(url,{cache:'no-store'});
- if(!response.ok)throw Error('No se pudo descargar el archivo. Comprueba la sesión e inténtalo de nuevo.');
+ if(!response.ok){const detail=await response.json().catch(()=>null);throw Error(detail?.error||(response.status===401?'La sesión ha caducado. Vuelve a entrar.':'No se pudo descargar el archivo de WhatsApp. Inténtalo de nuevo.'));}
  const blob=await response.blob();if(!blob.size)throw Error('El archivo recibido está vacío.');
  const objectUrl=URL.createObjectURL(blob),link=document.createElement('a');
  link.href=objectUrl;link.download=name||'archivo';document.body.appendChild(link);link.click();link.remove();
