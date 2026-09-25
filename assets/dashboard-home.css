@@ -356,3 +356,25 @@
  #view-dashboard.tpfDashPro .tdCard{padding:14px}
  #view-dashboard.tpfDashPro .tdFilterBar .tdWorkTab{padding:10px 7px;font-size:12px}
 }
+
+/* Compact existing summary; keep the workbench in view. */
+@media(min-width:1051px){
+#view-dashboard.tpfDashPro .tdSalesHero>div{padding:12px 16px}
+#view-dashboard.tpfDashPro .tdSalesHero>div+div{padding-left:16px}
+#view-dashboard.tpfDashPro .tdHeroNumber>b{font-size:26px;margin:3px 0}
+#view-dashboard.tpfDashPro .tdPulse{padding:10px 14px}
+#view-dashboard.tpfDashPro .tdPulse b{font-size:23px}
+#view-dashboard.tpfDashPro .tdSalesHero{margin-bottom:10px;gap:10px}
+}
+#view-dashboard.tpfDashPro .tdReminder{font-size:12px;min-width:145px;color:var(--td-muted)}
+#view-dashboard.tpfDashPro .tdReminder small{display:block;margin-top:4px;font-size:10px}
+#view-dashboard.tpfDashPro .tdQuickOpen{padding:6px 8px;border:1px solid var(--td-border);border-radius:7px;background:#fff;color:var(--td-blue);font-size:12px}
+
+#view-dashboard.tpfDashPro .tdPriorityTable{min-width:1080px}
+#view-dashboard.tpfDashPro .tdPriorityTable th:first-child{width:21%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(2){width:23%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(3){width:13%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(4){width:12%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(5){width:15%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:nth-child(6){width:8%}
+#view-dashboard.tpfDashPro .tdPriorityTable th:last-child{width:8%}

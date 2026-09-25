@@ -85,13 +85,13 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20260920-inicio-12';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20260925-workbench-1';document.head.appendChild(link);
 }
 
 function build(){
   const v=$('view-dashboard');if(!v||D.built)return;
   D.backupJson=$('backupJson');D.backupCsv=$('backupCsv');
-  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260920-inicio-12';
+  v.classList.add('tpfDashPro');v.dataset.homeVersion='20260925-workbench-1';
   v.innerHTML=`
   <header class="tdCommandBar"><div class="tdPageIntro"><span class="tdPageEyebrow">THE PHONE FACE · INICIO</span><h1>Inicio</h1><div class="tdDate"><span id="tdGreeting">Tu centro de ventas</span><span aria-hidden="true">·</span><span id="tdToday"></span></div></div><div class="tdCommandActions"><div class="tdHeroQuick"><button id="dashNewOpp" class="tdHeroNew">${icon('plus')} Nueva oportunidad</button><button class="tdHeroGhost" data-home-action="new-contact">${icon('users')} Nuevo contacto</button><button class="tdHeroGhost" data-route="agenda">${icon('calendar')} Agenda</button></div><button id="dashRefresh" class="tdIconButton" aria-label="Actualizar Inicio" title="Actualizar Inicio">${icon('refresh')}</button><div class="tdMore"><button id="tdMoreBtn" class="tdIconButton" aria-label="Más opciones">${icon('more')}</button><div id="tdMoreMenu" class="tdMoreMenu hidden"><div id="tdBackupJson"></div><div id="tdBackupCsv"></div><div id="backupMsg" class="small"></div></div></div></div></header>
   <div id="tdDataStatus" class="tdDataStatus" role="status" hidden></div>
@@ -198,7 +198,7 @@ async function action(name,type,id){
   }
 }
 
-async function fetchData(){const today=localDay(),month=today.slice(0,7),monthStart=`${month}-01`;const results=await Promise.all([queryWithTimeout(sb.from('sales_opportunities').select('*').order('updated_at',{ascending:false}).limit(1000)),queryWithTimeout(sb.from('sales_stages').select('*').eq('active',true).order('position')),queryWithTimeout(sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(500)),queryWithTimeout(sb.from('records').select('id',{count:'exact',head:true}).eq('source_sheet','BASE DE DATOS')),queryWithTimeout(sb.from('crm_audit_log').select('*').order('created_at',{ascending:false}).limit(40)),queryWithTimeout(sb.rpc('crm_get_month_goal',{p_month:monthStart}))]);const [oppR,stageR,taskR,countR,auditR,goalR]=results;return{opps:oppR.data||[],stages:stageR.data||[],tasks:taskR.data||[],contacts:Number(countR.count||0),activity:auditR.data||[],goal:Array.isArray(goalR.data)?goalR.data[0]||{}:goalR.data||{},today,month,monthStart,warnings:results.filter(r=>r.error).map(r=>r.error.message)}}
+async function fetchData(){const today=localDay(),month=today.slice(0,7),monthStart=`${month}-01`;const results=await Promise.all([queryWithTimeout(sb.from('sales_opportunities').select('*').order('updated_at',{ascending:false}).limit(1000)),queryWithTimeout(sb.from('sales_stages').select('*').eq('active',true).order('position')),queryWithTimeout(sb.from('agenda_items').select('*').order('starts_at',{ascending:true}).limit(500)),queryWithTimeout(sb.from('records').select('id',{count:'exact',head:true}).eq('source_sheet','BASE DE DATOS')),queryWithTimeout(sb.from('crm_audit_log').select('*').order('created_at',{ascending:false}).limit(40)),queryWithTimeout(sb.rpc('crm_get_month_goal',{p_month:monthStart})),queryWithTimeout(sb.from('crm_server_automation_jobs').select('context,run_at,action_config').eq('status','pending').eq('action_type','send_whatsapp_now').in('action_config->>offer_phase',['reminder_2','reminder_5']).order('run_at',{ascending:true}).limit(1000))]);const [oppR,stageR,taskR,countR,auditR,goalR,reminderR]=results;return{reminders:reminderR.data||[],remindersError:!!reminderR.error,opps:oppR.data||[],stages:stageR.data||[],tasks:taskR.data||[],contacts:Number(countR.count||0),activity:auditR.data||[],goal:Array.isArray(goalR.data)?goalR.data[0]||{}:goalR.data||{},today,month,monthStart,warnings:results.filter(r=>r.error).map(r=>r.error.message)}}
 function removeConfirmed(type,id){
  D.revision++;D.lastLoad=0;
  if(D.data){const key=type==='opportunity'?'opps':'tasks';D.data[key]=D.data[key].filter(row=>String(row.id)!==String(id));if(dashboardOpen())render();}
@@ -289,16 +289,25 @@ function renderPriority(d,map,pending){
   $('tdPageInfo').textContent=rows.length?`${start+1}–${Math.min(start+pageSize,rows.length)} de ${rows.length} gestiones`:(D.query.trim()?'Sin coincidencias en este grupo':'Sin gestiones en este grupo');
   $('tdPrevPage').disabled=D.page===0;$('tdNextPage').disabled=start+pageSize>=rows.length;
   saveWorkState();
-  $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th scope="col">Cliente</th><th scope="col">Oportunidad / tarea</th><th scope="col">Estado</th><th scope="col">Fecha prevista</th><th scope="col" class="tdAmountHeading">Importe</th><th scope="col"><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
+  $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th scope="col">Cliente</th><th scope="col">Oportunidad / tarea</th><th scope="col">Estado</th><th scope="col">Fecha prevista</th><th scope="col">Próximo recordatorio</th><th scope="col" class="tdAmountHeading">Importe</th><th scope="col"><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
     <td>${x.contactId?`<button class="tdClientButton" data-open="1" data-type="contact" data-id="${esc(x.contactId)}" aria-label="Abrir contacto: ${esc(x.name)}">`:'<div class="tdClientButton" title="Sin contacto vinculado">'}<span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}${x.contactId?'':' · Sin vincular'}</small></span>${x.contactId?'</button>':'</div>'}</td>
     <td><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button><small class="tdLastActivity">${x.updated?'Actualizada: '+esc(localDate(localDay(x.updated)))+' · '+esc(localTime(x.updated)):'Sin fecha de actualización'}</small></td>
     <td><span class="tdStatusPill ${x.tone}">${icon(x.stage==='Llamar'?'phone':x.tone==='green'?'checkCircle':x.tone==='amber'?'file':'refresh')}<span>${esc(x.stage)}</span></span></td>
     <td><span class="tdNextAction ${x.expired?'isLate':''}">${icon('calendar')}<span>${esc(localDate(x.date))}${x.dateTime?'<small class="tdScheduledTime">'+(x.date===d.today?'Hoy · ':'')+esc(localTime(x.when))+'</small>':''}${x.expired?'<small>Vencida</small>':''}</span></span></td>
+    <td class="tdReminder">${reminderText(x,d)}</td>
     <td class="tdAmount">${x.type==='opportunity'?esc(money(x.amount)):'<span class="tdNoAmount" aria-label="Sin importe">—</span>'}</td>
-    <td class="tdMenuCell"><button class="tdDots" data-dots="1" aria-label="Acciones de ${esc(x.name)}">${icon('moreVertical')}</button><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
+    <td class="tdMenuCell"><button class="tdQuickOpen" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button class="tdDots" data-dots="1" aria-label="Acciones de ${esc(x.name)}">${icon('moreVertical')}</button><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
   </tr>`).join('')}</tbody></table>`:`<div class="tdEmpty">${icon(D.query.trim()?'list':'checkCircle')}<strong>${D.query.trim()?'No hay coincidencias.':group?'No hay '+esc(group.title)+'.':'Todo al día.'}</strong><span>${D.query.trim()?'Prueba otro nombre, interés o teléfono, o limpia la búsqueda.':group?'Puedes consultar los otros grupos de tu mesa de trabajo.':'No hay gestiones vencidas ni pendientes para hoy.'}</span></div>`;
 }
 
+function reminderText(row,data){
+ if(row.type!=='opportunity')return '—';
+ if(data.remindersError)return 'No disponible';
+ const job=(data.reminders||[]).find(j=>String(j.context?.opportunity_id||'')===String(row.id));
+ if(!job)return 'Sin recordatorio programado';
+ const date=new Date(job.run_at);if(!Number.isFinite(date.getTime()))return 'No disponible';
+ return esc(date.toLocaleString('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}))+'<small>Hora de Madrid · Si no responde</small>';
+}
 function upcomingRows(d,map,pending){
   const rows=pending.filter(t=>status(t.status||'pending')==='pending'&&t.starts_at&&localDay(t.starts_at)>=d.today).map(t=>taskRow(t,d.today));
   rows.push(...d.opps.filter(o=>activeOpportunity(o,map)&&o.expected_date&&String(o.expected_date).slice(0,10)>=d.today).map(o=>opportunityRow(o,map,d.today)));
@@ -384,6 +393,6 @@ function startWhenReady(){
   observer.observe(app,{attributes:true,attributeFilter:['class','hidden','style']});
   ready();
 }
-function install(){ensureCss();window.loadDashboard=load;window.addEventListener('tpf:opportunity-deleted',e=>removeConfirmed('opportunity',e.detail?.id));window.addEventListener('tpf:task-deleted',e=>removeConfirmed('task',e.detail?.id));document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))setTimeout(()=>{build();hideTemplateLeak();D.lastLoad=0;load()},120)},true);startWhenReady()}
+function install(){ensureCss();window.loadDashboard=load;window.addEventListener('tpf:sales-updated',()=>{D.lastLoad=0;if(!$('view-dashboard')?.classList.contains('hidden'))load()});window.addEventListener('tpf:opportunity-deleted',e=>removeConfirmed('opportunity',e.detail?.id));window.addEventListener('tpf:task-deleted',e=>removeConfirmed('task',e.detail?.id));document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))setTimeout(()=>{build();hideTemplateLeak();D.lastLoad=0;load()},120)},true);startWhenReady()}
 M.register('dashboard-performance-guard',{install});
 })();

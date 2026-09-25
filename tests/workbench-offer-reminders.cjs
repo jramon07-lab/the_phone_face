@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('js/modules/dashboard-performance-guard.js','utf8');
+const code=source.slice(source.indexOf('function reminderText('),source.indexOf('function upcomingRows('));
+const ctx={esc:String};vm.createContext(ctx);vm.runInContext(code,ctx);
+const data={reminders:[{context:{opportunity_id:'other'},run_at:'2026-09-28T08:00:00Z'},{context:{opportunity_id:'wanted'},run_at:'2026-09-28T08:30:00Z'}]};
+assert.match(ctx.reminderText({type:'opportunity',id:'wanted',date:'2026-10-12'},data),/28\/0?9.*10:30/);
+assert.equal(ctx.reminderText({type:'opportunity',id:'missing'},data),'Sin recordatorio programado');
+assert.equal(ctx.reminderText({type:'task',id:'wanted'},data),'—');
+assert.equal(ctx.reminderText({type:'opportunity',id:'wanted'},{remindersError:true}),'No disponible');
+console.log('Offer reminders use queued opportunity jobs and Madrid time, never expected dates.');

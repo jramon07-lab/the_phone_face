@@ -160,7 +160,7 @@ async function loadCatalog(){
   catalog=(offers.data||[]).map(o=>({...o,line_options:(lines.data||[]).filter(l=>String(l.offer_id)===String(o.id))}));return catalog;
 }
 function statusLabel(status){return({draft:'Borrador',queued:'Preparando envío',following:'Seguimiento activo',paused:'Seguimiento pausado',accepted:'Pendiente de tramitar',processed:'Tramitado',won:'Ganada',lost:'Perdida',archived:'Antigua',cancelled:'Finalizada',error:'Error de envío'})[status]||status}
-window.TPFWhatsappOfferSummary=async function(id){const r=await sb.from('crm_offer_instances').select('operator,offer_name,total_price,status').eq('contact_id',id).order('created_at',{ascending:false});if(r.error)throw r.error;return (r.data||[]).map(x=>({title:x.operator+' · '+x.offer_name,amount:money(x.total_price),status:statusLabel(x.status)}));};
+window.TPFWhatsappOfferSummary=async function(id){const r=await sb.from('crm_offer_instances').select('id,operator,offer_name,total_price,status').eq('contact_id',id).order('created_at',{ascending:false});if(r.error)throw r.error;return (r.data||[]).map(x=>({id:x.id,rawStatus:x.status,title:x.operator+' · '+x.offer_name,amount:money(x.total_price),status:statusLabel(x.status)}));};
 async function loadInstances(contactId){
   if(!contactId)return;const {data,error}=await sb.from('crm_offer_instances').select('id,opportunity_id,operator,offer_name,total_price,status,sent_at,created_at').eq('contact_id',contactId).order('created_at',{ascending:false});
   if(error){if(String(error.message||'').includes('crm_offer_instances'))return;throw error}
@@ -182,7 +182,19 @@ function refreshOpportunityFollowup(){
   const full=$('opportunityFullPage');if(full&&!full.classList.contains('hidden')){let id='';try{id=currentFullOpportunity?.id||''}catch(_){}const content=$('oppFullContent');let section=$('oppFullFollowupAudit');if(content&&!section){section=document.createElement('div');section.id='oppFullFollowupAudit';section.className='oppField oppReadNotes cpOfferChecks';section.hidden=true;content.appendChild(section)}loadOpportunityFollowup(id,section)}
 }
 function renderInstances(){const root=$('cpOfferInstances');if(!root)return;root.innerHTML=instances.length?instances.map(x=>`<div class="cpOfferCard"><div class="cpOfferTop"><b>${esc(x.operator)} · ${esc(x.offer_name)}</b><strong>${esc(money(x.total_price))}</strong></div><div class="cpOfferMeta">${new Date(x.created_at).toLocaleString('es-ES')}</div><span class="cpOfferStatus ${esc(x.status)}">${esc(statusLabel(x.status))}</span>${deliveryCheck(x)}<div class="cpOfferActions">${['queued','following'].includes(x.status)?`<button data-offer-action="pause" data-id="${x.id}">Pausar</button>`:''}${x.status==='paused'?`<button data-offer-action="resume" data-id="${x.id}">Reanudar</button>`:''}${['queued','following','paused'].includes(x.status)?`<button class="primary" data-offer-action="accept" data-id="${x.id}">Aceptada</button><button data-offer-action="cancel" data-id="${x.id}">Finalizar</button>`:''}</div></div>`).join(''):'<div class="cpEmpty">Todavía no hay ofertas para este cliente.</div>';root.querySelectorAll('[data-offer-action]').forEach(b=>b.onclick=()=>control(b.dataset.id,b.dataset.offerAction))}
-async function control(id,action){if(busy)return;const label={pause:'pausar',resume:'reanudar',accept:'marcar como aceptada',cancel:'finalizar'}[action];if(!confirm(`¿Quieres ${label} esta oferta?`))return;busy=true;try{const {error}=await sb.rpc('crm_control_offer',{p_offer_id:id,p_action:action});if(error)throw error;await loadInstances(current()?.id);if(typeof renderContactProfile==='function')renderContactProfile()}catch(e){alert(e?.message||'No se pudo actualizar la oferta')}finally{busy=false}}
+async function control(id,action,{sidebar=false}={}){
+ if(busy)return false;const label={pause:'pausar',resume:'reanudar',accept:'marcar como aceptada',cancel:'finalizar'}[action];
+ if(!label||!confirm(`¿Quieres ${label} esta oferta?`))return false;
+ busy=true;const profileId=current()?.id;
+ try{
+  const {error}=await sb.rpc('crm_control_offer',{p_offer_id:id,p_action:action});if(error)throw error;
+  window.dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{offerId:id}}));
+  if(!sidebar&&profileId===current()?.id){await loadInstances(profileId);if(typeof renderContactProfile==='function')renderContactProfile()}
+  return true;
+ }catch(e){alert(e?.message||'No se pudo actualizar la oferta');return false}finally{busy=false}
+}
+window.TPFControlWhatsappOffer=(id,action)=>control(id,action,{sidebar:true});
+
 function operatorList(){const custom=catalog.map(o=>o.operator).filter(Boolean);return [...new Set([...OPERATORS,...custom])]}
 async function openConfigurator(){
   if(!offerContext){
