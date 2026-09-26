@@ -10,6 +10,12 @@ F.byOpportunity=new Map([['one',[active]],['two',[paused,{...paused,id:'c'}]]]);
 const rows=[{id:'one',stage:'Seguimiento'},{id:'two',stage:'Seguimiento'},{id:'none'}];
 F.filter='paused';assert.equal(api.filterRows(rows).length,1);assert.equal(rows[1].stage,'Seguimiento');
 F.responses=[{offer_instance_id:'a',created_at:'2026-09-25T10:00:00Z'}];assert.equal(api.summary(active).label,'Cliente respondió');assert.equal(api.matching('one','replied'),true);assert.equal(api.matching('two','replied'),false);F.responses=[];
+// Pending work must not treat a paused offer or a completed internal review as overdue.
+assert.equal(api.matching('two','pending'),false);
+F.responses=[{offer_instance_id:'a',created_at:'2026-09-25T10:00:00Z'}];assert.equal(api.matching('one','pending'),true);F.responses=[];
+F.byOpportunity.set('review',[{...paused,next_action_at:'2020-01-01T10:00:00Z',plan_task:{status:'completed'}}]);assert.equal(api.matching('review','pending'),false);
+F.byOpportunity.get('review')[0].plan_task.status='pending';assert.equal(api.matching('review','pending'),true);
+F.byOpportunity.set('failed',[{status:'error'}]);F.byOpportunity.set('accepted',[{status:'accepted'}]);assert.equal(api.matching('failed','pending'),true);assert.equal(api.matching('accepted','pending'),true);
 F.filter='active';assert.equal(api.filterRows(rows)[0].id,'one');F.filter='all';assert.equal(api.filterRows(rows).length,3);
 assert.equal(api.summary(paused,new Date('2026-09-26T10:00:00Z')).label,'Pausado hace 2 días');
 assert.equal(api.summary({...paused,paused_at:null}).label,'Pausado · fecha no registrada');

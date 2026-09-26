@@ -1177,3 +1177,31 @@ body.tpfUnified #view-dashboard .tdPriorityTable .tdStatusPill{margin-top:5px}
 body.tpfUnified #view-dashboard .tdPriorityTable th,body.tpfUnified #view-dashboard .tdPriorityTable td{width:auto!important}
 
 body.tpfUnified #view-dashboard .tdCommercialDetails{margin:12px 0;border:1px solid #dce5f0;border-radius:10px;background:#fff;padding:12px 16px}body.tpfUnified #view-dashboard .tdCommercialDetails>summary{cursor:pointer;font-size:13px;font-weight:600;color:#385172}body.tpfUnified #view-dashboard .tdCommercialDetails .tdSalesHero{margin-top:12px}
+
+/* Compact daily workspace: keep existing controls and commercial workflows. */
+body.tpfUnified #view-dashboard .tdCommandBar{padding-bottom:8px!important;margin-bottom:12px!important}
+body.tpfUnified #view-dashboard .tdPageEyebrow{display:none!important}
+body.tpfUnified #view-dashboard .tdPulseGrid{margin-bottom:14px!important;gap:12px!important}
+body.tpfUnified #view-dashboard .tdPulse{min-height:76px!important;padding:12px 16px!important;border-radius:12px!important}
+body.tpfUnified #view-dashboard .tdPulse b{font-size:26px!important}
+body.tpfUnified #view-dashboard .tdPriorityCard{padding:14px 18px!important}
+body.tpfUnified #view-dashboard .tdHead{padding-bottom:0!important;margin-bottom:8px!important}
+body.tpfUnified #view-dashboard #tdAddContact{display:none!important}
+body.tpfUnified #view-dashboard .tdWorkspaceControls{padding:0!important;margin:8px 0!important;gap:12px!important}
+body.tpfUnified #view-dashboard .tdWorkTab{padding:8px 10px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable td{padding:8px 12px!important;vertical-align:middle!important}
+body.tpfUnified #view-dashboard .tdPriorityTable th{padding:10px 12px!important;font-size:11px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdAvatar{width:32px!important;height:32px!important;min-width:32px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdClientButton b{font-size:13px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdStatusPill{padding:3px 6px!important;font-size:11px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdReminder{min-width:280px!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow{padding-block:7px!important;min-height:66px!important}
+body.tpfUnified #view-sales .salesBoardTopbar{padding:10px 14px!important}
+body.tpfUnified #view-sales .salesFollowup .ofItem,body.tpfUnified #view-dashboard .tdReminder .ofItem{position:relative;padding-right:80px!important;min-height:46px;gap:3px!important;max-width:none}
+body.tpfUnified #view-sales .salesFollowup .ofManage,body.tpfUnified #view-dashboard .tdReminder .ofManage{position:absolute;right:0;top:50%;transform:translateY(-50%);padding:6px 9px!important;font-size:12px!important;margin:0!important}
+.ofFilters .ofMoreFilters{position:relative;font-size:12px;flex:0 0 auto;z-index:15}
+.ofFilters .ofMoreFilters summary{cursor:pointer;padding:8px 10px;color:#245fba;border-radius:7px;list-style:none;background:#f4f7fc}
+.ofFilters .ofFilterMenu{position:absolute;top:100%;left:0;width:205px;display:grid;gap:5px;padding:8px;border:1px solid #dce5f0;border-radius:10px;background:white;box-shadow:0 8px 25px #23395720;z-index:50}
+.ofFilters .ofFilterMenu button{text-align:left!important}
+.ofFilters .ofFilterMenu small{font-size:11px;color:#64748b;padding:6px}
+@media(max-width:700px){body.tpfUnified #view-dashboard .tdPulseGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ofFilters .ofFilterMenu{left:auto;right:0}.ofManageDialog .ofPrimaryActions{grid-template-columns:1fr 1fr}}
