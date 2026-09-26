@@ -60,9 +60,9 @@ function visibleRows(rows,contacts=[]){
     return matchedContacts.some(c=>(recordId&&c.id===recordId)||(phone&&phone===agendaSearchDigits(c.phone))||(name&&name===agendaSearchText(c.name))||(queryDigits&&agendaSearchDigits(c.phone).includes(queryDigits)));
   })
 }
-function groupName(r){const d=startDay(new Date(r.starts_at)),t=startDay(),m=new Date(t);m.setDate(t.getDate()+1);return +d===+t?"Hoy":+d===+m?"Mañana":d<t?"Vencidos":"Próximos"}
-function renderItem(a){const t=typeFor(a),d=new Date(a.starts_at),state=a.status==="completed"?"completed":isOverdue(a)?"overdue":"";return `<article class="agendaItem"><time class="agendaTime">${d.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}<small>${d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</small></time><span class="agendaTypeIcon" style="--type-color:${esc(t.color)}">${esc(a.status==="completed"?"✓":t.name==="Tarea"?"○":t.icon)}</span><div class="agendaItemTitle"><b>${esc(a.title)}</b><small>${esc(t.name)}${a.description?" · "+esc(a.description):""}</small></div><div class="agendaItemPerson">${a.__contact?`<button class="agendaContactLink" data-agenda-contact="${esc(a.__contact.id)}">${esc(a.customer_name||agendaContactValues(a.__contact).name)}</button>`:`<b>${esc(a.customer_name||"Sin cliente")}</b>`}<small>${esc(a.customer_phone||"")}</small><small>DNI/NIF: ${esc(agendaDni(a.__contact)||"Sin DNI")}</small></div><div class="agendaItemState"><span class="agendaBadge ${state}">${state==="overdue"?"Vencido":agendaStatusLabel(a.status)}</span><div class="agendaActions"><button data-open-agenda="${esc(a.id)}">Abrir</button>${a.status==="pending"?`<button data-postpone-agenda="${esc(a.id)}">Posponer</button><button class="agendaDone" data-complete-agenda="${esc(a.id)}">✓ Completar</button>`:""}<button class="agendaMore" data-more-agenda="${esc(a.id)}" aria-label="Más acciones">•••</button></div></div></article>`}
-function renderList(rows){const groups=rows.reduce((a,r)=>((a[groupName(r)]||=[]).push(r),a),{});$("agendaList").innerHTML=["Vencidos","Hoy","Mañana","Próximos"].filter(k=>groups[k]?.length).map(k=>`<section class="agendaGroup"><h3 class="agendaGroupTitle">${k}<span>${groups[k].length} recordatorio${groups[k].length===1?"":"s"}</span></h3>${groups[k].map(renderItem).join("")}</section>`).join("")}
+function groupName(r){if(r.status==="completed")return "Completadas";if(r.status==="cancelled")return "Canceladas";if(isOverdue(r))return "Vencidos";const d=startDay(new Date(r.starts_at)),t=startDay(),m=new Date(t);m.setDate(t.getDate()+1);return +d===+t?"Hoy":+d===+m?"Mañana":d<t?"Vencidos":"Próximos"}
+function renderItem(a){const t=typeFor(a),d=new Date(a.starts_at),state=a.status==="completed"?"completed":isOverdue(a)?"overdue":"";return `<article class="agendaItem"><time class="agendaTime">${d.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"})}<small>${d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</small></time><span class="agendaTypeIcon" style="--type-color:${esc(t.color)}">${esc(a.status==="completed"?"✓":t.name==="Tarea"?"○":t.icon)}</span><div class="agendaItemTitle"><button class="agendaTaskTitle" data-open-agenda="${esc(a.id)}">${esc(a.title)}</button><small>${esc(t.name)}${a.description?" · "+esc(a.description):""}</small></div><div class="agendaItemPerson">${a.__contact?`<button class="agendaContactLink" data-agenda-contact="${esc(a.__contact.id)}">${esc(a.customer_name||agendaContactValues(a.__contact).name)}</button>`:`<b>${esc(a.customer_name||"Sin cliente")}</b>`}<small>${esc(a.customer_phone||"")}</small><small>DNI/NIF: ${esc(agendaDni(a.__contact)||"Sin DNI")}</small></div><div class="agendaItemState"><span class="agendaBadge ${state}">${state==="overdue"?"Vencido":agendaStatusLabel(a.status)}</span><div class="agendaActions">${a.status==="pending"?`<button data-postpone-agenda="${esc(a.id)}">Posponer</button><button class="agendaDone" data-complete-agenda="${esc(a.id)}">✓ Completar</button>`:""}<button class="agendaMore" data-more-agenda="${esc(a.id)}" aria-label="Más acciones">•••</button></div></div></article>`}
+function renderList(rows){const groups=rows.reduce((a,r)=>((a[groupName(r)]||=[]).push(r),a),{});$("agendaList").innerHTML=["Vencidos","Hoy","Mañana","Próximos","Completadas","Canceladas"].filter(k=>groups[k]?.length).map(k=>`<section class="agendaGroup"><h3 class="agendaGroupTitle ${k==='Vencidos'?'late':''}">${k}<span>${groups[k].length} recordatorio${groups[k].length===1?"":"s"}</span></h3>${groups[k].map(renderItem).join("")}</section>`).join("")}
 function renderCalendar(rows){
  agendaRenderedRows=rows;
  const n=agendaCalendarMonth,f=new Date(n.getFullYear(),n.getMonth(),1),s=new Date(f);s.setDate(f.getDate()-((f.getDay()+6)%7));
@@ -105,7 +105,8 @@ $("agendaCalendar").onclick=e=>{
  const nav=e.target.closest("[data-agenda-month]");if(nav){const v=nav.dataset.agendaMonth;agendaCalendarMonth=v==="today"?new Date():new Date(agendaCalendarMonth.getFullYear(),agendaCalendarMonth.getMonth()+Number(v),1);agendaDateFilter="all";return loadAgenda();}
  const day=e.target.closest("[data-agenda-day]");if(day)window.openAgendaComposer({startsAt:day.dataset.agendaDay+"T10:00"});
 };
-function updateStats(a){$("agendaStatToday").textContent=a.filter(r=>isToday(r.starts_at)).length;$("agendaStatPending").textContent=a.filter(r=>r.status==="pending").length;$("agendaStatOverdue").textContent=a.filter(isOverdue).length;$("agendaStatCompleted").textContent=a.filter(r=>r.status==="completed").length}
+async function agendaLoadStats(){const data=[];for(let from=0;;from+=1000){const result=await sb.from("agenda_items").select("id,status,starts_at").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").order("id").range(from,from+999);if(result.error)return {error:result.error};data.push(...(result.data||[]));if((result.data||[]).length<1000)return {data};}}
+function updateStats(a){window.TPFAgendaClean?.counts(a);$("agendaStatToday").textContent=a.filter(r=>isToday(r.starts_at)).length;$("agendaStatPending").textContent=a.filter(r=>r.status==="pending").length;$("agendaStatOverdue").textContent=a.filter(isOverdue).length;$("agendaStatCompleted").textContent=a.filter(r=>r.status==="completed").length}
 function agendaDateRange(period,now=new Date()){
   if(period==="all")return null;
   if(period==="today"){const start=startDay(now),end=new Date(start);end.setDate(end.getDate()+1);return {start,end}}
@@ -128,30 +129,32 @@ function syncAgendaFilterUi(){
 async function loadAgenda(){
   if(!(perms?.is_admin||perms?.can_view_agenda||perms?.can_manage_agenda))return;
   const revision=++agendaLoadVersion;
-  const status=$("agendaFilter")?.value||"pending",now=new Date();let range=agendaDateRange(agendaDateFilter,now);
-  if(agendaDateFilter==="all"&&!$("agendaCalendar").classList.contains("hidden")){const start=new Date(agendaCalendarMonth.getFullYear(),agendaCalendarMonth.getMonth(),1);start.setDate(start.getDate()-((start.getDay()+6)%7));const end=new Date(start);end.setDate(end.getDate()+42);range={start,end};}
+  const status=$("agendaFilter")?.value||"pending",now=new Date();let range=agendaDateRange(agendaDateFilter,now);if(window.TPFAgendaClean?.range())range=window.TPFAgendaClean.range();
+  if(agendaDateFilter==="all"&&!window.TPFAgendaClean?.range()&&!$("agendaCalendar").classList.contains("hidden")){const start=new Date(agendaCalendarMonth.getFullYear(),agendaCalendarMonth.getMonth(),1);start.setDate(start.getDate()-((start.getDay()+6)%7));const end=new Date(start);end.setDate(end.getDate()+42);range={start,end};}
   let q=sb.from("agenda_items").select("*").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").order("starts_at",{ascending:true}).limit(300);
   if(status==="pending")q=q.eq("status","pending");
   else if(status==="completed")q=q.eq("status","completed");
   else if(status==="cancelled")q=q.eq("status","cancelled");
   else if(status==="overdue")q=q.eq("status","pending").lt("starts_at",now.toISOString());
+  q=window.TPFAgendaClean?.query(q,now)||q;
   if(range)q=q.gte("starts_at",range.start.toISOString()).lt("starts_at",range.end.toISOString());
   syncAgendaFilterUi();
   const searchText=String($("agendaSearch")?.value||"").trim();
   const contactSearch=searchText.length>=2?sb.rpc("search_records",{search_text:searchText,sheet_filter:"BASE DE DATOS",result_limit:100}):Promise.resolve({data:[]});
-  const [one,two,contacts]=await Promise.all([q,sb.from("agenda_items").select("id,status,starts_at").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").limit(1000),contactSearch]);
+  const [one,two,contacts]=await Promise.all([q,agendaLoadStats(),contactSearch]);
   if(revision!==agendaLoadVersion)return;
   if(one.error){$("agendaList").innerHTML=`<div class="agendaEmpty">${esc(one.error.message)}</div>`;return}
-  const rows=visibleRows(one.data||[],contacts?.data||[]);
+  let rows=visibleRows(one.data||[],contacts?.data||[]);
  const contactCache=await agendaLoadLinkedContacts(rows);
  if(revision!==agendaLoadVersion)return;
  agendaContactCache=contactCache;
  await Promise.all(rows.map(async row=>{row.__contact=await agendaResolveContact(row,contactCache)}));
   if(revision!==agendaLoadVersion)return;
+  rows=window.TPFAgendaClean?.filter(rows)||rows;
   window.__agendaRows=one.data||[];
-  updateStats(two.data||[]);
+  if(!two.error)updateStats(two.data||[]);else window.TPFAgendaClean?.countsError();
   $("agendaEmpty").style.display=rows.length?"none":"block";
-  renderList(rows);renderCalendar(rows)
+  renderList(rows);renderCalendar(rows);window.TPFAgendaClean?.rendered(rows.length,(one.data||[]).length)
 }
 $("agendaFilter").onchange=loadAgenda;
 $("agendaRefresh").onclick=loadAgenda;
