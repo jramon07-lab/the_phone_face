@@ -78,5 +78,28 @@ const root=path.resolve(__dirname,'../..');
  await page.evaluate(()=>{demoFailSave=true});await page.click('#waWaitManual');await page.click('#waInboxDialog button[type=submit]');await page.waitForTimeout(100);
  assert.match(await page.locator('.waInboxError').textContent(),/Sin conexión/);assert.equal(await page.locator('#waInboxDialog').count(),1);
  await page.click('#waInboxDialog [data-cancel]');
+
+ // Real settings dialog and realtime events, using only synthetic data.
+ await page.evaluate((settings)=>{
+ window.replySettings=settings;window.replySaved=null;window.realtimeCallbacks={};window.sharedEvents=0;
+ window.addEventListener('tpf:wa-shared-state',()=>sharedEvents++);
+ const oldFrom=sb.from.bind(sb);sb.from=table=>{if(table!=='crm_whatsapp_reply_receipts')return oldFrom(table);const q={select(){return q},eq(){return q},order(){return q},range(){return Promise.resolve({data:[{outgoing_id:'auto-reply-test'}]})}};return q;};
+ sb.auth={getSession:async()=>({data:{session:{user:{id:'demo'},access_token:'demo'}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})};
+ sb.channel=()=>{const c={on(type,filter,fn){realtimeCallbacks[filter.table]=fn;return c},subscribe(fn){fn('SUBSCRIBED');return c}};return c};sb.removeChannel=async()=>{};
+ window.fetch=async(url,options)=>{if(url!=='/api/whatsapp-auto-replies')throw Error('Unexpected request');if(options.method==='POST')replySaved=JSON.parse(options.body);return {ok:true,json:async()=>({ok:true,settings:replySettings,connected:true,issues:[]})};};
+ },require('../../lib/whatsapp-auto-replies').DEFAULTS);
+ await page.addScriptTag({path:root+'/js/modules/whatsapp-auto-replies.js'});
+ await page.click('#waAutoReplySettings');await page.waitForSelector('#waAutoReplyDialog textarea');
+ await page.check('#waAutoReplyDialog [name=enabled]');await page.fill('#waAutoReplyDialog textarea','Mensaje de ejemplo fuera de horario');await page.click('#waAutoReplyDialog [type=submit]');
+ assert.equal(await page.evaluate(()=>replySaved.enabled),true);assert.equal(await page.evaluate(()=>replySaved.schedule[1].length),2);
+ await page.evaluate(()=>realtimeCallbacks.crm_whatsapp_chat_state({new:{chat_id:'demo'}}));await page.waitForTimeout(650);assert(await page.evaluate(()=>sharedEvents>0));
+ await page.evaluate(()=>{const c=waLiveState.chats[3];c._lastMessage={idMessage:'auto-reply-test',timestamp:fixtureNow+500,direction:'out',text:'Respuesta automática'};});
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'unanswered');
+ await page.evaluate(()=>waLiveState.chats[3]._lastMessage.idMessage='manual-human-reply');
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'all');
+ await page.click('#waAutoReplySettings');await page.waitForSelector('#waAutoReplyDialog textarea');
+ for(const width of [1366,390]){await page.setViewportSize({width,height:844});const box=await page.locator('#waAutoReplyDialog').boundingBox();assert(box.x>=0&&box.x+box.width<=width+1,'settings dialog fits '+width);}
+ await page.click('#waAutoReplyDialog [data-close]');
+
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: actual stable markup and chat renderer; category counts, resolve, incoming, automatic retention, desktop/mobile tabs; zero page errors');
 })().catch(e=>{console.error(e);process.exit(1)});

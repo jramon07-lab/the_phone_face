@@ -1,9 +1,22 @@
 {
   "version": 2,
   "crons": [
-    {"path":"/api/crm-backup?action=cron","schedule":"30 1,2 * * *"},
-    {"path":"/api/telegram-agenda","schedule":"* * * * *"},
-    {"path":"/api/telegram-operations","schedule":"* * * * *"}
+    {
+      "path": "/api/crm-backup?action=cron",
+      "schedule": "30 1,2 * * *"
+    },
+    {
+      "path": "/api/telegram-agenda",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/telegram-operations",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/whatsapp-auto-replies?action=cron",
+      "schedule": "* * * * *"
+    }
   ],
   "routes": [
     {

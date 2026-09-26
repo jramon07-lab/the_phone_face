@@ -51,7 +51,7 @@
     const last=live||(chat?._lastMessage||null);
     const timestamp=Number(live?.timestamp||(typeof window.waMessageTimestamp==='function'?window.waMessageTimestamp(last):0)||chat?.lastMessageTime||chat?.lastMessageTimestamp||chat?.timestamp||chat?.lastActivityTime||0);
     const outgoing=typeof live?.outgoing==='boolean'?live.outgoing:(typeof window.waMessageDirection==='function'?window.waMessageDirection(last)==='out':false);
-    return {timestamp,outgoing};
+    return {timestamp,outgoing,idMessage:String(last?.idMessage||last?.id_message||'')};
   }
   function isAutomaticWaiting(chat){
     const phone=chatPhone(chat),sentAt=Number(latestAutomaticByPhone.get(phone)||0);
@@ -101,6 +101,7 @@
     const m=meta(chat),last=preview(chat),inc=incoming(chat);
     if(m.archived)return 'archived';
     const manualState=window.TPFInboxManual?.category(chat,inc);if(manualState)return manualState;
+    if(last.outgoing&&window.TPFWaAutoReplies?.isReply(last.idMessage))return 'unanswered';
     if(isAutomaticWaiting(chat)){
       const manual=Number(manualMap()[chatPhone(chat)]||0)/1000;
       if(inc>Math.max(manual,Number(m.archivedAt||0)))return 'unanswered';
