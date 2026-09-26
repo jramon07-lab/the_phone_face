@@ -103,5 +103,17 @@ const root=path.resolve(__dirname,'../..');
  for(const width of [1366,390]){await page.setViewportSize({width,height:844});const box=await page.locator('#waAutoReplyDialog').boundingBox();assert(box.x>=0&&box.x+box.width<=width+1,'settings dialog fits '+width);}
  await page.click('#waAutoReplyDialog [data-close]');
 
+
+ await page.setViewportSize({width:1366,height:768});
+ await page.addScriptTag({path:root+'/js/modules/whatsapp-quick-replies.js'});
+ await page.evaluate(()=>{window.sentByFixture=0;document.getElementById('waComposerSend').onclick=()=>sentByFixture++;document.getElementById('waComposerText').value='Borrador anterior';});
+ await page.click('#waQuickRepliesBtn');await page.fill('#waQuickRepliesPanel input','factura');
+ assert.equal(await page.locator('#waQuickRepliesPanel [data-list] button').count(),1);
+ await page.click('#waQuickRepliesPanel [data-list] button');
+ assert.match(await page.inputValue('#waComposerText'),/^Borrador anterior\n\nHola, Ana/);
+ assert.equal(await page.evaluate(()=>sentByFixture),0);
+ await page.click('#waQuickRepliesBtn');await page.evaluate(()=>{waLiveState.selected={id:'other-chat',name:'Otro'};document.getElementById('waChatName').textContent='Otro';});await page.waitForTimeout(200);assert.equal(await page.locator('#waQuickRepliesPanel').count(),0);
+ await page.click('#waQuickRepliesBtn');await page.keyboard.press('Escape');assert.equal(await page.locator('#waQuickRepliesPanel').count(),0);
+
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: actual stable markup and chat renderer; category counts, resolve, incoming, automatic retention, desktop/mobile tabs; zero page errors');
 })().catch(e=>{console.error(e);process.exit(1)});
