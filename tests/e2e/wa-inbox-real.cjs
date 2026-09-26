@@ -96,7 +96,7 @@ const root=path.resolve(__dirname,'../..');
  await page.evaluate(()=>{const c=waLiveState.chats[3];c._lastMessage={idMessage:'auto-reply-test',timestamp:fixtureNow+500,direction:'out',text:'Respuesta automática'};});
  assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'unanswered');
  await page.evaluate(()=>waLiveState.chats[3]._lastMessage.idMessage='manual-human-reply');
- assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'all');
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'waiting');
  await page.evaluate(()=>{waLiveState.chats.find(c=>c.id==='600000004@c.us')._lastMessage.timestamp=Math.floor(Date.now()/1000)-1;realtimeCallbacks.wa_messages({new:{chat_id:'600000004@c.us',id_message:'realtime-test',ts:Math.floor(Date.now()/1000)+1,direction:'in',type_message:'textMessage',text_content:'Mensaje nuevo',raw:{}}});});
  assert.equal(await page.evaluate(()=>waLiveState.chats.find(c=>c.id==='600000004@c.us')._lastMessage.idMessage),'realtime-test');
  await page.click('#waAutoReplySettings');await page.waitForSelector('#waAutoReplyDialog textarea');
@@ -106,6 +106,7 @@ const root=path.resolve(__dirname,'../..');
 
  await page.setViewportSize({width:1366,height:768});
  await page.addScriptTag({path:root+'/js/modules/whatsapp-quick-replies.js'});
+ await page.addScriptTag({path:root+'/js/modules/whatsapp-composer-layout.js'});
  await page.evaluate(()=>{window.sentByFixture=0;document.getElementById('waComposerSend').onclick=()=>sentByFixture++;document.getElementById('waComposerText').value='Borrador anterior';});
  await page.click('#waQuickRepliesBtn');await page.fill('#waQuickRepliesPanel input','factura');
  assert.equal(await page.locator('#waQuickRepliesPanel [data-list] button').count(),1);
@@ -115,5 +116,15 @@ const root=path.resolve(__dirname,'../..');
  await page.click('#waQuickRepliesBtn');await page.evaluate(()=>{waLiveState.selected={id:'other-chat',name:'Otro'};document.getElementById('waChatName').textContent='Otro';});await page.waitForTimeout(200);assert.equal(await page.locator('#waQuickRepliesPanel').count(),0);
  await page.click('#waQuickRepliesBtn');await page.keyboard.press('Escape');assert.equal(await page.locator('#waQuickRepliesPanel').count(),0);
 
+ await page.evaluate(()=>{window.toolbarClicks=[];for(const id of ['waAttachBtn','waTemplateBtn','waScheduleBtn'])document.getElementById(id).onclick=()=>toolbarClicks.push(id);});
+ await page.click('#waAttachBtn');
+ await page.click('#waComposerMore summary');await page.click('#waTemplateBtn');
+ await page.click('#waComposerMore summary');await page.click('#waScheduleBtn');
+ assert.deepEqual(await page.evaluate(()=>toolbarClicks),['waAttachBtn','waTemplateBtn','waScheduleBtn']);
+ await page.evaluate(async()=>{demoFailSave=false;const c=waLiveState.chats[3];await TPFInboxManual.save(c.id,'pending');c._lastIncomingAt=fixtureNow;c._lastMessage={timestamp:Date.now()/1000+5,direction:'out',idMessage:'human-new'};});
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'waiting');
+ await page.click('#waComposerMore summary');await page.locator('#waScheduleBtn').waitFor({state:'visible'});await page.keyboard.press('Escape');
+ for(const width of [1366,1280]){await page.setViewportSize({width,height:844});const b=await page.locator('#waComposerActions').boundingBox();assert(b.x>=0&&b.x+b.width<=width+1,'composer toolbar fits '+width);}
+ await page.setViewportSize({width:1366,height:768});await page.screenshot({path:'/workspace/scratch/9a46ab1abca3/whatsapp-layout-final.png'});
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: actual stable markup and chat renderer; category counts, resolve, incoming, automatic retention, desktop/mobile tabs; zero page errors');
 })().catch(e=>{console.error(e);process.exit(1)});

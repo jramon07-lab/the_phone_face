@@ -6,12 +6,12 @@ const state=()=>{try{return waLiveState}catch(_){return window.waLiveState}};
 const db=()=>{try{return sb}catch(_){return window.sb}};
 const stamp=x=>Date.parse(x||'')/1000||0;
 const current=()=>state()?.selected?.id;
-function category(chat,incoming){
+function category(chat,incoming,last){
  const r=rows.get(String(chat.id));if(!r)return null;
  if(Number(window.waMeta?.(chat.id)?.archivedAt||0)>=stamp(r.inbox_since))return null;
  if(incoming>stamp(r.inbox_since)&&['waiting','snoozed'].includes(r.inbox_state))return 'unanswered';
  if(r.inbox_state==='waiting')return 'waiting';
- if(r.inbox_state==='pending')return 'unanswered';
+ if(r.inbox_state==='pending'){if(last?.outgoing&&!last.automatic&&last.timestamp>Math.max(incoming,stamp(r.inbox_since)))return null;return 'unanswered';}
  if(r.inbox_state==='snoozed')return stamp(r.inbox_until)>Date.now()/1000?'snoozed':'unanswered';
  return null;
 }

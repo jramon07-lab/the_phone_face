@@ -100,14 +100,14 @@
   function category(chat){
     const m=meta(chat),last=preview(chat),inc=incoming(chat);
     if(m.archived)return 'archived';
-    const manualState=window.TPFInboxManual?.category(chat,inc);if(manualState)return manualState;
+    const manualState=window.TPFInboxManual?.category(chat,inc,{...last,automatic:isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage)});if(manualState)return manualState;
     if(last.outgoing&&window.TPFWaAutoReplies?.isReply(last.idMessage))return 'unanswered';
     if(isAutomaticWaiting(chat)){
       const manual=Number(manualMap()[chatPhone(chat)]||0)/1000;
       if(inc>Math.max(manual,Number(m.archivedAt||0)))return 'unanswered';
       return 'automatic';
     }
-    return last.timestamp?(last.outgoing?'all':'unanswered'):'all';
+    return last.timestamp?(last.outgoing?'waiting':'unanswered'):'all';
   }
   function automaticChats(){return (liveState()?.chats||[]).filter(c=>category(c)==='automatic')}
   function updateAutomaticCount(){
@@ -135,7 +135,7 @@
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);
     let info=document.getElementById('waInboxHelp');
     if(!info){info=document.createElement('div');info.id='waInboxHelp';info.setAttribute('role','status');document.getElementById('waLiveSearch')?.parentElement.after(info);}
-    const messages={unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Marcadas por ti. Esperando documentación, confirmación u otra respuesta.',snoozed:'Conversaciones aplazadas hasta la fecha elegida.',automatic:'Último envío automático. Las respuestas pasan a Pendientes.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas o archivadas.'};
+    const messages={unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que esperan respuesta del cliente.',snoozed:'Conversaciones aplazadas hasta la fecha elegida.',automatic:'Último envío automático. Las respuestas pasan a Pendientes.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas o archivadas.'};
     info.textContent=messages[liveState()?.filter||'all']||'Filtra tus conversaciones.';
     updateAutomaticCount();decorateHeader();
   }
@@ -147,7 +147,7 @@
     const rows=new Map((liveState()?.chats||[]).map(c=>[String(c.id),c]));
     document.querySelectorAll('#waLiveChats .waChatRow').forEach(row=>{
       const chat=rows.get(row.dataset.waChatId);if(!chat)return;
-      const key=category(chat),labels={automatic:'Automático',waiting:'En espera',unanswered:'Pendiente',snoozed:'Aplazada'};
+      const key=category(chat),labels={automatic:'Automático',waiting:'Esperando respuesta',unanswered:'Pendiente',snoozed:'Aplazada'};
       row.querySelectorAll('.waMiniFlag,.waAutomaticFlag,.waInboxFlag,.waInboxReason').forEach(x=>x.remove());
       if(!labels[key])return;
       const badge=document.createElement('span');badge.className='waInboxFlag '+key;badge.textContent=labels[key];
