@@ -298,6 +298,9 @@
       choices.dataset.tpfLabelFiltersBound='1';
       choices.addEventListener('change',e=>{if(e.target.matches('input[type="checkbox"]'))filterContactLabels();});
     }
+    let selected=byId('contactLabelsSelected');
+    if(!selected){selected=document.createElement('div');selected.id='contactLabelsSelected';selected.setAttribute('aria-live','polite');tools.after(selected);}
+    const cancel=byId('contactLabelsCancel');if(cancel)cancel.onclick=()=>byId('contactLabelsClose')?.click();
     refreshContactLabelCategories();filterContactLabels();
     loadContactLabelCategories().then(()=>{refreshContactLabelCategories();filterContactLabels();});
   }
@@ -312,6 +315,8 @@
       const show=(!q||name.includes(q))&&(!category||row.dataset.tpfLabelCategory===category)&&(assignment!=='selected'||checkbox?.checked);
       row.classList.toggle('tpfLabelSearchHidden',!show);if(show)visible++;
     });
+    const selected=byId('contactLabelsSelected');
+    if(selected){const names=rows.filter(row=>row.querySelector('input')?.checked).map(row=>row.querySelector('span')?.textContent||'');const text=names.length?names.length+(names.length===1?' seleccionada: ':' seleccionadas: ')+names.join(' · '):'Ninguna etiqueta seleccionada';if(selected.textContent!==text)selected.textContent=text;}
     let empty=byId('contactLabelsFilterEmpty');
     if(rows.length&&!empty){empty=document.createElement('div');empty.id='contactLabelsFilterEmpty';empty.className='small';empty.textContent='No hay etiquetas que coincidan con los filtros.';choices.appendChild(empty);}
     if(empty)empty.classList.toggle('hidden',!rows.length||visible>0);
@@ -375,7 +380,7 @@
 
   async function loadObservation(id){
     const ta=byId('contactObservations');if(!ta||!id)return;ta.value='';
-    try{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();if(String(currentRecordId)!==String(id))return;ta.value=String(data?.data?.OBSERVACIONES??'');}catch(_){}setEditMode(editMode);
+    try{const {data}=await sb.from('records').select('data').eq('id',id).maybeSingle();if(String(currentRecordId)!==String(id))return;ta.value=String(data?.data?.OBSERVACIONES??data?.data?.OBSERVACION??data?.data?.Observaciones??'');window.dispatchEvent(new Event('tpf:contact-text-ready'));}catch(_){}setEditMode(editMode);
   }
 
   async function saveNotesAndObservations(){

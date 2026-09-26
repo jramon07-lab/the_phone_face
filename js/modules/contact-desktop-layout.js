@@ -160,6 +160,7 @@
  }
  if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
  window.addEventListener('tpf:contact-updated',fitContactText);
+ window.addEventListener('tpf:contact-text-ready',fitContactText);
  const linkRow=document.createElement('div');linkRow.className='tpfContactLinkRow';
  function ensureLinkRow(){if(linkRow.parentElement!==profile)tabs.before(linkRow);}
  let googleObserved=null;

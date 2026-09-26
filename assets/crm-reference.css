@@ -1367,3 +1367,32 @@ body.tpfUnified #view-whatsapplive.waCleanWorkspace .waMsg{max-width:min(85%,520
 #waImagePreview>button{display:block;margin-left:auto}
 
 body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTabs button{white-space:nowrap;font-size:11px!important}
+/* Full-page views opened over WhatsApp follow its compact navigation rail. */
+@media(min-width:1051px){
+body.tpfUnified.tpfWaCompactNav :is(#contactModal.contactProfileBack,#oppDetailModal,#opportunityFullPage){left:68px!important;right:0!important;width:calc(100% - 68px)!important;max-width:calc(100% - 68px)!important;margin-left:0!important;box-sizing:border-box!important}
+body.tpfUnified.tpfWaCompactNav.tpfWaWorkspaceOnly :is(#contactModal.contactProfileBack,#oppDetailModal,#opportunityFullPage){left:0!important;width:100%!important;max-width:100%!important}
+}
+
+/* Contact text reserves a separate area for copy/edit controls. */
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input,
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{box-sizing:border-box!important;min-width:0!important;padding-right:62px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{white-space:pre-wrap!important;overflow-wrap:anywhere!important;overflow-y:auto!important}
+.waFieldRow{min-width:0}
+.waFieldValue{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+/* Keep label search and actions visible; only the choices scroll. */
+body.tpfUnified #contactLabelsModal{padding:20px!important;box-sizing:border-box!important}
+body.tpfUnified #contactLabelsModal .waTemplateCard{width:min(620px,100%)!important;max-height:calc(100dvh - 40px)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;padding:0!important;min-height:0!important}
+body.tpfUnified #contactLabelsModal .waTemplateHead{flex-shrink:0;padding:16px 20px!important;margin:0!important}
+body.tpfUnified #contactLabelsModal #tpfContactLabelsTools{flex-shrink:0;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:12px 20px!important}
+body.tpfUnified #contactLabelsModal #tpfContactLabelsTools>*{min-width:0;width:100%;box-sizing:border-box;margin:0!important}
+body.tpfUnified #contactLabelsModal #contactLabelsSelected{flex-shrink:0;max-height:64px;overflow:auto;margin:0 20px 10px;font-size:12px;line-height:1.5;color:#475569;overflow-wrap:anywhere}
+body.tpfUnified #contactLabelsModal #contactLabelsChoices{flex:1 1 auto;min-height:80px!important;max-height:none!important;overflow-y:auto!important;padding:0 20px 12px!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px}
+body.tpfUnified #contactLabelsModal .contactLabelChoice{min-width:0;display:flex!important;align-items:center;gap:9px;padding:9px!important;margin:0!important;font-size:13px;line-height:1.4}
+body.tpfUnified #contactLabelsModal .contactLabelChoice span{overflow-wrap:anywhere;min-width:0}
+body.tpfUnified #contactLabelsModal .contactLabelChoice input{flex:0 0 16px;width:16px!important;height:16px!important;margin:0!important}
+body.tpfUnified #contactLabelsModal .contactLabelChoice:has(input:checked){background:#edf4ff;border-color:#b3ccf6}
+body.tpfUnified #contactLabelsModal .contactLabelChoice.tpfLabelSearchHidden{display:none!important}
+body.tpfUnified #contactLabelsModal .waTemplateActions{flex-shrink:0;display:flex;justify-content:flex-end;gap:8px;padding:12px 20px!important;margin:0!important;border-top:1px solid #e2e8f0;background:#fff}
+@media(max-width:600px){body.tpfUnified #contactLabelsModal{padding:10px!important}body.tpfUnified #contactLabelsModal .waTemplateCard{max-height:calc(100dvh - 20px)!important}body.tpfUnified #contactLabelsModal #contactLabelsChoices{grid-template-columns:minmax(0,1fr)}}
+
+body.tpfUnified #contactLabelsModal #contactLabelsSearch{grid-column:1/-1}

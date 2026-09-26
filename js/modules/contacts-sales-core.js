@@ -242,7 +242,7 @@ window.openContact=async(id)=>{
  $("contactPhone").value=contactField(d,"TELÉFONO","TELEFONO","PHONE","MOVIL");
  $("contactDni").value=contactField(d,"DNI / NIF","DNI","NIF");
  $("contactEmail").value=contactField(d,"EMAIL","Email","email");
- $("contactNotes").value=contactField(d,"NOTAS","NOTES","OBSERVACIONES");
+ $("contactNotes").value=String(d.NOTAS??d.NOTES??"");
  $("contactMeta").textContent=`Origen: ${data.source_sheet||""}${data.source_row?" · Fila "+data.source_row:""}`;
  $("contactMsg").textContent="";
  $("contactModal").classList.remove("hidden");

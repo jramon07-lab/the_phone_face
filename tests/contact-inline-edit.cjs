@@ -32,3 +32,13 @@ function client(data,{race=false,error=false}={}){
  ctx.perms={};await assert.rejects(saveField({contactId:'1',fieldId:'contactPhone',original:'600111222',value:'600333444'},client(base)),/permiso/);
  console.log('Inline editing: preservation, validation, aliases, no-op, permissions, conflicts and failures passed.');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+// Legacy profile opening must not substitute observations for empty notes.
+const core=fs.readFileSync('js/modules/contacts-sales-core.js','utf8');
+const noteAssignment=core.match(/\$\("contactNotes"\)\.value=([^;]+);/)[1];
+for(const data of [{OBSERVACIONES:'Sólo observación'},{NOTAS:'',NOTES:'Antigua',OBSERVACIONES:'Separada'},{NOTAS:'Nota',OBSERVACIONES:'Otra'}]){
+ assert.equal(vm.runInNewContext(noteAssignment,{d:data}),data.NOTAS??data.NOTES??'');
+}
+const edit=ctx.window.TPFContactInlineEdit;
+assert.equal(edit.prepare({NOTAS:'Nota',OBSERVACIONES:'Obs'},'contactNotes','Nota','Nueva').OBSERVACIONES,'Obs');
+assert.equal(edit.prepare({NOTAS:'Nota',OBSERVACIONES:'Obs'},'contactObservations','Obs','Nueva').NOTAS,'Nota');

@@ -22,10 +22,23 @@ const root=path.resolve(__dirname,'../..');
  for(const name of ['sidebar-fixed-safe','sidebar-compact','global-responsive','whatsapp-large-screen','whatsapp-workspace-design','whatsapp-contact-fields'])await page.addScriptTag({path:root+'/js/modules/'+name+'.js'});
  await page.waitForTimeout(650);
  assert.equal(await page.locator('#waSideTabs').count(),1);
+ // Load the production contact overlay CSS, including its legacy 252px offset.
+ const contactSource=fs.readFileSync(root+'/js/modules/contact-opportunity-actions.js','utf8');
+ await page.addStyleTag({content:contactSource.match(/s.textContent=`([\s\S]*?)`;/)[1]});
+ for(const width of [1280,1366,1440]){
+  await page.setViewportSize({width,height:768});
+  for(const id of ['contactModal','oppDetailModal']){
+   await page.evaluate(id=>document.getElementById(id).classList.remove('hidden'),id);
+   const box=await page.locator('#'+id).boundingBox();assert(Math.abs(box.x-68)<2,id+' aligns with compact rail');assert(Math.abs(box.x+box.width-width)<2,id+' fills remaining width');
+   await page.evaluate(id=>document.getElementById(id).classList.add('hidden'),id);
+  }
+ }
+ await page.setViewportSize({width:1366,height:768});
+
  assert(await page.locator('#waMiniStats').isVisible(),'header counters remain visible');
  assert.equal(await page.locator('#waSideTab-work').textContent(),'Gestiones · 1');
  await page.evaluate(()=>document.getElementById('waContactCard').append('nullnullnull'));await page.waitForTimeout(300);assert(!(await page.locator('#waContactCard').textContent()).includes('nullnull'));
- await page.evaluate(()=>{const img=document.createElement('img');img.className='waMediaImage';img.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="blue"/></svg>';document.getElementById('waMessages').append(img);});await page.click('.waMediaImage');assert(await page.locator('#waImagePreview').isVisible());await page.keyboard.press('Escape');assert.equal(await page.locator('#waImagePreview').count(),0);
+ await page.evaluate(()=>{const img=document.createElement('img');img.className='waMediaImage';img.src='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="blue"/></svg>';document.getElementById('waMessages').append(img);});await page.click('.waMediaImage');assert(await page.locator('#waImagePreview').isVisible());await page.keyboard.press('Escape');await page.locator('#waImagePreview').waitFor({state:'detached'});assert.equal(await page.locator('#waImagePreview').count(),0);
  await page.click('[data-wa-side-tab="work"]');await page.click('#fixtureManage');
  await page.click('#waSideNewTask');await page.click('#waSideNewOpp');await page.click('#waSideNewOffer');await page.click('#waSideDirectSale');await page.click('#waCleanReview');
  assert.deepEqual(await page.evaluate(()=>nativeActions),['waSideNewTask','waSideNewOpp','waSideNewOffer','waSideDirectSale']);assert(await page.evaluate(()=>reviewOpened));
@@ -39,6 +52,21 @@ const root=path.resolve(__dirname,'../..');
  await page.click('.waCleanFilters>summary');await page.locator('[data-wa-tab="archived"]').waitFor({state:'visible'});assert(await page.locator('[data-wa-tab="archived"]').isVisible());await page.click('[data-wa-tab="archived"]');await page.click('#waClientToggle');assert(!(await page.locator('.waContactPane').isVisible()));await page.click('#waClientToggle');await page.click('#waCleanExpand');await page.waitForTimeout(250);assert.equal(await page.locator('.referenceWorkspace').evaluate(el=>Math.round(el.getBoundingClientRect().left)),0);await page.click('#waCleanExpand');
  await page.evaluate(()=>{window.TPFModules={register:(name,m)=>m.install()};window.waMediaInfo=()=>({kind:'image',url:'https://fixture.test/example.jpg',name:'foto.jpg',mime:'image/jpeg'});waLiveState.history=[{idMessage:'fixture-image',outgoing:false,timestamp:1}];});
  await page.addScriptTag({path:root+'/js/modules/whatsapp-received-documents.js'});await page.locator('.tpfWaSaveMenu>summary').waitFor({state:'visible'});assert(!(await page.locator('[data-wa-doc-action="dni"]').isVisible()));await page.click('.tpfWaSaveMenu>summary');for(const action of ['pc','drive','dni'])assert(await page.locator('[data-wa-doc-action="'+action+'"]').isVisible());
+
+ // Actual label filtering functions with synthetic labels; no customer writes.
+ const profileSource=fs.readFileSync(root+'/js/modules/contact-profile.js','utf8');
+ const labelFunctions=profileSource.slice(profileSource.indexOf('  function ensureLabelSearch(){'),profileSource.indexOf('  function allowWhatsappForContact(){'));
+ await page.evaluate(()=>{const box=document.getElementById('contactLabelsChoices');box.innerHTML=Array.from({length:40},(_,i)=>'<label class="contactLabelChoice"><input type="checkbox" value="'+i+'" '+(i===0?'checked':'')+'><span>Etiqueta '+i+' de ejemplo</span></label>').join('');document.getElementById('contactLabelsClose').onclick=()=>document.getElementById('contactLabelsModal').classList.add('hidden');});
+ await page.addScriptTag({content:'(()=>{const byId=id=>document.getElementById(id);const refreshContactLabelCategories=()=>{},loadContactLabelCategories=async()=>{};'+labelFunctions+'ensureLabelSearch();})();'});
+ for(const width of [1366,1280,390]){
+  await page.setViewportSize({width,height:768});await page.evaluate(()=>document.getElementById('contactLabelsModal').classList.remove('hidden'));
+  assert(await page.locator('#contactLabelsSave').isVisible());
+  const fit=await page.evaluate(()=>{const a=document.getElementById('contactLabelsSave').getBoundingClientRect(),b=document.getElementById('contactLabelsChoices');return a.bottom<=innerHeight&&a.right<=innerWidth&&b.scrollHeight>b.clientHeight});assert(fit,'label scroll and footer fit '+width);if(width===1280)await page.screenshot({path:'/tmp/crm-labels-check.png'});
+ }
+ await page.locator('#contactLabelsSearch').fill('Etiqueta 39');assert.equal(await page.locator('.contactLabelChoice:visible').count(),1);assert((await page.locator('#contactLabelsSelected').textContent()).includes('Etiqueta 0'));
+ await page.locator('#contactLabelsChoices input[value="39"]').check();assert((await page.locator('#contactLabelsSelected').textContent()).startsWith('2 seleccionadas'));
+ await page.click('#contactLabelsCancel');assert(!(await page.locator('#contactLabelsModal').isVisible()));
+ await page.setViewportSize({width:1366,height:768});
  await page.evaluate(()=>document.getElementById('view-whatsapplive').classList.add('hidden'));await page.waitForTimeout(60);assert(!(await page.evaluate(()=>document.body.classList.contains('tpfWaCompactNav'))));assert.deepEqual(errors,[]);
  console.log('PASS: tabs, native actions, edit/save after tab switch, async automation, 3 laptop widths, filters, hide client, navigation; no page errors');await browser.close();
 })().catch(e=>{console.error(e);process.exit(1)});
