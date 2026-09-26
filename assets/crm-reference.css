@@ -1358,3 +1358,12 @@ body.tpfUnified #view-whatsapplive.waCleanWorkspace .waMsg{max-width:min(85%,520
 #view-whatsapplive .tpfWaSaveMenu>summary:after{content:' ▾'}
 #view-whatsapplive .tpfWaSaveMenu:not([open])>.tpfWaDocMenu{display:none!important}
 @media(min-width:1051px){body.tpfUnified.tpfWaCompactNav.tpfWaWorkspaceOnly .referenceWorkspace{margin-left:0!important;width:100%!important;max-width:100%!important}body.tpfUnified.tpfWaCompactNav .referenceUser{left:8px!important;right:8px!important}}
+
+/* In-chat image preview keeps the conversation open. */
+#waImagePreview{width:min(1000px,94vw);max-height:92dvh;border:0;border-radius:12px;padding:14px;background:#fff}
+#waImagePreview::backdrop{background:#101828bb}
+#waImagePreview img{display:block;max-width:100%;max-height:75dvh;object-fit:contain;margin:12px auto}
+#waImagePreview>a{display:block;text-align:center}
+#waImagePreview>button{display:block;margin-left:auto}
+
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTabs button{white-space:nowrap;font-size:11px!important}

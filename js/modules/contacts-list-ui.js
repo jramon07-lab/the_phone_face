@@ -147,15 +147,16 @@ async function loadGlobalLabels(){
 async function getContactLabels(id){
  if(state.labelsByContact.has(id))return state.labelsByContact.get(id);const cache=state.labelsByContact;let rows=[];try{if(typeof window.crmGetContactLabels==='function')rows=await window.crmGetContactLabels(id);else if(typeof crmGetContactLabels==='function')rows=await crmGetContactLabels(id);else{const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:id});if(r.error)throw r.error;rows=r.data;}rows=Array.isArray(rows)?rows:[];}catch(e){rows=[];}if(state.labelsByContact===cache&&!state.labelsAllLoaded)cache.set(id,rows);return state.labelsByContact.get(id)||rows;
 }
-let contactsLoad=null,contactsReloadPending=false,editRequest=0;
+let contactsLoad=null,contactsReloadPending=false,contactsStale=false,editRequest=0;
 function loadContacts(force=false){
+ force=force||contactsStale;
  if(contactsLoad){if(force)contactsReloadPending=true;return contactsLoad;}
  if(!force&&state.rows.length){applyAndRender();return Promise.resolve();}
  state.loading=true;
  contactsLoad=(async()=>{
   byId('tpfContactsLoading')?.classList.remove('hidden');byId('tpfContactsEmpty')?.classList.add('hidden');setStatus('Actualizando…');
   try{do{
-   contactsReloadPending=false;
+   contactsReloadPending=false;contactsStale=false;
    const salesRevision=state.salesRevision;
    const [rows,,opportunities]=await Promise.all([fetchAllContacts(),loadGlobalLabels(),fetchOpportunities()]);
    // A save/delete during this request requires a NEW read, not this stale response.
@@ -164,7 +165,7 @@ function loadContacts(force=false){
    if(state.filters.labels.length)await loadAllContactLabels();renderSources();applyAndRender();setStatus('');
    window.dispatchEvent(new CustomEvent('tpf:contacts-loaded',{detail:{records:rows}}));
   }while(contactsReloadPending);}
-  catch(e){setStatus(e?.message||'No se pudieron cargar los contactos',true);M.report?.('contacts-list-ui',e,'loadContacts');showToast(e?.message||'No se pudieron cargar los contactos',true);}
+  catch(e){contactsStale=true;setStatus(e?.message||'No se pudieron cargar los contactos',true);M.report?.('contacts-list-ui',e,'loadContacts');showToast(e?.message||'No se pudieron cargar los contactos',true);}
   finally{state.loading=false;contactsLoad=null;byId('tpfContactsLoading')?.classList.add('hidden');}
  })();return contactsLoad;
 }
@@ -348,5 +349,5 @@ async function createContact(){
  finally{btn.disabled=false;}
 }
 
-M.register('contacts-list-ui',{install(){buildUi();window.addEventListener('tpf:sales-updated',e=>{if(!Array.isArray(e.detail?.opportunities))return;state.salesRevision++;state.opportunities=e.detail.opportunities;if(state.rows.length)applyAndRender();});window.addEventListener('tpf:opportunity-deleted',e=>{state.salesRevision++;state.opportunities=state.opportunities.filter(o=>String(o.id)!==String(e.detail?.id));if(state.rows.length)applyAndRender();});if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);window.TPFContactsList={edit:id=>openEdit({id})};}});
+M.register('contacts-list-ui',{install(){buildUi();window.addEventListener('tpf:sales-updated',e=>{if(!Array.isArray(e.detail?.opportunities))return;state.salesRevision++;state.opportunities=e.detail.opportunities;if(state.rows.length)applyAndRender();});window.addEventListener('tpf:opportunity-deleted',e=>{state.salesRevision++;state.opportunities=state.opportunities.filter(o=>String(o.id)!==String(e.detail?.id));if(state.rows.length)applyAndRender();});if(!byId('view-database')?.classList.contains('hidden'))loadContacts(false);window.tpfReloadContacts=()=>loadContacts(true);window.TPFContactsList={edit:id=>openEdit({id}),invalidate:()=>{contactsStale=true;if(contactsLoad)contactsReloadPending=true;if(!byId('view-database')?.classList.contains('hidden'))return loadContacts(true);}};}});
 })();
