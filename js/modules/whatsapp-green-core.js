@@ -349,12 +349,14 @@ async function waApi(action,payload={}){
     opts.method="POST";
     opts.body=JSON.stringify(payload);
   }
-  const controller=['state','summary','chats','history','previews'].includes(action)?new AbortController():null;
-  const timeout=controller?setTimeout(()=>controller.abort(),20000):null;
+  // Una foto opcional no puede retener indefinidamente la cola de avatares.
+  const readTimeout=action==='avatar'?8000:(['state','summary','chats','history','previews'].includes(action)?20000:0);
+  const controller=readTimeout?new AbortController():null;
+  const timeout=controller?setTimeout(()=>controller.abort(),readTimeout):null;
   if(controller)opts.signal=controller.signal;
   try{
     const r=await fetch(url,opts);
-    const j=await r.json().catch(()=>({}));
+    const j=await r.json().catch(error=>{if(controller?.signal.aborted)throw error;return {}});
     if(!r.ok||j.ok===false){const error=new Error(j.error||`Error ${r.status}`);error.status=r.status;throw error}
     return j;
   }finally{if(timeout)clearTimeout(timeout)}

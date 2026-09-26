@@ -12,6 +12,6 @@ assert.match(core,/if\(changed\)\{waCacheHistory[\s\S]*?renderWaMessages/,'uncha
 assert.doesNotMatch(core,/Promise\.all\(\[waRefreshHybridSummary\(\),waLiveState\.selected\?window\.loadWaHistory\(false\)/,'the 15-second shared sync must not reload and persist the entire selected conversation');
 assert.match(core,/before!==waStableSig\(waLiveState\.chats\|\|\[\]\)/,'an unchanged summary must not rebuild the conversation list');
 assert.doesNotMatch(fixes,/setInterval\(\(\)=>\{if\(!waViewVisible\(\)\)return;[^}]*patchMessages/,'the maintenance timer must not traverse every visible message repeatedly');
-assert.match(html,/whatsapp-green-core\.js\?v=20260920-contact-final-5/,'the browser must load the safe WhatsApp core');
+assert.match(html,/whatsapp-green-core\.js\?v=20260926-avatar-deadline-1/,'the browser must load the safe WhatsApp core');
 assert.match(html,/runtime\.js\?v=/,'the browser must load the search runtime');
 console.log('WhatsApp history and background refresh remain bounded');

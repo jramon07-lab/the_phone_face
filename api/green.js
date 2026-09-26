@@ -209,7 +209,9 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 12000);
     try {
-      return await fetch(url, { ...opts, signal: controller.signal });
+      const response = await fetch(url, { ...opts, signal: controller.signal });
+      const text = await response.text();
+      return { response, text };
     } finally {
       clearTimeout(timer);
     }
@@ -221,8 +223,7 @@ export default async function handler(req, res) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await waitForGreenMethodSlot(greenMethod);
-        const r = await greenTimedFetch(url, opts);
-        const text = await r.text();
+        const { response: r, text } = await greenTimedFetch(url, opts);
         let data;
         try { data = text ? JSON.parse(text) : null; } catch { data = text; }
         if (r.ok) return data;
@@ -251,8 +252,7 @@ export default async function handler(req, res) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         await waitForGreenMethodSlot(method);
-        const r = await greenTimedFetch(apiUrl(method), opts);
-        const text = await r.text();
+        const { response: r, text } = await greenTimedFetch(apiUrl(method), opts);
         let data;
         try { data = text ? JSON.parse(text) : null; } catch { data = text; }
         if (r.ok) return data;
