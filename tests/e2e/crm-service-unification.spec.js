@@ -314,6 +314,14 @@ test('Seguimientos: filtros y acciones conservan la etapa (datos sintéticos)',a
  await page.evaluate(()=>{window.TPFModules={register:(_,m)=>window.followModule=m};window.actionCalls=[];window.TPFControlWhatsappOffer=async(id,action)=>window.actionCalls.push({id,action});});
  await page.addScriptTag({content:fs.readFileSync('js/modules/offer-followup-ui.js','utf8')});
  await page.evaluate(()=>{const api=window.TPFOfferFollowup,F=api.state;F.loaded=true;F.at=Date.now();F.byOpportunity=new Map([['a',[{id:'offer-a',status:'following',sent_at:'2026-09-20T10:00:00Z'}]],['b',[{id:'offer-b',status:'paused',paused_at:'2026-09-24T10:00:00Z'}]]]);window.fixtureRows=[{id:'a',stage:'Seguimiento'},{id:'b',stage:'Seguimiento'}];window.renderSales=()=>{api.salesControls(window.fixtureRows);document.getElementById('salesScroll').innerHTML=api.filterRows(window.fixtureRows).map(x=>'<article data-row="'+x.id+'"><b>'+x.stage+'</b>'+api.html(x.id,true)+'</article>').join('')};window.followModule.install();window.renderSales()});
+ await page.locator('.ofMoreFilters summary').click();
+ await page.evaluate(()=>{window.originalFilterMenu=document.querySelector('.ofMoreFilters');window.renderSales()});
+ await expect(page.locator('.ofMoreFilters')).toHaveAttribute('open','');
+ expect(await page.evaluate(()=>window.originalFilterMenu===document.querySelector('.ofMoreFilters'))).toBe(true);
+ await page.evaluate(()=>{window.fixtureRows.push({id:'c',stage:'Seguimiento'});window.renderSales()});
+ await expect(page.locator('.ofMoreFilters')).toHaveAttribute('open','');
+ await page.locator('[data-of-filter="all"]').click();
+ await expect(page.locator('.ofMoreFilters')).not.toHaveAttribute('open','');
  await page.locator('[data-of-filter="paused"]').click();await expect(page.locator('article')).toHaveCount(1);await expect(page.locator('article')).toHaveAttribute('data-row','b');
  await page.locator('[data-of-manage]').click();await page.getByRole('button',{name:'Reanudar'}).click();expect(await page.evaluate(()=>window.actionCalls)).toEqual([{id:'offer-b',action:'resume'}]);
  expect(await page.evaluate(()=>window.fixtureRows.every(x=>x.stage==='Seguimiento'))).toBe(true);

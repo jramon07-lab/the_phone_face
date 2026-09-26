@@ -39,13 +39,14 @@ function install(){
 }
 function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;refresh();},120);}
 function refresh(){
+ if(!view.isConnected||!$('waClientToggle'))return;
  const draft=$('tpfWaFinalReviewOpen')||view.querySelector('.waLiveHeaderActions>button[id*="Draft"]');if(draft&&!draft.closest('#waCleanTools'))$('waCleanTools')?.lastChild.append(draft);
  const c=contact(),id=String(c?.id||'');for(const n of [$('waCleanRelations'),$('waCleanOffers'),$('waCleanReview')])if(n)n.hidden=!id;
- const actions=$('waSideContactActions');if(actions&&$('waCleanReview')?.parentElement!==actions)actions.append($('waCleanReview'));
+ const actions=$('waSideContactActions'),review=$('waCleanReview');if(actions&&review&&review.parentElement!==actions)actions.append(review);
  const head=$('waContactCard')?.querySelector('.waContactHeader');if(actions&&head&&head.nextElementSibling!==actions)head.after(actions);
  const state=$('waContactState');if(state)state.dataset.compact=String(!!$('tpfWaAliasCard')&&state.textContent.trim()==='Contacto encontrado');
  const all=view.querySelector('[data-wa-tab="all"]');if(all&&all.textContent!=='Todos')all.textContent='Todos';
- const auto=$('waAutomationStatus');if(auto&&auto.previousElementSibling!==$('waCleanOffers'))$('waCleanOffers').after(auto);
+ const auto=$('waAutomationStatus'),offers=$('waCleanOffers');if(auto&&offers&&auto.previousElementSibling!==offers)offers.after(auto);
  fit();if(!window.TPFContactRelations?.sidebarSnapshot||!window.TPFWhatsappOfferSummary){setTimeout(schedule,500);return;}if(id===activeId)return;activeId=id;const token=++revision;
  $('waCleanRelationRows').textContent=id?'Cargando relaciones…':'';$('waCleanOfferRows').textContent=id?'Cargando ofertas…':'';
  if(!id)return;
