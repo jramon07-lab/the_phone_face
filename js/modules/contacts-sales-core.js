@@ -1,5 +1,6 @@
 /* TPF physical module split · generated from app-core.js */
 let currentContact=null;
+let contactOpenSequence=0;
 function splitContactFullName(value){
  const full=String(value||"").trim().replace(/\s+/g," ");
  if(!full)return {first:"",last:""};
@@ -61,15 +62,23 @@ $("cpOpportunities").innerHTML=opps.length
  let waPrograms=[];
  if(contactCanUseWhatsapp()){
    try{
-     const {data:waData}=await sb.from("agenda_items").select("*")
-       .eq("whatsapp_enabled",true).eq("status","pending")
-       .order("whatsapp_scheduled_at",{ascending:true}).limit(100);
+     const waData=[];
+     for(let from=0;;from+=500){
+       const page=await sb.from("agenda_items").select("*")
+         .eq("whatsapp_enabled",true).eq("status","pending")
+         .order("whatsapp_scheduled_at",{ascending:true}).order("id").range(from,from+499);
+       if(currentContact!==profileContact)return;
+       if(page.error)throw page.error;
+       waData.push(...(page.data||[]));
+       if((page.data||[]).length<500)break;
+     }
      const np=String(phone||"").replace(/\D/g,"").slice(-9);
      waPrograms=(waData||[]).filter(x=>{
        const xp=String(x.whatsapp_phone||x.customer_phone||"").replace(/\D/g,"").slice(-9);
        return np&&xp===np;
      });
    }catch(e){}
+   if(currentContact!==profileContact)return;
    $("cpWhatsappPrograms").innerHTML=waPrograms.length?waPrograms.map(w=>`<div class="cpWaWrap">
      <button class="cpWaItem" onclick="openContactProgrammedWhatsapp('${w.id}')"><b>${waIsDue(w)?"Listo para enviar":"Programado"}</b><span>${esc(fmtAgendaDate(w.whatsapp_scheduled_at||w.starts_at))}</span><small>${esc(w.whatsapp_message||"Sin mensaje")}</small></button>
      <div class="cpWaActions"><button onclick="openContactProgrammedWhatsapp('${w.id}')">Editar</button><button class="dangerText" onclick="deleteContactProgrammedWhatsapp('${w.id}')">Eliminar</button></div>
@@ -85,7 +94,7 @@ $("cpOpportunities").innerHTML=opps.length
  try{
    const {data:activityData}=await sb.from("contact_activity")
      .select("*")
-     .eq("contact_id",currentContact.id)
+     .eq("contact_id",profileContact.id)
      .order("created_at",{ascending:false});
    activityRows.push(...(activityData||[]).map(a=>({
      date:a.created_at?new Date(a.created_at).toLocaleString("es-ES"):"",
@@ -94,6 +103,8 @@ $("cpOpportunities").innerHTML=opps.length
      type:a.activity_type||"activity",author:a
    })));
  }catch(e){}
+
+ if(currentContact!==profileContact)return;
 
  // Opportunities linked to this contact
  activityRows.push(...opps.map(o=>{
@@ -204,9 +215,11 @@ function applyWhatsappVisibilityForContact(){
   }
 }
 window.openContact=async(id)=>{
+ const request=++contactOpenSequence;
  const sameVisible=String(currentContact?.id||"")===String(id) && !$("contactModal")?.classList.contains("hidden");
  if(!sameVisible)tpfRememberScreen();
  const {data,error}=await sb.from("records").select("id,source_sheet,source_row,data").eq("id",id).single();
+ if(request!==contactOpenSequence)return;
  if(error){alert(error.message);return}
  currentContact=data; const d=data.data||{};
  if(!window.__returnSalesOpportunityId && $("contactClose")){

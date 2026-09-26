@@ -1,0 +1,28 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modules/contacts-sales-core.js','utf8');
+const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',innerHTML:'',classList:{contains:()=>true,remove(){}}});return nodes.get(id)};
+const pending=new Map();
+const ctx={window:{},$ :node,currentContact:null,contactOpenSequence:0,tpfRememberScreen(){},alert(){throw Error('Unexpected alert')},applyWhatsappVisibilityForContact(){},contactFullNameFromData:d=>d.NOMBRE,splitContactFullName:n=>({first:n,last:''}),contactField:(d,...keys)=>keys.map(k=>d[k]).find(v=>v!=null)||'',renderContactProfile:async()=>{},sb:{from(){return{select(){return this},eq(k,id){this.id=id;return this},single(){return new Promise(resolve=>pending.set(this.id,resolve))}}}}};
+vm.createContext(ctx);
+vm.runInContext(source.slice(source.indexOf('window.openContact=async(id)=>{'),source.indexOf('$("contactClose").onclick')),ctx);
+(async()=>{
+ const first=ctx.window.openContact('a'),second=ctx.window.openContact('b');
+ pending.get('b')({data:{id:'b',data:{NOMBRE:'Segundo'}}});await second;
+ pending.get('a')({data:{id:'a',data:{NOMBRE:'Primero'}}});await first;
+ assert.equal(ctx.currentContact.id,'b');assert.equal(node('contactFirstName').value,'Segundo');
+ const person={id:'b',data:{NOMBRE:'Segundo',TELEFONO:'600000002'}};
+ let releaseActivity,activityContact;
+ const pages=[];
+ Object.assign(ctx,{currentContact:person,salesCache:{opportunities:[{id:'o'}]},esc:String,hydrateOpportunityStageNames:x=>x,oppIsClosed:()=>false,oppIsExpired:()=>false,oppUnifiedCard:()=>'',contactCanUseWhatsapp:()=>true,waIsDue:()=>false,fmtAgendaDate:String,fmtDateOnly:String,fmtMoney:String});
+ ctx.window.TPFRecordLinks={load:async()=>[],related:()=>[]};
+ ctx.sb={from(table){const q={select(){return q},eq(key,value){if(table==='contact_activity')activityContact=value;return q},or(){q.tasks=true;return q},order(){return q},range(from){if(q.tasks)return Promise.resolve({data:[]});pages.push(from);return Promise.resolve({data:from===0?Array.from({length:500},(_,i)=>({id:String(i),whatsapp_phone:'600000001'})):[{id:'late',whatsapp_phone:'600000002',whatsapp_message:'Encontrado'}]})},then(resolve){return new Promise(r=>{releaseActivity=r}).then(resolve)}};return q}};
+ vm.runInContext(source.slice(source.indexOf('async function renderContactProfile(){'),source.indexOf('window.deleteContactProgrammedWhatsapp=')),ctx);
+ const render=ctx.renderContactProfile();
+ while(!releaseActivity)await new Promise(r=>setImmediate(r));
+ assert.deepEqual(pages,[0,500]);assert(node('cpWhatsappPrograms').innerHTML.includes('Encontrado'));assert.equal(activityContact,'b');
+ node('cpTimeline').innerHTML='Nuevo cliente';ctx.currentContact={id:'c',data:{}};
+ releaseActivity({data:[{title:'Historial antiguo'}]});await render;
+ assert.equal(node('cpTimeline').innerHTML,'Nuevo cliente');
+ console.log('PASS contact open ordering, scheduled messages beyond first page, stale activity isolation');
+})().catch(e=>{console.error(e);process.exitCode=1});
