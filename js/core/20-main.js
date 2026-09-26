@@ -1414,7 +1414,7 @@ function initSalesNavigation(){
   // Click-and-drag anywhere on empty board area.
   let dragging=false,startX=0,startLeft=0;
   sc.addEventListener("mousedown",e=>{
-    if(e.target.closest("button,input,select,textarea,.opp"))return;
+    if(e.target.closest("button,input,select,textarea,summary,details,[role=button],[role=menuitem],.opp"))return;
     dragging=true;startX=e.clientX;startLeft=sc.scrollLeft;sc.classList.add("dragging");
   });
   window.addEventListener("mousemove",e=>{
@@ -1468,7 +1468,7 @@ function initSalesNavigation(){
 
     salesView.addEventListener("pointerdown",e=>{
       if(e.pointerType==="mouse" && e.button!==0)return;
-      if(e.target.closest("button,input,select,textarea,.opp,.stageHead,a"))return;
+      if(e.target.closest("button,input,select,textarea,summary,details,[role=button],[role=menuitem],.opp,.stageHead,a"))return;
 
       panelDrag=true;
       panelStartX=e.clientX;

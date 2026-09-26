@@ -168,6 +168,21 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
         // A visible section alone is insufficient: the normal navigation must
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
+        if(view==='sales'){
+          const more=page.locator('#salesMoreMenu');
+          await more.locator('summary').click();
+          await expect(more).toHaveAttribute('open','');
+          await expect(more.getByRole('button',{name:'Personalizar panel'})).toBeVisible();
+          await more.locator('summary').click();
+          await expect(more).not.toHaveAttribute('open','');
+          const filters=page.locator('#ofSalesFilters .ofMoreFilters');
+          await filters.locator('summary').click();
+          await expect(filters).toHaveAttribute('open','');
+          await expect(filters.locator('[data-of-filter="all"]')).toBeVisible();
+          await filters.locator('[data-of-filter="all"]').click();
+          await expect(page.locator('#ofSalesFilters [data-of-filter="all"]')).toHaveAttribute('aria-pressed','true');
+        }
+
       });
     }
     const card = page.locator('#whatsappSettingsStatus');
