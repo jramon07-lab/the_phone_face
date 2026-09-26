@@ -1324,3 +1324,35 @@ body.tpfUnified #tpfMonthlyClose [data-monthly-panel="sales"] .tpfMonthlyTable :
 body.tpfUnified #tpfMonthlyClose [data-monthly-panel="sales"] .tpfMonthlyTable :is(th,td):nth-child(4){width:200px}
 body.tpfUnified #tpfMonthlyClose .tpfMonthlyMeta span{white-space:normal;overflow-wrap:anywhere;min-width:0}
 @media(max-width:600px){body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable{min-width:560px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyTableWrap{overflow:auto!important}}
+
+/* WhatsApp workspace: preserve native controls in three focused panels. */
+@media(min-width:1051px){
+body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) .referenceSidebar{width:68px!important;padding:12px 8px!important}
+body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) .referenceWorkspace{margin-left:68px!important;width:calc(100% - 68px)!important}
+body.tpfUnified.tpfWaCompactNav .referenceSidebar .nav{justify-content:center!important;padding:10px!important;min-height:38px}
+body.tpfUnified.tpfWaCompactNav .referenceSidebar .nav>span,body.tpfUnified.tpfWaCompactNav .referenceBrand>div:last-child,body.tpfUnified.tpfWaCompactNav .referenceUserText,body.tpfUnified.tpfWaCompactNav .referenceOnline{display:none!important}
+body.tpfUnified.tpfWaCompactNav .referenceBrand,body.tpfUnified.tpfWaCompactNav .referenceUser{justify-content:center!important;padding:8px 0!important}
+body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) #sidebarToggle{left:51px!important}
+body.tpfUnified.tpfWaCompactNav .referenceTopbar{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveTitle h2{font-size:21px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveTitle small,body.tpfUnified #view-whatsapplive.waCleanWorkspace #waMiniStats{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveHeader{min-height:52px!important;padding:8px 14px!important;flex-wrap:nowrap!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveLayout{grid-template-columns:clamp(230px,20vw,280px) minmax(280px,1fr) 310px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace.waClientHidden .waLiveLayout{grid-template-columns:clamp(230px,20vw,280px) minmax(280px,1fr)!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waTabs{grid-template-columns:1fr 1fr 1.25fr auto!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waContactPane{padding:14px!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTabs{display:flex;gap:4px;margin:12px -2px 14px;border-bottom:1px solid #e1e7ef;position:sticky;top:-14px;background:white;z-index:3}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTabs button{flex:1;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;background:white!important;padding:12px 3px!important;color:#667085!important;font-size:12px!important;box-shadow:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTabs button[aria-selected=true]{border-bottom-color:#175cd3!important;color:#175cd3!important;font-weight:700}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace [data-wa-side-panel][hidden]{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace [data-wa-side-panel]{min-width:0}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waCleanOffers{border:1px solid #e1e7ef;border-radius:10px;padding:10px!important;margin:0 0 12px}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideContactActions{grid-template-columns:1fr 1fr!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waMediaImage{max-height:220px!important;max-width:min(260px,100%)!important;width:auto!important;object-fit:contain!important;cursor:zoom-in}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waMediaVideo{max-height:220px!important;max-width:100%!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waMsg{max-width:min(85%,520px)!important}
+}
+#view-whatsapplive .tpfWaSaveMenu>summary{cursor:pointer;list-style:none;padding:7px 11px;border:1px solid #d8e1eb;border-radius:7px;background:white;color:#175cd3;font-size:12px}
+#view-whatsapplive .tpfWaSaveMenu>summary:after{content:' ▾'}
+#view-whatsapplive .tpfWaSaveMenu:not([open])>.tpfWaDocMenu{display:none!important}
+@media(min-width:1051px){body.tpfUnified.tpfWaCompactNav.tpfWaWorkspaceOnly:not(.sidebarCollapsed) .referenceWorkspace{margin-left:0!important;width:100%!important}body.tpfUnified.tpfWaCompactNav .referenceUser{left:8px!important;right:8px!important}}

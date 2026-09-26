@@ -168,6 +168,26 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
         // A visible section alone is insufficient: the normal navigation must
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
+        if(view==='whatsapplive'){
+          await expect(page.locator('#waSideTabs')).toHaveCount(1);
+          await page.locator('.waCleanFilters>summary').click();
+          await expect(page.locator('[data-wa-tab="archived"]')).toBeVisible();
+          await expect(page.locator('[data-wa-tab="automatic"]')).toBeVisible();
+          await page.locator('.waCleanFilters>summary').click();
+          const row=page.locator('#waLiveChats .waChatRow').first();
+          if(await row.count()){
+            await row.click();
+            await expect(page.locator('#waChatActive')).toBeVisible();
+            if(await page.locator('#waContactCard').isVisible()){
+              for(const tab of ['work','history','client']){
+                await page.locator('[data-wa-side-tab="'+tab+'"]').click();
+                await expect(page.locator('#waSidePanel-'+tab)).toBeVisible();
+              }
+              await expect(page.locator('#waCleanReview')).toBeVisible();
+              await expect(page.locator('#waSideNewOffer')).toBeVisible();
+            }
+          }
+        }
         if(view==='sales'){
           const more=page.locator('#salesMoreMenu');
           await more.locator('summary').click();
