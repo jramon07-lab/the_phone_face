@@ -181,6 +181,24 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
           await expect(filters.locator('[data-of-filter="all"]')).toBeVisible();
           await filters.locator('[data-of-filter="all"]').click();
           await expect(page.locator('#ofSalesFilters [data-of-filter="all"]')).toHaveAttribute('aria-pressed','true');
+          await more.locator('summary').click();
+          await page.locator('#tpfMonthlyCloseBtn').click();
+          await expect(page.locator('#tpfMonthlyClose')).toBeVisible();
+          for(const size of [{width:1366,height:768},{width:1280,height:720}]){
+            await page.setViewportSize(size);
+            for(const panel of ['sales','pending']){
+              await page.locator('[data-monthly-view="'+panel+'"]').click();
+              const geometry=await page.locator('#tpfMonthlyClose').evaluate(root=>{
+                const card=root.querySelector('.tpfMonthlyCard').getBoundingClientRect();
+                const section=root.querySelector('.tpfMonthlyView.active');
+                const nodes=[section,section.querySelector('.tpfMonthlySectionHead'),section.querySelector('table'),...section.querySelectorAll('th'),root.querySelector('.tpfMonthlyFoot')];
+                return nodes.every(el=>{const r=el.getBoundingClientRect();return r.left>=card.left&&r.right<=card.right+1});
+              });
+              expect(geometry,'Monthly close columns and controls must fit the dialog').toBe(true);
+            }
+          }
+          await page.locator('#tpfMonthlyClose [data-close]').first().click();
+
         }
 
       });

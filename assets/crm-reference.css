@@ -1313,3 +1313,14 @@ body.tpfUnified #view-sales .salesBoardPage{width:100%!important;max-width:100%!
 
 @media(max-width:600px){#salesMoreMenu .salesMoreBody{left:0;right:auto}body.tpfUnified #view-sales:has(.tpfCleanFilters:not(.hidden)){z-index:50000!important}}
 @media(max-width:600px){body.tpfUnified #tpfMonthlyClose .tpfMonthlyTabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;flex:none!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyTab{font-size:12px!important;white-space:normal!important;min-width:0!important;padding:8px 3px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters{display:grid!important;grid-template-columns:1fr 1fr;max-height:none;flex:none!important;overflow:visible;gap:6px}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters input,body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters select{width:100%;box-sizing:border-box;min-width:0}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters label:last-child{grid-column:1/-1}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters input[type=checkbox]{width:auto}body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead{flex-wrap:wrap;gap:6px}body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead p{font-weight:400;font-size:11px}}
+/* Keep the monthly dialog's content inside its own width, including long client names. */
+body.tpfUnified #tpfMonthlyClose :is(.tpfMonthlyBody,.tpfMonthlyMain,.tpfMonthlySection,.tpfMonthlySectionHead,.tpfMonthlyTableWrap){width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead{flex-wrap:wrap!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead>div{min-width:0;overflow-wrap:anywhere}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable{table-layout:fixed!important;width:100%!important;min-width:0!important;max-width:100%!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable :is(th,td){white-space:normal!important;overflow-wrap:anywhere}
+body.tpfUnified #tpfMonthlyClose [data-monthly-panel="sales"] .tpfMonthlyTable :is(th,td):nth-child(1){width:42px}
+body.tpfUnified #tpfMonthlyClose [data-monthly-panel="sales"] .tpfMonthlyTable :is(th,td):nth-child(3){width:110px}
+body.tpfUnified #tpfMonthlyClose [data-monthly-panel="sales"] .tpfMonthlyTable :is(th,td):nth-child(4){width:200px}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyMeta span{white-space:normal;overflow-wrap:anywhere;min-width:0}
+@media(max-width:600px){body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable{min-width:560px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyTableWrap{overflow:auto!important}}
