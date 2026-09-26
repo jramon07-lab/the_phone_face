@@ -67,7 +67,12 @@ function safeLabel(request) {
   const url = new URL(request.url());
   if (url.pathname.startsWith('/rest/v1/rpc/')) return `rpc:${url.pathname.split('/').pop().replace(/[^a-z0-9_]/gi, '')}`;
   if (url.pathname.startsWith('/rest/v1/')) return `table:${url.pathname.split('/')[3].replace(/[^a-z0-9_]/gi, '')}`;
-  if (url.pathname.startsWith('/api/')) return `api:${url.pathname.split('/').pop().replace(/[^a-z0-9_-]/gi, '')}`;
+  if (url.pathname.startsWith('/api/')) {
+    const endpoint = url.pathname.split('/').pop().replace(/[^a-z0-9_-]/gi, '');
+    const action = url.searchParams.get('action') || '';
+    // Only fixed operation names: never log phones, IDs, payloads or tokens.
+    return `api:${endpoint}${GREEN_READ.has(action) ? ':' + action : ''}`;
+  }
   return 'external-request';
 }
 
