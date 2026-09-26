@@ -99,7 +99,7 @@ async function installReadOnlyGuard(context, page, origin) {
     if (new URL(request.url()).origin === origin) headers['x-vercel-protection-bypass'] = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
     await route.continue({ headers });
   });
-  page.on('pageerror', () => { report.pageErrors += 1; });
+  page.on('pageerror', error => { report.pageErrors += 1; const frames=String(error.stack||'').split('\n').slice(1,4).map(line=>line.replace(/https?:\/\/[^\s)]+/g,url=>{try{const u=new URL(url);return u.pathname.replace(/\?.*/, '')}catch(_){return '[source]'}})); console.log('BROWSER_ERROR_LOCATION',JSON.stringify({name:error.name,frames})); });
   page.on('requestfinished', request => { report.pendingReads = report.pendingReads.filter(item => item !== request); });
   page.on('requestfailed', request => {
     report.pendingReads = report.pendingReads.filter(item => item !== request);
