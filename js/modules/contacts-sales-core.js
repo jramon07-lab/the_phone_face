@@ -654,7 +654,7 @@ function salesFilteredOpps(){
     if(sort==="date_desc") return String(b.expected_date||"").localeCompare(String(a.expected_date||""));
     return Number(a.position||0)-Number(b.position||0);
   });
-  return rows;
+  return window.TPFOfferFollowup?.filterRows(rows)||rows;
 }
 function fmtMoney(v){return Number(v||0).toLocaleString("es-ES",{style:"currency",currency:"EUR"})}
 function fmtDateOnly(v){
@@ -663,6 +663,7 @@ function fmtDateOnly(v){
   return d&&m&&y?`${d}/${m}/${y}`:v;
 }
 function renderSales(){
+  window.TPFOfferFollowup?.salesControls(salesCache.opportunities||[]);
   const stages=salesCache.stages||[];
   const selectedStage=String($("salesStageFilter")?.value||"");
   const opps=salesFilteredOpps();
@@ -724,6 +725,7 @@ function renderSales(){
           ${o.expected_date?`<div><span class="label">Fecha:</span> ${esc(fmtDateOnly(o.expected_date))}</div>`:""}
           ${o.notes?`<details class="tpfSalesNotes" onclick="event.stopPropagation()"><summary>Notas de la oportunidad</summary><div>${esc(o.notes)}</div></details>`:""}
         </div>
+        ${window.TPFOfferFollowup?.html(o.id,true)||""}
         <div class="oppFooter">
           <span class="oppAmount">${esc(fmtMoney(o.amount||0))}</span>
           <select onclick="event.stopPropagation()" onchange="event.stopPropagation();moveOpp('${o.id}',this.value)">

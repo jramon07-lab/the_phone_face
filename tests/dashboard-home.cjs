@@ -42,11 +42,11 @@ assert.match(shell,/<details class="tdBusinessDetails">/,'Analytics remains avai
 assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
 assert.ok(!html.includes('dashboard-home-pro.js'));
 assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260925-workbench-1'"));
-assert.match(html,/runtime\.js\?v=20260926-contact-parallel-1/);
+assert.match(html,/runtime\.js\?v=20260926-followup-1/);
 assert.ok(!/\.referenceSidebar|\.referenceNav|\.referenceWorkspace/.test(css),'Inicio must not restyle the shared CRM navigation');
 assert.ok(!source.includes('scrollIntoView'),'filters never force the page to scroll');
 assert.ok(!source.includes('tdPipelineRows'),'do not duplicate and truncate the worklist into previews');
-assert.equal((source.match(/sb\.from\(/g)||[]).length,6,'one bounded batch read for pending reminders');
+assert.equal((source.match(/sb\.from\(/g)||[]).length,5,'pending reminders reuse the shared follow-up read');
 assert.equal((source.match(/sb\.rpc\(/g)||[]).length,2,'only existing goal RPCs');
 assert.ok(!/sb\.(?:from|rpc)[\s\S]{0,100}sendMessage/.test(source));
 console.log('dashboard home reference: counts, pending status, Madrid dates, closed exclusions, pagination and scope passed');

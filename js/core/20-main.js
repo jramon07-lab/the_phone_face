@@ -1668,6 +1668,7 @@ function renderSalesList(){
         <select onclick="event.stopPropagation()" onchange="event.stopPropagation();moveOpp('${o.id}',this.value)">
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
         </select>
+        ${window.TPFOfferFollowup?.html(o.id,true)||""}
       </div>
       <div class="salesListDate"><input type="text" class="salesListDateInput" data-opp-id="${esc(o.id||'')}" data-original-date="${esc(o.expected_date||'')}" value="${esc(o.expected_date?fmtDateOnly(o.expected_date):'')}" placeholder="dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de oportunidad"></div>
       <div class="salesListAction"><button type="button" class="tpfListMenuBtn" aria-label="Acciones de ${esc(o.title||'Oportunidad')}" title="Acciones">•••</button></div>
