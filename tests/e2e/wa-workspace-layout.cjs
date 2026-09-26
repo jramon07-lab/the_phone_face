@@ -22,6 +22,7 @@ const root=path.resolve(__dirname,'../..');
  for(const name of ['sidebar-fixed-safe','sidebar-compact','global-responsive','whatsapp-large-screen','whatsapp-workspace-design','whatsapp-contact-fields'])await page.addScriptTag({path:root+'/js/modules/'+name+'.js'});
  await page.waitForTimeout(650);
  assert.equal(await page.locator('#waSideTabs').count(),1);
+ assert(await page.locator('#waMiniStats').isVisible(),'header counters remain visible');
  await page.click('[data-wa-side-tab="work"]');await page.click('#fixtureManage');
  await page.click('#waSideNewTask');await page.click('#waSideNewOpp');await page.click('#waSideNewOffer');await page.click('#waSideDirectSale');await page.click('#waCleanReview');
  assert.deepEqual(await page.evaluate(()=>nativeActions),['waSideNewTask','waSideNewOpp','waSideNewOffer','waSideDirectSale']);assert(await page.evaluate(()=>reviewOpened));

@@ -1335,7 +1335,9 @@ body.tpfUnified.tpfWaCompactNav .referenceBrand,body.tpfUnified.tpfWaCompactNav 
 body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) #sidebarToggle{left:51px!important}
 body.tpfUnified.tpfWaCompactNav .referenceTopbar{display:none!important}
 body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveTitle h2{font-size:21px!important}
-body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveTitle small,body.tpfUnified #view-whatsapplive.waCleanWorkspace #waMiniStats{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveTitle small{display:none!important}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waMiniStats{display:flex!important;gap:4px!important;flex-wrap:nowrap!important;align-items:center}
+body.tpfUnified #view-whatsapplive.waCleanWorkspace #waMiniStats span{white-space:nowrap;padding:4px 6px!important;font-size:10px!important}
 body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveHeader{min-height:52px!important;padding:8px 14px!important;flex-wrap:nowrap!important}
 body.tpfUnified #view-whatsapplive.waCleanWorkspace .waLiveLayout{grid-template-columns:clamp(230px,20vw,280px) minmax(280px,1fr) 310px!important}
 body.tpfUnified #view-whatsapplive.waCleanWorkspace.waClientHidden .waLiveLayout{grid-template-columns:clamp(230px,20vw,280px) minmax(280px,1fr)!important}
