@@ -45,7 +45,7 @@ function enableListScroll(){const view=document.getElementById('salesListView'),
 // Keep the native controls and their handlers; only group related information.
 function compactRows(){
  const head=document.querySelector('#salesListView .salesListHeader');
- if(head&&!head.dataset.compact){head.dataset.compact='1';head.innerHTML='<div></div><div>Cliente / oportunidad</div><div>Contacto</div><div>Importe</div><div>Estado</div><div>Fecha prevista</div><div aria-label="Acciones"></div>';}
+ if(head&&!head.dataset.compact){head.dataset.compact='1';head.innerHTML='<div></div><div>Cliente / oportunidad</div><div>Contacto</div><div>Importe</div><div>Estado</div><div>Seguimiento</div><div>Fecha prevista</div><div aria-label="Acciones"></div>';}
  document.querySelectorAll('#salesListRows .salesListRow').forEach(row=>{
   if(row.dataset.compact)return;
   const cells=[...row.children];if(cells.length!==9)return;
@@ -53,6 +53,8 @@ function compactRows(){
   const contact=document.createElement('div');contact.className='salesContact';
   cells[3].before(contact);contact.append(cells[4],cells[3]);
   cells[5].classList.add('salesAmount');
+  const follow=document.createElement('div');follow.className='salesFollowup';cells[6].after(follow);while(cells[6].querySelector('.ofItem'))follow.appendChild(cells[6].querySelector('.ofItem'));
+  if(!follow.children.length)follow.textContent='—';
  });
 }
 

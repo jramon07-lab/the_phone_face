@@ -300,8 +300,8 @@ test('Seguimientos: filtros y acciones conservan la etapa (datos sintéticos)',a
  await page.addScriptTag({content:fs.readFileSync('js/modules/offer-followup-ui.js','utf8')});
  await page.evaluate(()=>{const api=window.TPFOfferFollowup,F=api.state;F.loaded=true;F.at=Date.now();F.byOpportunity=new Map([['a',[{id:'offer-a',status:'following',sent_at:'2026-09-20T10:00:00Z'}]],['b',[{id:'offer-b',status:'paused',paused_at:'2026-09-24T10:00:00Z'}]]]);window.fixtureRows=[{id:'a',stage:'Seguimiento'},{id:'b',stage:'Seguimiento'}];window.renderSales=()=>{api.salesControls(window.fixtureRows);document.getElementById('salesScroll').innerHTML=api.filterRows(window.fixtureRows).map(x=>'<article data-row="'+x.id+'"><b>'+x.stage+'</b>'+api.html(x.id,true)+'</article>').join('')};window.followModule.install();window.renderSales()});
  await page.locator('[data-of-filter="paused"]').click();await expect(page.locator('article')).toHaveCount(1);await expect(page.locator('article')).toHaveAttribute('data-row','b');
- await page.getByRole('button',{name:'Reanudar'}).click();expect(await page.evaluate(()=>window.actionCalls)).toEqual([{id:'offer-b',action:'resume'}]);
+ await page.locator('.ofActions summary').click();await page.getByRole('button',{name:'Reanudar'}).click();expect(await page.evaluate(()=>window.actionCalls)).toEqual([{id:'offer-b',action:'resume'}]);
  expect(await page.evaluate(()=>window.fixtureRows.every(x=>x.stage==='Seguimiento'))).toBe(true);
- await page.locator('[data-of-filter="active"]').click();await expect(page.locator('article')).toHaveAttribute('data-row','a');await page.getByRole('button',{name:'Pausar',exact:false}).click();
- expect(await page.evaluate(()=>window.actionCalls.length)).toBe(2);await expect(page.locator('.ofBadge')).toHaveText('Activo');
+ await page.locator('[data-of-filter="active"]').click();await expect(page.locator('article')).toHaveAttribute('data-row','a');await page.locator('.ofActions summary').click();await page.getByRole('button',{name:'Pausar',exact:false}).click();
+ expect(await page.evaluate(()=>window.actionCalls.length)).toBe(2);await expect(page.locator('.ofBadge')).toHaveText('Sin envíos pendientes');
 });

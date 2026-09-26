@@ -1157,3 +1157,12 @@ body.tpfUnified #view-whatsapplive.waCleanWorkspace #waSideTags .waGlobalTagChip
 @media(max-width:700px){.tpfAdminTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.tpfAdminTabs button{white-space:normal;font-size:12px;padding:10px 8px!important}.tpfAdminPanel>.card{padding:16px!important}.tpfAdminPanel .notifyActions #notifySave{margin-left:0}.tpfAdminPanel .notifyActions button{flex:1 1 160px}#view-system-advanced #tpf25General,#view-system-advanced #tpf25Modules{grid-template-columns:1fr}.tpfAdminPanel .notifyTypeTable{overflow-x:auto}.tpfAdminPanel .notifyTypeHead,.tpfAdminPanel .notifyTypeRow{min-width:460px}}
 
 .tpfAdminPanel .tpfNeedsAttention{background:#fff7e6;border:1px solid #f0cf85;color:#78510a;padding:14px;border-radius:12px}.tpfAdminPanel details summary{cursor:pointer;font-weight:600}.tpfAdminPanel details small{overflow-wrap:anywhere}.tpfAdminPanel .tpfIncidentFilters{flex-wrap:wrap}
+
+/* Follow-up information has a dedicated column in the sales list. */
+body.tpfUnified #view-sales #salesListView .salesListHeader,body.tpfUnified #view-sales #salesListRows .salesListRow{grid-template-columns:24px minmax(170px,1fr) 112px 75px 135px 190px 116px 32px!important;gap:8px!important;min-width:1030px!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow{padding-block:8px!important;min-height:78px!important}
+body.tpfUnified #view-sales .salesFollowup .ofItem{margin:0!important;gap:2px!important}
+body.tpfUnified #view-sales .salesFollowup .ofItem small{font-size:12px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable td{padding-block:9px!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem{margin:0!important;gap:2px!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem small{font-size:12px!important}
