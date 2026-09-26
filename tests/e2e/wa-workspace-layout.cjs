@@ -18,7 +18,8 @@ const root=path.resolve(__dirname,'../..');
  $('waSideOpps').innerHTML='<div class="waSideItem">Oferta de fibra y móvil · 39,00 €</div>';$('waSideTasks').innerHTML='<div class="waSideItem">Revisar factura · Hoy, 17:00</div>';
  $('waMessages').innerHTML='<div class="waMsg in"><div class="waBubble">Te adjunto la factura.<div class="waMsgMeta">12:42</div></div></div><div class="waMsg out"><div class="waBubble">Gracias, reviso las dos líneas.<div class="waMsgMeta">12:44</div></div></div>';
  });
- for(const name of ['whatsapp-workspace-design','whatsapp-contact-fields'])await page.addScriptTag({path:root+'/js/modules/'+name+'.js'});
+ await page.evaluate(()=>{window.TPFModules={register:(name,m)=>m.install()}});
+ for(const name of ['sidebar-fixed-safe','sidebar-compact','global-responsive','whatsapp-large-screen','whatsapp-workspace-design','whatsapp-contact-fields'])await page.addScriptTag({path:root+'/js/modules/'+name+'.js'});
  await page.waitForTimeout(650);
  assert.equal(await page.locator('#waSideTabs').count(),1);
  await page.click('[data-wa-side-tab="work"]');await page.click('#fixtureManage');
@@ -28,7 +29,7 @@ const root=path.resolve(__dirname,'../..');
  await page.click('[data-wa-side-tab="history"]');assert(await page.locator('#waActivityTimeline').evaluate(el=>!!el.closest('[data-wa-side-panel="history"]')));
  // Asynchronously inserted sections must be grouped without replacing any native node.
  await page.evaluate(()=>{const a=document.createElement('section');a.id='waAutomationStatus';a.className='waSideSection';a.textContent='Automatizaciones · 2 programadas';document.getElementById('waContactCard').append(a);window.dispatchEvent(new Event('tpf:sales-updated'));});await page.waitForTimeout(500);assert.equal(await page.locator('#waAutomationStatus').evaluate(el=>el.parentElement.dataset.waSidePanel),'work');
- for(const width of [1280,1366,1440]){await page.setViewportSize({width,height:768});await page.click('[data-wa-side-tab="work"]');await page.waitForTimeout(160);const fit=await page.evaluate(()=>{const p=document.querySelector('.waLivePage').getBoundingClientRect(),c=document.querySelector('.waComposer').getBoundingClientRect();return p.right<=innerWidth+1&&c.bottom<=innerHeight+1&&c.width>280});assert(fit,'workspace fits '+width);}
+ for(const width of [1280,1366,1440]){await page.setViewportSize({width,height:768});await page.click('[data-wa-side-tab="work"]');await page.waitForTimeout(160);const fit=await page.evaluate(()=>{const p=document.querySelector('.waLivePage').getBoundingClientRect(),c=document.querySelector('.waComposer').getBoundingClientRect();return p.right<=innerWidth+1&&p.right>=innerWidth-24&&c.bottom<=innerHeight+1&&c.width>280});assert(fit,'workspace fits '+width);}
  await page.setViewportSize({width:1366,height:768});await page.waitForTimeout(300);await page.screenshot({path:'/workspace/scratch/72e8aa0b6d27/whatsapp-integrado-gestiones.png'});
  await page.click('[data-wa-side-tab="client"]');await page.screenshot({path:'/workspace/scratch/72e8aa0b6d27/whatsapp-integrado-cliente.png'});
  await page.click('.waCleanFilters>summary');await page.locator('[data-wa-tab="archived"]').waitFor({state:'visible'});assert(await page.locator('[data-wa-tab="archived"]').isVisible());await page.click('[data-wa-tab="archived"]');await page.click('#waClientToggle');assert(!(await page.locator('.waContactPane').isVisible()));await page.click('#waClientToggle');await page.click('#waCleanExpand');await page.waitForTimeout(250);assert.equal(await page.locator('.referenceWorkspace').evaluate(el=>Math.round(el.getBoundingClientRect().left)),0);await page.click('#waCleanExpand');

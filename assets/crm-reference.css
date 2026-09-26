@@ -1328,7 +1328,7 @@ body.tpfUnified #tpfMonthlyClose .tpfMonthlyMeta span{white-space:normal;overflo
 /* WhatsApp workspace: preserve native controls in three focused panels. */
 @media(min-width:1051px){
 body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) .referenceSidebar{width:68px!important;padding:12px 8px!important}
-body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) .referenceWorkspace{margin-left:68px!important;width:calc(100% - 68px)!important}
+body.tpfUnified.tpfWaCompactNav:not(.sidebarCollapsed) .referenceWorkspace{margin-left:68px!important;width:calc(100% - 68px)!important;max-width:calc(100% - 68px)!important}
 body.tpfUnified.tpfWaCompactNav .referenceSidebar .nav{justify-content:center!important;padding:10px!important;min-height:38px}
 body.tpfUnified.tpfWaCompactNav .referenceSidebar .nav>span,body.tpfUnified.tpfWaCompactNav .referenceBrand>div:last-child,body.tpfUnified.tpfWaCompactNav .referenceUserText,body.tpfUnified.tpfWaCompactNav .referenceOnline{display:none!important}
 body.tpfUnified.tpfWaCompactNav .referenceBrand,body.tpfUnified.tpfWaCompactNav .referenceUser{justify-content:center!important;padding:8px 0!important}
@@ -1355,4 +1355,4 @@ body.tpfUnified #view-whatsapplive.waCleanWorkspace .waMsg{max-width:min(85%,520
 #view-whatsapplive .tpfWaSaveMenu>summary{cursor:pointer;list-style:none;padding:7px 11px;border:1px solid #d8e1eb;border-radius:7px;background:white;color:#175cd3;font-size:12px}
 #view-whatsapplive .tpfWaSaveMenu>summary:after{content:' ▾'}
 #view-whatsapplive .tpfWaSaveMenu:not([open])>.tpfWaDocMenu{display:none!important}
-@media(min-width:1051px){body.tpfUnified.tpfWaCompactNav.tpfWaWorkspaceOnly:not(.sidebarCollapsed) .referenceWorkspace{margin-left:0!important;width:100%!important}body.tpfUnified.tpfWaCompactNav .referenceUser{left:8px!important;right:8px!important}}
+@media(min-width:1051px){body.tpfUnified.tpfWaCompactNav.tpfWaWorkspaceOnly .referenceWorkspace{margin-left:0!important;width:100%!important;max-width:100%!important}body.tpfUnified.tpfWaCompactNav .referenceUser{left:8px!important;right:8px!important}}
