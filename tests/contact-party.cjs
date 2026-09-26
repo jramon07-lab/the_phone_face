@@ -22,7 +22,8 @@ vm.runInThisContext(businessSource);
 const legacy={name:'Legado',phone:'600000003'};assert.equal(businessContext(legacy),legacy);
 assert.equal(businessContext({name:chosen.recipient_name,phone:chosen.recipient_phone,contract_party:chosen}).name,'Contacto Ejemplo');
 const before=fs.readFileSync(path.join(root,'db/proposals/contact-party-runner-before.ts'),'utf8'),after=fs.readFileSync(path.join(root,'supabase/functions/crm-automation-runner/index.ts'),'utf8');
-for(const name of ['cronAuthorized','phoneToChat','sendGreen','preflight','hasResponseSince']){const pattern=new RegExp('(?:async )?function '+name+'[^\\n]*');assert.equal(after.match(pattern)?.[0],before.match(pattern)?.[0],name);}
+// Permit only the separately tested business-hours guard added after this snapshot.
+for(const name of ['cronAuthorized','phoneToChat','sendGreen','preflight','hasResponseSince']){const pattern=new RegExp('(?:async )?function '+name+'[^\\n]*');assert.equal(after.match(pattern)?.[0]?.replace(',job:any=null','').replace('if(job&&await deferOutsideBusinessHours(job))return null;',''),before.match(pattern)?.[0],name);}
 console.log('PASS: recipient selection, optional phone, validation, snapshot, null legacy metadata, escaping, business identity and unchanged transport. No network or data writes.');
 
 const compound=p.snapshot({same:false,holder_first_name:'MARÍA JOSÉ',holder_last_name:'DE LA TORRE',recipient:'contact'},contact);

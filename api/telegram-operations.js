@@ -48,7 +48,15 @@ async function jobRows(start,end,{status,field='updated_at'}={}){
 }
 async function templateMap(jobs){
   const ids=[...new Set((jobs||[]).map(row=>String(row?.action_config?.template_id||'')).filter(Boolean))];if(!ids.length)return new Map();
-  const rows=await sbRequest(`whatsapp_templates?id=in.(${ids.map(encodeURIComponent).join(',')})&select=id,name,body`);return new Map((rows||[]).map(row=>[String(row.id),row]));
+  // Automation templates use bigint IDs; the separate legacy table uses UUIDs.
+  // Never send one kind of identifier to the other table (Postgres 22P02).
+  const numeric=ids.filter(id=>/^[1-9]\d*$/.test(id)&&BigInt(id)<=9223372036854775807n);
+  const uuids=ids.filter(id=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+  const rows=[];
+  for(const [table,keys] of [['wa_templates',numeric],['whatsapp_templates',uuids]]){
+    if(keys.length)rows.push(...(await sbRequest(`${table}?id=in.(${keys.map(encodeURIComponent).join(',')})&select=id,name,body`)||[]));
+  }
+  return new Map(rows.map(row=>[String(row.id),row]));
 }
 async function businessRows(start,end){return sbRequest(`crm_telegram_business_events?${rangeQuery('id,topic,event_type,entity_type,entity_id,payload,created_at','created_at',start,end)}`)}
 async function followupRows(start,end){return sbRequest(`crm_offer_followup_events?${rangeQuery('id,event_key,offer_instance_id,opportunity_id,event_type,result,detail,created_at','created_at',start,end,{event_type:'in.(followup_sent,verification_deferred,delivery_deferred,pre_send_blocked)'})}`)}
@@ -96,4 +104,4 @@ async function runCron(){
   return {ok:totals.failed===0,enabled:true,...totals};
 }
 module.exports=async function handler(req,res){try{if(req.method!=='GET')return json(res,405,{ok:false,error:'Método no permitido'});if(!CRON_SECRET||req.headers.authorization!==`Bearer ${CRON_SECRET}`)return json(res,401,{ok:false,error:'No autorizado'});return json(res,200,await runCron())}catch(error){console.error('telegram-operations',error);return json(res,500,{ok:false,error:String(error.message||error)})}};
-module.exports._test={runCron,setting,saveSetting,manualRows,jobRows,businessRows,followupRows,entityMaps};
+module.exports._test={runCron,setting,saveSetting,manualRows,jobRows,businessRows,followupRows,entityMaps,templateMap};
