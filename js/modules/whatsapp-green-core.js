@@ -1906,6 +1906,8 @@ async function crmChangeSingleContactLabel(contactId,labelId,add=false){
   const found=ids.includes(String(labelId));if(found===add)return;
   const next=add?[...ids,String(labelId)]:ids.filter(id=>id!==String(labelId));
   const {error}=await sb.rpc("crm_set_contact_labels",{p_contact_id:contactId,p_label_ids:next});if(error)throw error;
+  const labels=add?await crmGetContactLabels(contactId):rows.filter(row=>String(row.id)!==String(labelId));
+  window.dispatchEvent(new CustomEvent('tpf:contact-labels-updated',{detail:{contactId,labels}}));
 }
 function crmShowLabelUndo(contactId,labelId,name){
   let notice=$('tpfLabelUndo');if(!notice){notice=document.createElement('div');notice.id='tpfLabelUndo';notice.setAttribute('role','status');document.body.append(notice);}

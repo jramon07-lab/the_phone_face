@@ -1396,3 +1396,35 @@ body.tpfUnified #contactLabelsModal .waTemplateActions{flex-shrink:0;display:fle
 @media(max-width:600px){body.tpfUnified #contactLabelsModal{padding:10px!important}body.tpfUnified #contactLabelsModal .waTemplateCard{max-height:calc(100dvh - 20px)!important}body.tpfUnified #contactLabelsModal #contactLabelsChoices{grid-template-columns:minmax(0,1fr)}}
 
 body.tpfUnified #contactLabelsModal #contactLabelsSearch{grid-column:1/-1}
+/* Contacts: one filter drawer, with a fixed header/footer and explicit application. */
+body #tpfContactsApp .tpfContactsBody{grid-template-columns:minmax(0,1fr)!important}
+#tpfFilterBackdrop{position:fixed;inset:0;background:#17273f35;z-index:80029}#tpfFilterBackdrop[hidden]{display:none}
+body #tpfContactsApp #tpfContactsFilters[data-modern]{display:none!important;position:fixed!important;inset:18px 20px 18px auto!important;width:min(570px,calc(100vw - 40px))!important;max-height:calc(100dvh - 36px)!important;height:auto!important;padding:0!important;overflow:hidden!important;z-index:80030!important;border:1px solid #dfe6ef!important;border-radius:14px!important;box-shadow:0 20px 70px #10203535!important;background:white;color:#20324b;box-sizing:border-box}
+body #tpfContactsApp #tpfContactsFilters[data-modern].open{display:flex!important;flex-direction:column!important;gap:0!important}
+#tpfContactsFilters[data-modern] *{box-sizing:border-box}
+#tpfContactsFilters[data-modern] .tpfContactsFiltersHead{padding:22px 24px;margin:0;border-bottom:1px solid #e5eaf1;gap:14px;align-items:flex-start;flex-shrink:0}
+#tpfContactsFilters[data-modern] .tpfContactsFiltersHead b{font-size:21px}#tpfContactsFilters[data-modern] p{font-size:12px;line-height:1.5;color:#64748b;margin:8px 0 12px}
+#tpfContactsFilters[data-modern] #tpfContactsFiltersClose{font-size:25px!important;border:0;padding:0 8px!important;background:transparent;line-height:30px;min-width:34px}
+#tpfContactsFilters[data-modern] .tpfFilterScroll{overflow:auto;min-height:0;flex:1;padding:20px 24px}
+#tpfContactsFilters[data-modern] h3{font-size:15px;margin:0 0 12px}
+#tpfContactsFilters[data-modern] button{cursor:pointer;font-size:12px;box-shadow:none;white-space:normal}
+#tpfContactsFilters[data-modern] .tpfFilterModes{display:flex;gap:3px;padding:4px;background:#f3f6fa;border-radius:9px}
+#tpfContactsFilters[data-modern] .tpfFilterModes button{flex:1;border:0;background:transparent;padding:10px 5px;min-width:0}
+#tpfContactsFilters[data-modern] .tpfFilterModes button.selected{background:#fff;color:#145ed0;box-shadow:0 1px 5px #142c5120;font-weight:700}
+#tpfContactsFilters[data-modern] #tpfFilterLabelChoices,#tpfContactsFilters[data-modern] #tpfFilterExcludeChoices{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;max-height:220px;overflow:auto;border:1px solid #e4eaf2;border-radius:9px;padding:9px;margin-top:10px}
+#tpfContactsFilters[data-modern] #tpfFilterLabelChoices label,#tpfContactsFilters[data-modern] #tpfFilterExcludeChoices label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:400;letter-spacing:normal;text-transform:none;color:#33455f;padding:7px;margin:0;overflow-wrap:anywhere;cursor:pointer}
+#tpfContactsFilters[data-modern] input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;margin:0;accent-color:#1763dc}
+#tpfContactsFilters[data-modern] #tpfFilterSelectedLabels,#tpfContactsFilters[data-modern] #tpfFilterExcludedLabels{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#tpfContactsFilters[data-modern] #tpfFilterSelectedLabels button{background:#eef4ff;color:#235ab0;border-color:#dce8fb}#tpfContactsFilters[data-modern] #tpfFilterExcludedLabels button{background:#fff2ee;color:#a24b31;border-color:#f4d9cf}
+#tpfContactsFilters[data-modern] [hidden]{display:none!important}
+#tpfContactsFilters[data-modern] details{border-top:1px solid #e5eaf1;padding:16px 0;margin-top:14px}
+#tpfContactsFilters[data-modern] summary{font-weight:600;font-size:14px;cursor:pointer}
+#tpfContactsFilters[data-modern] .tpfFilterFields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+#tpfContactsFilters[data-modern] label{font-size:12px;letter-spacing:normal;text-transform:none;margin-top:12px}
+#tpfContactsFilters[data-modern] input,#tpfContactsFilters[data-modern] select{min-width:0;max-width:100%}
+#tpfContactsFilters[data-modern] footer{display:flex;justify-content:space-between;gap:12px;padding:17px 24px;border-top:1px solid #e5eaf1;background:white;flex-shrink:0}
+#tpfContactsFilters[data-modern] footer button{min-height:40px}#tpfContactsFilters[data-modern] footer .primary{background:#1763e8;color:white;min-width:160px}
+#tpfContactsFilters[data-modern] #tpfFilterError{color:#9b2737}#tpfSavedFilters>div{display:flex;justify-content:space-between;gap:6px;margin-top:8px}
+#tpfActiveContactFilters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}#tpfActiveContactFilters[hidden]{display:none}#tpfActiveContactFilters button{font-size:12px;background:#eef4ff;color:#235ab0;border:1px solid #dce8fb;padding:5px 9px;border-radius:7px;text-align:left;overflow-wrap:anywhere}
+body #tpfContactsApp .tpfRemoveContactLabel{border:0!important;background:transparent!important;color:inherit!important;display:inline-grid;place-items:center;padding:0 2px!important;margin-left:4px;min-width:18px!important;width:18px;height:20px;font-size:15px;line-height:1;cursor:pointer;border-radius:4px}body #tpfContactsApp .tpfRemoveContactLabel:hover{background:#0001!important}body #tpfContactsApp .tpfRemoveContactLabel:focus-visible{outline:2px solid #1763dc}
+@media(max-width:600px){body #tpfContactsApp #tpfContactsFilters[data-modern]{inset:8px!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 16px)!important}#tpfContactsFilters[data-modern] .tpfContactsFiltersHead,#tpfContactsFilters[data-modern] .tpfFilterScroll,#tpfContactsFilters[data-modern] footer{padding:16px}#tpfContactsFilters[data-modern] .tpfFilterModes button{font-size:11px}#tpfContactsFilters[data-modern] .tpfFilterFields{grid-template-columns:1fr}}
