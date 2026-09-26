@@ -100,12 +100,13 @@
   function category(chat){
     const m=meta(chat),last=preview(chat),inc=incoming(chat);
     if(m.archived)return 'archived';
+    const manualState=window.TPFInboxManual?.category(chat,inc);if(manualState)return manualState;
     if(isAutomaticWaiting(chat)){
       const manual=Number(manualMap()[chatPhone(chat)]||0)/1000;
       if(inc>Math.max(manual,Number(m.archivedAt||0)))return 'unanswered';
       return 'automatic';
     }
-    return last.timestamp?(last.outgoing?'waiting':'unanswered'):'all';
+    return last.timestamp?(last.outgoing?'all':'unanswered'):'all';
   }
   function automaticChats(){return (liveState()?.chats||[]).filter(c=>category(c)==='automatic')}
   function updateAutomaticCount(){
@@ -133,7 +134,7 @@
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);
     let info=document.getElementById('waInboxHelp');
     if(!info){info=document.createElement('div');info.id='waInboxHelp';info.setAttribute('role','status');document.getElementById('waLiveSearch')?.parentElement.after(info);}
-    const messages={unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Ya has respondido. Esperando al cliente.',automatic:'Último envío automático. Las respuestas pasan a Pendientes.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas o archivadas.'};
+    const messages={unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Marcadas por ti. Esperando documentación, confirmación u otra respuesta.',snoozed:'Conversaciones aplazadas hasta la fecha elegida.',automatic:'Último envío automático. Las respuestas pasan a Pendientes.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas o archivadas.'};
     info.textContent=messages[liveState()?.filter||'all']||'Filtra tus conversaciones.';
     updateAutomaticCount();decorateHeader();
   }
@@ -145,11 +146,12 @@
     const rows=new Map((liveState()?.chats||[]).map(c=>[String(c.id),c]));
     document.querySelectorAll('#waLiveChats .waChatRow').forEach(row=>{
       const chat=rows.get(row.dataset.waChatId);if(!chat)return;
-      const key=category(chat),labels={automatic:'Automático',waiting:'En espera',unanswered:'Pendiente'};
-      row.querySelectorAll('.waMiniFlag,.waAutomaticFlag,.waInboxFlag').forEach(x=>x.remove());
+      const key=category(chat),labels={automatic:'Automático',waiting:'En espera',unanswered:'Pendiente',snoozed:'Aplazada'};
+      row.querySelectorAll('.waMiniFlag,.waAutomaticFlag,.waInboxFlag,.waInboxReason').forEach(x=>x.remove());
       if(!labels[key])return;
       const badge=document.createElement('span');badge.className='waInboxFlag '+key;badge.textContent=labels[key];
       let host=row.querySelector('.waChatMeta');if(!host){host=document.createElement('div');host.className='waChatMeta';row.querySelector('.waChatRowMain')?.append(host);}host.append(badge);
+      const detail=window.TPFInboxManual?.describe(chat);if(detail){const note=document.createElement('small');note.className='waInboxReason';note.textContent=detail;host.append(note);}
     });decorateHeader();
   }
   function openAutomaticTab(tab){
@@ -164,7 +166,7 @@
     const wrapped=function(...args){
       const state=liveState();if(!state)return base.apply(this,args);
       const chats=state.chats,filter=state.filter||'all';
-      if(['automatic','waiting','unanswered'].includes(filter)){
+      if(['automatic','waiting','unanswered','snoozed'].includes(filter)){
         state.chats=(chats||[]).filter(c=>category(c)===filter);state.filter='all';
       }
       try{return base.apply(this,args)}finally{state.chats=chats;state.filter=filter;updateAutomaticCount();queueMicrotask(decorateAutomaticRows);}
@@ -196,7 +198,7 @@
     const view=document.getElementById('view-whatsapplive');if(view)new MutationObserver(()=>{if(!view.classList.contains('hidden'))ensureTab();}).observe(view,{attributes:true,attributeFilter:['class']});
     document.addEventListener('click',event=>{
       const tab=event.target.closest?.('#view-whatsapplive [data-wa-tab]');
-      if(tab&&['automatic','waiting','unanswered','all'].includes(tab.dataset.waTab)){
+      if(tab&&['automatic','waiting','unanswered','snoozed','all'].includes(tab.dataset.waTab)){
         event.preventDefault();event.stopImmediatePropagation();openAutomaticTab(tab);
       }
       if(tab)setTimeout(()=>{ensureTab();updateAutomaticCount();if(tab.dataset.waTab==='automatic')decorateAutomaticRows()},0);

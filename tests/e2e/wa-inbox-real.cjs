@@ -42,10 +42,17 @@ const root=path.resolve(__dirname,'../..');
  await page.addScriptTag({content:core.slice(start,end)});
  await page.addScriptTag({path:root+'/js/modules/whatsapp-automation-inbox.js'});
  await page.evaluate(()=>{TPFAutomationInbox.ingestJobs([{context:{phone:'600000003'},completed_at:new Date(fixtureNow*1000).toISOString()}]);selectWhatsAppChat('600000001@c.us');renderWhatsAppChats();});
+
+ await page.evaluate(()=>{
+ window.demoInboxRows=new Map();window.demoFailSave=false;
+ window.sb={from(table){if(table!=='crm_whatsapp_chat_state')throw Error('Unexpected table '+table);return {select(){let after='';const q={order(){return q},limit(){return q},gt(k,v){after=v;return q},then(ok,bad){return Promise.resolve({data:[...demoInboxRows.values()].filter(r=>r.chat_id>after).sort((a,b)=>a.chat_id.localeCompare(b.chat_id)),error:null}).then(ok,bad)}};return q},upsert(p){return {select(){return {async single(){if(demoFailSave)return {error:{message:'Sin conexión'}};demoInboxRows.set(p.chat_id,{...p});return {data:{...p},error:null};}}}}}}}};
+ });
+ await page.addScriptTag({path:root+'/js/modules/whatsapp-inbox-manual.js'});
+ await page.evaluate(async()=>{await TPFInboxManual.save('600000002@c.us','waiting','Documentación del cliente');await TPFInboxManual.save('600000005@c.us','waiting','Confirmación del cliente');});
  await page.waitForTimeout(350);
  for(const [key,count,id]of [['unanswered',2,'600000001'],['waiting',2,'600000002'],['automatic',1,'600000003'],['all',5,'600000001']]){
  await page.click('[data-wa-tab="'+key+'"]');assert.equal(await page.locator('#waLiveChats .waChatRow').count(),count,key);await page.click('[data-wa-chat-id="'+id+'@c.us"]');await page.waitForTimeout(250);
- const hit=await page.locator('#waComposerText').evaluate(n=>{const r=n.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===n});assert(hit,'composer is visible and clickable');if(key!=='all')await page.screenshot({path:root+'/../whatsapp-final-'+key+'.png'});
+ const hit=await page.locator('#waComposerText').evaluate(n=>{const r=n.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===n});assert(hit,'composer is visible and clickable');
  }
  // Resolve retains chat history and automatic jobs; another incoming reply returns to pending.
  await page.click('#waArchiveChat');assert.equal(await page.locator('#waLiveChats .waChatRow').count(),4);
@@ -55,5 +62,21 @@ const root=path.resolve(__dirname,'../..');
  // An automatic message after an unhandled incoming message must not hide it.
  await page.evaluate(()=>{const c=waLiveState.chats[2];c._lastIncomingAt=fixtureNow+150;c._lastMessage={timestamp:fixtureNow+200,direction:'out',text:'Seguimiento automático'};TPFAutomationInbox.ingestJobs([{context:{phone:'600000003'},completed_at:new Date((fixtureNow+200)*1000).toISOString()}]);renderWhatsAppChats();});assert.equal(await page.locator('#waLiveChats .waChatRow').count(),3);
  for(const width of [1280,1440,390]){await page.setViewportSize({width,height:844});await page.waitForTimeout(200);const box=await page.locator('.waTabs').boundingBox();assert(box.x>=0&&box.x+box.width<=width+1,'tabs fit '+width);}
+
+ await page.setViewportSize({width:1366,height:768});
+ await page.evaluate(()=>{waLiveState.chats[0]._lastMessage.timestamp=fixtureNow;selectWhatsAppChat('600000001@c.us')});
+ await page.click('#waWaitManual');await page.selectOption('#waInboxDialog select','Confirmación del cliente');await page.fill('#waInboxDialog input[name=detail]','Precio de fibra');await page.click('#waInboxDialog button[type=submit]');
+ await page.locator('#waInboxDialog').waitFor({state:'detached',timeout:2000});
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[0])),'waiting');
+ await page.evaluate(()=>{waLiveState.chats[0]._lastIncomingAt=Date.now()/1000+5});
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[0])),'unanswered');
+ await page.evaluate(()=>{waLiveState.chats[0]._lastIncomingAt=0;waLiveState.chats[0]._lastMessage.timestamp=fixtureNow;});
+ await page.click('#waSnoozeManual');await page.click('#waInboxDialog button[type=submit]');
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[0])),'snoozed');
+ await page.evaluate(async()=>{demoInboxRows.get('600000001@c.us').inbox_until=new Date(Date.now()-1000).toISOString();await TPFInboxManual.sync()});
+ assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[0])),'unanswered');
+ await page.evaluate(()=>{demoFailSave=true});await page.click('#waWaitManual');await page.click('#waInboxDialog button[type=submit]');await page.waitForTimeout(100);
+ assert.match(await page.locator('.waInboxError').textContent(),/Sin conexión/);assert.equal(await page.locator('#waInboxDialog').count(),1);
+ await page.click('#waInboxDialog [data-cancel]');
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: actual stable markup and chat renderer; category counts, resolve, incoming, automatic retention, desktop/mobile tabs; zero page errors');
 })().catch(e=>{console.error(e);process.exit(1)});
