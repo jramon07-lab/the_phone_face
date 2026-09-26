@@ -2,6 +2,9 @@
 'use strict';
 const M=window.TPFModules;if(!M)return;
 const cache=new Map(),queued=new Set(),queue=[];let working=false,timer=0;
+const visible=el=>{const r=el.getBoundingClientRect();return el.isConnected&&r.width>0&&r.height>0&&r.bottom>=0&&r.top<=window.innerHeight;};
+const observed=new Set();
+const observer=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))hydrate();}):null;
 function normalizedPhone(value){let p=String(value||'').replace(/\D/g,'');if(p.startsWith('00'))p=p.slice(2);if(p.length===9)p='34'+p;return /^[0-9]{10,15}$/.test(p)?p:'';}
 function identify(el){
  const holder=el.closest('tr[data-contact-id],article[data-contact-id]');if(!holder)return null;
@@ -21,7 +24,7 @@ function decorate(el,url){
 async function run(){
  if(working)return;working=true;
  while(queue.length){
-  const phone=queue.shift();queued.delete(phone);if(!matching(phone).length)continue;
+  const phone=queue.shift();queued.delete(phone);if(!matching(phone).some(visible))continue;
   try{
    if(typeof waLoadAvatar!=='function'){cache.set(phone,'');continue;}
    const url=await waLoadAvatar(phone+'@c.us');cache.set(phone,url||'');if(url)matching(phone).forEach(el=>decorate(el,url));
@@ -32,7 +35,10 @@ async function run(){
 }
 function hydrate(){
  clearTimeout(timer);timer=setTimeout(()=>{
+  for(const el of observed){if(!el.isConnected){observer?.unobserve(el);observed.delete(el);}}
   document.querySelectorAll('#tpfContactsApp .tpfContactAvatar').forEach(el=>{
+   if(observer&&!observed.has(el)){observed.add(el);observer.observe(el);}
+   if(!visible(el))return;
    const phone=el.dataset.contactAvatar!==undefined?el.dataset.phone:identify(el);if(!phone)return;
    if(cache.has(phone)){if(cache.get(phone))decorate(el,cache.get(phone));return;}
    if(!queued.has(phone)){queued.add(phone);queue.push(phone);}

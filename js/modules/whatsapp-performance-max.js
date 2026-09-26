@@ -96,7 +96,7 @@ function waPerformanceAvatarVisible(chatId){
   if(!elements.length)return false;
   if(!box?.getBoundingClientRect)return true;
   const bounds=box.getBoundingClientRect();
-  if(!bounds||(!bounds.height&&!bounds.width))return true;
+  if(!bounds||(!bounds.height&&!bounds.width))return false;
   return elements.some(el=>{
     const rect=el.getBoundingClientRect?.();
     return !rect||rect.bottom>=bounds.top-48&&rect.top<=bounds.bottom+48;
@@ -111,7 +111,7 @@ function waPerformanceVisibleAvatarIds(candidateIds=[]){
   return [...new Set(all.filter(el=>{
     const id=String(el.dataset.waAvatarId||'');
     if(!id||(allowed.size&&!allowed.has(id)))return false;
-    if(noLayout)return true;
+    if(noLayout)return false;
     const rect=el.getBoundingClientRect?.();
     return !rect||rect.bottom>=bounds.top-48&&rect.top<=bounds.bottom+48;
   }).map(el=>String(el.dataset.waAvatarId||'')))];
@@ -351,7 +351,12 @@ function install(){
       const serializedFetch=async function(input,init){
         const url=typeof input==='string'?input:(input&&input.url)||'';
         if(String(url).includes('/api/green?action=avatar')){
-          while(avatarInFlight>=1)await new Promise(resolve=>setTimeout(resolve,80));
+          const signal=init?.signal||input?.signal;
+          while(avatarInFlight>=1){
+            if(signal?.aborted)throw signal.reason||new DOMException('Cancelled','AbortError');
+            await new Promise(resolve=>setTimeout(resolve,80));
+          }
+          if(signal?.aborted)throw signal.reason||new DOMException('Cancelled','AbortError');
           avatarInFlight++;
           try{return await originalFetch(input,init)}finally{avatarInFlight=Math.max(0,avatarInFlight-1)}
         }

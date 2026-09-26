@@ -157,6 +157,11 @@ async function run(){
   const visible=api.waPerformanceVisibleAvatarIds(avatarNodes.map(x=>x.dataset.waAvatarId));
   assert.deepEqual(Array.from(visible),['avatar-0','avatar-1','avatar-2','avatar-3','avatar-4','avatar-5']);
 
+  const boundsBefore=list.getBoundingClientRect;
+  list.getBoundingClientRect=()=>({top:0,bottom:0,width:0,height:0});
+  assert.equal(api.waPerformanceVisibleAvatarIds([]).length,0,'hidden WhatsApp must not schedule photos');
+  list.getBoundingClientRect=boundsBefore;
+
   let avatarCalls=0;
   context.waApi=async()=>{
     avatarCalls+=1;
