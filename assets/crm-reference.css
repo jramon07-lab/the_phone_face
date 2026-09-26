@@ -1166,3 +1166,14 @@ body.tpfUnified #view-sales .salesFollowup .ofItem small{font-size:12px!importan
 body.tpfUnified #view-dashboard .tdPriorityTable td{padding-block:9px!important}
 body.tpfUnified #view-dashboard .tdReminder .ofItem{margin:0!important;gap:2px!important}
 body.tpfUnified #view-dashboard .tdReminder .ofItem small{font-size:12px!important}
+
+/* Simple workspace: prioritize the next step, keep details available. */
+body.tpfUnified #view-sales #salesListView .salesListHeader,body.tpfUnified #view-sales #salesListRows .salesListRow{grid-template-columns:24px minmax(170px,1fr) 108px 75px 125px minmax(235px,1.1fr) 120px 32px!important;min-width:1080px!important}
+body.tpfUnified #view-sales .salesFollowup .ofItem{max-width:none;gap:4px!important}
+body.tpfUnified #view-sales .salesFollowup .ofManage{margin-top:3px}
+body.tpfUnified #view-dashboard .tdPriorityTable{table-layout:auto!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdReminder{min-width:230px;max-width:360px}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdStatusPill{margin-top:5px}
+body.tpfUnified #view-dashboard .tdPriorityTable th,body.tpfUnified #view-dashboard .tdPriorityTable td{width:auto!important}
+
+body.tpfUnified #view-dashboard .tdCommercialDetails{margin:12px 0;border:1px solid #dce5f0;border-radius:10px;background:#fff;padding:12px 16px}body.tpfUnified #view-dashboard .tdCommercialDetails>summary{cursor:pointer;font-size:13px;font-weight:600;color:#385172}body.tpfUnified #view-dashboard .tdCommercialDetails .tdSalesHero{margin-top:12px}

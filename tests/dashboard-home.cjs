@@ -29,7 +29,7 @@ assert.equal(groups({...data,opps:[]},stages,[]).every(g=>g.rows.length===0),tru
 const priorities=priorityRows(data,stages,pending);
 assert.equal(priorities.length,6,'all due calls, tasks and open opportunities appear once');
 assert.ok(priorities.every(r=>!['won','lost','closed-follow','cancelled','tomorrow-call'].includes(r.id)));
-assert.ok(source.includes('<h1>Inicio</h1>')&&source.includes('Tu mesa de trabajo')&&source.includes('Próximos seguimientos'));
+assert.ok(source.includes('<h1>Inicio</h1>')&&source.includes('Tu trabajo de hoy')&&source.includes('Próximos seguimientos'));
 assert.ok(!source.includes('Tu día, de un vistazo.')&&!source.includes('Clientes a contactar hoy'));
 assert.ok(source.includes('tdPriorityTable')&&source.includes('tdPrevPage')&&source.includes('tdNextPage'),'lists remain usable beyond the first five rows');
 const shell=source.slice(source.indexOf('v.innerHTML=`'),source.indexOf('D.built=true;bind();'));
@@ -42,7 +42,7 @@ assert.match(shell,/<details class="tdBusinessDetails">/,'Analytics remains avai
 assert.ok(source.includes("if(el.closest('.nav[data-view=\"dashboard\"]'))"),'navigation keeps the same renderer');
 assert.ok(!html.includes('dashboard-home-pro.js'));
 assert.ok(runtime.includes("file==='dashboard-performance-guard.js'?'20260925-workbench-1'"));
-assert.match(html,/runtime\.js\?v=20260926-work-plan-1/);
+assert.match(html,/runtime\.js\?v=20260926-simple-workspace-1/);
 assert.ok(!/\.referenceSidebar|\.referenceNav|\.referenceWorkspace/.test(css),'Inicio must not restyle the shared CRM navigation');
 assert.ok(!source.includes('scrollIntoView'),'filters never force the page to scroll');
 assert.ok(!source.includes('tdPipelineRows'),'do not duplicate and truncate the worklist into previews');

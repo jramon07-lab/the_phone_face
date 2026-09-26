@@ -45,7 +45,7 @@ function enableListScroll(){const view=document.getElementById('salesListView'),
 // Keep the native controls and their handlers; only group related information.
 function compactRows(){
  const head=document.querySelector('#salesListView .salesListHeader');
- if(head&&!head.dataset.compact){head.dataset.compact='1';head.innerHTML='<div></div><div>Cliente / oportunidad</div><div>Contacto</div><div>Importe</div><div>Estado</div><div>Seguimiento</div><div>Fecha prevista</div><div aria-label="Acciones"></div>';}
+ if(head&&!head.dataset.compact){head.dataset.compact='1';head.innerHTML='<div></div><div>Cliente / oportunidad</div><div>Contacto</div><div>Importe</div><div>Estado</div><div>Seguimiento</div><div>Fecha prevista de venta</div><div aria-label="Acciones"></div>';}
  document.querySelectorAll('#salesListRows .salesListRow').forEach(row=>{
   if(row.dataset.compact)return;
   const cells=[...row.children];if(cells.length!==9)return;
