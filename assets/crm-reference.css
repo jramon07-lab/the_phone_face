@@ -1205,3 +1205,51 @@ body.tpfUnified #view-sales .salesFollowup .ofManage,body.tpfUnified #view-dashb
 .ofFilters .ofFilterMenu button{text-align:left!important}
 .ofFilters .ofFilterMenu small{font-size:11px;color:#64748b;padding:6px}
 @media(max-width:700px){body.tpfUnified #view-dashboard .tdPulseGrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.ofFilters .ofFilterMenu{left:auto;right:0}.ofManageDialog .ofPrimaryActions{grid-template-columns:1fr 1fr}}
+
+/* Compact production work area with progressively disclosed follow-up detail. */
+body.tpfUnified #view-dashboard .tdPriorityCard>.tdHead{display:none!important}
+body.tpfUnified #view-dashboard .tdCommandBar h1{font-size:26px!important}
+body.tpfUnified #view-dashboard .tdPulse{min-height:66px!important;padding:9px 14px!important}
+body.tpfUnified #view-dashboard .tdPulse>span:not(.tdPulseIcon){display:grid!important;grid-template-columns:auto 1fr;align-items:center;column-gap:10px}
+body.tpfUnified #view-dashboard .tdPulse small{grid-column:2;font-size:10px!important}
+body.tpfUnified #view-dashboard .tdPulse b{grid-row:1 / 3;grid-column:1;margin:0!important}
+body.tpfUnified #view-dashboard .tdPulse em{grid-column:2;font-size:11px!important}
+body.tpfUnified #view-dashboard .tdPulseIcon{width:32px!important;height:32px!important;min-width:32px!important}
+body.tpfUnified #view-dashboard .tdWorkspaceControls{display:flex!important;justify-content:space-between!important;align-items:center!important;flex-wrap:wrap!important;padding:0!important;margin:0 0 7px!important}
+body.tpfUnified #view-dashboard .tdWorkToolbar{gap:6px!important;align-items:center!important}
+body.tpfUnified #view-dashboard .tdWorkToolbar label{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+body.tpfUnified #view-dashboard .tdWorkSearchField{min-width:180px!important;width:230px!important}
+body.tpfUnified #view-dashboard #tdWorkSearch,body.tpfUnified #view-dashboard #tdPageSize{height:34px!important;min-height:34px!important;padding:6px 9px!important}
+body.tpfUnified #view-dashboard .tdFilterBar{gap:3px!important;border:0!important;margin:0!important}
+body.tpfUnified #view-dashboard .tdWorkTab{font-size:12px!important;padding:8px!important}
+body.tpfUnified #view-dashboard .tdPriorityCard{padding:12px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable td{padding:8px 12px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdClientButton{min-height:0!important;padding:0!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdStatusPill{margin-top:0!important}
+body.tpfUnified #view-dashboard .tdInterestButton{font-size:12px!important;display:inline!important;padding:0!important}
+body.tpfUnified #view-dashboard .tdLastActivity{display:inline!important;margin-left:8px!important;font-size:11px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdNextAction{font-size:11px!important;margin-top:5px;display:block!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdNextAction>svg{display:none!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdReminder{min-width:350px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdMenuCell{white-space:nowrap!important}
+body.tpfUnified #view-dashboard .tdQuickOpen,body.tpfUnified #view-dashboard .tdDots{display:inline-flex!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdAvatar{display:none!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdClientButton small{display:none!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdClientButton:hover b{text-decoration:underline}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdOpportunityLine{margin-top:5px}
+body.tpfUnified #view-sales .salesBoardTitleGroup h2{font-size:25px!important}
+body.tpfUnified #view-sales .salesSummaryAccordion{order:5!important}
+body.tpfUnified #view-sales #ofSalesFilters{padding:8px 4px!important;border:0!important;background:transparent!important}
+body.tpfUnified #view-sales #salesListRows .salesListRow{min-height:64px!important;padding-block:6px!important}
+body.tpfUnified #view-sales #salesListRows .salesIdentity .salesClientLink{order:-1!important;font-size:13px!important}
+body.tpfUnified #view-sales #salesListRows .salesIdentity .salesListTitle{font-size:11px!important;font-weight:400!important;color:#72829a!important}
+body.tpfUnified #view-sales .salesFollowup .ofItem .ofPlanNext{max-width:280px}
+body.tpfUnified .ofBadge{font-weight:600!important;border-radius:5px!important}
+body.tpfUnified .ofManage{background:#f6f8ff!important;border-color:#dce6f7!important}
+body.tpfUnified .referenceSidebar{background:white!important}
+body.tpfUnified .referenceSidebar .referenceNav .nav.active{background:#eaf1ff!important;color:#175aca!important;box-shadow:none!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem{display:grid!important;grid-template-columns:auto 1fr!important;align-items:center;column-gap:8px!important;row-gap:5px!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofBadge{grid-column:1;grid-row:1}
+body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofBadge+small{grid-column:2;grid-row:1;font-size:11px!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofNext,body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofPlanNext{grid-column:1/-1;font-size:12px!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem>small:not(.ofNext):not(.ofPlanNext):not(.ofBadge+small){grid-column:1/-1}
