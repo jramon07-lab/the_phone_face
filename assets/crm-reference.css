@@ -1253,3 +1253,63 @@ body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofBadge{grid-column:1;grid-
 body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofBadge+small{grid-column:2;grid-row:1;font-size:11px!important}
 body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofNext,body.tpfUnified #view-dashboard .tdReminder .ofItem>.ofPlanNext{grid-column:1/-1;font-size:12px!important}
 body.tpfUnified #view-dashboard .tdReminder .ofItem>small:not(.ofNext):not(.ofPlanNext):not(.ofBadge+small){grid-column:1/-1}
+/* Compact sales workspace: primary actions, filters and configuration separated. */
+body.tpfUnified #view-sales .salesBoardTopbar{display:grid!important;grid-template-columns:auto minmax(180px,1fr) auto!important;gap:12px!important;padding:8px 14px!important;min-height:52px!important;align-items:center!important}
+body.tpfUnified #view-sales .salesBoardTitleGroup h2{font-size:20px!important;white-space:nowrap}
+body.tpfUnified #view-sales .salesBoardTitleGroup .small,body.tpfUnified #view-sales .salesBackBtn{display:none!important}
+body.tpfUnified #view-sales .tpfSalesSearch{width:100%!important;max-width:360px!important;min-width:0!important;margin:0!important;justify-self:end}
+body.tpfUnified #view-sales .salesBoardTopActions{width:auto!important;flex-wrap:nowrap!important;gap:5px!important;margin:0!important}
+body.tpfUnified #view-sales .salesSummaryAccordion{order:0!important;margin:0 14px 5px!important}
+body.tpfUnified #view-sales .salesSummaryToggle{min-height:26px!important;padding:4px 10px!important}
+body.tpfUnified #view-sales #ofSalesFilters{margin:0 14px 5px!important;padding:5px 0!important;min-height:34px!important}
+#salesMoreMenu{position:relative;flex:none}
+#salesMoreMenu>summary{list-style:none;cursor:pointer;border:1px solid #dbe3ed;border-radius:7px;padding:8px 10px;font-size:12px;white-space:nowrap}
+#salesMoreMenu .salesMoreBody{position:absolute;right:0;top:calc(100% + 5px);z-index:27000;width:220px;padding:7px;background:white;border:1px solid #dbe3ed;border-radius:10px;box-shadow:0 12px 30px #182b4920;display:grid;gap:5px}
+body.tpfUnified #view-sales #salesMoreMenu button{width:100%;text-align:left;justify-content:flex-start}
+body.tpfUnified #view-sales .tpfCleanFilters{top:105px!important;max-height:calc(100dvh - 125px)!important;width:min(380px,calc(100vw - 24px))!important}
+body.tpfUnified #view-sales .tpfCleanFilters .salesOptionsGrid{display:block!important}
+body.tpfUnified #view-sales .tpfCleanFilters .salesOptionSection[hidden]{display:none!important}
+body.tpfUnified #view-sales .tpfCleanFilters .row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+body.tpfUnified #view-sales .tpfCleanFilters select{width:100%!important;min-width:0!important}
+body.tpfUnified #view-sales .tpfCleanFilters .tpfDateQuick{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+body.tpfUnified #view-sales .tpfCleanFilters h3{font-size:13px!important;margin:0 0 10px!important}
+body.tpfUnified #view-sales .salesFilterTags{display:flex;gap:6px;flex-wrap:wrap;margin:0 14px 5px}
+.salesFilterTags:empty{display:none!important}.salesFilterTags button{font-size:11px;background:#edf4ff;border:1px solid #d6e4ff;border-radius:20px;padding:4px 9px;color:#215599}
+body.tpfUnified #tpfMonthlyClose{padding:24px!important;align-items:center!important;background:#15233888!important;box-sizing:border-box}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyCard{width:min(1120px,100%)!important;height:min(820px,calc(100dvh - 48px))!important;max-height:calc(100dvh - 48px)!important;background:white!important;box-sizing:border-box}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyHead{display:flex!important;flex:none!important;padding:12px 18px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyHead h2{font-size:21px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyBadge,body.tpfUnified #tpfMonthlyClose .tpfMonthlyHead small{display:none!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyBody{padding:12px 18px!important;gap:10px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyStats{grid-template-columns:repeat(3,1fr)!important;gap:8px}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyStat{padding:8px 12px!important;border-radius:7px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyStat b{font-size:20px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyStat small{font-size:11px!important;font-weight:500!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.tpfMonthlyFilters label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#596a80}.tpfMonthlyFilters label:last-child{flex-direction:row;align-items:center;padding-bottom:8px}
+.tpfMonthlyFilters input,.tpfMonthlyFilters select{min-height:34px;border:1px solid #d9e2ed;border-radius:6px;padding:5px 8px;max-width:210px}
+.tpfMonthlyFilters input[type=checkbox]{min-height:auto}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead{padding:8px 12px!important;align-items:center}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead b{font-size:14px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable th,body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable td{display:table-cell!important;padding:9px 12px!important}
+body.tpfUnified #tpfMonthlyClose tr[hidden]{display:none!important}
+.monthlyReview{display:block;margin-top:5px;color:#7b8798!important;font-weight:400!important;font-size:11px}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlySection{box-shadow:none!important;border-radius:8px}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyTableWrap{max-height:none!important;border:0!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyFoot{flex:none!important;padding:10px 18px!important;flex-direction:row!important;align-items:center!important}
+@media(max-width:1100px){body.tpfUnified #view-sales .salesBoardTopbar{grid-template-columns:1fr 1fr!important}body.tpfUnified #view-sales .salesBoardTopActions{grid-column:1/-1;justify-content:flex-end!important}}
+@media(max-width:600px){body.tpfUnified #tpfMonthlyClose{padding:6px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyCard{height:calc(100dvh - 12px)!important;max-height:calc(100dvh - 12px)!important}.tpfMonthlyFilters{max-height:120px;overflow:auto}body.tpfUnified #tpfMonthlyClose .tpfMonthlyHead{padding:9px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyBody{padding:8px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFoot{flex-wrap:wrap!important}.tpfMonthlyFootActions{flex-direction:row!important}.tpfMonthlyTable{min-width:620px}}
+body.tpfUnified #tpfMonthlyClose,body.tpfUnified #view-sales .tpfCleanFilters{font-family:Arial,sans-serif!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters label:last-child{white-space:nowrap;width:auto!important;flex:none!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyMain{padding:0!important;margin:0!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyTabs{box-shadow:none!important;border-radius:0!important;gap:18px!important}
+body.tpfUnified #tpfMonthlyClose .tpfMonthlyTable b{font-size:13px!important}
+body.tpfUnified #view-sales .salesOperatorLabel{display:block;font-size:12px;margin:12px 0 0}
+
+body.tpfUnified #view-sales{width:auto!important;box-sizing:border-box!important}
+body.tpfUnified #view-sales .salesBoardPage{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}
+
+@media(max-width:600px){body.tpfUnified #view-sales .salesBoardTopbar{grid-template-columns:1fr!important;gap:6px!important}body.tpfUnified #view-sales .salesBoardTopActions{flex-wrap:wrap!important;justify-content:flex-start!important;min-width:0!important}body.tpfUnified #view-sales .tpfSalesSearch{max-width:none!important}body.tpfUnified #view-sales .tpfCleanFilters{top:16px!important;max-height:calc(100dvh - 32px)!important}}
+
+@media(max-width:600px){#salesMoreMenu .salesMoreBody{left:0;right:auto}body.tpfUnified #view-sales:has(.tpfCleanFilters:not(.hidden)){z-index:50000!important}}
+@media(max-width:600px){body.tpfUnified #tpfMonthlyClose .tpfMonthlyTabs{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;flex:none!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyTab{font-size:12px!important;white-space:normal!important;min-width:0!important;padding:8px 3px!important}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters{display:grid!important;grid-template-columns:1fr 1fr;max-height:none;flex:none!important;overflow:visible;gap:6px}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters input,body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters select{width:100%;box-sizing:border-box;min-width:0}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters label:last-child{grid-column:1/-1}body.tpfUnified #tpfMonthlyClose .tpfMonthlyFilters input[type=checkbox]{width:auto}body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead{flex-wrap:wrap;gap:6px}body.tpfUnified #tpfMonthlyClose .tpfMonthlySectionHead p{font-weight:400;font-size:11px}}

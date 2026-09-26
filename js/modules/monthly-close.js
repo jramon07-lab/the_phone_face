@@ -89,10 +89,10 @@
     const stage=id=>stages.find(item=>String(item.id)===String(id));
     return {
       stages,
-      tramitado:opportunities.filter(item=>stageNamed(stage(item.stage_id),'tramit')),
+      tramitado:opportunities.filter(item=>normal(stage(item.stage_id)?.name)==='tramitado'),
       pending:opportunities.filter(item=>{
         const name=normal(stage(item.stage_id)?.name);
-        return item.status!=='lost'&&!stageNamed(stage(item.stage_id),'tramit')&&!stageNamed(stage(item.stage_id),'ganad')&&!stageNamed(stage(item.stage_id),'perdid')&&!name.includes('antigu');
+        return item.status!=='lost'&&normal(stage(item.stage_id)?.name)!=='tramitado'&&!stageNamed(stage(item.stage_id),'ganad')&&!stageNamed(stage(item.stage_id),'perdid')&&!name.includes('antigu');
       })
     };
   }
@@ -112,8 +112,12 @@
 
   function refreshSelectedSummary(root){
     const count=selectedIds(root).length;
+    const amount=[...root.querySelectorAll('[data-monthly-id]:checked')].reduce((n,x)=>n+Number(x.dataset.amount||0),0);
+    const save=$('tpfMonthlySave');if(save)save.disabled=count===0;
+    const metric=$('tpfMonthlyAmount');if(metric)metric.textContent=money(amount);
     const label=$('tpfMonthlySelectedText');
-    if(label)label.textContent=count+' seleccionada(s) para pasar a Ganado';
+    if(label)label.textContent=count+' ventas seleccionadas · '+money(amount);
+    const visible=[...root.querySelectorAll('[data-monthly-id]')].filter(x=>!x.closest('tr').hidden),all=$('tpfMonthlyAll');if(all){all.checked=!!visible.length&&visible.every(x=>x.checked);all.indeterminate=visible.some(x=>x.checked)&&!all.checked;}
   }
 
   async function contactLookup(){
@@ -157,52 +161,64 @@
     return '<b>'+escape(item.client_name||holder||item.title||'Sin nombre')+'</b><br><small>'+escape(item.title||'')+'</small>'+(meta?'<div class="tpfMonthlyMeta">'+meta+'</div>':'')+(party.length?'<span class="tpfMonthlyParty">'+escape(party.join(' · '))+'</span>':'');
   }
 
+
+  function formatDay(value){const v=String(value||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(v)?v.split('-').reverse().join('/'):'Sin fecha';}
+  function processingDay(value){if(!value)return '';const date=new Date(value);return Number.isNaN(date.getTime())?'':new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
+  function processedDate(item){const rows=window.TPFOfferFollowup?.state?.byOpportunity?.get(String(item.id))||[];return rows.map(x=>x.processed_at).filter(Boolean).sort().at(-1)||item.processed_at||'';}
+  function setupMonthlyFilters(root,data){
+    const toolbar=document.createElement('div');toolbar.className='tpfMonthlyFilters';
+    const current=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'}).format(new Date());
+    toolbar.innerHTML='<label>Mes de tramitación<input type="month" id="monthlyPeriod" value="'+current+'"></label><label>Buscar cliente<input type="search" id="monthlySearch" placeholder="Nombre o teléfono"></label><label>Operador<select id="monthlyOperator"><option value="">Todos</option></select></label><label><input type="checkbox" id="monthlyUnknown"> Incluir sin fecha registrada</label>';
+    root.querySelector('.tpfMonthlyTabs').before(toolbar);
+    const offers=window.TPFOfferFollowup?.state?.byOpportunity;
+    const operator=item=>(offers?.get(String(item.id))||[]).map(x=>x.operator).find(Boolean)||String(item.title||'').replace(/^(CAMBIO|REVISI[ÓO]N)\s+/i,'');
+    const ops=[...new Set(data.tramitado.map(operator).filter(Boolean))].sort();
+    ops.forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;$('monthlyOperator').appendChild(o)});
+    const allRows=[...root.querySelectorAll('[data-monthly-id]')];
+    allRows.forEach(box=>{const item=data.tramitado.find(x=>String(x.id)===box.dataset.monthlyId);const cell=box.closest('tr').lastElementChild;const when=processedDate(item);cell.innerHTML=escape(when?'Tramitada: '+formatDay(processingDay(when)):'Tramitación sin fecha')+'<small class="monthlyReview">Prevista / revisión: '+escape(formatDay(item.expected_date))+'</small>';});
+    const empty=document.createElement('tr');empty.innerHTML='<td colspan="4" class="tpfMonthlyEmpty">No hay ventas para estos filtros. Puedes cambiar el mes o incluir las ventas sin fecha registrada.</td>';root.querySelector('[data-monthly-panel="sales"] tbody').appendChild(empty);
+    const filter=()=>{const period=$('monthlyPeriod').value,q=normal($('monthlySearch').value),op=$('monthlyOperator').value;
+      allRows.forEach(box=>{const item=data.tramitado.find(x=>String(x.id)===box.dataset.monthlyId),when=processedDate(item);const show=(!period||(when?processingDay(when).slice(0,7)===period:$('monthlyUnknown').checked))&&(!q||normal(item.client_name+' '+item.phone+' '+item.title).includes(q))&&(!op||operator(item)===op);box.closest('tr').hidden=!show;if(!show)box.checked=false;});
+      empty.hidden=!allRows.length||allRows.some(box=>!box.closest('tr').hidden);
+      $('tpfMonthlyAll').checked=false;refreshSelectedSummary(root);
+    };
+    toolbar.addEventListener('input',filter);toolbar.addEventListener('change',filter);filter();
+  }
+
   async function open(){
     addStyle();
     close();
     await reloadSales();
+    if(window.TPFOfferFollowup?.load)await window.TPFOfferFollowup.load();
     const data=board();
     const contacts=await contactLookup();
     const total=data.tramitado.reduce((sum,item)=>sum+Number(item.amount||0),0);
     const root=document.createElement('div');
     root.id='tpfMonthlyClose';
-    const rows=data.tramitado.map(item=>'<tr><td><input type="checkbox" data-monthly-id="'+escape(item.id)+'" checked></td><td>'+identityCell(item,contacts)+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay oportunidades en Tramitado para cerrar.</td></tr>';
+    const rows=data.tramitado.map(item=>'<tr><td><input type="checkbox" data-monthly-id="'+escape(item.id)+'" data-amount="'+Number(item.amount||0)+'"></td><td>'+identityCell(item,contacts)+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(formatDay(item.expected_date))+'</td></tr>').join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay oportunidades en Tramitado para cerrar.</td></tr>';
     const pendingRows=data.pending.map(item=>{
       const stage=data.stages.find(stage=>String(stage.id)===String(item.stage_id));
-      return '<tr><td>'+identityCell(item,contacts)+'</td><td>'+escape(stage?.name||'Sin columna')+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(item.expected_date||'Sin fecha')+'</td></tr>';
+      return '<tr><td>'+identityCell(item,contacts)+'</td><td>'+escape(stage?.name||'Sin columna')+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(formatDay(item.expected_date))+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay ofertas pendientes.</td></tr>';
-    root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><div class="tpfMonthlyTitleRow"><span class="tpfMonthlyBadge">Control mensual</span><h2>Cierre de mes</h2></div><small>Pasa solo las ventas tramitadas a Ganado. Las ofertas pendientes, revisiones y fechas quedan intactas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b>'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><div class="tpfMonthlyTabs" role="tablist"><button class="tpfMonthlyTab active" type="button" data-monthly-view="sales">Ventas para cerrar <span class="tpfMonthlyTabCount">'+data.tramitado.length+'</span></button><button class="tpfMonthlyTab" type="button" data-monthly-view="pending">Ofertas pendientes <span class="tpfMonthlyTabCount">'+data.pending.length+'</span></button></div><main class="tpfMonthlyMain"><section class="tpfMonthlySection tpfMonthlyView active" data-monthly-panel="sales"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><p>Selecciona únicamente las ventas que quieres pasar a Ganado.</p></div><label class="tpfMonthlySelectAll"><input id="tpfMonthlyAll" type="checkbox" checked> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+rows+'</tbody></table></div></section><section class="tpfMonthlySection tpfMonthlyView" data-monthly-panel="pending"><div class="tpfMonthlySectionHead"><div><b>Ofertas pendientes</b><p>Vista de control. Se ven aquí, pero no se moverán al cerrar el mes.</p></div><div class="tpfMonthlyInfo">Fechas previstas y revisiones de 3 y 11 meses no se modifican.</div></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th>Cliente / oportunidad</th><th>Columna</th><th>Importe</th><th>Fecha prevista</th></tr></thead><tbody>'+pendingRows+'</tbody></table></div></section></main></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Pasar seleccionadas a Ganado</button></div></footer></section>';
+    root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><div class="tpfMonthlyTitleRow"><span class="tpfMonthlyBadge">Control mensual</span><h2>Cierre de mes</h2></div><small>Pasa solo las ventas tramitadas a Ganado. Las ofertas pendientes, revisiones y fechas quedan intactas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b id="tpfMonthlyAmount">'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><div class="tpfMonthlyTabs" role="tablist"><button class="tpfMonthlyTab active" type="button" data-monthly-view="sales">Ventas para cerrar <span class="tpfMonthlyTabCount">'+data.tramitado.length+'</span></button><button class="tpfMonthlyTab" type="button" data-monthly-view="pending">Ofertas pendientes <span class="tpfMonthlyTabCount">'+data.pending.length+'</span></button></div><main class="tpfMonthlyMain"><section class="tpfMonthlySection tpfMonthlyView active" data-monthly-panel="sales"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><p>Selecciona únicamente las ventas que quieres pasar a Ganado.</p></div><label class="tpfMonthlySelectAll"><input id="tpfMonthlyAll" type="checkbox"> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Tramitación / revisión</th></tr></thead><tbody>'+rows+'</tbody></table></div></section><section class="tpfMonthlySection tpfMonthlyView" data-monthly-panel="pending"><div class="tpfMonthlySectionHead"><div><b>Ofertas pendientes</b><p>Vista de control. Se ven aquí, pero no se moverán al cerrar el mes.</p></div><div class="tpfMonthlyInfo">Fechas previstas y revisiones de 3 y 11 meses no se modifican.</div></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th>Cliente / oportunidad</th><th>Columna</th><th>Importe</th><th>Fecha prevista / revisión</th></tr></thead><tbody>'+pendingRows+'</tbody></table></div></section></main></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Revisar cierre</button></div></footer></section>';
     document.body.appendChild(root);
-    const activeScroll=()=>root.querySelector('.tpfMonthlyView.active .tpfMonthlyTableWrap');
-    root.addEventListener('wheel',event=>{
-      const area=activeScroll();
-      if(!area||event.target.closest('.tpfMonthlyFootActions')||event.target.closest('.tpfMonthlyTab'))return;
-      event.preventDefault();
-      area.scrollTop+=event.deltaY;
-    },{passive:false});
-    let touchY=0;
-    root.addEventListener('touchstart',event=>{touchY=event.touches?.[0]?.clientY||0},{passive:true});
-    root.addEventListener('touchmove',event=>{
-      const area=activeScroll();
-      const y=event.touches?.[0]?.clientY||0;
-      if(!area||!touchY)return;
-      event.preventDefault();
-      area.scrollTop+=touchY-y;
-      touchY=y;
-    },{passive:false});
+    setupMonthlyFilters(root,data);
+    refreshSelectedSummary(root);
     root.querySelectorAll('[data-close]').forEach(button=>button.onclick=close);
     root.querySelectorAll('[data-monthly-view]').forEach(button=>button.onclick=()=>{
       const view=button.dataset.monthlyView;
+      $('tpfMonthlySave').hidden=view!=='sales';
       root.querySelectorAll('[data-monthly-view]').forEach(item=>item.classList.toggle('active',item===button));
       root.querySelectorAll('[data-monthly-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.monthlyPanel===view));
     });
     const all=$('tpfMonthlyAll');
-    all.onchange=()=>{root.querySelectorAll('[data-monthly-id]').forEach(item=>item.checked=all.checked);refreshSelectedSummary(root)};
+    all.onchange=()=>{root.querySelectorAll('[data-monthly-id]').forEach(item=>{if(!item.closest('tr').hidden)item.checked=all.checked});refreshSelectedSummary(root)};
     root.querySelectorAll('[data-monthly-id]').forEach(item=>item.onchange=refreshSelectedSummary.bind(null,root));
     $('tpfMonthlySave').onclick=async()=>{
       const ids=selectedIds(root);
       if(!ids.length)return alert('Selecciona al menos una oportunidad.');
-      if(!confirm('Se moverán '+ids.length+' oportunidad(es) a Ganado. Las fechas y revisiones no cambiarán.'))return;
+      const amount=[...root.querySelectorAll('[data-monthly-id]:checked')].reduce((sum,box)=>sum+Number(box.dataset.amount||0),0);
+      if(!confirm('Cerrar '+ids.length+' venta(s) por '+money(amount)+' y pasarlas a Ganado. Las fechas y revisiones no cambiarán.'))return;
       const button=$('tpfMonthlySave');
       button.disabled=true;
       try{

@@ -618,7 +618,7 @@ window.crmBackFromOpenLayer=crmBackFromOpenLayer;
     if(chev)chev.textContent=open?"⌃":"⌄";
     try{localStorage.setItem(key,open?"1":"0")}catch(e){}
   };
-  let initial=true;
+  let initial=false;
   try{const v=localStorage.getItem(key);if(v!==null)initial=v==="1"}catch(e){}
   apply(initial);
   toggle.onclick=()=>apply(panel.classList.contains("hidden"));

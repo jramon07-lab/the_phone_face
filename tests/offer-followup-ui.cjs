@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync('js/modules/offer-followup-ui.js','utf8');
 const calls=[]; const data=Array.from({length:501},(_,i)=>({id:String(i),opportunity_id:'opp'+i,status:'following'}));
 const sb={from(table){const q={select(){return q},eq(){return q},in(){return q},order(){return q},range(a,b){calls.push([table,a,b]);return Promise.resolve({data:table==='crm_offer_instances'?data.slice(a,b+1):[]})}};return q}};
-const context={window:{},sb,Intl,Date,Map,setTimeout,clearTimeout};vm.runInNewContext(source,context);
+const context={document:{getElementById:()=>null},window:{},sb,Intl,Date,Map,setTimeout,clearTimeout};vm.runInNewContext(source,context);
 const api=context.window.TPFOfferFollowup,F=api.state;
 const active={id:'a',opportunity_id:'one',status:'following',sent_at:'2026-09-20T10:00:00Z'};
 const paused={id:'b',opportunity_id:'two',status:'paused',sent_at:'2026-09-19T10:00:00Z',paused_at:'2026-09-24T10:00:00Z'};
