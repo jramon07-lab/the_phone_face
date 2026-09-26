@@ -19,7 +19,7 @@ vm.runInContext(source.slice(source.indexOf('window.openContact=async(id)=>{'),s
  ctx.sb={from(table){const q={select(){return q},eq(key,value){if(table==='contact_activity')activityContact=value;return q},or(){q.tasks=true;return q},order(){return q},range(from){if(q.tasks)return Promise.resolve({data:[]});pages.push(from);return Promise.resolve({data:from===0?Array.from({length:500},(_,i)=>({id:String(i),whatsapp_phone:'600000001'})):[{id:'late',whatsapp_phone:'600000002',whatsapp_message:'Encontrado'}]})},then(resolve){return new Promise(r=>{releaseActivity=r}).then(resolve)}};return q}};
  vm.runInContext(source.slice(source.indexOf('async function renderContactProfile(){'),source.indexOf('window.deleteContactProgrammedWhatsapp=')),ctx);
  const render=ctx.renderContactProfile();
- while(!releaseActivity)await new Promise(r=>setImmediate(r));
+ while(!releaseActivity||!node('cpWhatsappPrograms').innerHTML.includes('Encontrado'))await new Promise(r=>setImmediate(r));
  assert.deepEqual(pages,[0,500]);assert(node('cpWhatsappPrograms').innerHTML.includes('Encontrado'));assert.equal(activityContact,'b');
  node('cpTimeline').innerHTML='Nuevo cliente';ctx.currentContact={id:'c',data:{}};
  releaseActivity({data:[{title:'Historial antiguo'}]});await render;

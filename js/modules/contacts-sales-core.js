@@ -21,13 +21,31 @@ async function renderContactProfile(){
  const d=profileContact.data||{};
  const name=contactField(d,"NOMBRE Y APELLIDOS","NOMBRE","CLIENTE","CLIENTE FINAL")||"Contacto";
  const phone=contactField(d,"TELÉFONO","TELEFONO","PHONE","MOVIL");
+ // Independent reads start together; a slow sales request must not hold up
+ // the agenda and history requests for this same profile.
+ const peopleRead=window.TPFRecordLinks.load(sb).catch(()=>[]);
+ const salesRead=(async()=>{if(!(salesCache.opportunities||[]).length)await loadSales();})().catch(()=>{});
+ const agendaRead=async(programs)=>{
+   const rows=[];
+   for(let from=0;;from+=500){
+     if(currentContact!==profileContact)return [];
+     let query=sb.from('agenda_items').select('*');
+     query=programs?query.eq('whatsapp_enabled',true).eq('status','pending').order('whatsapp_scheduled_at',{ascending:true}):query.or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('starts_at',{ascending:false});
+     const result=await query.order('id').range(from,from+499);
+     if(result.error)throw result.error;
+     rows.push(...(result.data||[]));
+     if((result.data||[]).length<500)return rows;
+   }
+ };
+ const tasksRead=agendaRead(false).catch(()=>[]);
+ const programsRead=contactCanUseWhatsapp()?agendaRead(true).catch(()=>[]):Promise.resolve([]);
+ const activityRead=(async()=>await sb.from('contact_activity').select('*').eq('contact_id',profileContact.id).order('created_at',{ascending:false}))().catch(()=>({data:[]}));
  $("cpAvatar").textContent=name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||"").join("").toUpperCase()||"C";
  $("cpInfo").innerHTML=`Origen: <b>${esc(currentContact.source_sheet||"")}</b>${currentContact.source_row?`<br>Fila: ${esc(currentContact.source_row)}`:""}`;
 
  let opps=[];
  try{
-   if(!(salesCache.opportunities||[]).length)await loadSales();
-   const people=await window.TPFRecordLinks.load(sb);
+   const [people]=await Promise.all([peopleRead,salesRead]);
    opps=window.TPFRecordLinks.related(salesCache.opportunities||[],people,profileContact.id,'opportunity');
  }catch(e){}
  if(currentContact!==profileContact)return;
@@ -42,8 +60,7 @@ $("cpOpportunities").innerHTML=opps.length
 
  let tasks=[];
  try{
-   const people=await window.TPFRecordLinks.load(sb),data=[];
-   for(let from=0;;from+=500){const r=await sb.from('agenda_items').select('*').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').order('starts_at',{ascending:false}).order('id').range(from,from+499);if(r.error)throw r.error;data.push(...(r.data||[]));if((r.data||[]).length<500)break;}
+   const [people,data]=await Promise.all([peopleRead,tasksRead]);
    tasks=window.TPFRecordLinks.related(data,people,profileContact.id,'task');
  }catch(e){}
  if(currentContact!==profileContact)return;
@@ -62,16 +79,7 @@ $("cpOpportunities").innerHTML=opps.length
  let waPrograms=[];
  if(contactCanUseWhatsapp()){
    try{
-     const waData=[];
-     for(let from=0;;from+=500){
-       const page=await sb.from("agenda_items").select("*")
-         .eq("whatsapp_enabled",true).eq("status","pending")
-         .order("whatsapp_scheduled_at",{ascending:true}).order("id").range(from,from+499);
-       if(currentContact!==profileContact)return;
-       if(page.error)throw page.error;
-       waData.push(...(page.data||[]));
-       if((page.data||[]).length<500)break;
-     }
+     const waData=await programsRead;
      const np=String(phone||"").replace(/\D/g,"").slice(-9);
      waPrograms=(waData||[]).filter(x=>{
        const xp=String(x.whatsapp_phone||x.customer_phone||"").replace(/\D/g,"").slice(-9);
@@ -92,10 +100,7 @@ $("cpOpportunities").innerHTML=opps.length
 
  // Activity log saved explicitly
  try{
-   const {data:activityData}=await sb.from("contact_activity")
-     .select("*")
-     .eq("contact_id",profileContact.id)
-     .order("created_at",{ascending:false});
+   const {data:activityData}=await activityRead;
    activityRows.push(...(activityData||[]).map(a=>({
      date:a.created_at?new Date(a.created_at).toLocaleString("es-ES"):"",
      title:a.title||a.activity_type||"Actividad",

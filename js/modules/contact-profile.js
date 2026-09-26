@@ -132,7 +132,8 @@
       const returnToWhatsapp=!!window.TPFWhatsappContactEditBack?.hasOrigin?.();
       if(msg)msg.textContent='Contacto guardado correctamente';
       restoreCreateModal(true);
-      try{await window.tpfReloadContacts?.();}catch(_){}
+      // The saved record can reopen while the contacts list refreshes separately.
+      try{Promise.resolve(window.tpfReloadContacts?.()).catch(()=>{});}catch(_){}
       if(returnToWhatsapp)await window.TPFWhatsappContactEditBack.restore();
       else if(typeof window.openContact==='function')await window.openContact(id);
       try{window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id,phone,previous:q.data?.data||{},data:d}}));}catch(_){}
