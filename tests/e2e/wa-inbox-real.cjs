@@ -97,6 +97,8 @@ const root=path.resolve(__dirname,'../..');
  assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'unanswered');
  await page.evaluate(()=>waLiveState.chats[3]._lastMessage.idMessage='manual-human-reply');
  assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'all');
+ await page.evaluate(()=>{waLiveState.chats.find(c=>c.id==='600000004@c.us')._lastMessage.timestamp=Math.floor(Date.now()/1000)-1;realtimeCallbacks.wa_messages({new:{chat_id:'600000004@c.us',id_message:'realtime-test',ts:Math.floor(Date.now()/1000)+1,direction:'in',type_message:'textMessage',text_content:'Mensaje nuevo',raw:{}}});});
+ assert.equal(await page.evaluate(()=>waLiveState.chats.find(c=>c.id==='600000004@c.us')._lastMessage.idMessage),'realtime-test');
  await page.click('#waAutoReplySettings');await page.waitForSelector('#waAutoReplyDialog textarea');
  for(const width of [1366,390]){await page.setViewportSize({width,height:844});const box=await page.locator('#waAutoReplyDialog').boundingBox();assert(box.x>=0&&box.x+box.width<=width+1,'settings dialog fits '+width);}
  await page.click('#waAutoReplyDialog [data-close]');

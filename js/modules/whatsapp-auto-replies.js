@@ -5,13 +5,31 @@ const db=()=>{try{return sb}catch(_){return window.sb}},$=id=>document.getElemen
 let channel=null,client=null,user='',authSubscription=null,attaching=false,refreshTimer=0,loading=false,receipts=new Set();
 async function loadReceipts(){if(loading||document.hidden||!db()?.from)return;loading=true;try{const next=new Set();let offset=0;for(;;){const {data,error}=await db().from('crm_whatsapp_reply_receipts').select('outgoing_id').eq('status','sent').order('created_at',{ascending:false}).range(offset,offset+499);if(error)throw error;for(const row of data||[])if(row.outgoing_id)next.add(row.outgoing_id);if((data||[]).length<500)break;offset+=500;}receipts=next;window.renderWhatsAppChats?.();}catch(_){/* keep last confirmed view; periodic retry */}finally{loading=false;}}
 function refresh(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{if(document.hidden)return;window.TPFInboxManual?.sync();window.dispatchEvent(new Event('tpf:wa-shared-state'));loadReceipts();try{if(typeof waWakeSharedSync==='function')waWakeSharedSync()}catch(_){}},500);}
+function incomingChange(payload){
+ const row=payload?.new;if(!row||document.hidden){refresh();return;}
+ try{
+  const state=typeof waLiveState!=='undefined'?waLiveState:window.waLiveState;
+  const ts=Number(row.ts)>1e12?Number(row.ts)/1000:Number(row.ts);
+  if(!state?.chats||!row.id_message||!ts||ts<Date.now()/1000-300){refresh();return;}
+  const raw=row.raw||{},msg={...raw,idMessage:row.id_message,timestamp:ts,type:row.direction==='in'?'incoming':'outgoing',outgoing:row.direction==='out'};
+  if(!msg.messageData&&!msg.textMessage)msg.messageData={typeMessage:row.type_message,textMessageData:{textMessage:row.text_content||''}};
+  let chat=state.chats.find(c=>c.id===row.chat_id);
+  if(!chat){chat={id:row.chat_id,name:raw.senderData?.senderName||row.chat_id.split('@')[0]};state.chats.unshift(chat);}
+  if(ts>=Number(window.waMessageTimestamp?.(chat._lastMessage)||0))chat._lastMessage=msg;
+  if(row.direction==='in')chat._lastIncomingAt=Math.max(chat._lastIncomingAt||0,ts);
+  if(typeof waRememberLivePreview==='function')waRememberLivePreview(row.chat_id,msg);
+  if(state.selected?.id===row.chat_id&&!$('view-whatsapplive')?.classList.contains('hidden')&&typeof waPushLiveMessage==='function')waPushLiveMessage(msg,false);
+  window.renderWhatsAppChats?.();
+ }catch(_){/* periodic shared refresh remains the recovery path */}
+ refresh();
+}
 async function attach(){
  if(attaching)return;const next=db();if(!next?.channel||!next.auth?.getSession)return;attaching=true;
  try{
   const {data}=await next.auth.getSession(),id=data?.session?.user?.id||'';
   if(next!==client){authSubscription?.unsubscribe();if(channel&&client)await client.removeChannel(channel);channel=null;client=next;authSubscription=next.auth.onAuthStateChange(()=>{setTimeout(attach,0);}).data.subscription;}
   if(user!==id&&channel){await client.removeChannel(channel);channel=null;receipts.clear();}user=id;if(!id||channel)return;
-  channel=client.channel('tpf-whatsapp-shared-v1').on('postgres_changes',{event:'*',schema:'public',table:'crm_whatsapp_chat_state'},refresh).on('postgres_changes',{event:'INSERT',schema:'public',table:'wa_messages'},refresh).on('postgres_changes',{event:'*',schema:'public',table:'crm_whatsapp_reply_receipts'},refresh).subscribe(status=>{if(status==='SUBSCRIBED')refresh();});
+  channel=client.channel('tpf-whatsapp-shared-v1').on('postgres_changes',{event:'*',schema:'public',table:'crm_whatsapp_chat_state'},refresh).on('postgres_changes',{event:'INSERT',schema:'public',table:'wa_messages'},incomingChange).on('postgres_changes',{event:'*',schema:'public',table:'crm_whatsapp_reply_receipts'},refresh).subscribe(status=>{if(status==='SUBSCRIBED')refresh();});
  }finally{attaching=false;}
 }
 async function api(body){const {data}=await db().auth.getSession();if(!data?.session?.access_token)throw Error('Inicia sesión en el CRM.');const r=await fetch('/api/whatsapp-auto-replies',{method:body?'POST':'GET',headers:{Authorization:'Bearer '+data.session.access_token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const result=await r.json();if(!r.ok||!result.ok)throw Error(result.error||'No se pudo guardar.');return result;}
