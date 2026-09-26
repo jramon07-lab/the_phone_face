@@ -9,6 +9,7 @@ const paused={id:'b',opportunity_id:'two',status:'paused',sent_at:'2026-09-19T10
 F.byOpportunity=new Map([['one',[active]],['two',[paused,{...paused,id:'c'}]]]);
 const rows=[{id:'one',stage:'Seguimiento'},{id:'two',stage:'Seguimiento'},{id:'none'}];
 F.filter='paused';assert.equal(api.filterRows(rows).length,1);assert.equal(rows[1].stage,'Seguimiento');
+F.responses=[{offer_instance_id:'a',created_at:'2026-09-25T10:00:00Z'}];assert.equal(api.summary(active).label,'Cliente respondió');assert.equal(api.matching('one','replied'),true);assert.equal(api.matching('two','replied'),false);F.responses=[];
 F.filter='active';assert.equal(api.filterRows(rows)[0].id,'one');F.filter='all';assert.equal(api.filterRows(rows).length,3);
 assert.equal(api.summary(paused,new Date('2026-09-26T10:00:00Z')).label,'Pausado hace 2 días');
 assert.equal(api.summary({...paused,paused_at:null}).label,'Pausado · fecha no registrada');
@@ -18,4 +19,4 @@ F.jobs=[{context:{offer_instance_id:'other'},run_at:'2026-09-27T12:00:00Z'}];ass
 F.jobs.push({context:{offer_instance_id:'a'},run_at:'2026-09-28T12:00:00Z'});assert.match(api.summary(active).next,/28\/0?9/);assert.equal(api.summary(paused).next,'Sin recordatorios');
 assert.ok(!api.htmlOffer({...active,id:'\"<script>'},true).includes('<script>'));
 F.error='offline';assert.match(api.summary(active).next,/no disponible/);assert.match(api.html('one'),/no disponible/);
-(async()=>{await Promise.all([api.load(),api.load()]);assert.equal(F.offers.length,501);assert.equal(calls.length,3);await api.load();assert.equal(calls.length,3);assert.equal(F.error,'');console.log('follow-up dates, filters, isolation, escaping and pagination passed')})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{await Promise.all([api.load(),api.load()]);assert.equal(F.offers.length,501);assert.equal(calls.length,4);await api.load();assert.equal(calls.length,4);assert.equal(F.error,'');console.log('follow-up dates, filters, isolation, escaping and pagination passed')})().catch(e=>{console.error(e);process.exitCode=1});

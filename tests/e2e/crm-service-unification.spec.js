@@ -305,3 +305,15 @@ test('Seguimientos: filtros y acciones conservan la etapa (datos sintéticos)',a
  await page.locator('[data-of-filter="active"]').click();await expect(page.locator('article')).toHaveAttribute('data-row','a');await page.locator('[data-of-manage]').click();await page.getByRole('button',{name:'Pausar',exact:false}).click();
  expect(await page.evaluate(()=>window.actionCalls.length)).toBe(2);await expect(page.locator('.ofBadge')).toHaveText('Sin envíos pendientes');
 });
+
+test('Plan compartido: pausa, aviso interno y fecha Madrid sin envío (datos sintéticos)',async({page,context})=>{
+ const fs=require('node:fs');await context.route('**/*',route=>route.abort());await page.setContent('<section id="view-sales"></section>');
+ await page.evaluate(()=>{window.TPFModules={register:(_,m)=>m.install()};window.saved=[];window.sb={rpc:async(name,args)=>{saved.push({name,args});return{data:{ok:true}}}}});
+ await page.addScriptTag({content:fs.readFileSync('js/modules/offer-work-plan.js','utf8')});
+ await page.addScriptTag({content:fs.readFileSync('js/modules/offer-followup-ui.js','utf8')});
+ await page.evaluate(()=>{const F=TPFOfferFollowup.state;F.loaded=true;F.at=Date.now();window.addEventListener('tpf:sales-updated',e=>e.stopImmediatePropagation(),true);F.offers=[{id:'example',status:'following',updated_at:'2026-09-26T10:00:00Z'}];TPFOfferFollowup.manage('example')});
+ await page.locator('[name=reason]').fill('Cliente necesita pensarlo');await page.locator('input[name=action]').fill('Revisar documentos');await page.locator('[name=at]').fill('2026-09-28T10:00');await page.locator('[name=remind]').check();
+ await page.getByRole('button',{name:'Guardar y pausar',exact:true}).click();await expect(page.locator('dialog')).toHaveCount(0);
+ const calls=await page.evaluate(()=>saved);expect(calls).toHaveLength(1);expect(calls[0].name).toBe('crm_save_offer_work_plan');expect(calls[0].args.p_at).toBe('2026-09-28T08:00:00.000Z');expect(calls[0].args.p_pause).toBe(true);expect(calls[0].args.p_remind).toBe(true);
+ expect(await page.evaluate(()=>TPFOfferWorkPlan.madrid('2026-12-28T10:00'))).toBe('2026-12-28T09:00:00.000Z');
+});

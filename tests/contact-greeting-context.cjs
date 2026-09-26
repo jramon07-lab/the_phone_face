@@ -2,7 +2,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('js/modules/offers-pro.js','utf8').replace("M.register('offers-pro',{install});","window.testContext=directOfferContext;");
 let managers=[];const sb={from(){const q={select(){return q},eq(){return q},contains(){return q},async limit(){return{data:managers}}};return q;}};
-const context={window:{TPFModules:{}},document:{addEventListener(){},getElementById(){return null}},sb,Intl};vm.createContext(context);vm.runInContext(source,context);
+const context={window:{TPFModules:{},addEventListener(){}},document:{addEventListener(){},getElementById(){return null}},sb,Intl};vm.createContext(context);vm.runInContext(source,context);
 (async()=>{
  const contact={id:'owner',data:{NOMBRE:'María José',APELLIDOS:'García López','NOMBRE Y APELLIDOS':'María José García López','TELÉFONO':'600000001'}};
  const own=await context.window.testContext(contact);assert.equal(own.name,'María José');assert.equal(own.phone,'600000001');
