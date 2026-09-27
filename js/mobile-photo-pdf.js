@@ -16,7 +16,7 @@ async function renderPhoto(file,check){
    check();const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;if(!w||!h)throw Error('La foto no tiene dimensiones válidas.');
    const ratio=Math.min(1,2000/Math.max(w,h)),dw=Math.max(1,Math.round(w*ratio)),dh=Math.max(1,Math.round(h*ratio)),swap=o>=5&&o<=8;canvas=document.createElement('canvas');canvas.width=swap?dh:dw;canvas.height=swap?dw:dh;
    const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);const transforms={2:[-1,0,0,1,dw,0],3:[-1,0,0,-1,dw,dh],4:[1,0,0,-1,0,dh],5:[0,1,1,0,0,0],6:[0,1,-1,0,dh,0],7:[0,-1,-1,0,dh,dw],8:[0,-1,1,0,0,dw]};if(transforms[o])ctx.transform(...transforms[o]);ctx.drawImage(img,0,0,dw,dh);
-   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.82));if(!blob)throw Error('No se pudo preparar la foto.');
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.78));if(!blob)throw Error('No se pudo preparar la foto.');
    check();return {width:canvas.width,height:canvas.height,blob};
   }finally{img.close?.();if(canvas){canvas.width=1;canvas.height=1;}}
 }
