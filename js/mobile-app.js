@@ -1180,6 +1180,7 @@
     const meta={...(original?.agenda_meta||{})},keys={tarea:[['priority','Priority']],llamada:[['duration','Duration'],['result','Result']],cita:[['duration','Duration'],['location','Location']],whatsapp:[['whatsapp_message','WhatsappMessage']]};
     for(const key of ['priority','duration','result','location','whatsapp_message','custom'])delete meta[key];
     for(const [key,suffix] of keys[type.toLowerCase()]||[['custom','Custom']]){const value=clean(byId(prefix+suffix)?.value);if(value)meta[key]=value;}
+    if(prefix==='newTask'&&documentTaskDraft&&route().query.get('fromDocument')==='1'&&documentTaskDraft.contactId===String(route().parts[1]))meta.attachments=documentTaskDraft.files.map(f=>({id:f.id,name:f.name,url:f.webViewLink}));
     return {agenda_type:type,agenda_meta:meta};
   }
   function taskFields(prefix,row={}){
@@ -1193,11 +1194,15 @@
     return window.TPFTaskModel.payload({...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked});
   }
   let documentTaskDraft=null;
-  function taskDocumentLinks(description){const urls=[...new Set(String(description||'').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<>"']+/g)||[])];return urls.length?`<div class="m-info-card"><b>Archivos de la tarea</b>${urls.map((url,i)=>`<p><a class="m-secondary" target="_blank" rel="noopener noreferrer" href="${esc(url)}">Abrir archivo ${i+1} ↗</a></p>`).join('')}</div>`:'';}
+  function taskDocumentLinks(description,attachments=[]){
+    const legacy=[...new Set(String(description||'').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<>"']+/g)||[])].map((url,i)=>({url,name:'Archivo '+(i+1)}));
+    const files=[...attachments,...legacy].filter((f,i,all)=>{try{const u=new URL(f.url);return u.protocol==='https:'&&['drive.google.com','docs.google.com'].includes(u.hostname)&&all.findIndex(x=>x.url===f.url)===i;}catch(_){return false;}});
+    return files.length?`<div class="m-info-card" style="padding:10px;margin-bottom:10px"><small>Archivos adjuntos</small>${files.map(f=>`<div><a target="_blank" rel="noopener noreferrer" href="${esc(f.url)}" style="display:block;padding:10px 0;overflow-wrap:anywhere">${esc(f.name||'Archivo')} ↗</a></div>`).join('')}</div>`:'';
+  }
   function renderNewTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
-    const back=mobileWaReturnPath(contactId,'task'),files=route().query.get('fromDocument')==='1'&&documentTaskDraft?.contactId===String(contactId)?documentTaskDraft.files:[],draft=files.length?{title:'Revisar '+files[0].name,description:files.map(f=>'Archivo: '+f.name+'\n'+f.webViewLink).join('\n\n')}:{title:'Llamar a '+contact.fullName};
-    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskDocumentLinks(draft.description)}${taskFields('newTask',{...draft,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
+    const back=mobileWaReturnPath(contactId,'task'),files=route().query.get('fromDocument')==='1'&&documentTaskDraft?.contactId===String(contactId)?documentTaskDraft.files:[],draft=files.length?{title:'Revisar '+files[0].name,description:'',agenda_meta:{attachments:files.map(f=>({id:f.id,name:f.name,url:f.webViewLink}))}}:{title:'Llamar a '+contact.fullName};
+    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskDocumentLinks('',draft.agenda_meta?.attachments||[])}${taskFields('newTask',{...draft,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
   }
   function ensureTaskDetail(id){if(!has('can_view_agenda')&&!has('can_manage_agenda'))return;if(taskDetail.id!==String(id))loadTaskDetail(id);}
   async function loadTaskDetail(id){
@@ -1213,7 +1218,7 @@
     const editor=taskDetail;if(editor.id!==String(id)||editor.loading)return `<div class="m-page">${head}${skeleton()}</div>`;
     if(!editor.row)return `<div class="m-page">${head}${empty('No disponible',editor.error||'La tarea ya no existe.')}<button class="m-secondary" data-action="reload-task" data-id="${esc(id)}">Reintentar</button></div>`;
     const row=editor.row,canEdit=has('can_manage_agenda');
-    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description)}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description,row.agenda_meta?.attachments||[])}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
   }
   function mergeTaskChange(id,row){
     if(row){const index=state.tasks.findIndex(item=>String(item.id)===String(id));if(index>=0)state.tasks[index]=row;else state.tasks.push(row);}
