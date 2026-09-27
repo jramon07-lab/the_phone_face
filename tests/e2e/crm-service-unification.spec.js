@@ -50,6 +50,7 @@ function classify(request, origin) {
     if (['/api/green', '/api/mobile-green'].includes(url.pathname)) {
       return GREEN_READ.get(action) === method ? 'read' : 'blocked-unknown';
     }
+    if (url.pathname === '/api/whatsapp-auto-replies' && method === 'GET') return 'read';
     if (['/api/health', '/api/green-health'].includes(url.pathname) && method === 'GET') return 'read';
     if (['/api/google-contacts', '/api/crm-backup', '/api/crm-documents'].includes(url.pathname) &&
         ['status', ''].includes(action) && method === 'GET') return 'read';
@@ -316,6 +317,22 @@ test.describe('Móvil de solo lectura', () => {
         await expect.poll(() => page.locator('#mobileView').evaluate(el => el.childElementCount > 0)).toBe(true);
       }
       await expect.poll(() => report.greenAuthorized, { timeout: 20000 }).toBe(true);
+      await expect(page.locator('[data-action="wa-auto-settings"]')).toBeVisible();
+      await page.locator('[data-action="wa-auto-settings"]').click();
+      await expect(page.locator('#waAutoReplyDialog textarea')).toBeVisible({timeout:15000});
+      await page.locator('#waAutoReplyDialog [data-close]').click();
+      await page.locator('[data-mobile-route="contacts"]').click();
+      await expect(page.locator('#mobileView .m-contact-card').first()).toBeVisible({timeout:15000});
+      await page.locator('#mobileView .m-contact-card').first().click();
+      await expect(page.locator('[data-action="contact-offer"]')).toBeVisible();
+      await page.locator('[data-action="contact-offer"]').click();
+      await expect(page.locator('#opOfferModal:not(.hidden) #opPreview')).toBeVisible({timeout:15000});
+      await page.locator('#opOfferModal .opClose').click();
+      await page.locator('[data-action="contact-direct"]').click();
+      await expect(page.locator('#directSalePrice')).toBeVisible();
+      await page.locator('#directSaleModal [data-direct-close]').first().click();
+      await page.locator('[data-mobile-route="whatsapp"]').click();
+      await expect(page.locator('[data-action="wa-auto-settings"]')).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
       expect(overflow, 'La página móvil no debe desbordar el ancho de pantalla').toBe(false);
       await expect.poll(() => report.pendingReads.length, { timeout: 20000 }).toBe(0);

@@ -4,7 +4,7 @@ const noop=()=>{};
 async function check(kind){
  const sessions={current:true,other:true},calls=[],button={};
  const auth={signOut:async options=>{calls.push(options);sessions.current=false;if(options?.scope!=='local')sessions.other=false;return {error:null}}};
- const c={ALERT_PAGE_SIZE:30,CONTACT_PAGE_SIZE:60,sb:{auth},client:{auth,rpc:async()=>{throw Error('Synthetic permission outage')}},state:{},$:()=>button,location:{reload:noop,hash:'#/more'},window:{},showLogin:noop,stopMobileWaRefresh:noop,stopGuidedCamera:noop,closeMobileWaSheet:noop,clearTimeout:noop,mobileTemplateRequestId:0,mobileLabelRequestId:0,contactSearchTimer:0,opportunitySearchTimer:0};
+ const c={mobileDrafts:new Map(),sharedContact:null,mobileContactIndexSource:null,automaticAt:0,mobileSummaryAt:0,ALERT_PAGE_SIZE:30,CONTACT_PAGE_SIZE:60,sb:{auth},client:{auth,rpc:async()=>{throw Error('Synthetic permission outage')}},state:{},$:()=>button,location:{reload:noop,hash:'#/more'},window:{},showLogin:noop,stopMobileWaRefresh:noop,stopGuidedCamera:noop,closeMobileWaSheet:noop,clearTimeout:noop,mobileTemplateRequestId:0,mobileLabelRequestId:0,contactSearchTimer:0,opportunitySearchTimer:0};
  vm.createContext(c);
  if(kind==='desktop'){
   vm.runInContext(desktop.split('\n').find(x=>x.includes('$("logout").onclick=')),c);await button.onclick();

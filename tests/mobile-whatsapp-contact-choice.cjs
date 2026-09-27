@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const location={hash:'#/whatsapp-chat/34676107894%40c.us'};
 const window={};
 const source=fs.readFileSync('js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`window.api={state,renderMobileWaContactAction,mobileWaFindContact,startContactFromMobileWa};toast=()=>{};render=()=>{};})();`);
-vm.runInNewContext(source,{window,document:{addEventListener(){}},location,URLSearchParams,Intl,Date,console});
+vm.runInNewContext(source,{window,document:{addEventListener(){},getElementById(){return null}},location,URLSearchParams,Intl,Date,console});
 const a=window.api,chat={id:'34676107894@c.us'};
 a.state.perms={can_view_database:true,can_create_database:true};
 a.state.contacts=[{id:'full',fullName:'Juan David Santiago Gamez',phone:'676107894',dni:'TEST-1'},{id:'old',fullName:'Juan David Santiago',phone:'+34 676107894',dni:'TEST-2'}];

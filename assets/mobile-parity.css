@@ -28,3 +28,21 @@
 .tpfUnifiedMobile #tpfSched3 input,.tpfUnifiedMobile #tpfSched3 textarea,.tpfUnifiedMobile #tpfSched3 select{font-size:16px}
 
 .tpfUnifiedMobile .m-wa-delivery.read{color:#008dc9}.tpfUnifiedMobile .m-wa-delivery.failed{color:#b42318}
+/* Complete the light palette in legacy controls and shared dialogs. */
+.tpfUnifiedMobile .m-nav-add{background:#1769e0!important;border-color:#f5f7fb!important;box-shadow:0 5px 18px #1769e02b!important;color:#fff!important}
+.tpfUnifiedMobile .m-profile-label,.tpfUnifiedMobile .m-review-card,.tpfUnifiedMobile .m-step,.tpfUnifiedMobile .m-system-empty{background:#fff;border-color:#dce4ef;color:#1d2939}
+.tpfUnifiedMobile .m-profile-label input{accent-color:#1769e0}
+.tpfUnifiedMobile .m-wa-sheet-contact b,.tpfUnifiedMobile .m-system-empty b{color:#1d2939}
+.tpfUnifiedMobile .m-wa-sheet-field{color:#475467}
+.tpfUnifiedMobile .m-system-banner.ok,.tpfUnifiedMobile .m-system-protected{background:#eff8f3;color:#067647;border-color:#b7e5cb}
+.tpfUnifiedMobile .m-system-banner.warn{background:#fffaeb;color:#9a6700;border-color:#f6dd9c}
+.tpfUnifiedMobile .m-system-banner.bad,.tpfUnifiedMobile .m-system-danger,.tpfUnifiedMobile .m-system-incident .danger{background:#fff1f0!important;color:#b42318!important;border-color:#f2c8c5!important}
+.tpfUnifiedMobile .m-system-pill{background:#eef2f6;color:#475467}.tpfUnifiedMobile .m-system-pill.resolved{background:#eff8f3;color:#067647}.tpfUnifiedMobile .m-system-pill.warning{background:#fffaeb;color:#9a6700}.tpfUnifiedMobile .m-system-pill.error,.tpfUnifiedMobile .m-system-pill.critical,.tpfUnifiedMobile .m-system-pill.active{background:#fff1f0;color:#b42318}
+.tpfUnifiedMobile .opShell button{border:1px solid #dce4ef;border-radius:10px;background:#fff;color:#245fba;padding:10px 12px;font:inherit;min-height:44px}
+.tpfUnifiedMobile .opShell button.active,.tpfUnifiedMobile .opShell button.primary{background:#1769e0;border-color:#1769e0;color:#fff}
+.tpfUnifiedMobile .opShell input:not([type=checkbox]):not([type=radio]),.tpfUnifiedMobile .opShell textarea,.tpfUnifiedMobile .opShell select{border:1px solid #dce4ef;border-radius:9px;padding:10px;background:#fff;color:#1d2939}
+.tpfUnifiedMobile .opPreview,.tpfUnifiedMobile .opOptionCopy b{font-size:14px}.tpfUnifiedMobile .opMode label{font-size:14px}.tpfUnifiedMobile .opMode small{font-size:12px}
+.tpfUnifiedMobile #directSaleModal .opShell{height:auto;width:100%;max-height:90dvh}.tpfUnifiedMobile #directSaleModal .directSaleOperators{flex-wrap:wrap}
+.tpfUnifiedMobile .m-wa-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tpfUnifiedMobile .m-wa-filter{min-width:0;padding:7px 5px;justify-content:space-between}
+.tpfUnifiedMobile .opShell .opCard.active{background:#eaf2ff;color:#1d2939;border:2px solid #1769e0}.tpfUnifiedMobile .opShell .opCard.active span{color:#475467}
+.tpfUnifiedMobile .m-input,.tpfUnifiedMobile .m-select,.tpfUnifiedMobile .m-textarea{font-size:16px}

@@ -4,16 +4,16 @@ const {chromium}=require('playwright-core');const root=path.resolve(__dirname,'.
 (async()=>{
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/tmp/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
 try{
-const page=await browser.newPage({viewport:{width:393,height:852}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.route('**/*',r=>{const u=new URL(r.request().url()),file=path.join(root,u.pathname);if(u.hostname==='fixture.test'&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});return r.abort();});
-let html=fs.readFileSync(root+'/movil/index.html','utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace('<head>','<head><base href="http://fixture.test/">');await page.setContent(html);
+const page=await browser.newPage({viewport:{width:393,height:852}}),errors=[];page.setDefaultTimeout(4000);page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message)});
+await page.route('**/*',r=>{const u=new URL(r.request().url()),file=path.join(root,u.pathname);if(u.hostname==='fixture.test'&&u.pathname==='/movil/')return r.fulfill({contentType:'text/html',body:html});if(u.hostname==='fixture.test'&&fs.existsSync(file)&&fs.statSync(file).isFile())return r.fulfill({path:file});return r.abort();});
+let html=fs.readFileSync(root+'/movil/index.html','utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');await page.goto('https://fixture.test/movil/');
 await page.evaluate(()=>{
 window.crypto.randomUUID=()=> '11111111-1111-4111-8111-111111111111';window.fixtureWrites=[];window.fixtureRows=new Map();
 window.fixtureContact={id:'demo-1',data:{NOMBRE:'Ana',APELLIDOS:'Martín','TELÉFONO':'600000001'}};
 const db={auth:{getSession:async()=>({data:{session:{access_token:'fixture'}}})},rpc:async(name,args)=>{fixtureWrites.push({name,args});return {data:name==='crm_whatsapp_mark_internal_read'?args.p_ts:[],error:null}},from(table){let row;const q=new Proxy({},{get(_,key){if(key==='then')return (ok,bad)=>Promise.resolve({data:row||(table==='records'?fixtureContact:table==='crm_whatsapp_chat_state'?[...fixtureRows.values()]:table==='crm_offer_catalog'?[{id:'offer-1',operator:'Vodafone',name:'Fibra',base_price:30,base_features:['Fibra 600 Mb'],active:true}]:[]),error:null}).then(ok,bad);return (...args)=>{if(key==='upsert'){row=args[0];fixtureRows.set(row.chat_id,row);fixtureWrites.push({table,row})}return q}}});return q}};window.supabase={createClient:()=>db};
 });
 for(const file of ['record-links','task-model','contact-party'])await page.addScriptTag({path:root+'/js/modules/'+file+'.js'});
-let app=fs.readFileSync(root+'/js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`window.fixture={state,render,bindStaticEvents,mapContact,renderMobileWhatsAppChat,renderMobileWhatsApp,openMobileSharedOffer,openMobileSharedSchedule,renderContact};})();`);
+let app=fs.readFileSync(root+'/js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`window.fixture={state,render,bindStaticEvents,mapContact,renderMobileWhatsAppChat,renderMobileWhatsApp,openMobileSharedOffer,openMobileSharedSchedule,renderContact,updateMobileWaListDom,loadMobileWaChats,refreshVisibleMobileData,rememberMobileDraft,renderMobileWaListBody};})();`);
 await page.addScriptTag({content:app});
 for(const file of ['whatsapp-inbox-manual','whatsapp-automation-inbox','whatsapp-auto-replies','whatsapp-read-guard','offer-followup-ui','offers-pro','whatsapp-schedule-direct-v3'])await page.addScriptTag({path:root+'/js/modules/'+file+'.js'});
 await page.evaluate(()=>{fixture.state.user={id:'demo-user'};fixture.state.perms={is_admin:true};fixture.state.contacts=[fixture.mapContact(fixtureContact)];fixture.state.whatsapp.chats=[{id:'34600000001@c.us',name:'Ana Martín',unreadCount:1,_lastMessage:{type:'incoming',textMessage:'Hola',timestamp:Math.floor(Date.now()/1000)-10}}];fixture.state.whatsapp.selectedId='34600000001@c.us';document.getElementById('mobileBoot').classList.add('hidden');document.getElementById('mobileApp').classList.remove('hidden');fixture.bindStaticEvents();document.getElementById('mobileView').innerHTML=fixture.renderMobileWhatsApp();});
@@ -33,6 +33,28 @@ await page.locator('#opOfferModal .opClose').click();
 await page.evaluate(()=>fixture.openMobileSharedSchedule());await page.locator('#tpfS3msg').waitFor();assert.match(await page.inputValue('#tpfS3msg'),/Hola, Ana/);assert.equal(await page.inputValue('#tpfS3phone'),'600000001');
 assert(await page.locator('#tpfS3save').isVisible());
 
+await page.locator('#tpfSched3 [data-close]').first().click();
+// Refresh must preserve settings access, input drafts and editors.
+await page.evaluate(()=>{document.getElementById('mobileView').innerHTML=fixture.renderMobileWhatsApp();fixture.updateMobileWaListDom();});
+assert.equal(await page.locator('[data-action="wa-auto-settings"]').count(),1);
+await page.evaluate(settings=>{window.fetch=async(url)=>({ok:true,json:async()=>({ok:true,settings,connected:true,issues:[],chats:fixture.state.whatsapp.chats,messages:[]})});},require('../../lib/whatsapp-auto-replies').DEFAULTS);
+await page.click('[data-action="wa-auto-settings"]');await page.locator('#waAutoReplyDialog textarea').waitFor();assert.match(await page.locator('#waAutoReplyDialog').innerText(),/Horario de atención/);await page.click('#waAutoReplyDialog [data-close]');
+await page.evaluate(()=>{location.hash='#/whatsapp-chat/34600000001%40c.us'});await page.locator('#mobileWaComposer').waitFor();await page.fill('#mobileWaComposer','Borrador que debe conservarse');
+await page.evaluate(()=>fixture.refreshVisibleMobileData());assert.equal(await page.inputValue('#mobileWaComposer'),'Borrador que debe conservarse');
+await page.evaluate(()=>{waPushLiveMessage({idMessage:'live-1',type:'incoming',timestamp:Date.now()/1000,textMessage:'Mensaje en tiempo real'});waPushLiveMessage({idMessage:'live-1',type:'incoming',timestamp:Date.now()/1000,textMessage:'Mensaje en tiempo real'});});assert.equal(await page.getByText('Mensaje en tiempo real',{exact:true}).count(),1);
+await page.click('[data-action="wa-back-list"]');await page.locator('#mobileWaSearch').waitFor();await page.click('[data-route="whatsapp-chat/34600000001%40c.us"]');await page.locator('#mobileWaComposer').waitFor();assert.equal(await page.inputValue('#mobileWaComposer'),'Borrador que debe conservarse');
+// A slow connection status must not delay the chat list.
+await page.evaluate(()=>{window.fetch=(url)=>new URL(url,'https://fixture.test').searchParams.get('action')==='state'?new Promise(()=>{}):Promise.resolve({ok:true,json:async()=>({ok:true,chats:fixture.state.whatsapp.chats})});});
+await Promise.race([page.evaluate(()=>fixture.loadMobileWaChats({light:true})),new Promise((_,reject)=>setTimeout(()=>reject(Error('Chat list blocked by connection status')),2000))]);
+await page.evaluate(()=>{window.fetch=async()=>({ok:true,json:async()=>({ok:true,chats:fixture.state.whatsapp.chats,messages:[]})});});
+for(const route of ['home','contacts','contact/demo-1','opportunities','alerts','more','templates','labels','new-task/demo-1','edit-contact/demo-1']){
+ await page.evaluate(route=>{location.hash='#/'+route},route);await page.waitForTimeout(30);
+ assert(!await page.getByText('No se pudo abrir esta pantalla',{exact:true}).count(),route+' renders');
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),route+' fits');
+}
+await page.fill('#editFirst','Ana editada');await page.evaluate(()=>fixture.refreshVisibleMobileData());assert.equal(await page.inputValue('#editFirst'),'Ana editada');
+await page.screenshot({path:'/tmp/mobile-review-contact.png'});
+const elapsed=await page.evaluate(()=>{const contacts=fixture.state.contacts,chats=fixture.state.whatsapp.chats;fixture.state.contacts=Array.from({length:2500},(_,i)=>({id:'c'+i,phone:String(600000000+i),fullName:'Cliente '+i,nickname:'Apodo '+i}));fixture.state.whatsapp.chats=fixture.state.contacts.slice(0,1500).map(c=>({id:'34'+c.phone+'@c.us',name:c.fullName}));fixture.state.whatsapp.filter='all';const start=performance.now();fixture.renderMobileWaListBody();const elapsed=performance.now()-start;fixture.state.contacts=contacts;fixture.state.whatsapp.chats=chats;return elapsed;});assert(elapsed<1500,'indexed list with 2500 contacts and 1500 chats');console.log('Synthetic large-list render milliseconds:',Math.round(elapsed));
 assert.deepEqual(errors,[]);console.log('Mobile parity: light theme, private read, quick reply draft, shared waiting and offer layout passed.');
 }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
