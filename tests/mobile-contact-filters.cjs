@@ -76,7 +76,9 @@ assert.match(card,/data-route="contact\/c1"/);
 assert.match(card,/Ramón Sánchez/);
 assert.match(card,/\+34 612 345 678/);
 assert.match(card,/12345678Z/);
-assert.match(card,/ramon@example\.com/);
+assert(!card.includes('ramon@example.com'));
+assert(!api.contactCard(api.state.contacts[2]).includes('m-contact-activity'));
+assert(api.contactCard({...api.state.contacts[0],nickname:'Mi apodo'}).includes('Mi apodo'));
 assert.match(card,/1 venta abierta/);
 assert.match(card,/1 tarea pendiente/);
 
