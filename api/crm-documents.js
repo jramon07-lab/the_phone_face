@@ -6,7 +6,7 @@ const CID=process.env.GOOGLE_DRIVE_CLIENT_ID||'',SECRET=process.env.GOOGLE_DRIVE
 const ORIGIN=process.env.CRM_DOCUMENTS_ORIGIN||'https://the-phone-face-app-whatsapp-fotos-y.vercel.app';
 const CALLBACK=ORIGIN+'/api/crm-documents?action=callback';
 const PROVIDER='google_drive_documents',FOLDER='application/vnd.google-apps.folder';
-const UPLOAD_MIMES=new Set(['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/rtf','text/plain','image/jpeg','image/png','image/webp','image/heic','image/heif']);
+const UPLOAD_MIMES=new Set(['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/rtf','text/plain','image/jpeg','image/png','image/webp','image/heic','image/heif','image/x-adobe-dng','image/dng']);
 const configured=()=>!!(KEY&&PUBLIC&&CID&&SECRET&&ENC);
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 // Google binds resumable-upload CORS to the origin used to start the session.
