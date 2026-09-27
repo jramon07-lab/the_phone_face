@@ -197,3 +197,29 @@ html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
 .tpfUnifiedMobile .m-task-save{position:sticky;bottom:-24px;margin-top:auto;padding:8px 0 12px;background:#f4f6f9;z-index:3}
 .tpfUnifiedMobile .m-task-save button{width:100%;min-height:44px;margin:0}
 .tpfUnifiedMobile .m-task-save .m-form-msg:empty{display:none}
+
+/* Compact contact summary and on-demand document upload. */
+.tpfUnifiedMobile .m-contact-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-size:20px}
+.tpfUnifiedMobile .m-contact-upload small{font-size:10px;margin-top:2px}
+.tpfUnifiedMobile .m-contact-summary>.m-contact-text-empty{grid-template-columns:minmax(0,1fr) 20px 44px;padding:0}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-empty>b{grid-column:2;grid-row:1}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-empty .m-ghost{grid-column:3;grid-row:1}
+.tpfUnifiedMobile .m-contact-summary>.m-info-row:nth-child(-n+2){display:grid;grid-template-columns:1fr;gap:0;padding:0 0 3px}
+.tpfUnifiedMobile .m-contact-summary>.m-info-row:nth-child(-n+2)>span{margin-bottom:-5px}
+.tpfUnifiedMobile .m-contact-snapshot .m-summary-offer{margin:0}
+.tpfUnifiedMobile .m-contact-snapshot-card:last-child{grid-column:1/-1;min-height:44px;display:grid;grid-template-columns:1fr auto;align-items:center}
+.tpfUnifiedMobile .m-contact-snapshot-card:last-child span{grid-column:1/-1;white-space:normal}
+.tpfUnifiedMobile .m-contact-tab-hint{display:none}
+.tpfUnifiedMobile .m-contact-tab-wrap{margin-top:6px}
+.m-quick-upload{width:min(94vw,560px);max-height:85dvh;padding:0;border:1px solid #dce5ef;border-radius:16px;background:#fff;color:#243344;box-sizing:border-box;overflow:auto}
+.m-quick-upload::backdrop{background:rgba(15,23,42,.45)}
+.m-quick-upload>header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #dce5ef;position:sticky;top:0;background:#fff;z-index:1}
+.m-quick-upload>header button{width:44px;height:44px;border:0;background:transparent;color:#245fba;font-size:20px}
+.m-quick-upload-body{padding:10px}
+.m-quick-upload .m-docs{margin:0;padding:8px;box-shadow:none;border:0}
+.m-quick-upload .m-docs>h2,.m-quick-upload .m-docs>h3,.m-quick-upload .m-doc-file,.m-quick-upload [data-md-more]{display:none}
+.m-quick-upload .m-docs-quick>p:has(b){display:none}
+.m-quick-upload .m-docs-quick>h3~p{display:none}
+.m-quick-upload .m-doc-actions>a,.m-quick-upload [data-md-refresh]{display:none}
+.m-quick-upload .m-doc-actions{gap:6px}
+.m-quick-upload .m-doc-actions button{font-size:14px;padding:10px;min-height:44px}

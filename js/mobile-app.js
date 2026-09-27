@@ -738,7 +738,7 @@
     const opportunity=overview.last,stage=opportunity&&state.board.stages.find(row=>String(row.id)===String(opportunity.stage_id));
     const whatsapp=contactMobileWhatsApp(contact);
     const pending=(relatedTasks(contact.id)||[]).filter(task=>taskIsPending(task));
-    return `<section class="m-contact-snapshot" aria-label="Resumen comercial">
+    return `<section class="m-contact-snapshot" aria-label="Resumen comercial"><button id="mobileSummaryOffer" class="m-summary-offer m-contact-snapshot-card" data-action="profile-tab" data-tab="offers" type="button"><small>Última oferta</small><b>Cargando…</b><span>Ver ofertas ›</span></button>
       <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="opportunities" type="button"><small>Última oportunidad</small><b>${esc(opportunity?.title||'Sin oportunidades')}</b><span>${esc(opportunity?`${stage?.name||'Sin estado'} · ${opportunity.amount!=null?money(opportunity.amount):'Sin importe'}`:'Crear oportunidad')}</span></button>
       <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Próxima tarea</small><b>${esc(overview.next?dateTime(overview.next.starts_at):'Sin tarea pendiente')}</b><span>${esc(overview.next?.title||'Programar tarea')}</span></button>
       <button class="m-contact-snapshot-card" data-action="contact-whatsapp" data-id="${esc(contact.id)}" type="button"><small>Último WhatsApp</small><b>${esc(whatsapp?.when||'Sin conversación')}</b><span>${esc(whatsapp?.text||'Abrir conversación')}</span></button>
@@ -750,7 +750,7 @@
     if(!contact)return `<div class="m-page">${pageHead('Ficha del contacto','contacts')}${empty('Contacto no encontrado','Actualiza los datos e inténtalo de nuevo.')}</div>`;
     const opps=relatedOpportunities(id),tasks=relatedTasks(id),overview=contactMobileOverview(opps,tasks);const tab=state.profileTab;
     let body='';
-    if(tab==='summary')body=`<button id="mobileSummaryOffer" class="m-summary-offer" data-action="profile-tab" data-tab="offers" type="button"><small>Última oferta</small><b>Cargando…</b><span>Ver ofertas ›</span></button><div class="m-info-card m-contact-summary">
+    if(tab==='summary')body=`<div class="m-info-card m-contact-summary">
       ${copyableContactRow('Teléfonos',contactPhones(contact).map(p=>p.label),'teléfono')}${copyableContactRow('DNI / NIF',[contact.dni],'DNI')}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
     </div>${mobileRelationsSummary(contact)}`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
@@ -765,17 +765,25 @@
     if(tab==='history')body=renderContactHistory(id);
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
     return `<div class="m-page m-contact-profile">
-      <section class="m-contact-identity m-contact-identity-inline"><button class="m-back" data-action="route" data-route="contacts" aria-label="Volver">‹</button><div class="m-contact-name"><h1>${esc(contact.fullName)}</h1>${contact.nickname?`<p>${esc(contact.nickname)}</p>`:''}<p>${esc(contact.phone||'Sin teléfono')} · ${esc(contact.dni||'Sin DNI')}</p></div><div class="m-contact-inline-tools">${has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar contacto">✎</button>`:''}${contactPhones(contact).length?`<a id="mobileContactCall" class="m-contact-call" href="tel:+${contactPhones(contact)[0].number}" aria-label="Llamar al contacto"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg></a>`:''}</div></section>
+      <section class="m-contact-identity m-contact-identity-inline"><button class="m-back" data-action="route" data-route="contacts" aria-label="Volver">‹</button><div class="m-contact-name"><h1>${esc(contact.fullName)}</h1>${contact.nickname?`<p>${esc(contact.nickname)}</p>`:''}<p>${esc(contact.phone||'Sin teléfono')} · ${esc(contact.dni||'Sin DNI')}</p></div><div class="m-contact-inline-tools">${has('can_edit_records')?`<button class="m-back m-contact-upload" data-action="contact-upload" data-id="${esc(id)}" aria-label="Subir archivo, foto o escanear DNI">＋<small>Subir</small></button>`:''}${has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar contacto">✎</button>`:''}${contactPhones(contact).length?`<a id="mobileContactCall" class="m-contact-call" href="tel:+${contactPhones(contact)[0].number}" aria-label="Llamar al contacto"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg></a>`:''}</div></section>
       ${contactPhoneActions(contact)}
       <div class="m-contact-action-grid">${has('can_use_whatsapp')?`<button class="m-primary" data-action="contact-compose" data-id="${esc(id)}" type="button">Enviar WhatsApp</button><button class="m-secondary" data-action="contact-offer" data-id="${esc(id)}" type="button">Enviar oferta</button>`:''}${has('can_edit_sales')?`<button class="m-secondary" data-action="contact-direct" data-id="${esc(id)}" type="button">Venta directa</button>`:''}${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-secondary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Oportunidad</button>`:''}${has('can_manage_agenda')?`<button class="m-secondary" data-action="route" data-route="new-task/${esc(id)}" type="button">＋ Tarea</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" aria-label="Gestionar etiquetas">Etiquetas</button>`:''}</div>
       <div class="m-contact-tab-wrap"><span class="m-contact-tab-hint" aria-hidden="true">Desliza ↔</span><div class="m-tabs m-contact-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades</button><button class="${tab==='offers'?'active':''}" data-action="profile-tab" data-tab="offers" aria-label="Ofertas y seguimiento">Ofertas</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas</button><button class="${tab==='documents'?'active':''}" data-action="profile-tab" data-tab="documents">Archivos</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button></div></div>${body}${tab==='summary'?contactMobileSnapshot(overview,contact):''}
     </div>`;
   }
-  function mountContactDocuments(id){
+  function openContactUpload(id){
+    if(!has('can_edit_records')||!has('can_view_database'))return;
+    const dialog=document.createElement('dialog');dialog.className='m-quick-upload';
+    dialog.innerHTML='<header><strong>Subir a la ficha</strong><button type="button" aria-label="Cerrar">✕</button></header><div class="m-quick-upload-body"></div>';
+    document.body.appendChild(dialog);dialog.querySelector('header button').onclick=()=>dialog.close();
+    dialog.addEventListener('close',()=>{window.TPFMobileDocuments?.leave();dialog.remove();if(state.profileTab==='documents')mountContactDocuments(id);},{once:true});
+    dialog.showModal();mountContactDocuments(id,dialog.querySelector('.m-quick-upload-body'),dialog);
+  }
+  function mountContactDocuments(id,host=null,dialog=null){
     const contact=state.contacts.find(c=>String(c.id)===String(id));if(!contact||!has('can_view_database'))return;
-    window.TPFMobileDocuments?.mount(byId('mobileContactDocuments'),{client,contact,userId:state.user?.id,
-      createTask:has('can_manage_agenda')?files=>{documentTaskDraft={contactId:String(id),files};go('new-task/'+encodeURIComponent(id)+'?fromDocument=1');}:null,
-      isCurrent:()=>!!state.user&&has('can_view_database')&&route().parts[0]==='contact'&&route().parts[1]===String(id)&&state.profileTab==='documents',
+    window.TPFMobileDocuments?.mount(host||byId('mobileContactDocuments'),{client,contact,userId:state.user?.id,quickUpload:!!dialog,
+      createTask:has('can_manage_agenda')?files=>{if(dialog)dialog.close();documentTaskDraft={contactId:String(id),files};go('new-task/'+encodeURIComponent(id)+'?fromDocument=1');}:null,
+      isCurrent:()=>!!state.user&&has('can_view_database')&&route().parts[0]==='contact'&&route().parts[1]===String(id)&&(dialog?dialog.open:state.profileTab==='documents'),
       update:row=>{const index=state.contacts.findIndex(c=>String(c.id)===String(row.id));if(index>=0)state.contacts[index]=mapContact(row);}
     });
   }
@@ -790,7 +798,7 @@
     const id=route().query.get('fromContact');
     return id&&has('can_view_database')&&state.contacts.some(contact=>String(contact.id)===id)?'contact/'+encodeURIComponent(id):'whatsapp';
   }
-  function contactTextCard(contact,kind){const label=kind==='notes'?'Notas':'Observaciones';return `<div class="m-info-row m-contact-text-row"><div class="m-contact-text-head"><span>${label}</span>${has('can_edit_records')?`<button class="m-ghost" data-action="route" data-route="contact-text/${esc(contact.id)}/${kind}" aria-label="Editar ${label.toLowerCase()}">✎</button>`:''}</div><b>${esc(contact[kind]||'—')}</b></div>`;}
+  function contactTextCard(contact,kind){const label=kind==='notes'?'Notas':'Observaciones';return `<div class="m-info-row m-contact-text-row ${contact[kind]?'':'m-contact-text-empty'}"><div class="m-contact-text-head"><span>${label}</span>${has('can_edit_records')?`<button class="m-ghost" data-action="route" data-route="contact-text/${esc(contact.id)}/${kind}" aria-label="Editar ${label.toLowerCase()}">✎</button>`:''}</div><b>${esc(contact[kind]||'—')}</b></div>`;}
   function renderContactText(id,kind){
     const contact=state.contacts.find(c=>String(c.id)===String(id));if(!contact||!has('can_edit_records')||!['notes','observations'].includes(kind))return empty('No disponible','No tienes permiso para editar este contacto.');
     const label=kind==='notes'?'Notas':'Observaciones';
@@ -2050,6 +2058,7 @@ function crmInteractiveText(message){
     if(action==='create-all')performCreation();
     if(action==='retry-creation')performCreation();
     if(action==='finish-flow'){resetDraft();go('home');}
+    if(action==='contact-upload'){openContactUpload(target.dataset.id);return;}
     if(action==='profile-tab'){state.profileTab=target.dataset.tab;if(state.profileTab==='history')contactHistory={id:'',rows:[],loading:false,error:'',limit:50};render();requestAnimationFrame(()=>{const tabs=document.querySelector('.m-contact-tabs'),view=byId('mobileView');if(tabs&&view)view.scrollTop+=tabs.getBoundingClientRect().top-view.getBoundingClientRect().top;});}
     if(action==='contact-compose')openMobileContactCompose(target.dataset.id);
     if(action==='contact-whatsapp')openContactWhatsApp(target.dataset.id);
