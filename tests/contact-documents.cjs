@@ -23,8 +23,10 @@ async function invoke(action,body={},method,extraHeaders={}){let result;const re
  assert.equal(T.folderId('https://drive.google.com/drive/u/0/folders/'+fid),fid);
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));
  assert.throws(()=>T.adapter({version:1,provider:'onedrive'}));
+ calls=[];const mobile=await invoke('mobileList');assert.equal(mobile.status,200);assert.equal(mobile.body.status.connected,true);assert.equal(mobile.body.files.length,1);assert.equal(mobile.body.record.id,rid);assert.equal(calls.filter(c=>c.url.includes('oauth2.googleapis.com')).length,1);assert.ok(!JSON.stringify(mobile).includes('test-google-access'));
  const s=await invoke('status');assert.equal(s.body.connected,true);assert.ok(!JSON.stringify(s).includes('test-refresh'));
  oauthError='invalid_grant';const expired=await invoke('status');assert.equal(expired.body.connected,false);assert.equal(expired.body.reconnectRequired,true);assert.equal((await invoke('list')).body.code,'GOOGLE_RECONNECT_REQUIRED');
+ const mobileExpired=await invoke('mobileList');assert.equal(mobileExpired.body.status.reconnectRequired,true);assert.equal(mobileExpired.body.files.length,0);
  oauthError='temporarily_unavailable';assert.equal((await invoke('status')).status,503);oauthError=null;
  const mobileAuth=await invoke('authorize',{mobile:true});assert.equal(T.unseal(new URL(mobileAuth.body.url).searchParams.get('state')).returnTo,'/movil/#/contact/'+rid);
  const a=await invoke('authorize');assert.equal(a.status,200);assert.equal(new URL(a.body.url).searchParams.get('redirect_uri').includes('crm-documents'),true);

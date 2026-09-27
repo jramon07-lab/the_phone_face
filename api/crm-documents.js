@@ -48,6 +48,17 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  const write=['authorize','link','bulkLink','upload','expiry','trash','ensureFolder'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
  const who=await identity(req),body=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
  if(action==='status'){let connected=false,reconnectRequired=false;if(configured()){try{await token();connected=true;}catch(e){if(e.code!=='GOOGLE_RECONNECT_REQUIRED')throw e;reconnectRequired=true;}}return json(res,200,{ok:true,configured:configured(),connected,reconnectRequired,canManage:!!who.p.is_admin,canUpload:!!(who.p.is_admin||who.p.can_edit_records),callback:who.p.is_admin?CALLBACK:undefined});}
+ // Mobile opens the record, connection and file list in one authenticated request.
+ if(action==='mobileList'){
+  const row=await record(req.query?.contactId,who),link=row.data?.TPF_DOCUMENTS||null;
+  const status={configured:configured(),connected:false,reconnectRequired:false,canManage:!!who.p.is_admin,canUpload:!!(who.p.is_admin||who.p.can_edit_records)};
+  const result={ok:true,status,link,record:row,folder:null,files:[],nextPageToken:null};
+  if(!configured())return json(res,200,result);
+  let t;try{t=await token();status.connected=true;}catch(e){if(e.code!=='GOOGLE_RECONNECT_REQUIRED')throw e;status.reconnectRequired=true;return json(res,200,result);}
+  if(!link)return json(res,200,result);
+  const provider=adapter(link),[f,listing]=await Promise.all([provider.folder(t,link.folder_id),provider.list(t,link.folder_id,req.query?.page)]);
+  return json(res,200,{...result,folder:{id:f.id,name:f.name,canUpload:!!f.capabilities?.canAddChildren},...listing});
+ }
  if(!configured())throw fail(503,'Falta configurar la conexión de Documentos en el servidor.');
  if(action==='authorize'){
   if(!who.p.is_admin)throw fail(403,'Solo el administrador puede conectar Documentos.');
