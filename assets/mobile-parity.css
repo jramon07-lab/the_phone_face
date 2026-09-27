@@ -149,3 +149,9 @@ html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
 .tpfUnifiedMobile .m-contact-snapshot-card span{font-size:10px}
 .tpfUnifiedMobile .m-contact-pending h2{font-size:17px;margin:8px 0}
 .tpfUnifiedMobile .m-contact-pending h3{font-size:14px;margin:12px 0 8px}
+
+/* Latest offer in the mobile contact summary. */
+.tpfUnifiedMobile .m-summary-offer{display:grid;width:100%;min-width:0;gap:2px;text-align:left;padding:8px 10px;margin:0 0 6px;border:1px solid #dce5ef;border-radius:12px;background:#fff;color:#243344;cursor:pointer}
+.tpfUnifiedMobile .m-summary-offer small{font-size:10px;color:#657487}
+.tpfUnifiedMobile .m-summary-offer b{font-size:12px;line-height:1.3;overflow-wrap:anywhere}
+.tpfUnifiedMobile .m-summary-offer span{font-size:11px;color:#2162b6}
