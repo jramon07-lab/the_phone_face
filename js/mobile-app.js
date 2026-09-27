@@ -73,7 +73,7 @@
       id:String(row?.id||''),source:row?.source_sheet||CONTACT_SOURCE,data,
       first,last,fullName:[first,last].filter(Boolean).join(' ')||legacy||'Contacto',
       nickname:clean(field(data,'APODO','Apodo','ALIAS')),
-      phone:clean(field(data,'TELÉFONO','TELEFONO','PHONE','MOVIL')),
+      phone:clean(field(data,'TELÉFONO','TELEFONO','PHONE','MOVIL'))||(contactPhones({data})[0]?.label||''),
       dni:clean(field(data,'DNI / NIF','DNI','NIF')),
       email:clean(field(data,'EMAIL','Email','email')),
       bank:clean(field(data,'BANCO','Banco','bank')),

@@ -8,6 +8,9 @@ const location={hash:'#/contact-text/c1/notes',replace(v){this.hash=v}},context=
 const source=fs.readFileSync('js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`render=()=>{};toast=()=>{};window.api={state,mapContact,contactPhones,contactMatchesSearch,renderContact,openContactWhatsApp,mobileWaBackTarget,mobileWaFindContact,mobileWaContactChat,resolveMobileWaTemplate,saveContactText,loadContactHistory,renderContactHistory,get history(){return contactHistory}};})();`);
 vm.runInNewContext(fs.readFileSync('js/modules/contact-party.js','utf8'),context);vm.runInNewContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);vm.runInNewContext(fs.readFileSync('js/modules/task-model.js','utf8'),context);vm.runInNewContext(source,context);const a=context.window.api;a.state.user={id:'u1'};a.state.perms={can_view_database:true,can_edit_records:true,can_use_whatsapp:true,can_view_agenda:true,can_view_sales:true};a.state.contacts=[a.mapContact(record)];
 (async()=>{
+ assert.equal(a.mapContact({data:{NOMBRE:'Cliente','TELÉFONO':'','TELÉFONO 2':'611 222 333'}}).phone,'611 222 333');
+ assert.equal(a.mapContact({data:{NOMBRE:'Cliente'}}).phone,'');
+ assert.equal(a.mapContact({data:{'TELÉFONO':'600111222','TELÉFONO 2':'611222333'}}).phone,'600111222');
  const chatId='34611222333@c.us';a.state.contacts[0].dni='TEST-DNI';a.state.whatsapp.chats=[{id:chatId,name:'Alias WhatsApp'}];
  assert.equal(a.mobileWaFindContact(chatId).id,'c1');assert.equal(a.mobileWaContactChat(chatId).name,'Cliente');assert.equal(a.resolveMobileWaTemplate('{nombre} {dni} {telefono}',chatId),'Cliente TEST-DNI 0034 611222333');
  assert.equal(a.mobileWaFindContact('447700900123@c.us').id,'c1');assert.equal(a.mobileWaFindContact('347700900123@c.us'),null);assert.equal(a.mobileWaFindContact('34611222333@g.us'),null);
@@ -30,4 +33,3 @@ vm.runInNewContext(fs.readFileSync('js/modules/contact-party.js','utf8'),context
  a.state.perms={};n=calls.length;a.openContactWhatsApp('c1');await a.saveContactText('c1','notes');await a.loadContactHistory('c1');assert.equal(calls.length,n);
  console.log('PASS: all phones/dedup/search, selected chat navigation without sends, isolated text edits, empty values, concurrent edits, duplicate clicks, scoped history and permissions');
 })().catch(e=>{console.error(e);process.exitCode=1});
-
