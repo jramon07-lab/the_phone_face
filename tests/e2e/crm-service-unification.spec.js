@@ -203,6 +203,7 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
           await more.locator('summary').click();
           await page.locator('#tpfMonthlyCloseBtn').click();
           await expect(page.locator('#tpfMonthlyClose')).toBeVisible();
+          await expect(page.locator('#tpfMonthlyClose [data-monthly-view="sales"]')).toBeVisible({timeout:20000});
           for(const size of [{width:1366,height:768},{width:1280,height:720}]){
             await page.setViewportSize(size);
             for(const panel of ['sales','pending']){
