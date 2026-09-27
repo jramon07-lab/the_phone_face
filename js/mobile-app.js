@@ -1183,12 +1183,29 @@
     if(prefix==='newTask'&&documentTaskDraft&&route().query.get('fromDocument')==='1'&&documentTaskDraft.contactId===String(route().parts[1]))meta.attachments=documentTaskDraft.files.map(f=>({id:f.id,name:f.name,url:f.webViewLink}));
     return {agenda_type:type,agenda_meta:meta};
   }
+  function taskDateFields(prefix,suffix,value){
+    const local=taskLocalValue(value),date=local.slice(0,10),time=local.slice(11,16);
+    return `<div class="m-task-date-row"><label class="m-field"><span>Fecha</span><input id="${prefix}${suffix}Date" class="m-input" type="date" value="${esc(date)}"></label><label class="m-field"><span>Hora</span><input id="${prefix}${suffix}Time" class="m-input" type="time" step="60" value="${esc(time)}"></label></div>`;
+  }
+  function taskDateInput(prefix,suffix){
+    const date=byId(prefix+suffix+'Date')?.value,time=byId(prefix+suffix+'Time')?.value;
+    if(!date||!time)return '';
+    return date+'T'+time;
+  }
+  function taskQuickDate(prefix,days){
+    if(!['newTask','editTask'].includes(prefix)||![0,1,7].includes(Number(days)))return;
+    const date=new Date();date.setDate(date.getDate()+Number(days));date.setHours(10,0,0,0);
+    byId(prefix+'StartsDate').value=taskLocalValue(date).slice(0,10);
+    if(!byId(prefix+'StartsTime').value)byId(prefix+'StartsTime').value='10:00';
+  }
+  function defaultTaskDate(){const date=new Date();date.setHours(10,0,0,0);if(date<=new Date())date.setDate(date.getDate()+1);return date;}
   function taskFields(prefix,row={}){
     const type=row.agenda_type||'Tarea';
-    return `<div class="m-form-grid"><label class="m-field"><span>Tipo de recordatorio</span><select id="${prefix}Type" data-task-type-prefix="${prefix}" class="m-select">${taskTypeOptions(type)}</select></label><div id="${prefix}TypeFields" class="m-form-grid">${taskTypeFields(prefix,type,row.agenda_meta||{})}</div><label class="m-field"><span>Asunto</span><input id="${prefix}Title" class="m-input" value="${esc(row.title||'')}" placeholder="Llamar al cliente"></label><label class="m-field"><span>Fecha y hora</span><input id="${prefix}Starts" class="m-input" type="datetime-local" value="${esc(taskLocalValue(row.starts_at))}"></label><label class="m-task-option"><input id="${prefix}ExtraReminder" data-task-reminder-prefix="${prefix}" type="checkbox" ${row.reminder_at?'checked':''}> Añadir otro aviso</label><label class="m-field" id="${prefix}ReminderBox" ${row.reminder_at?'':'hidden'}><span>Recordatorio adicional</span><input id="${prefix}Reminder" class="m-input" type="datetime-local" value="${esc(taskLocalValue(row.reminder_at))}"></label><label class="m-field"><span>Notas</span><textarea id="${prefix}Notes" class="m-textarea">${esc(row.description||'')}</textarea></label><label class="m-task-option"><input id="${prefix}NotifyApp" type="checkbox" ${row.notify_in_app!==false?'checked':''}> Aviso en The Phone Face</label><label class="m-task-option"><input id="${prefix}NotifyEmail" type="checkbox" ${row.notify_email?'checked':''}> Email</label><label class="m-task-option"><input id="${prefix}Google" type="checkbox" ${row.sync_google_calendar?'checked':''}> Añadir a Google Calendar</label></div>`;
+    return `<div class="m-form-grid m-task-form"><label class="m-field"><span>Asunto</span><input id="${prefix}Title" class="m-input" value="${esc(row.title||'')}" placeholder="Llamar al cliente"></label>${taskDateFields(prefix,'Starts',row.starts_at)}<div class="m-task-quick-dates" role="group" aria-label="Elegir fecha">${[[0,'Hoy'],[1,'Mañana'],[7,'En una semana']].map(([days,label])=>`<button type="button" class="m-secondary" data-action="task-quick-date" data-prefix="${prefix}" data-days="${days}">${label}</button>`).join('')}</div><label class="m-field"><span>Notas (opcional)</span><textarea id="${prefix}Notes" class="m-textarea" rows="2" placeholder="Escribe tus notas…">${esc(row.description||'')}</textarea></label><details class="m-task-more"><summary>Más opciones <small id="${prefix}OptionsSummary">${esc(type)} · tipo, prioridad y avisos</small></summary><div class="m-form-grid"><label class="m-field"><span>Tipo de tarea</span><select id="${prefix}Type" data-task-type-prefix="${prefix}" class="m-select">${taskTypeOptions(type)}</select></label><div id="${prefix}TypeFields" class="m-form-grid">${taskTypeFields(prefix,type,row.agenda_meta||{})}</div><label class="m-task-option"><input id="${prefix}ExtraReminder" data-task-reminder-prefix="${prefix}" type="checkbox" ${row.reminder_at?'checked':''}> Añadir otro aviso</label><div id="${prefix}ReminderBox" ${row.reminder_at?'':'hidden'}><small>Recordatorio adicional</small>${taskDateFields(prefix,'Reminder',row.reminder_at)}</div><label class="m-task-option"><input id="${prefix}NotifyEmail" type="checkbox" ${row.notify_email?'checked':''}> Email</label><label class="m-task-option"><input id="${prefix}Google" type="checkbox" ${row.sync_google_calendar?'checked':''}> Añadir a Google Calendar</label></div></details><label class="m-task-option"><input id="${prefix}NotifyApp" type="checkbox" ${row.notify_in_app!==false?'checked':''}> Avisarme en el CRM</label></div>`;
   }
   function readTaskFields(prefix){
-    const title=clean(byId(prefix+'Title')?.value),starts=byId(prefix+'Starts')?.value,reminder=byId(prefix+'Reminder')?.value;
+    const title=clean(byId(prefix+'Title')?.value),starts=taskDateInput(prefix,'Starts'),reminder=byId(prefix+'ExtraReminder')?.checked?taskDateInput(prefix,'Reminder'):'';
+    if(byId(prefix+'ExtraReminder')?.checked&&!reminder)throw new Error('Indica la fecha y hora del aviso adicional.');
     if(!title||!starts)throw new Error('Escribe un asunto y una fecha/hora.');
     if(!Number.isFinite(new Date(starts).getTime())||(reminder&&!Number.isFinite(new Date(reminder).getTime())))throw new Error('La fecha no es válida.');
     return window.TPFTaskModel.payload({...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked});
@@ -1202,7 +1219,7 @@
   function renderNewTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
     const back=mobileWaReturnPath(contactId,'task'),files=route().query.get('fromDocument')==='1'&&documentTaskDraft?.contactId===String(contactId)?documentTaskDraft.files:[],draft=files.length?{title:'Revisar '+files[0].name,description:'',agenda_meta:{attachments:files.map(f=>({id:f.id,name:f.name,url:f.webViewLink}))}}:{title:'Llamar a '+contact.fullName};
-    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskDocumentLinks('',draft.agenda_meta?.attachments||[])}${taskFields('newTask',{...draft,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page m-task-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:10px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskDocumentLinks('',draft.agenda_meta?.attachments||[])}${taskFields('newTask',{...draft,starts_at:defaultTaskDate()})}<div class="m-task-save"><button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg" role="status"></p></div></div>`;
   }
   function ensureTaskDetail(id){if(!has('can_view_agenda')&&!has('can_manage_agenda'))return;if(taskDetail.id!==String(id))loadTaskDetail(id);}
   async function loadTaskDetail(id){
@@ -1244,7 +1261,7 @@
     finally{taskWrites.delete(String(id));}
   }
   async function saveTask(contactId){
-    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),msg=byId('mobileTaskMsg');if(!contact||!has('can_manage_agenda')){if(msg)msg.textContent='No tienes permiso o el contacto ya no existe.';return;}const title=clean(byId('newTaskTitle')?.value),starts=byId('newTaskStarts')?.value;
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),msg=byId('mobileTaskMsg');if(!contact||!has('can_manage_agenda')){if(msg)msg.textContent='No tienes permiso o el contacto ya no existe.';return;}const title=clean(byId('newTaskTitle')?.value),starts=taskDateInput('newTask','Starts');
     if(!title||!starts){if(msg)msg.textContent='Escribe un asunto y una fecha.';return;}
     const back=mobileWaReturnPath(contact.id,'task');
     const button=document.querySelector('[data-action="save-task"]');button.disabled=true;byId('mobileTaskMsg').textContent='Guardando…';
@@ -1976,9 +1993,9 @@ function crmInteractiveText(message){
     byId('mobileView').addEventListener('change',event=>{
       if(event.target?.dataset?.contactPhone){const phone=selectedContactPhone(event.target.dataset.contactPhone),link=byId('mobileContactCall');if(phone&&link)link.href='tel:+'+phone.number;return;}
       const reminderPrefix=event.target?.dataset?.taskReminderPrefix;
-      if(['newTask','editTask'].includes(reminderPrefix)){const box=byId(reminderPrefix+'ReminderBox'),input=byId(reminderPrefix+'Reminder');if(box)box.hidden=!event.target.checked;if(input&&!event.target.checked)input.value='';return;}
+      if(['newTask','editTask'].includes(reminderPrefix)){const box=byId(reminderPrefix+'ReminderBox'),input=byId(reminderPrefix+'Reminder');if(box)box.hidden=!event.target.checked;if(!event.target.checked){byId(reminderPrefix+'ReminderDate').value='';byId(reminderPrefix+'ReminderTime').value='';}return;}
       const prefix=event.target?.dataset?.taskTypePrefix;
-      if(['newTask','editTask'].includes(prefix)){const fields=byId(prefix+'TypeFields');if(fields)fields.innerHTML=taskTypeFields(prefix,event.target.value);return;}
+      if(['newTask','editTask'].includes(prefix)){const fields=byId(prefix+'TypeFields');if(fields)fields.innerHTML=taskTypeFields(prefix,event.target.value);const summary=byId(prefix+'OptionsSummary');if(summary)summary.textContent=event.target.value+' · tipo, prioridad y avisos';return;}
       if(event.target?.id==='mobileProfileLabelCategory'){filterProfileLabels();return;}
       const id=event.target?.dataset?.profileLabelId;
       if(id&&profileLabels.loaded&&!profileLabels.saving){event.target.checked?profileLabels.selected.add(id):profileLabels.selected.delete(id);}
@@ -1998,6 +2015,7 @@ function crmInteractiveText(message){
   }
   async function handleViewClick(event){
     const target=event.target.closest('[data-action]');if(!target)return;event.preventDefault();const action=target.dataset.action;
+    if(action==='task-quick-date'){taskQuickDate(target.dataset.prefix,target.dataset.days);return;}
     if(action==='mobile-rel-add'||action==='mobile-rel-remove'){mobileUpdateRelations(target.dataset.prefix,target.dataset.id,action==='mobile-rel-remove');return;}
     if(action==='mobile-rel-create'){await mobileCreateHolder(target.dataset.prefix,target);return;}
     if(action.startsWith('system-')){await window.TPFMobileSystem?.handle?.(action,target);return;}

@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+process.env.TZ='Europe/Madrid';
+const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',checked:false});return nodes.get(id)};
+const context={window:{supabase:{createClient:()=>({})},TPFTaskModel:{payload:x=>x}},document:{getElementById:node},console,Intl,Date,URL,URLSearchParams,setTimeout,clearTimeout};
+const source=fs.readFileSync('js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`window.api={taskFields,readTaskFields,taskQuickDate,taskLocalValue,setRow(row){taskDetail.row=row}};})();`);
+vm.runInNewContext(source,context);const a=context.window.api;
+const html=a.taskFields('editTask',{starts_at:'2026-09-28T08:00:00.000Z',agenda_type:'Cita',agenda_meta:{location:'Tienda'},notify_email:true,sync_google_calendar:true});
+assert(html.includes('value="10:00"'));assert(!html.includes('datetime-local'));for(const id of ['Type','Location','NotifyEmail','Google','ExtraReminder','Notes'])assert(html.includes('editTask'+id));
+node('editTaskTitle').value='Revisar archivo';node('editTaskType').value='Cita';node('editTaskLocation').value='Tienda';node('editTaskStartsDate').value='2026-09-28';node('editTaskStartsTime').value='10:00';node('editTaskNotes').value='Mis notas';node('editTaskNotifyApp').checked=true;node('editTaskNotifyEmail').checked=true;node('editTaskGoogle').checked=true;
+a.setRow({agenda_meta:{attachments:[{name:'Documento',url:'https://drive.google.com/file/d/example/view'}]}});
+let result=a.readTaskFields('editTask');assert.equal(result.starts_at,'2026-09-28T08:00:00.000Z');assert.equal(result.description,'Mis notas');assert.equal(result.agenda_meta.attachments.length,1);assert(result.notify_email&&result.sync_google_calendar&&result.notify_in_app);
+node('editTaskStartsDate').value='2026-12-28';result=a.readTaskFields('editTask');assert.equal(result.starts_at,'2026-12-28T09:00:00.000Z');
+node('editTaskExtraReminder').checked=true;assert.throws(()=>a.readTaskFields('editTask'),/aviso adicional/);node('editTaskReminderDate').value='2026-12-27';node('editTaskReminderTime').value='17:30';assert.equal(a.readTaskFields('editTask').reminder_at,'2026-12-27T16:30:00.000Z');node('editTaskExtraReminder').checked=false;assert.equal(a.readTaskFields('editTask').reminder_at,null);
+node('editTaskStartsTime').value='17:45';a.taskQuickDate('editTask',7);const next=new Date();next.setDate(next.getDate()+7);assert.equal(node('editTaskStartsDate').value,a.taskLocalValue(next).slice(0,10));assert.equal(node('editTaskStartsTime').value,'17:45');node('editTaskStartsTime').value='';assert.throws(()=>a.readTaskFields('editTask'),/fecha/);
+console.log('PASS: compact controls, summer/winter local times, optional reminder, preserved attachments and notifications, quick dates retain time');
