@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 Object.assign(process.env,{SUPABASE_SERVICE_ROLE_KEY:'test-service',SUPABASE_ANON_KEY:'test-anon',GOOGLE_DRIVE_CLIENT_ID:'test-client',GOOGLE_DRIVE_CLIENT_SECRET:'test-secret',CRM_BACKUP_ENCRYPTION_KEY:'test-encryption'});
 const handler=require('../api/crm-documents.js'),T=handler._test;
 const rid='11111111-1111-1111-1111-111111111111',fid='folder_test_123456';
-let oauthError=null;
+let oauthError=null,thumbnailParents=null,thumbnailUrl=null;
 let permission={user_id:rid,is_admin:true,can_edit_records:true},savedLink={version:1,provider:'google_drive',folder_id:fid,folder_name:'Carpeta'},patch=null,emptyPatch=false,calls=[];
 const row=()=>({id:rid,source_sheet:'BASE DE DATOS',data:{NOMBRE:'Contacto',NOTAS:'Conservar',TPF_TITULAR:{same:false,holder_name:'Titular'},TPF_DOCUMENTS:savedLink}});
 const response=(body,status=200,headers={})=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json',...headers}});
@@ -13,12 +13,13 @@ global.fetch=async(url,options={})=>{calls.push({url,options});
  if(url.includes('/rest/v1/records')){if(options.method==='PATCH'){patch=JSON.parse(options.body);return response(emptyPatch?[]:[{...row(),...patch}]);}return response([row()]);}
  if(url.includes('/upload/drive'))return response({},200,{location:'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'});
  if(url.includes('/drive/v3/files/root_test_123456'))return response({id:'root_test_123456',name:'Clientes',mimeType:'application/vnd.google-apps.folder'});
- if(url.includes('/drive/v3/files/file_test_123456'))return response({id:'file_test_123456',name:'DNI.pdf',mimeType:'application/pdf',parents:[fid],capabilities:{canTrash:true},trashed:false});
+ if(String(url).startsWith('https://lh3.googleusercontent.com/'))return new Response(new Uint8Array([255,216,255,217]),{headers:{'Content-Type':'image/jpeg'}});
+ if(url.includes('/drive/v3/files/file_test_123456'))return response({thumbnailLink:thumbnailUrl,id:'file_test_123456',name:'DNI.pdf',mimeType:'application/pdf',parents:thumbnailParents||[fid],capabilities:{canTrash:true},trashed:false});
  if(url.includes('/drive/v3/files/'+fid))return response({id:fid,name:'Carpeta verificada',mimeType:'application/vnd.google-apps.folder',parents:['root_test_123456'],capabilities:{canAddChildren:true}});
  if(url.includes('/drive/v3/files?'))return response({files:[{id:'file_test',name:'Factura.pdf'}]});
  throw Error('Unexpected network call: '+url);
 };
-async function invoke(action,body={},method,extraHeaders={},extraQuery={}){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry','trash'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-fotos-y.vercel.app',...extraHeaders},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456',...extraQuery},body:{contactId:rid,...body}},res);return result;}
+async function invoke(action,body={},method,extraHeaders={},extraQuery={}){let result;const res={setHeader(){return this;},status(s){this.code=s;return this;},json(d){result={status:this.code,body:d};return this;},end(){result={status:this.code};return this;}};await handler({method:method||(['link','bulkLink','upload','authorize','expiry','trash','thumbnails'].includes(action)?'POST':'GET'),headers:{authorization:'Bearer test.token.value',host:'the-phone-face-app-whatsapp-fotos-y.vercel.app',...extraHeaders},query:{action,contactId:rid,q:'Cliente',rootId:'root_test_123456',...extraQuery},body:{contactId:rid,...body}},res);return result;}
 (async()=>{
  assert.equal(T.folderId('https://drive.google.com/drive/u/0/folders/'+fid),fid);
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));
@@ -28,6 +29,13 @@ async function invoke(action,body={},method,extraHeaders={},extraQuery={}){let r
  for(const [body,expected] of [[{size:0},'vacío'],[{size:101*1024*1024},'máximo'],[{mimeType:'text/html'},'Formato'],[{name:'bad/name.jpg'},'nombre']]){const bad=await invoke('upload',{expectedLink:savedLink,name:'image.jpg',size:6000000,mimeType:'image/jpeg',...body});assert.equal(bad.status,400);assert(bad.body.error.includes(expected));}
  const alias=await invoke('upload',{expectedLink:savedLink,name:'image.jpg',size:6000000,mimeType:'image/jpg'});assert.equal(alias.status,200);assert.equal(alias.body.mimeType,'image/jpeg');
  const raw=await invoke('upload',{expectedLink:savedLink,name:'Photo.DNG',size:75*1024*1024,mimeType:'image/x-adobe-dng'});assert.equal(raw.status,200);assert.equal(raw.body.mimeType,'image/x-adobe-dng');
+
+ calls=[];let duplicate=await invoke('upload',{expectedLink:savedLink,name:'Factura.pdf',size:1000,mimeType:'application/pdf',checkDuplicates:true});assert.equal(duplicate.body.duplicates.length,1);assert(!calls.some(c=>c.url.includes('/upload/drive')));
+ duplicate=await invoke('upload',{expectedLink:savedLink,name:'Factura.pdf',size:1000,mimeType:'application/pdf',checkDuplicates:true,allowDuplicate:true});assert(duplicate.body.uploadUrl);
+ thumbnailUrl='https://lh3.googleusercontent.com/test';let thumb=await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:savedLink});assert.equal(thumb.status,200);assert(thumb.body.images[0].data.startsWith('data:image/jpeg;base64,'));assert(!JSON.stringify(thumb).includes('test-google-access'));
+ thumbnailParents=['other_folder'];assert.equal((await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:savedLink})).status,403);thumbnailParents=null;
+ thumbnailUrl='https://evil.test/steal';calls=[];thumb=await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:savedLink});assert.equal(thumb.body.images[0].data,null);assert(!calls.some(c=>String(c.url).includes('evil.test')));thumbnailUrl=null;
+ assert.equal((await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:null})).status,409);
  const s=await invoke('status');assert.equal(s.body.connected,true);assert.ok(!JSON.stringify(s).includes('test-refresh'));
  oauthError='invalid_grant';const expired=await invoke('status');assert.equal(expired.body.connected,false);assert.equal(expired.body.reconnectRequired,true);assert.equal((await invoke('list')).body.code,'GOOGLE_RECONNECT_REQUIRED');
  const mobileExpired=await invoke('mobileList');assert.equal(mobileExpired.body.status.reconnectRequired,true);assert.equal(mobileExpired.body.files.length,0);

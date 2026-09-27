@@ -30,7 +30,7 @@ async function record(id,who){if(!/^[0-9a-f-]{36}$/i.test(String(id)))throw fail
 function folderId(value){let s=String(value||'').trim();if(s.startsWith('https://')){let u;try{u=new URL(s);}catch(_){throw fail(400,'Enlace no válido.');}if(u.hostname!=='drive.google.com')throw fail(400,'Pega un enlace de carpeta de Google Drive.');s=u.pathname.match(/\/folders\/([\w-]+)/)?.[1]||'';}if(!/^[\w-]{10,200}$/.test(s))throw fail(400,'Identificador de carpeta no válido.');return s;}
 async function drive(t,path,options={}){const r=await request('https://www.googleapis.com/drive/v3/'+path,{...options,headers:{Authorization:'Bearer '+t,...options.headers}});if(!r.ok)throw fail(r.status===404?404:502,r.status===404?'La carpeta no existe o Google no permite acceder a ella.':'Google Drive no pudo completar la operación. Inténtalo más tarde.');return r.json();}
 async function folder(t,id){const d=await drive(t,'files/'+folderId(id)+'?supportsAllDrives=true&fields=id,name,mimeType,trashed,parents,capabilities(canAddChildren),webViewLink');if(d.trashed||d.mimeType!==FOLDER)throw fail(400,'Elige una carpeta existente, no un archivo.');return d;}
-const adapters={google_drive:{folder,async list(t,id,page){const q=new URLSearchParams({q:"'"+folderId(id)+"' in parents and trashed = false and mimeType != '"+FOLDER+"'",fields:'nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink)',pageSize:'100',orderBy:'name',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});if(page)q.set('pageToken',String(page));return drive(t,'files?'+q);}}};
+const adapters={google_drive:{folder,async list(t,id,page){const q=new URLSearchParams({q:"'"+folderId(id)+"' in parents and trashed = false and mimeType != '"+FOLDER+"'",fields:'nextPageToken,files(id,name,mimeType,size,modifiedTime,webViewLink,hasThumbnail)',pageSize:'100',orderBy:'name',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});if(page)q.set('pageToken',String(page));return drive(t,'files?'+q);}}};
 function adapter(link){if(!link||link.version!==1)throw fail(409,'Vincula primero una carpeta.');if(!adapters[link.provider])throw fail(409,'Este proveedor todavía no está conectado.');return adapters[link.provider];}
 function cookie(req,name){return String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith(name+'='))?.slice(name.length+1)||'';}
 module.exports=async function(req,res){res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Content-Type-Options','nosniff');const action=String(req.query?.action||'status');try{
@@ -45,7 +45,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const saved=await request(SB+'/rest/v1/crm_external_credentials?on_conflict=provider',{method:'POST',headers:{...serviceHeaders(),Prefer:'resolution=merge-duplicates'},body:JSON.stringify({provider:PROVIDER,encrypted_value:seal({refresh_token:d.refresh_token}),updated_by:state.userId,updated_at:new Date().toISOString()})});if(!saved.ok)throw fail(503,'No se pudo guardar la autorización.');
   res.setHeader('Set-Cookie','tpf_docs_nonce=; Path=/api/crm-documents; HttpOnly; Secure; SameSite=Lax; Max-Age=0');res.setHeader('Location',ORIGIN+(/^\/movil\/#\/contact\/[0-9a-f-]{36}$/i.test(state.returnTo||'')?state.returnTo:'/?documents=connected'));return res.status(303).end();
  }
- const write=['authorize','link','bulkLink','upload','expiry','trash','ensureFolder'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
+ const write=['authorize','link','bulkLink','upload','expiry','trash','ensureFolder','thumbnails'].includes(action);if(req.method!==(write?'POST':'GET'))throw fail(405,'Método no permitido.');
  const who=await identity(req),body=typeof req.body==='string'?JSON.parse(req.body):req.body||{};
  if(action==='status'){let connected=false,reconnectRequired=false;if(configured()){try{await token();connected=true;}catch(e){if(e.code!=='GOOGLE_RECONNECT_REQUIRED')throw e;reconnectRequired=true;}}return json(res,200,{ok:true,configured:configured(),connected,reconnectRequired,canManage:!!who.p.is_admin,canUpload:!!(who.p.is_admin||who.p.can_edit_records),callback:who.p.is_admin?CALLBACK:undefined});}
  // Mobile opens the record, connection and file list in one authenticated request.
@@ -118,6 +118,20 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
  }
  const provider=adapter(link);
  if(action==='list'){const f=await provider.folder(t,link.folder_id);return json(res,200,{ok:true,folder:{id:f.id,name:f.name,canUpload:!!f.capabilities?.canAddChildren},...await provider.list(t,link.folder_id,req.query?.page)});}
+ if(action==='thumbnails'){
+  if(stableLink(body.expectedLink)!==stableLink(link))throw fail(409,'La carpeta ha cambiado.');
+  const ids=Array.isArray(body.ids)?[...new Set(body.ids)]:[];if(!ids.length||ids.length>4)throw fail(400,'Elige de 1 a 4 miniaturas.');
+  const images=await Promise.all(ids.map(async id=>{
+   const f=await drive(t,'files/'+folderId(id)+'?supportsAllDrives=true&fields=id,parents,trashed,thumbnailLink');
+   if(f.trashed||!f.parents?.includes(link.folder_id))throw fail(403,'El archivo no pertenece a esta ficha.');
+   if(!f.thumbnailLink)return {id,data:null};
+   const u=new URL(f.thumbnailLink);if(u.protocol!=='https:'||!(u.hostname==='googleusercontent.com'||u.hostname.endsWith('.googleusercontent.com')))return {id,data:null};
+   const r=await request(u.href,{headers:{Authorization:'Bearer '+t},redirect:'error'});if(!r.ok)return {id,data:null};
+   const mime=String(r.headers.get('content-type')||'').split(';')[0];if(!['image/jpeg','image/png','image/webp'].includes(mime))return {id,data:null};
+   const bytes=Buffer.from(await r.arrayBuffer());if(bytes.length>512000)return {id,data:null};
+   return {id,data:'data:'+mime+';base64,'+bytes.toString('base64')};
+  }));return json(res,200,{ok:true,images});
+ }
  if(action==='trash'){
   if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para retirar documentos.');
   if(body.confirmed!==true)throw fail(400,'Confirma el archivo que quieres enviar a la papelera.');
@@ -140,6 +154,11 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   if(!Number.isSafeInteger(size)||size<=0)throw fail(400,'La foto o archivo llega vacío. Vuelve a seleccionarlo desde Fotos o Archivos.');
   if(size>100*1024*1024)throw fail(400,'El archivo pesa '+(size/1024/1024).toFixed(1)+' MB. El máximo es 100 MB.');
   if(!UPLOAD_MIMES.has(mime))throw fail(400,'Formato no admitido ('+(mime||'sin identificar')+'). Selecciona una foto JPEG, PNG, HEIC o un PDF.');
+  if(body.checkDuplicates===true&&body.allowDuplicate!==true){
+   const quote=v=>String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+   const q=new URLSearchParams({q:"'"+quote(f.id)+"' in parents and trashed = false and name = '"+quote(name)+"'",fields:'files(id,name,size,mimeType,webViewLink,modifiedTime)',pageSize:'5',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});
+   const existing=await drive(t,'files?'+q);if(existing.files?.length)return json(res,200,{ok:true,duplicates:existing.files});
+  }
   const r=await request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(size),Origin:uploadOrigin(req)},body:JSON.stringify({name,mimeType:mime,parents:[f.id]})});const url=r.headers.get('location');if(!r.ok||!url||new URL(url).origin!=='https://www.googleapis.com')throw fail(502,'Google no pudo preparar la subida.');return json(res,200,{ok:true,uploadUrl:url,mimeType:mime});
  }
  throw fail(400,'Acción no disponible.');
