@@ -325,6 +325,12 @@ test.describe('Móvil de solo lectura', () => {
       await page.locator('[data-mobile-route="contacts"]').click();
       await expect(page.locator('#mobileView .m-contact-card').first()).toBeVisible({timeout:15000});
       await page.locator('#mobileView .m-contact-card').first().click();
+      await page.locator('[data-action="contact-compose"]').click();
+      await expect(page.locator('.m-contact-compose textarea')).toBeVisible();
+      await expect(page.locator('.m-contact-compose [data-send]')).toBeVisible();
+      await page.locator('.m-contact-compose [data-schedule]').click();
+      await expect(page.locator('#tpfS3save')).toBeVisible();
+      await page.locator('#tpfSched3 [data-close]').first().click();
       await expect(page.locator('[data-action="contact-offer"]')).toBeVisible();
       await page.locator('[data-action="contact-offer"]').click();
       await expect(page.locator('#opOfferModal:not(.hidden) #opPreview')).toBeVisible({timeout:15000});

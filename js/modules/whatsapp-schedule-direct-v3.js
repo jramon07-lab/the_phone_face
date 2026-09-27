@@ -529,7 +529,7 @@ function open(prefill={}){
     if(event.key==='Escape'&&!$('tpfDirectPickerModal'))close();
   };
   document.addEventListener('keydown',escapeHandler);
-  $('tpfS3msg').focus();
+  if(document.body.classList.contains('tpfUnifiedMobile'))overlay.querySelector('[data-close]').focus();else $('tpfS3msg').focus();
   return overlay;
 }
 

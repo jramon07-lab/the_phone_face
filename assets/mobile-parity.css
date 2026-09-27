@@ -46,3 +46,31 @@
 .tpfUnifiedMobile .m-wa-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.tpfUnifiedMobile .m-wa-filter{min-width:0;padding:7px 5px;justify-content:space-between}
 .tpfUnifiedMobile .opShell .opCard.active{background:#eaf2ff;color:#1d2939;border:2px solid #1769e0}.tpfUnifiedMobile .opShell .opCard.active span{color:#475467}
 .tpfUnifiedMobile .m-input,.tpfUnifiedMobile .m-select,.tpfUnifiedMobile .m-textarea{font-size:16px}
+/* Keep the installed iPhone layout inside the visible screen, including keyboard changes. */
+html .tpfUnifiedMobile .m-app{position:fixed;top:var(--mobile-visible-top,0px);left:0;width:100%;height:var(--mobile-visible-height,100dvh);min-height:0;display:flex;flex-direction:column}
+html .tpfUnifiedMobile .m-app>.m-header,html .tpfUnifiedMobile .m-app>.m-view,html .tpfUnifiedMobile .m-app>.m-bottom-nav{position:relative;inset:auto;transform:none;width:100%;max-width:680px;margin-inline:auto}
+html .tpfUnifiedMobile .m-app>.m-header{flex-shrink:0}
+html .tpfUnifiedMobile .m-app>.m-view{flex:1 1 0;min-height:0;padding-bottom:24px}
+html .tpfUnifiedMobile .m-app>.m-bottom-nav{flex-shrink:0;height:auto;min-height:calc(76px + env(safe-area-inset-bottom,0px));padding:8px 8px max(14px,env(safe-area-inset-bottom,0px));align-items:center}
+.tpfUnifiedMobile .m-bottom-nav button{min-height:52px}.tpfUnifiedMobile .m-bottom-nav small{font-size:11px;line-height:1.3}.tpfUnifiedMobile .m-bottom-nav .m-nav-add{margin-top:0;width:50px;height:50px}
+html.m-keyboard-open .tpfUnifiedMobile .m-bottom-nav{display:none}
+.tpfUnifiedMobile .m-contact-identity .m-avatar{background:#eaf2ff;color:#245fba}
+.tpfUnifiedMobile .m-contact-identity{padding:12px;margin-bottom:10px}.tpfUnifiedMobile .m-contact-identity h1{font-size:18px}
+.tpfUnifiedMobile .m-contact-phone-actions{margin-bottom:8px}.tpfUnifiedMobile .m-contact-phone-actions a{min-height:44px}
+.tpfUnifiedMobile .m-contact-action-grid{gap:6px;margin-bottom:8px}.tpfUnifiedMobile .m-contact-action-grid button{min-height:44px;padding:8px}
+.tpfUnifiedMobile .m-contact-snapshot{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-block:10px}
+.tpfUnifiedMobile .m-contact-snapshot-card{padding:10px;grid-column:auto;min-height:74px}
+.tpfUnifiedMobile .m-contact-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:4px;margin:12px 0}
+.tpfUnifiedMobile .m-contact-tabs button{min-width:0;min-height:44px;padding:7px 3px;white-space:normal;font-size:12px}
+.tpfUnifiedMobile #tpfSched3{top:var(--mobile-visible-top,0px)!important;bottom:auto!important;height:var(--mobile-visible-height,100dvh)!important;padding:8px!important;box-sizing:border-box;align-items:center}
+.tpfUnifiedMobile #tpfSched3 .tpfS3{width:100%;max-width:600px;max-height:100%;display:flex;flex-direction:column;overflow:hidden}
+.tpfUnifiedMobile #tpfSched3 .tpfS3h,.tpfUnifiedMobile #tpfSched3 .tpfS3f{flex:none;padding:10px 12px;flex-direction:row;gap:8px}
+.tpfUnifiedMobile #tpfSched3 .tpfS3h h2{font-size:20px}.tpfUnifiedMobile #tpfSched3 .tpfS3h [data-close]{width:44px;min-width:44px;height:44px;padding:0;font-size:24px}
+.tpfUnifiedMobile #tpfSched3 .tpfS3b{overflow:auto;min-height:0;padding:12px;overscroll-behavior:contain}
+.tpfUnifiedMobile #tpfSched3 input,.tpfUnifiedMobile #tpfSched3 textarea,.tpfUnifiedMobile #tpfSched3 select{font-size:16px!important;min-width:0;max-width:100%;color:#1d2939}
+.tpfUnifiedMobile #tpfSched3 .tpfS3q{padding:8px 4px;min-height:54px}.tpfUnifiedMobile #tpfSched3 .tpfS3f button{min-height:44px;padding:8px;font-size:14px}.tpfUnifiedMobile #tpfSched3 .tpfS3primary{background:#1769e0}
+.tpfUnifiedMobile dialog.m-contact-compose{position:fixed;top:calc(var(--mobile-visible-top,0px) + 8px);bottom:auto;margin:0 auto;width:calc(100% - 16px);max-height:calc(var(--mobile-visible-height,100dvh) - 16px);padding:0;overflow:hidden}
+.tpfUnifiedMobile dialog.m-contact-compose[open]{display:flex;flex-direction:column}
+.m-contact-compose header,.m-contact-compose footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;flex-shrink:0}.m-contact-compose h2{font-size:20px;margin:0}.m-contact-compose p{font-size:14px;margin:5px 0}.m-contact-compose header button{font-size:24px;min-width:44px}
+.m-compose-body{padding:12px;overflow:auto;min-height:0}.m-compose-body label{display:block;margin-bottom:12px;font-size:14px}.m-compose-body textarea,.m-compose-body select{display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #dce4ef;border-radius:8px;background:#fff;color:#1d2939;font-size:16px!important}.m-contact-compose footer button{flex:1}.tpfUnifiedMobile .m-contact-compose [data-send]{background:#1769e0;color:#fff}
+.tpfUnifiedMobile .m-contact-action-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tpfUnifiedMobile .m-contact-action-grid button{font-size:12px;white-space:normal}

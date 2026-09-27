@@ -13,7 +13,7 @@ window.fixtureContact={id:'demo-1',data:{NOMBRE:'Ana',APELLIDOS:'Martín','TELÉ
 const db={auth:{getSession:async()=>({data:{session:{access_token:'fixture'}}})},rpc:async(name,args)=>{fixtureWrites.push({name,args});return {data:name==='crm_whatsapp_mark_internal_read'?args.p_ts:[],error:null}},from(table){let row;const q=new Proxy({},{get(_,key){if(key==='then')return (ok,bad)=>Promise.resolve({data:row||(table==='records'?fixtureContact:table==='crm_whatsapp_chat_state'?[...fixtureRows.values()]:table==='crm_offer_catalog'?[{id:'offer-1',operator:'Vodafone',name:'Fibra',base_price:30,base_features:['Fibra 600 Mb'],active:true}]:[]),error:null}).then(ok,bad);return (...args)=>{if(key==='upsert'){row=args[0];fixtureRows.set(row.chat_id,row);fixtureWrites.push({table,row})}return q}}});return q}};window.supabase={createClient:()=>db};
 });
 for(const file of ['record-links','task-model','contact-party'])await page.addScriptTag({path:root+'/js/modules/'+file+'.js'});
-let app=fs.readFileSync(root+'/js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`window.fixture={state,render,bindStaticEvents,mapContact,renderMobileWhatsAppChat,renderMobileWhatsApp,openMobileSharedOffer,openMobileSharedSchedule,renderContact,updateMobileWaListDom,loadMobileWaChats,refreshVisibleMobileData,rememberMobileDraft,renderMobileWaListBody};})();`);
+let app=fs.readFileSync(root+'/js/mobile-app.js','utf8').replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`initMobileViewport();window.fixture={state,render,bindStaticEvents,mapContact,renderMobileWhatsAppChat,renderMobileWhatsApp,openMobileSharedOffer,openMobileSharedSchedule,renderContact,updateMobileWaListDom,loadMobileWaChats,refreshVisibleMobileData,rememberMobileDraft,renderMobileWaListBody};})();`);
 await page.addScriptTag({content:app});
 for(const file of ['whatsapp-inbox-manual','whatsapp-automation-inbox','whatsapp-auto-replies','whatsapp-read-guard','offer-followup-ui','offers-pro','whatsapp-schedule-direct-v3'])await page.addScriptTag({path:root+'/js/modules/'+file+'.js'});
 await page.evaluate(()=>{fixture.state.user={id:'demo-user'};fixture.state.perms={is_admin:true};fixture.state.contacts=[fixture.mapContact(fixtureContact)];fixture.state.whatsapp.chats=[{id:'34600000001@c.us',name:'Ana Martín',unreadCount:1,_lastMessage:{type:'incoming',textMessage:'Hola',timestamp:Math.floor(Date.now()/1000)-10}}];fixture.state.whatsapp.selectedId='34600000001@c.us';document.getElementById('mobileBoot').classList.add('hidden');document.getElementById('mobileApp').classList.remove('hidden');fixture.bindStaticEvents();document.getElementById('mobileView').innerHTML=fixture.renderMobileWhatsApp();});
@@ -54,6 +54,28 @@ for(const route of ['home','contacts','contact/demo-1','opportunities','alerts',
 }
 await page.fill('#editFirst','Ana editada');await page.evaluate(()=>fixture.refreshVisibleMobileData());assert.equal(await page.inputValue('#editFirst'),'Ana editada');
 await page.screenshot({path:'/tmp/mobile-review-contact.png'});
+// Reproduce the installed-screen and keyboard constraints from the user recordings.
+await page.evaluate(()=>{location.hash='#/contact/demo-1';document.documentElement.classList.add('m-installed')});
+await page.locator('[data-action="contact-compose"]').waitFor();
+await page.screenshot({path:'/tmp/mobile-contact-fixed.png'});
+assert(await page.evaluate(()=>{const nav=document.querySelector('.m-bottom-nav').getBoundingClientRect();return nav.bottom<=innerHeight+1&&[...document.querySelectorAll('.m-bottom-nav button')].every(b=>b.getBoundingClientRect().bottom<=innerHeight-10)}),'navigation tap targets clear the bottom edge');
+await page.click('[data-action="contact-compose"]');
+assert.match(await page.locator('.m-contact-compose').innerText(),/Enviar ahora/);
+await page.fill('.m-contact-compose textarea','Prueba de programación');
+await page.click('.m-contact-compose [data-schedule]');
+assert.equal(await page.inputValue('#tpfS3msg'),'Prueba de programación');
+assert.equal(await page.inputValue('#tpfS3phone'),'34600000001');
+await page.setViewportSize({width:393,height:440});
+await page.locator('#tpfS3msg').focus();
+assert(await page.evaluate(()=>{const x=document.querySelector('#tpfSched3 [data-close]').getBoundingClientRect(),save=document.querySelector('#tpfS3save').getBoundingClientRect();return x.top>=0&&save.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth+1}),'scheduler header and footer fit with keyboard-sized viewport');
+await page.screenshot({path:'/tmp/mobile-keyboard-fixed.png'});
+await page.locator('#tpfSched3 [data-close]').first().click();await page.setViewportSize({width:393,height:852});
+await page.click('.m-contact-tabs [data-tab="tasks"]');
+assert(await page.evaluate(()=>{const tabs=document.querySelector('.m-contact-tabs').getBoundingClientRect(),view=document.querySelector('#mobileView').getBoundingClientRect();return tabs.top>=view.top-1&&tabs.bottom<view.bottom-44}),'selected tab and content remain visible');
+await page.click('[data-action="contact-compose"]');await page.fill('.m-contact-compose textarea','Mensaje de prueba aislado');
+await page.evaluate(()=>{window.sentFixture=[];window.fetch=async(url,options)=>{sentFixture.push({url:String(url),body:options?.body});return {ok:true,json:async()=>({ok:true,idMessage:'synthetic-only'})}}});
+await page.click('.m-contact-compose [data-send]');await page.locator('.m-contact-compose').waitFor({state:'detached'});
+assert(await page.evaluate(()=>sentFixture.some(r=>r.body?.includes('Mensaje de prueba aislado')&&r.body?.includes('34600000001@c.us')&&r.body?.includes('manualReply'))),'manual sending uses chosen recipient and read policy');
 const elapsed=await page.evaluate(()=>{const contacts=fixture.state.contacts,chats=fixture.state.whatsapp.chats;fixture.state.contacts=Array.from({length:2500},(_,i)=>({id:'c'+i,phone:String(600000000+i),fullName:'Cliente '+i,nickname:'Apodo '+i}));fixture.state.whatsapp.chats=fixture.state.contacts.slice(0,1500).map(c=>({id:'34'+c.phone+'@c.us',name:c.fullName}));fixture.state.whatsapp.filter='all';const start=performance.now();fixture.renderMobileWaListBody();const elapsed=performance.now()-start;fixture.state.contacts=contacts;fixture.state.whatsapp.chats=chats;return elapsed;});assert(elapsed<1500,'indexed list with 2500 contacts and 1500 chats');console.log('Synthetic large-list render milliseconds:',Math.round(elapsed));
 assert.deepEqual(errors,[]);console.log('Mobile parity: light theme, private read, quick reply draft, shared waiting and offer layout passed.');
 }finally{await browser.close()}
