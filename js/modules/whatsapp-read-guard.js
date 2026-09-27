@@ -18,7 +18,7 @@ function apply(row){
 }
 async function sync(){
  if(syncing||!db()?.rpc||document.hidden)return;syncing=true;
- try{let after='';for(;;){const {data,error}=await db().rpc('crm_whatsapp_internal_reads',{p_after:after});if(error)throw error;for(const row of data||[])if(!pending.has(row.chat_id))apply(row);if((data||[]).length<500)break;after=data[data.length-1].chat_id;}refresh();}
+ try{if(db().auth?.getSession){const {data}=await db().auth.getSession();if(!data?.session)return;}let after='';for(;;){const {data,error}=await db().rpc('crm_whatsapp_internal_reads',{p_after:after});if(error)throw error;for(const row of data||[])if(!pending.has(row.chat_id))apply(row);if((data||[]).length<500)break;after=data[data.length-1].chat_id;}refresh();}
  catch(e){M.report?.('whatsapp-read',e,'shared-read-sync');}
  finally{syncing=false;}
 }

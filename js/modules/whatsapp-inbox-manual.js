@@ -15,11 +15,11 @@ function category(chat,incoming,last){
  if(r.inbox_state==='snoozed')return stamp(r.inbox_until)>Date.now()/1000?'snoozed':'unanswered';
  return null;
 }
-function describe(chat){const r=rows.get(String(chat.id));if(!r)return '';const inc=Math.max(chat._lastIncomingAt||0,window.waMeta?.(chat.id)?.lastIncomingAt||0);if(inc>stamp(r.inbox_since))return '';if(r.inbox_state==='waiting')return r.inbox_reason+' · desde '+new Date(r.inbox_since).toLocaleDateString('es-ES');if(r.inbox_state==='snoozed')return 'Recordatorio: '+new Date(r.inbox_until).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'});return '';}
+function describe(chat){const r=rows.get(String(chat.id));if(!r)return '';const inc=Math.max(chat._lastIncomingAt||0,window.waMeta?.(chat.id)?.lastIncomingAt||0);if(inc>stamp(r.inbox_since))return '';if(r.inbox_state==='waiting')return r.inbox_reason+' · desde '+new Date(r.inbox_since).toLocaleDateString('es-ES');if(r.inbox_state==='snoozed')return (stamp(r.inbox_until)<=Date.now()/1000?'Recordatorio vencido: ':'Recordatorio: ')+new Date(r.inbox_until).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'});return '';}
 function refresh(){window.renderWhatsAppChats?.();window.waRefreshChatTopButtons?.();controls();}
 async function sync(){
  if(loading||!db()?.from||document.hidden)return;loading=true;const revision=generation;
- try{const next=new Map();let after='';for(;;){let q=db().from('crm_whatsapp_chat_state').select('chat_id,inbox_state,inbox_reason,inbox_since,inbox_until').order('chat_id').limit(500);if(after)q=q.gt('chat_id',after);const {data,error}=await q;if(error)throw error;for(const r of data||[])next.set(r.chat_id,r);if((data||[]).length<500)break;after=data[data.length-1].chat_id;}if(revision===generation&&!busy.size){rows.clear();for(const [k,v] of next)rows.set(k,v);refresh();}}
+ try{if(db().auth?.getSession){const {data}=await db().auth.getSession();if(!data?.session)return;}const next=new Map();let after='';for(;;){let q=db().from('crm_whatsapp_chat_state').select('chat_id,inbox_state,inbox_reason,inbox_since,inbox_until').order('chat_id').limit(500);if(after)q=q.gt('chat_id',after);const {data,error}=await q;if(error)throw error;for(const r of data||[])next.set(r.chat_id,r);if((data||[]).length<500)break;after=data[data.length-1].chat_id;}if(revision===generation&&!busy.size){rows.clear();for(const [k,v] of next)rows.set(k,v);refresh();}}
  catch(e){console.warn('No se pudieron actualizar los estados de conversación',e)}finally{loading=false;}
 }
 async function save(id,kind,reason='',until=null){
