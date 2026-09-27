@@ -112,3 +112,25 @@ html:not(.m-keyboard-open) .tpfUnifiedMobile .m-app{top:0;bottom:0;height:auto;m
 .tpfUnifiedMobile #mobileSharedOffers h3{font-size:15px;line-height:1.3;margin-bottom:6px}
 .tpfUnifiedMobile #mobileSharedOffers p{margin:8px 0;font-size:14px}
 .tpfUnifiedMobile #mobileSharedOffers button{min-height:44px}
+
+/* Recover space above the contact and keep editable information visible. */
+html .tpfUnifiedMobile .m-app>.m-header{height:calc(48px + var(--m-safe-top));min-height:calc(48px + var(--m-safe-top))}
+html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
+.tpfUnifiedMobile .m-contact-identity-inline{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:6px;padding:6px}
+.tpfUnifiedMobile .m-contact-identity-inline .m-back{width:44px;height:44px;min-height:44px;margin:0;box-shadow:none;border-radius:9px;color:#245fba}
+.tpfUnifiedMobile .m-contact-inline-tools{display:flex;gap:2px;align-items:center}
+.tpfUnifiedMobile .m-contact-inline-tools .m-contact-call{width:44px;height:44px}
+.tpfUnifiedMobile .m-contact-name h1{font-size:16px}
+.tpfUnifiedMobile .m-contact-name p{font-size:11px}
+.tpfUnifiedMobile .m-contact-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px;padding:6px 12px}
+.tpfUnifiedMobile .m-contact-summary>.m-info-row{min-width:0;padding:8px 0}
+.tpfUnifiedMobile .m-contact-summary>.m-info-row:nth-child(n+3){grid-column:1/-1}
+.tpfUnifiedMobile .m-contact-summary>.m-info-row:nth-child(n+5){display:grid;grid-template-columns:100px minmax(0,1fr);align-items:baseline;gap:8px}
+.tpfUnifiedMobile .m-contact-summary .m-info-row b{font-size:14px;line-height:1.35;margin-top:3px}
+.tpfUnifiedMobile .m-contact-summary .m-info-row span{font-size:11px;letter-spacing:.03em}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-head{min-height:44px;gap:6px}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-head .m-ghost{min-height:44px;padding:4px 0;font-size:12px}
+.tpfUnifiedMobile .m-contact-tab-wrap{position:relative}
+.tpfUnifiedMobile .m-contact-tab-hint{display:block;text-align:right;font-size:10px;line-height:12px;color:#667085;margin:0 2px}
+.tpfUnifiedMobile .m-contact-tab-wrap .m-contact-tabs{margin-top:2px}
+@media(min-width:600px){.tpfUnifiedMobile .m-contact-tab-hint{display:none}}
