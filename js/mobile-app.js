@@ -737,11 +737,12 @@
   function contactMobileSnapshot(overview,contact){
     const opportunity=overview.last,stage=opportunity&&state.board.stages.find(row=>String(row.id)===String(opportunity.stage_id));
     const whatsapp=contactMobileWhatsApp(contact);
+    const pending=(relatedTasks(contact.id)||[]).filter(task=>taskIsPending(task));
     return `<section class="m-contact-snapshot" aria-label="Resumen comercial">
       <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="opportunities" type="button"><small>Última oportunidad</small><b>${esc(opportunity?.title||'Sin oportunidades')}</b><span>${esc(opportunity?`${stage?.name||'Sin estado'} · ${opportunity.amount!=null?money(opportunity.amount):'Sin importe'}`:'Crear oportunidad')}</span></button>
       <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Próxima tarea</small><b>${esc(overview.next?dateTime(overview.next.starts_at):'Sin tarea pendiente')}</b><span>${esc(overview.next?.title||'Programar tarea')}</span></button>
       <button class="m-contact-snapshot-card" data-action="contact-whatsapp" data-id="${esc(contact.id)}" type="button"><small>Último WhatsApp</small><b>${esc(whatsapp?.when||'Sin conversación')}</b><span>${esc(whatsapp?.text||'Abrir conversación')}</span></button>
-      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Trabajo pendiente</small><b>${overview.open.length+Math.max(0,(relatedTasks(contact.id)||[]).filter(task=>taskIsPending(task)).length)}</b><span>${esc(`${overview.open.length} oportunidades · ${overview.completed} tareas completadas`)}</span></button>
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="pending" type="button"><small>Trabajo pendiente</small><b>${overview.open.length+pending.length}</b><span>${esc(`${overview.open.length} oportunidades · ${pending.length} tareas pendientes`)}</span></button>
     </section>`;
   }
   function renderContact(id){
@@ -756,6 +757,10 @@
     if(tab==='offers')body='<div id="mobileSharedOffers">Cargando ofertas…</div>';
     
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
+    if(tab==='pending'){
+      const pending=tasks.filter(task=>taskIsPending(task));
+      body=`<section class="m-contact-pending"><h2>Trabajo pendiente</h2><h3>Oportunidades abiertas · ${overview.open.length}</h3>${overview.open.length?`<div class="m-list">${overview.open.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades abiertas','')}<h3>Tareas pendientes · ${pending.length}</h3>${pending.length?`<div class="m-list">${pending.map(taskCard).join('')}</div>`:empty('Sin tareas pendientes','')}</section>`;
+    }
     if(tab==='documents')body='<div id="mobileContactDocuments"></div>';
     if(tab==='history')body=renderContactHistory(id);
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
@@ -784,7 +789,7 @@
     const id=route().query.get('fromContact');
     return id&&has('can_view_database')&&state.contacts.some(contact=>String(contact.id)===id)?'contact/'+encodeURIComponent(id):'whatsapp';
   }
-  function contactTextCard(contact,kind){const label=kind==='notes'?'Notas':'Observaciones';return `<div class="m-info-row"><div class="m-contact-text-head"><span>${label}</span>${has('can_edit_records')?`<button class="m-ghost" data-action="route" data-route="contact-text/${esc(contact.id)}/${kind}">Editar ${label.toLowerCase()}</button>`:''}</div><b>${esc(contact[kind]||'—')}</b></div>`;}
+  function contactTextCard(contact,kind){const label=kind==='notes'?'Notas':'Observaciones';return `<div class="m-info-row m-contact-text-row"><div class="m-contact-text-head"><span>${label}</span>${has('can_edit_records')?`<button class="m-ghost" data-action="route" data-route="contact-text/${esc(contact.id)}/${kind}" aria-label="Editar ${label.toLowerCase()}">✎</button>`:''}</div><b>${esc(contact[kind]||'—')}</b></div>`;}
   function renderContactText(id,kind){
     const contact=state.contacts.find(c=>String(c.id)===String(id));if(!contact||!has('can_edit_records')||!['notes','observations'].includes(kind))return empty('No disponible','No tienes permiso para editar este contacto.');
     const label=kind==='notes'?'Notas':'Observaciones';

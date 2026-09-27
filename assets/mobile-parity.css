@@ -134,3 +134,18 @@ html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
 .tpfUnifiedMobile .m-contact-tab-hint{display:block;text-align:right;font-size:10px;line-height:12px;color:#667085;margin:0 2px}
 .tpfUnifiedMobile .m-contact-tab-wrap .m-contact-tabs{margin-top:2px}
 @media(min-width:600px){.tpfUnifiedMobile .m-contact-tab-hint{display:none}}
+
+/* Compact summary without hiding notes or reducing touch targets. */
+.tpfUnifiedMobile .m-contact-summary>.m-info-row{padding:6px 0}
+.tpfUnifiedMobile .m-contact-summary>.m-contact-text-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;column-gap:8px;align-items:center}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-row .m-contact-text-head{display:contents}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-row .m-contact-text-head>span{grid-column:1;grid-row:1}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-row .m-ghost{grid-column:2;grid-row:1/span 2;width:44px;height:44px;min-height:44px;padding:0;font-size:19px}
+.tpfUnifiedMobile .m-contact-summary .m-contact-text-row>b{grid-column:1;grid-row:2;margin:0;min-width:0}
+.tpfUnifiedMobile .m-contact-snapshot{margin:6px 0 0;gap:5px}
+.tpfUnifiedMobile .m-contact-snapshot-card,.tpfUnifiedMobile .m-contact-snapshot-card:first-child{min-height:60px;padding:7px 8px;gap:2px}
+.tpfUnifiedMobile .m-contact-snapshot-card small{font-size:10px}
+.tpfUnifiedMobile .m-contact-snapshot-card b{font-size:12px}
+.tpfUnifiedMobile .m-contact-snapshot-card span{font-size:10px}
+.tpfUnifiedMobile .m-contact-pending h2{font-size:17px;margin:8px 0}
+.tpfUnifiedMobile .m-contact-pending h3{font-size:14px;margin:12px 0 8px}

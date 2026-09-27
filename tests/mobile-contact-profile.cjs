@@ -30,6 +30,10 @@ vm.runInNewContext(fs.readFileSync('js/modules/contact-party.js','utf8'),context
  record.data.NOTAS='PC changed';n=calls.filter(c=>c.kind==='update').length;await a.saveContactText('c1','notes',node('save'));assert.equal(calls.filter(c=>c.kind==='update').length,n);assert(node('mobileContactTextMsg').textContent.includes('ha cambiado'));
  a.state.contacts=[a.mapContact(record)];conflict=true;node('mobileContactText').value='Rejected';await a.saveContactText('c1','notes',node('save'));assert.equal(record.data.NOTAS,'PC changed');conflict=false;
  await a.loadContactHistory('c1');html=a.renderContactHistory('c1');assert(html.includes('Tarea completada'));assert(html.includes('Oportunidad cerrada'));assert(html.includes('Nombre actualizado'));for(const c of calls.filter(c=>c.kind==='read'&&c.table!=='records'))assert(c.filters.some(([k,v])=>['contact_id','related_record_id','record_id'].includes(k)&&v==='c1'));
+ a.state.board={stages:[],opportunities:[{id:'open',record_id:'c1',title:'Open sale',status:'open'},{id:'won',record_id:'c1',title:'Closed sale',status:'won'}]};
+ a.state.tasks=[{id:'pending',related_record_id:'c1',title:'Pending task',status:'pending'},{id:'done',related_record_id:'c1',title:'Done task',status:'completed'}];
+ a.state.profileTab='summary';html=a.renderContact('c1');assert.match(html,/data-tab="pending"[^>]*><small>Trabajo pendiente<\/small><b>2<\/b>/);assert(html.includes('1 oportunidades · 1 tareas pendientes'));
+ a.state.profileTab='pending';html=a.renderContact('c1');assert(html.includes('Open sale'));assert(html.includes('Pending task'));assert(!html.includes('Closed sale'));assert(!html.includes('Done task'));
  a.state.perms={};n=calls.length;a.openContactWhatsApp('c1');await a.saveContactText('c1','notes');await a.loadContactHistory('c1');assert.equal(calls.length,n);
  console.log('PASS: all phones/dedup/search, selected chat navigation without sends, isolated text edits, empty values, concurrent edits, duplicate clicks, scoped history and permissions');
 })().catch(e=>{console.error(e);process.exitCode=1});
