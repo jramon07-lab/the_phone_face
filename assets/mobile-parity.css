@@ -51,7 +51,7 @@ html .tpfUnifiedMobile .m-app{position:fixed;top:var(--mobile-visible-top,0px);l
 html .tpfUnifiedMobile .m-app>.m-header,html .tpfUnifiedMobile .m-app>.m-view,html .tpfUnifiedMobile .m-app>.m-bottom-nav{position:relative;inset:auto;transform:none;width:100%;max-width:680px;margin-inline:auto}
 html .tpfUnifiedMobile .m-app>.m-header{flex-shrink:0}
 html .tpfUnifiedMobile .m-app>.m-view{flex:1 1 0;min-height:0;padding-bottom:24px}
-html .tpfUnifiedMobile .m-app>.m-bottom-nav{flex-shrink:0;height:auto;min-height:calc(76px + env(safe-area-inset-bottom,0px));padding:8px 8px max(14px,env(safe-area-inset-bottom,0px));align-items:center}
+html .tpfUnifiedMobile .m-app>.m-bottom-nav{flex-shrink:0;height:auto;min-height:calc(60px + env(safe-area-inset-bottom,0px));padding:8px 8px env(safe-area-inset-bottom,0px);align-items:center}
 .tpfUnifiedMobile .m-bottom-nav button{min-height:52px}.tpfUnifiedMobile .m-bottom-nav small{font-size:11px;line-height:1.3}.tpfUnifiedMobile .m-bottom-nav .m-nav-add{margin-top:0;width:50px;height:50px}
 html.m-keyboard-open .tpfUnifiedMobile .m-bottom-nav{display:none}
 .tpfUnifiedMobile .m-contact-identity .m-avatar{background:#eaf2ff;color:#245fba}
@@ -89,3 +89,9 @@ html:not(.m-keyboard-open) .tpfUnifiedMobile .m-app{top:0;bottom:0;height:auto;m
 .tpfUnifiedMobile #tpfSched3 input[type=date]{appearance:none;-webkit-appearance:none;display:block;width:100%;min-width:0}
 .tpfUnifiedMobile #tpfSched3 input::-webkit-date-and-time-value{min-width:0;text-align:left}
 .tpfUnifiedMobile #tpfSched3 .tpfS3q{min-width:0;overflow-wrap:anywhere}.tpfUnifiedMobile #tpfSched3 .tpfS3messageHead{flex-wrap:wrap}
+
+/* Long contact names and native controls must shrink with the mobile dialog. */
+.tpfUnifiedMobile #tpfSched3 .tpfS3h>div{min-width:0;overflow-wrap:anywhere}
+.tpfUnifiedMobile #tpfSched3 .tpfS3f button{flex:1 1 0;min-width:0;width:auto;white-space:normal}
+.tpfUnifiedMobile .m-contact-compose header>div{min-width:0;overflow-wrap:anywhere}
+.tpfUnifiedMobile .m-contact-compose header button{flex:0 0 44px}
