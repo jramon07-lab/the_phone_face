@@ -8,15 +8,8 @@ function install(){
  const composer=$('waComposerText')?.closest('.waComposer');if(!composer||!$('waQuickRepliesBtn')||$('waComposerActions'))return;
  composer.classList.add('waOrganizedComposer');
  const bar=document.createElement('div');bar.id='waComposerActions';composer.append(bar);
- const more=document.createElement('details');more.id='waComposerMore';const summary=document.createElement('summary');label(summary,'more','Más');more.append(summary);
- const menu=document.createElement('div');menu.id='waComposerMoreMenu';more.append(menu);
- for(const [id,key,text] of [['waAttachBtn','attach','Adjuntar'],['waQuickRepliesBtn','reply','Respuestas'],['waTemplateBtn','template','Plantillas']]){label($(id),key,text);if($(id))bar.append($(id));}
- for(const [id,key,text] of [['waScheduleBtn','clock','Programar mensaje']]){label($(id),key,text);if($(id))menu.append($(id));}
- bar.append(more);label($('waComposerSend'),'send','');
- more.addEventListener('toggle',()=>{if(!more.open)return;const r=summary.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(r.right-230,innerWidth-238))+'px';menu.style.bottom=Math.max(8,innerHeight-r.top+6)+'px';});
- document.addEventListener('click',e=>{if(more.open&&(!more.contains(e.target)||e.target.closest('#waComposerMoreMenu button')))more.open=false;});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&more.open){more.open=false;summary.focus();}});
- window.addEventListener('resize',()=>more.open=false);
+ for(const [id,key,text] of [['waAttachBtn','attach','Adjuntar'],['waQuickRepliesBtn','reply','Respuestas'],['waTemplateBtn','template','Plantillas'],['waScheduleBtn','clock','Programar']]){label($(id),key,text);if($(id))bar.append($(id));}
+ label($('waComposerSend'),'send','');
 }
 const style=document.createElement('style');style.textContent=`
 #view-whatsapplive .waTabs{justify-content:flex-start!important;flex-wrap:wrap!important;overflow:visible!important;gap:4px!important;height:auto!important;flex-shrink:0!important}.waCleanFilters[hidden]{display:none!important}

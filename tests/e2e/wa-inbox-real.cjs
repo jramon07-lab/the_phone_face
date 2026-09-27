@@ -120,11 +120,11 @@ const root=path.resolve(__dirname,'../..');
  await page.evaluate(()=>{window.toolbarClicks=[];for(const id of ['waAttachBtn','waTemplateBtn','waScheduleBtn'])document.getElementById(id).onclick=()=>toolbarClicks.push(id);});
  await page.click('#waAttachBtn');
  await page.click('#waTemplateBtn');
- await page.click('#waComposerMore summary');await page.click('#waScheduleBtn');
+ await page.click('#waScheduleBtn');
  assert.deepEqual(await page.evaluate(()=>toolbarClicks),['waAttachBtn','waTemplateBtn','waScheduleBtn']);
  await page.evaluate(async()=>{demoFailSave=false;const c=waLiveState.chats[3];await TPFInboxManual.save(c.id,'pending');c._lastIncomingAt=fixtureNow;c._lastMessage={timestamp:Date.now()/1000+5,direction:'out',idMessage:'human-new'};});
  assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'waiting');
- await page.click('#waComposerMore summary');await page.locator('#waScheduleBtn').waitFor({state:'visible'});await page.keyboard.press('Escape');
+ await page.locator('#waScheduleBtn').waitFor({state:'visible'});
  for(const width of [1366,1280]){await page.setViewportSize({width,height:844});const b=await page.locator('#waComposerActions').boundingBox();assert(b.x>=0&&b.x+b.width<=width+1,'composer toolbar fits '+width);}
  await page.addScriptTag({path:root+'/js/modules/whatsapp-template-picker-direct.js'});
  await page.evaluate(()=>{window.waLoadTemplates=()=>[{name:'Oferta A',category:'VODAFONE',text:'Hola {nombre}'},{name:'Oferta B',category:'Vodafone',text:'Hola {nombre}'},{name:'Oferta C',category:'MASMOVIL',text:'Hola {nombre}'},{name:'Oferta D',category:'MásMóvil',text:'Hola {nombre}'},{name:'DEMO · Oferta',text:'Ejemplo'}];});

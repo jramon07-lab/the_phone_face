@@ -353,11 +353,14 @@ export default async function handler(req, res) {
       const needOutgoingPhone = String(current?.outgoingMessageWebhook || "").toLowerCase() !== "yes";
       const needOutgoingApi = String(current?.outgoingAPIMessageWebhook || "").toLowerCase() !== "yes";
 
-      if (needIncoming || needOutgoingPhone || needOutgoingApi) {
+      const needPrivateRead = current?.markIncomingMessagesReaded !== "no" || current?.markIncomingMessagesReadedOnReply !== "no";
+      if (needIncoming || needOutgoingPhone || needOutgoingApi || needPrivateRead) {
         const patch = {
           incomingWebhook: "yes",
           outgoingMessageWebhook: "yes",
-          outgoingAPIMessageWebhook: "yes"
+          outgoingAPIMessageWebhook: "yes",
+          markIncomingMessagesReaded: "no",
+          markIncomingMessagesReadedOnReply: "no"
         };
         const saved = await greenFetch("setSettings", {
           method: "POST",
@@ -589,6 +592,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({ chatId, message })
       });
 
+      await require('../lib/green-manual-read')({manualReply:body.manualReply,data,chatId,base,id,token});
       return res.status(200).json({
         ok: true,
         chatId,
@@ -638,12 +642,7 @@ export default async function handler(req, res) {
       const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
       const chatId = normalizeChatId(body.chatId);
       if (!chatId) return res.status(400).json({ ok: false, error: "Falta chatId." });
-      const data = await greenFetch("readChat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId })
-      });
-      return res.status(200).json({ ok: true, data });
+      return res.status(200).json({ ok: true, setRead: false, localOnly: true });
     }
 
     if (req.method === "POST" && action === "sendfile") {
@@ -669,6 +668,7 @@ export default async function handler(req, res) {
       const text = await r.text();
       let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
       if (!r.ok) return res.status(r.status).json({ ok: false, error: data?.message || data?.error || String(data || "No se pudo enviar el archivo") });
+      await require('../lib/green-manual-read')({manualReply:body.manualReply,data,chatId,base,id,token});
       return res.status(200).json({ ok: true, idMessage: data?.idMessage || null, urlFile: data?.urlFile || "", data });
     }
 

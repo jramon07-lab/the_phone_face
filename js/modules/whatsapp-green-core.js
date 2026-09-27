@@ -908,7 +908,7 @@ async function sendWaLiveMessage(){
   $("waComposerSend").disabled=true;
   $("waComposerMsg").textContent="Enviando…";
   try{
-    const r=await waApi("send",{chatId:chat.id,message:text});
+    const r=await waApi("send",{chatId:chat.id,message:text,manualReply:true});
     if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
     if(waLiveState.selected?.id===chat.id){
       if($("waComposerText").value.trim()===text)$("waComposerText").value="";
@@ -1185,7 +1185,7 @@ $("waAttachInput").onchange=async()=>{
   try{
     const dataUrl=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});
     const caption=$("waComposerText").value.trim();
-    const r=await waApi("sendfile",{chatId:chat.id,fileName:f.name,mimeType:f.type||"application/octet-stream",dataUrl,caption});
+    const r=await waApi("sendfile",{chatId:chat.id,manualReply:true,fileName:f.name,mimeType:f.type||"application/octet-stream",dataUrl,caption});
     $("waComposerText").value=""; $("waComposerMsg").textContent="Archivo enviado";
     setTimeout(()=>loadWaHistory(true),800); setTimeout(()=>{$("waComposerMsg").textContent=""},1800);
   }catch(e){$("waComposerMsg").textContent=e.message||"No se pudo enviar el archivo."}
@@ -1537,7 +1537,7 @@ function waRenderFilePreview(){
 }
 $("waFilePreviewClose").onclick=()=>{$("waFilePreviewModal").classList.add("hidden");waPendingFiles=[];$("waAttachInput").value=""};
 $("waFilePreviewSend").onclick=async()=>{
- const chat=waLiveState.selected;if(!chat)return;for(const f of waPendingFiles){if(f.size>2500000){alert(`${f.name}: supera 2,5 MB y se omitirá.`);continue}try{const dataUrl=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});await waApi("sendfile",{chatId:chat.id,fileName:f.name,mimeType:f.type||"application/octet-stream",dataUrl,caption:""})}catch(e){alert(`${f.name}: ${e.message}`)}}$("waFilePreviewModal").classList.add("hidden");waPendingFiles=[];$("waAttachInput").value="";setTimeout(()=>loadWaHistory(true),900)
+ const chat=waLiveState.selected;if(!chat)return;for(const f of waPendingFiles){if(f.size>2500000){alert(`${f.name}: supera 2,5 MB y se omitirá.`);continue}try{const dataUrl=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});await waApi("sendfile",{chatId:chat.id,manualReply:true,fileName:f.name,mimeType:f.type||"application/octet-stream",dataUrl,caption:""})}catch(e){alert(`${f.name}: ${e.message}`)}}$("waFilePreviewModal").classList.add("hidden");waPendingFiles=[];$("waAttachInput").value="";setTimeout(()=>loadWaHistory(true),900)
 };
 
 /* Drag & drop files on chat */

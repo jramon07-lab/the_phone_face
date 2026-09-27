@@ -112,15 +112,27 @@
   function automaticChats(){return (liveState()?.chats||[]).filter(c=>category(c)==='automatic')}
   function updateAutomaticCount(){
     const rows=liveState()?.chats||[];
-    for(const [key,id] of [['automatic','waAutomaticCount'],['unanswered','waPendingCount'],['waiting','waWaitingCount']]){
-      const badge=document.getElementById(id);if(!badge)continue;
-      badge.textContent=String(rows.filter(c=>category(c)===key).length);badge.hidden=false;
+    const counts={automatic:0,unanswered:0,waiting:0,all:0,contacts:0,groups:0,unread:0,favorites:0,archived:0,snoozed:0};
+    for(const c of rows){
+      const key=category(c),m=window.waMeta?.(c.id)||{};
+      if(key==='archived'){counts.archived++;continue;}
+      counts.all++;
+      if(['automatic','unanswered','waiting','snoozed'].includes(key))counts[key]++;
+      if(String(c.id).includes('@c.us'))counts.contacts++;
+      if(String(c.id).includes('@g.us'))counts.groups++;
+      if(m.favorite||m.pinned)counts.favorites++;
+      if(Math.max(Number(window.waUnreadCount?.(c.id)||0),Number(window.waChatServerUnread?.(c)||0))>0)counts.unread++;
+    }
+    for(const [key,n] of Object.entries(counts)){
+      const badge=document.querySelector('[data-wa-tab="'+key+'"] .waAutomaticCount');
+      if(badge){badge.textContent=String(n);badge.hidden=false;}
     }
   }
+
   function ensureTab(){
     const view=document.getElementById('view-whatsapplive'),tabs=view?.querySelector('.waTabs');if(!tabs)return;
     if(!view.classList.contains('waInboxWorkspace'))view.classList.add('waInboxWorkspace');
-    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['all','Todos',''],['contacts','Clientes',''],['groups','Grupos',''],['unread','No leídos',''],['favorites','Favoritos',''],['archived','Archivados',''],['snoozed','Aplazados','']];
+    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['all','Todos','waCount_all'],['contacts','Clientes','waCount_contacts'],['groups','Grupos','waCount_groups'],['unread','No leídos','waCount_unread'],['favorites','Favoritos','waCount_favorites'],['archived','Archivados','waCount_archived'],['snoozed','Aplazados','waCount_snoozed']];
     const more=tabs.querySelector('.waCleanFilters');
     for(const [key,label,id] of labels){
       let button=view.querySelector('[data-wa-tab="'+key+'"]');

@@ -22,6 +22,7 @@ export default async function handler(req,res){
     const text=await r.text();
     let data;try{data=text?JSON.parse(text):null}catch{data=text}
     if(!r.ok)return res.status(r.status).json({ok:false,error:data?.message||data?.error||String(data||r.statusText)});
+    await require('../lib/green-manual-read')({manualReply:true,data,chatId,base,id,token});
     return res.status(200).json({ok:true,chatId,idMessage:data?.idMessage||null,data});
   }catch(e){
     console.error("GREEN_REPLY_ERROR",e?.message||e);
