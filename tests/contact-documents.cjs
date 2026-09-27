@@ -24,6 +24,8 @@ async function invoke(action,body={},method,extraHeaders={}){let result;const re
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));
  assert.throws(()=>T.adapter({version:1,provider:'onedrive'}));
  calls=[];const mobile=await invoke('mobileList');assert.equal(mobile.status,200);assert.equal(mobile.body.status.connected,true);assert.equal(mobile.body.files.length,1);assert.equal(mobile.body.record.id,rid);assert.equal(calls.filter(c=>c.url.includes('oauth2.googleapis.com')).length,1);assert.ok(!JSON.stringify(mobile).includes('test-google-access'));
+ for(const [body,expected] of [[{size:0},'vacío'],[{size:101*1024*1024},'máximo'],[{mimeType:'text/html'},'Formato'],[{name:'bad/name.jpg'},'nombre']]){const bad=await invoke('upload',{expectedLink:savedLink,name:'image.jpg',size:6000000,mimeType:'image/jpeg',...body});assert.equal(bad.status,400);assert(bad.body.error.includes(expected));}
+ const alias=await invoke('upload',{expectedLink:savedLink,name:'image.jpg',size:6000000,mimeType:'image/jpg'});assert.equal(alias.status,200);assert.equal(alias.body.mimeType,'image/jpeg');
  const s=await invoke('status');assert.equal(s.body.connected,true);assert.ok(!JSON.stringify(s).includes('test-refresh'));
  oauthError='invalid_grant';const expired=await invoke('status');assert.equal(expired.body.connected,false);assert.equal(expired.body.reconnectRequired,true);assert.equal((await invoke('list')).body.code,'GOOGLE_RECONNECT_REQUIRED');
  const mobileExpired=await invoke('mobileList');assert.equal(mobileExpired.body.status.reconnectRequired,true);assert.equal(mobileExpired.body.files.length,0);

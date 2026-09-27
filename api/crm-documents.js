@@ -135,9 +135,12 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   if(!who.p.is_admin&&!who.p.can_edit_records)throw fail(403,'No tienes permiso para subir documentos.');
   if(stableLink(body.expectedLink)!==stableLink(link))throw fail(409,'La carpeta ha cambiado. Actualiza antes de subir.');
   const f=await provider.folder(t,link.folder_id);if(!f.capabilities?.canAddChildren)throw fail(403,'Google no permite subir archivos a esta carpeta.');
-  const name=String(body.name||'').trim(),size=Number(body.size),mime=String(body.mimeType||'');
-  if(!name||name.length>200||/[\x00-\x1f/\\]/.test(name)||!Number.isSafeInteger(size)||size<=0||size>100*1024*1024||!UPLOAD_MIMES.has(mime))throw fail(400,'Elige un documento o una fotografía de hasta 100 MB.');
-  const r=await request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(size),Origin:uploadOrigin(req)},body:JSON.stringify({name,mimeType:mime,parents:[f.id]})});const url=r.headers.get('location');if(!r.ok||!url||new URL(url).origin!=='https://www.googleapis.com')throw fail(502,'Google no pudo preparar la subida.');return json(res,200,{ok:true,uploadUrl:url});
+  const name=String(body.name||'').trim(),size=Number(body.size),rawMime=String(body.mimeType||'').split(';')[0].trim().toLowerCase(),mime=({'image/jpg':'image/jpeg','image/pjpeg':'image/jpeg','image/x-png':'image/png'}[rawMime]||rawMime);
+  if(!name||name.length>200||/[\x00-\x1f/\\]/.test(name))throw fail(400,'El nombre del archivo no es válido. Usa un nombre de hasta 200 caracteres sin barras.');
+  if(!Number.isSafeInteger(size)||size<=0)throw fail(400,'La foto o archivo llega vacío. Vuelve a seleccionarlo desde Fotos o Archivos.');
+  if(size>100*1024*1024)throw fail(400,'El archivo pesa '+(size/1024/1024).toFixed(1)+' MB. El máximo es 100 MB.');
+  if(!UPLOAD_MIMES.has(mime))throw fail(400,'Formato no admitido ('+(mime||'sin identificar')+'). Selecciona una foto JPEG, PNG, HEIC o un PDF.');
+  const r=await request('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id,name,size,webViewLink',{method:'POST',headers:{Authorization:'Bearer '+t,'Content-Type':'application/json','X-Upload-Content-Type':mime,'X-Upload-Content-Length':String(size),Origin:uploadOrigin(req)},body:JSON.stringify({name,mimeType:mime,parents:[f.id]})});const url=r.headers.get('location');if(!r.ok||!url||new URL(url).origin!=='https://www.googleapis.com')throw fail(502,'Google no pudo preparar la subida.');return json(res,200,{ok:true,uploadUrl:url,mimeType:mime});
  }
  throw fail(400,'Acción no disponible.');
  }catch(e){const status=e.status||500;return json(res,status,{ok:false,code:e.code||undefined,error:status===500?'No se pudo completar la operación. Vuelve a intentarlo.':e.message});}
