@@ -160,3 +160,20 @@ html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
 .tpfUnifiedMobile .m-copy-value b{flex:1;min-width:0;overflow-wrap:anywhere}
 .tpfUnifiedMobile .m-copy-button{display:flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;padding:0;border:0;background:transparent;color:#2162b6;border-radius:8px}
 .tpfUnifiedMobile .m-contact-summary b,.tpfUnifiedMobile .m-contact-name p{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
+/* Compact contact list: keep full touch targets and useful information. */
+.tpfUnifiedMobile .m-contacts-page .m-contact-filters{gap:5px;margin-bottom:7px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-filter{flex-direction:row;gap:5px;min-height:44px;padding:5px 3px;font-size:11px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-filter b{font-size:10px;padding:0 3px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-card{padding:10px;margin:0}
+.tpfUnifiedMobile .m-contacts-page .m-list{gap:7px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-card .m-list-row{grid-template-columns:32px minmax(0,1fr) 12px;gap:8px}
+.tpfUnifiedMobile .m-contacts-page .m-avatar{width:32px;height:32px;font-size:13px}
+.tpfUnifiedMobile .m-contacts-page .m-list-main strong{font-size:14px;line-height:1.3;white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.tpfUnifiedMobile .m-contacts-page .m-list-main small{font-size:11px;line-height:1.3;margin-top:2px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-meta{margin:5px 0 0 40px;gap:8px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-meta>span{padding:0;border:0;background:transparent!important;gap:1px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-meta small{font-size:9px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-meta b{font-size:12px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-activity{margin:5px 0 0 40px;gap:4px}
+.tpfUnifiedMobile .m-contacts-page .m-contact-activity>span{padding:3px 6px;font-size:10px}
