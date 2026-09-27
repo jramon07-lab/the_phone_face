@@ -56,7 +56,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   if(!configured())return json(res,200,result);
   let t;try{t=await token();status.connected=true;}catch(e){if(e.code!=='GOOGLE_RECONNECT_REQUIRED')throw e;status.reconnectRequired=true;return json(res,200,result);}
   if(!link)return json(res,200,result);
-  const provider=adapter(link),[f,listing]=await Promise.all([provider.folder(t,link.folder_id),provider.list(t,link.folder_id,req.query?.page)]);
+  const provider=adapter(link),[f,listing]=await Promise.all([provider.folder(t,link.folder_id),req.query?.uploadOnly==='1'?Promise.resolve({files:[],nextPageToken:null}):provider.list(t,link.folder_id,req.query?.page)]);
   return json(res,200,{...result,folder:{id:f.id,name:f.name,canUpload:!!f.capabilities?.canAddChildren},...listing});
  }
  if(!configured())throw fail(503,'Falta configurar la conexión de Documentos en el servidor.');
