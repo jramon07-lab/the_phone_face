@@ -59,6 +59,7 @@ await page.evaluate(()=>{location.hash='#/contact/demo-1';document.documentEleme
 await page.locator('[data-action="contact-compose"]').waitFor();
 await page.screenshot({path:'/tmp/mobile-contact-fixed.png'});
 assert(await page.evaluate(()=>{const nav=document.querySelector('.m-bottom-nav').getBoundingClientRect();return nav.bottom<=innerHeight+1&&[...document.querySelectorAll('.m-bottom-nav button')].every(b=>b.getBoundingClientRect().bottom<=innerHeight-10)}),'navigation tap targets clear the bottom edge');
+assert(await page.evaluate(()=>Math.abs(document.querySelector('.m-bottom-nav').getBoundingClientRect().bottom-innerHeight)<2),'no empty strip below navigation');
 await page.click('[data-action="contact-compose"]');
 assert.match(await page.locator('.m-contact-compose').innerText(),/Enviar ahora/);
 await page.fill('.m-contact-compose textarea','Prueba de programación');
@@ -68,6 +69,7 @@ assert.equal(await page.inputValue('#tpfS3phone'),'34600000001');
 await page.setViewportSize({width:393,height:440});
 await page.locator('#tpfS3msg').focus();
 assert(await page.evaluate(()=>{const x=document.querySelector('#tpfSched3 [data-close]').getBoundingClientRect(),save=document.querySelector('#tpfS3save').getBoundingClientRect();return x.top>=0&&save.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth+1}),'scheduler header and footer fit with keyboard-sized viewport');
+assert(await page.evaluate(()=>{const body=document.querySelector('#tpfSched3 .tpfS3b');body.scrollLeft=100;return body.scrollWidth<=body.clientWidth+1&&body.scrollLeft===0&&[...body.querySelectorAll('input,textarea,select,.tpfS3q')].every(el=>{const a=el.getBoundingClientRect(),b=body.getBoundingClientRect();return a.left>=b.left&&a.right<=b.right+1})}),'scheduler fields fit the internal scroller without sideways movement');
 await page.screenshot({path:'/tmp/mobile-keyboard-fixed.png'});
 await page.locator('#tpfSched3 [data-close]').first().click();await page.setViewportSize({width:393,height:852});
 await page.click('.m-contact-tabs [data-tab="tasks"]');

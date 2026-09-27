@@ -74,3 +74,18 @@ html.m-keyboard-open .tpfUnifiedMobile .m-bottom-nav{display:none}
 .m-contact-compose header,.m-contact-compose footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;flex-shrink:0}.m-contact-compose h2{font-size:20px;margin:0}.m-contact-compose p{font-size:14px;margin:5px 0}.m-contact-compose header button{font-size:24px;min-width:44px}
 .m-compose-body{padding:12px;overflow:auto;min-height:0}.m-compose-body label{display:block;margin-bottom:12px;font-size:14px}.m-compose-body textarea,.m-compose-body select{display:block;width:100%;margin-top:6px;padding:10px;border:1px solid #dce4ef;border-radius:8px;background:#fff;color:#1d2939;font-size:16px!important}.m-contact-compose footer button{flex:1}.tpfUnifiedMobile .m-contact-compose [data-send]{background:#1769e0;color:#fff}
 .tpfUnifiedMobile .m-contact-action-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.tpfUnifiedMobile .m-contact-action-grid button{font-size:12px;white-space:normal}
+/* Fit the layout viewport when the keyboard is closed; visualViewport may exclude iOS chrome twice. */
+html:not(.m-keyboard-open) .tpfUnifiedMobile .m-app{top:0;bottom:0;height:auto;max-height:none}
+.tpfUnifiedMobile .m-boot{background:#f5f7fb;color:#1d2939}.tpfUnifiedMobile .m-boot .m-brand-mark{border-color:#1769e0;box-shadow:none}.tpfUnifiedMobile .m-boot .m-brand-mark:before{background:#1769e0}.tpfUnifiedMobile .m-boot .m-brand-mark span{border-color:#1769e0}.tpfUnifiedMobile .m-spinner{border-color:#dce4ef;border-top-color:#1769e0}
+.tpfUnifiedMobile .m-avatar{background:#eaf2ff;color:#245fba}
+/* Constrain every grid item, including WebKit's intrinsic date input width. */
+.tpfUnifiedMobile #tpfSched3{grid-template-columns:minmax(0,1fr);overflow:hidden}
+.tpfUnifiedMobile #tpfSched3 .tpfS3{min-width:0;box-sizing:border-box}
+.tpfUnifiedMobile #tpfSched3 .tpfS3b{width:100%;max-width:100%;min-width:0;overflow-x:hidden;touch-action:pan-y}
+.tpfUnifiedMobile #tpfSched3 .tpfS3b>*{min-width:0;max-width:100%;box-sizing:border-box}
+.tpfUnifiedMobile #tpfSched3 .tpfS3grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tpfUnifiedMobile #tpfSched3 .tpfS3custom{grid-template-columns:minmax(0,1fr)}
+.tpfUnifiedMobile #tpfSched3 .tpfS3custom>div{min-width:0;max-width:100%}
+.tpfUnifiedMobile #tpfSched3 input[type=date]{appearance:none;-webkit-appearance:none;display:block;width:100%;min-width:0}
+.tpfUnifiedMobile #tpfSched3 input::-webkit-date-and-time-value{min-width:0;text-align:left}
+.tpfUnifiedMobile #tpfSched3 .tpfS3q{min-width:0;overflow-wrap:anywhere}.tpfUnifiedMobile #tpfSched3 .tpfS3messageHead{flex-wrap:wrap}

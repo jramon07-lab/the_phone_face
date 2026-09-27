@@ -2159,9 +2159,10 @@ function crmInteractiveText(message){
 
   function fitMobileViewport(){
     const vv=window.visualViewport,root=document.documentElement;
-    root.style.setProperty('--mobile-visible-height',(vv?.height||window.innerHeight)+'px');
-    root.style.setProperty('--mobile-visible-top',(vv?.offsetTop||0)+'px');
-    root.classList.toggle('m-keyboard-open',!!vv&&window.innerHeight-vv.height>150);
+    const keyboard=!!vv&&window.innerHeight-vv.height>150;
+    root.style.setProperty('--mobile-visible-height',(keyboard?vv.height:window.innerHeight)+'px');
+    root.style.setProperty('--mobile-visible-top',(keyboard?vv.offsetTop:0)+'px');
+    root.classList.toggle('m-keyboard-open',keyboard);
   }
   function initMobileViewport(){
   window.visualViewport?.addEventListener('resize',fitMobileViewport);
