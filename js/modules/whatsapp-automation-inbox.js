@@ -80,6 +80,7 @@
     if(loading||!client)return;
     loading=true;
     try{
+      if(client.auth?.getSession){const {data}=await client.auth.getSession();if(!data?.session)return;}
       const since=new Date(Date.now()-120*86400000).toISOString();
       const result=await client.from('crm_server_automation_jobs')
         .select('id,action_type,context,completed_at,updated_at')

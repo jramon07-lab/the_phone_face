@@ -96,7 +96,7 @@
   const CONTACT_FILTERS=['all','opportunities','tasks','untracked','incomplete'];
   const CONTACT_PAGE_SIZE=60;
   const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
-  const MOBILE_WA_FILTERS=['all','unread','contacts','groups','archived'];
+  const MOBILE_WA_FILTERS=['unanswered','waiting','automatic','all','unread','contacts','groups','archived','snoozed'];
   const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
   const taskIsPending=task=>taskStatus(task)==='pending';
@@ -332,7 +332,7 @@
       switch(current.parts[0]){
         case 'home':view.innerHTML=renderHome();break;
         case 'contacts':view.innerHTML=renderContacts();bindContactFilters();break;
-        case 'contact':view.innerHTML=renderContact(current.parts[1]);if(state.profileTab==='history')ensureContactHistory(current.parts[1]);if(state.profileTab==='documents')mountContactDocuments(current.parts[1]);break;
+        case 'contact':view.innerHTML=renderContact(current.parts[1]);if(state.profileTab==='history')ensureContactHistory(current.parts[1]);if(state.profileTab==='documents')mountContactDocuments(current.parts[1]);if(state.profileTab==='offers')loadMobileSharedOffers(current.parts[1]);break;
         case 'contact-text':view.innerHTML=renderContactText(current.parts[1],current.parts[2]);break;
         case 'edit-contact':view.innerHTML=renderEditContact(current.parts[1]);break;
         case 'contact-labels':view.innerHTML=renderProfileLabels(current.parts[1]);ensureProfileLabels(current.parts[1]);break;
@@ -704,23 +704,51 @@
   }
   function relatedOpportunities(id){return mobileOpportunityIndex().get(String(id))||[];}
   function relatedTasks(id){return window.TPFRecordLinks.related(state.tasks,state.contacts,id,'task');}
+  function contactMobileOverview(opps,tasks){
+    const stages=new Map((state.board.stages||[]).map(stage=>[String(stage.id),stage]));
+    const open=opps.filter(opp=>!opportunityIsClosed(opp,stages.get(String(opp.stage_id))));
+    const last=[...opps].sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')))[0];
+    const next=[...tasks].filter(task=>taskIsPending(task)).sort((a,b)=>String(a.starts_at||'').localeCompare(String(b.starts_at||'')))[0];
+    const completed=tasks.filter(task=>String(task.status||'').toLowerCase()==='completed').length;
+    return {open,last,next,completed};
+  }
+  function contactMobileWhatsApp(contact){
+    const phoneSet=new Set(contactPhones(contact).map(phone=>contactPhoneNumber(phone.number)).filter(Boolean));
+    const chat=(state.whatsapp.chats||[]).filter(row=>phoneSet.has(contactPhoneNumber(mobileWaNormalizePhone(row?.id)))).sort((a,b)=>Number(mobileWaChatTimestamp(b)||0)-Number(mobileWaChatTimestamp(a)||0))[0];
+    return chat?{chat,when:mobileWaTime(mobileWaChatTimestamp(chat)),text:mobileWaPreview(chat)}:null;
+  }
+  function contactMobileSnapshot(overview,contact){
+    const opportunity=overview.last,stage=opportunity&&state.board.stages.find(row=>String(row.id)===String(opportunity.stage_id));
+    const whatsapp=contactMobileWhatsApp(contact);
+    return `<section class="m-contact-snapshot" aria-label="Resumen comercial">
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="opportunities" type="button"><small>Última oportunidad</small><b>${esc(opportunity?.title||'Sin oportunidades')}</b><span>${esc(opportunity?`${stage?.name||'Sin estado'} · ${opportunity.amount!=null?money(opportunity.amount):'Sin importe'}`:'Crear oportunidad')}</span></button>
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Próxima tarea</small><b>${esc(overview.next?dateTime(overview.next.starts_at):'Sin tarea pendiente')}</b><span>${esc(overview.next?.title||'Programar tarea')}</span></button>
+      <button class="m-contact-snapshot-card" data-action="contact-whatsapp" data-id="${esc(contact.id)}" type="button"><small>Último WhatsApp</small><b>${esc(whatsapp?.when||'Sin conversación')}</b><span>${esc(whatsapp?.text||'Abrir conversación')}</span></button>
+      <button class="m-contact-snapshot-card" data-action="profile-tab" data-tab="tasks" type="button"><small>Trabajo pendiente</small><b>${overview.open.length+Math.max(0,(relatedTasks(contact.id)||[]).filter(task=>taskIsPending(task)).length)}</b><span>${esc(`${overview.open.length} oportunidades · ${overview.completed} tareas completadas`)}</span></button>
+    </section>`;
+  }
   function renderContact(id){
     const contact=state.contacts.find(row=>String(row.id)===String(id));
     if(!contact)return `<div class="m-page">${pageHead('Ficha del contacto','contacts')}${empty('Contacto no encontrado','Actualiza los datos e inténtalo de nuevo.')}</div>`;
-    const opps=relatedOpportunities(id),tasks=relatedTasks(id);const tab=state.profileTab;
+    const opps=relatedOpportunities(id),tasks=relatedTasks(id),overview=contactMobileOverview(opps,tasks);const tab=state.profileTab;
     let body='';
     if(tab==='summary')body=`<div class="m-info-card">
       ${infoRow('Teléfonos',contactPhones(contact).map(p=>p.label).join('\n'))}${infoRow('DNI / NIF',contact.dni)}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
     </div>${mobileRelationsSummary(contact)}`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
+    if(tab==='offers')body='<div id="mobileSharedOffers">Cargando ofertas…</div>';
+    
     if(tab==='tasks')body=`${has('can_manage_agenda')?'<button class="m-primary" style="width:100%;margin-bottom:12px" data-action="route" data-route="new-task/'+esc(id)+'">＋ Nueva tarea</button>':''}${tasks.length?`<div class="m-list">${tasks.map(taskCard).join('')}</div>`:empty('Sin tareas','Este contacto todavía no tiene tareas.')}`;
     if(tab==='documents')body='<div id="mobileContactDocuments"></div>';
     if(tab==='history')body=renderContactHistory(id);
     if(tab==='more')body=`<div class="m-info-card">${infoRow('Origen',contact.source)}${infoRow('Última actualización',dateTime(contact.updatedAt))}</div><div class="m-inline-actions"><button class="m-secondary full" data-action="open-desktop">Abrir en el CRM completo</button></div>`;
-    return `<div class="m-page">${pageHead('Ficha del contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar">✎</button>`:'')}
-      <div class="m-profile-hero"><div class="m-avatar">${esc(initials(contact))}</div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.dni||'Sin DNI')}</p><p>${esc(contact.phone||'Sin teléfono')}</p></div>
-      ${contactPhoneActions(contact)}<div class="m-profile-actions">${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-primary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Nueva oportunidad</button>`:''}${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}" type="button">Gestionar etiquetas</button>`:''}</div>
-      <div class="m-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades (${opps.length})</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas (${tasks.length})</button><button class="${tab==='documents'?'active':''}" data-action="profile-tab" data-tab="documents">Documentos</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button><button class="${tab==='more'?'active':''}" data-action="profile-tab" data-tab="more">Más</button></div>${body}
+    return `<div class="m-page m-contact-profile">${pageHead('Contacto','contacts',has('can_edit_records')?`<button class="m-back" data-action="route" data-route="edit-contact/${esc(id)}" aria-label="Editar contacto">✎</button>`:'')}
+      <section class="m-contact-identity"><div class="m-avatar">${esc(initials(contact))}</div><div><h1>${esc(contact.fullName)}</h1><p>${esc(contact.nickname||'')}</p><p>${esc(contact.phone||'Sin teléfono')} · ${esc(contact.dni||'Sin DNI')}</p></div></section>
+      ${contactPhoneActions(contact)}
+      <div class="m-contact-action-grid">${has('can_use_whatsapp')?`<button class="m-primary" data-action="contact-whatsapp" data-id="${esc(id)}" type="button">WhatsApp</button><button class="m-secondary" data-action="contact-offer" data-id="${esc(id)}" type="button">Enviar oferta</button>`:''}${has('can_edit_sales')?`<button class="m-secondary" data-action="contact-direct" data-id="${esc(id)}" type="button">Venta directa</button>`:''}${has('can_view_sales')&&has('can_edit_sales')?`<button class="m-secondary" data-action="route" data-route="new-contact-opportunity/${esc(id)}" type="button">＋ Oportunidad</button>`:''}${has('can_manage_agenda')?`<button class="m-secondary" data-action="route" data-route="new-task/${esc(id)}" type="button">＋ Tarea</button>`:''}</div>
+      ${has('can_manage_labels')?`<button class="m-secondary" data-action="profile-labels" data-contact-id="${esc(id)}">Gestionar etiquetas</button>`:''}
+      ${contactMobileSnapshot(overview,contact)}
+      <div class="m-tabs m-contact-tabs"><button class="${tab==='summary'?'active':''}" data-action="profile-tab" data-tab="summary">Resumen</button><button class="${tab==='opportunities'?'active':''}" data-action="profile-tab" data-tab="opportunities">Oportunidades</button><button class="${tab==='offers'?'active':''}" data-action="profile-tab" data-tab="offers">Ofertas y seguimiento</button><button class="${tab==='tasks'?'active':''}" data-action="profile-tab" data-tab="tasks">Tareas</button><button class="${tab==='documents'?'active':''}" data-action="profile-tab" data-tab="documents">Archivos</button><button class="${tab==='history'?'active':''}" data-action="profile-tab" data-tab="history">Historial</button></div>${body}
     </div>`;
   }
   function mountContactDocuments(id){
@@ -1444,6 +1472,7 @@
     return ((parts[0]?.[0]||'W')+(parts.length>1?(parts.at(-1)?.[0]||''):'')).toUpperCase();
   }
   function mobileWaUnread(chat){
+    const shared=window.TPFPrivateReads?.count(String(chat?.id));if(shared!=null)return shared;
     for(const value of [chat?.unreadCount,chat?.unreadMessagesCount,chat?.unreadMessages,chat?.countUnread,chat?.unread]){
       const count=Number(value);if(Number.isFinite(count)&&count>0)return Math.floor(count);
     }
@@ -1508,7 +1537,7 @@ function crmInteractiveText(message){
   const mobileWaArchiveState=chatId=>state.whatsapp.archiveStates?.[String(chatId)]||{archived:false,archivedAt:0};
   const mobileWaIsArchived=chatId=>!!mobileWaArchiveState(chatId).archived;
   function mobileWaFilterCounts(chats=state.whatsapp.chats){
-    const rows=chats||[],active=rows.filter(chat=>!mobileWaIsArchived(chat.id)),archived=rows.filter(chat=>mobileWaIsArchived(chat.id));return {all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
+    const rows=chats||[],active=rows.filter(chat=>!mobileWaIsArchived(chat.id)),archived=rows.filter(chat=>mobileWaIsArchived(chat.id));const kinds=Object.fromEntries(['unanswered','waiting','automatic','snoozed'].map(k=>[k,active.filter(c=>window.TPFAutomationInbox?.category(c)===k).length]));return {...kinds,all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
   }
   function mobileWaFilteredChats(){
     const query=clean(state.whatsapp.query).toLowerCase(),queryDigits=digits(query),filter=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
@@ -1516,9 +1545,10 @@ function crmInteractiveText(message){
       const group=String(chat.id||'').includes('@g.us'),archived=mobileWaIsArchived(chat.id);
       if(filter==='archived'&&!archived)return false;
       if(filter!=='archived'&&archived)return false;
+      if(['unanswered','waiting','automatic','snoozed'].includes(filter)&&window.TPFAutomationInbox?.category(chat)!==filter)return false;
       if(filter==='unread'&&mobileWaUnread(chat)<1)return false;
       if(filter==='contacts'&&group)return false;if(filter==='groups'&&!group)return false;
-      const haystack=`${mobileWaChatName(chat)} ${mobileWaNormalizePhone(chat.id)}`.toLowerCase();
+      const haystack=`${mobileWaChatName(chat)} ${mobileWaFindContact(chat.id)?.nickname||''} ${mobileWaNormalizePhone(chat.id)}`.toLowerCase();
       return !query||haystack.includes(query)||(queryDigits.length>=3&&digits(haystack).includes(queryDigits));
     });
   }
@@ -1550,13 +1580,13 @@ function crmInteractiveText(message){
   }
   function renderMobileWaFilters(){
     const counts=mobileWaFilterCounts(),active=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
-    const options=[['all','Todos'],['unread','No leídos'],['contacts','Contactos'],['groups','Grupos'],['archived','Archivados']];
+    const options=[['unanswered','Pendientes'],['waiting','En espera'],['automatic','Automáticos'],['all','Todos'],['unread','No leídos'],['contacts','Clientes'],['groups','Grupos'],['archived','Archivados'],['snoozed','Aplazados']];
     return options.map(([key,label])=>`<button class="m-wa-filter ${active===key?'active':''}" data-action="wa-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
   }
   function renderMobileWaChatRow(chat){
     const name=mobileWaChatName(chat),id=String(chat.id||''),group=id.includes('@g.us'),lid=id.includes('@lid'),unread=mobileWaUnread(chat),time=mobileWaTime(mobileWaChatTimestamp(chat));
     const kind=group?'Grupo':lid?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`;
-    return `<button class="m-wa-chat-row ${unread?'unread':''}" data-action="route" data-route="whatsapp-chat/${esc(encodeURIComponent(id))}" type="button"><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-main"><span class="m-wa-chat-top"><strong>${esc(name)}</strong><time>${esc(time)}</time></span><span class="m-wa-chat-bottom"><small>${esc(mobileWaPreview(chat))}</small>${unread?`<b>${unread>99?'99+':unread}</b>`:''}</span><span class="m-wa-chat-kind">${esc(kind)}</span></span></button>`;
+    return `<button class="m-wa-chat-row ${unread?'unread':''}" data-action="route" data-route="whatsapp-chat/${esc(encodeURIComponent(id))}" type="button"><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-main"><span class="m-wa-chat-top"><strong>${esc(name)}</strong><time>${esc(time)}</time></span><span class="m-wa-chat-bottom"><small>${esc(mobileWaPreview(chat))}</small>${unread?`<b>${unread>99?'99+':unread}</b>`:''}</span><span class="m-wa-chat-kind">${esc(mobileWaFindContact(id)?.nickname||kind)}</span>${mobileSharedBadge(chat)}</span></button>`;
   }
   function renderMobileWaListBody(){
     if(state.whatsapp.loadingChats&&!state.whatsapp.loaded)return skeleton();
@@ -1570,7 +1600,7 @@ function crmInteractiveText(message){
     if(!has('can_use_whatsapp'))return `<div class="m-page">${pageHead('WhatsApp','home')}${empty('Acceso restringido','No tienes permiso para utilizar WhatsApp.')}</div>`;
     const refresh='<button class="m-back m-wa-refresh" data-action="wa-refresh" type="button" aria-label="Actualizar WhatsApp">↻</button>';
     const head=`<div class="m-page-head"><button class="m-back" data-action="wa-back-home" type="button" aria-label="Volver al inicio">‹</button><h1>WhatsApp</h1>${refresh}</div>`;
-    return `<div class="m-page m-wa-page">${head}<div id="mobileWaStatus">${renderMobileWaStatus()}</div><div class="m-search m-wa-search"><input id="mobileWaSearch" class="m-input" value="${esc(state.whatsapp.query)}" placeholder="Buscar nombre o teléfono" autocomplete="off"></div><div id="mobileWaFilters" class="m-wa-filters" role="group" aria-label="Filtrar conversaciones">${renderMobileWaFilters()}</div><div id="mobileWaList">${renderMobileWaListBody()}</div></div>`;
+    return `<div class="m-page m-wa-page">${head}<div id="mobileWaStatus">${renderMobileWaStatus()}${has('can_use_whatsapp')?'<button class="m-secondary" data-action="wa-auto-settings">Respuestas automáticas</button>':''}</div><div class="m-search m-wa-search"><input id="mobileWaSearch" class="m-input" value="${esc(state.whatsapp.query)}" placeholder="Nombre, apodo o teléfono" autocomplete="off"></div><div id="mobileWaFilters" class="m-wa-filters" role="group" aria-label="Filtrar conversaciones">${renderMobileWaFilters()}</div><div id="mobileWaList">${renderMobileWaListBody()}</div></div>`;
   }
   async function mobileWaApi(action,payload={}){
     const getActions=new Set(['state','summary','chats']);if(!getActions.has(action)&&!['file','history','send','read','sendfile'].includes(action))throw new Error('Acción móvil no permitida.');
@@ -1620,7 +1650,7 @@ function crmInteractiveText(message){
     state.whatsapp.loadingChats=true;state.whatsapp.error='';if(!silent)updateMobileWaListDom();
     try{
       const action=light&&state.whatsapp.loaded?'chats':'summary';
-      const [result,status]=await Promise.all([mobileWaApi(action),mobileWaApi('state').catch(()=>null),loadMobileWaArchiveStates()]),rows=Array.isArray(result?.chats)?result.chats.filter(chat=>chat?.id):[];
+      const [result,status]=await Promise.all([mobileWaApi(action),mobileWaApi('state').catch(()=>null),loadMobileWaArchiveStates(),window.TPFPrivateReads?.sync(),window.TPFInboxManual?.sync(),loadMobileAutomaticKinds()]),rows=Array.isArray(result?.chats)?result.chats.filter(chat=>chat?.id):[];
       if(action==='chats'){
         const previous=new Map(state.whatsapp.chats.map(chat=>[String(chat.id),chat]));
         state.whatsapp.chats=rows.map(chat=>{const old=previous.get(String(chat.id))||{};return {...old,...chat,_lastMessage:chat?._lastMessage||chat?.lastMessage||old?._lastMessage||old?.lastMessage||null};});
@@ -1649,13 +1679,18 @@ function crmInteractiveText(message){
     const type=String(message?.messageData?.typeMessage||message?.typeMessage||message?.messageType||'').toLowerCase();
     if(type.includes('contact'))return '👤 Contacto compartido';if(type.includes('location'))return '📍 Ubicación';if(type.includes('reaction'))return '↪ Reacción';if(type.includes('template'))return '▤ Plantilla';if(type.includes('interactive'))return '☑ Respuesta interactiva';if(type.includes('quoted'))return '↩ Mensaje citado';return type?'Mensaje de WhatsApp':'';
   }
+  function mobileWaDelivery(message){
+    if(mobileWaMessageDirection(message)!=='out')return '';
+    const status=String(message?.statusMessage||message?.status||'').toLowerCase(),labels={sent:'Enviado',delivered:'Entregado',read:'Leído',failed:'No enviado'};
+    return labels[status]?` <span class="m-wa-delivery ${status}" aria-label="${labels[status]}" title="${labels[status]}">${status==='read'||status==='delivered'?'✓✓':status==='failed'?'!':'✓'}</span>`:'';
+  }
   function renderMobileWaMessages(){
     if(state.whatsapp.loadingHistory&&!state.whatsapp.messages.length)return skeleton();
     if(state.whatsapp.historyError&&!state.whatsapp.messages.length)return `<div class="m-duplicate warn">${esc(state.whatsapp.historyError)}</div><button class="m-secondary" style="width:100%" data-action="wa-refresh-chat">Reintentar</button>`;
     const rows=[...state.whatsapp.messages].sort((a,b)=>Number(mobileWaMessageTimestamp(a)||0)-Number(mobileWaMessageTimestamp(b)||0));
     if(!rows.length)return empty('Sin mensajes','Todavía no hay mensajes disponibles en este chat.');
     return rows.map(message=>{const direction=mobileWaMessageDirection(message),text=mobileWaMessageText(message),media=renderMobileWaMedia(message),fallback=mobileWaFallbackMessage(message);if(!text&&!media&&!fallback)return '';
-      return `<div class="m-wa-msg ${direction}"><div class="m-wa-bubble">${media}${text?`<div class="m-wa-text">${esc(text)}</div>`:fallback?`<div class="m-wa-text m-wa-placeholder">${esc(fallback)}</div>`:''}<time>${esc(mobileWaTime(mobileWaMessageTimestamp(message)))}</time></div></div>`;
+      return `<div class="m-wa-msg ${direction}"><div class="m-wa-bubble">${media}${text?`<div class="m-wa-text">${esc(text)}</div>`:fallback?`<div class="m-wa-text m-wa-placeholder">${esc(fallback)}</div>`:''}<time>${esc(mobileWaTime(mobileWaMessageTimestamp(message)))}${mobileWaDelivery(message)}</time></div></div>`;
     }).join('')||empty('Sin mensajes','No hay mensajes de texto o archivos disponibles.');
   }
   function mobileWaSelectedChat(chatId=state.whatsapp.selectedId){return state.whatsapp.chats.find(chat=>String(chat.id)===String(chatId))||{id:chatId,name:mobileWaNormalizePhone(chatId)||'WhatsApp'};}
@@ -1692,7 +1727,7 @@ function crmInteractiveText(message){
   }
   function renderMobileWaActions(){
     const chatId=state.whatsapp.selectedId,contact=mobileWaFindContact(chatId),linked=!!contact,linkHint=linked?contact.fullName:'Primero crea o vincula el contacto';
-    const archived=mobileWaIsArchived(chatId);return `<div class="m-wa-sheet-options">${mobileWaActionOption('wa-toggle-archive',archived?'↥':'✓',archived?'Recuperar conversación':'Archivar conversación',archived?'Devuélvela a conversaciones activas':'Se aparta y vuelve sola si el cliente escribe')}${mobileWaActionOption('wa-choose-file','⌁','Foto o archivo','Envía una imagen, vídeo, audio o documento')}${mobileWaActionOption('wa-show-templates','▤','Usar plantilla',has('can_manage_templates')?'Prepara un texto guardado':'No tienes permiso para usar plantillas',has('can_manage_templates'))}${mobileWaActionOption('wa-create-task','▣','Crear tarea',linked?(has('can_manage_agenda')?`Vinculada a ${linkHint}`:'No tienes permiso para crear tareas'):linkHint,linked&&has('can_manage_agenda'))}${mobileWaActionOption('wa-create-opportunity','◇','Crear oportunidad',linked?(has('can_view_sales')&&has('can_edit_sales')?`Vinculada a ${linkHint}`:'No tienes permiso para crear oportunidades'):linkHint,linked&&has('can_view_sales')&&has('can_edit_sales'))}${mobileWaActionOption('wa-show-labels','◆','Añadir etiqueta',linked?(has('can_manage_labels')?`Gestiona las etiquetas de ${linkHint}`:'No tienes permiso para gestionar etiquetas'):linkHint,linked&&has('can_manage_labels'))}</div>`;
+    const archived=mobileWaIsArchived(chatId);return `<div class="m-wa-sheet-options">${mobileWaActionOption('wa-toggle-archive',archived?'↥':'✓',archived?'Reabrir conversación':'Resolver conversación',archived?'Devuélvela a conversaciones activas':'Se aparta y vuelve sola si el cliente escribe')}${mobileWaActionOption('wa-wait','◷','En espera','Indica qué esperas del cliente')}${mobileWaActionOption('wa-remind','◷','Recordar conversación','Vuelve a Pendientes a la hora elegida')}${mobileWaActionOption('wa-offer','◇','Enviar oferta','Catálogo y seguimiento del PC',linked&&has('can_edit_sales'))}${mobileWaActionOption('wa-choose-file','⌁','Foto o archivo','Envía una imagen, vídeo, audio o documento')}${mobileWaActionOption('wa-show-templates','▤','Usar plantilla',has('can_manage_templates')?'Prepara un texto guardado':'No tienes permiso para usar plantillas',has('can_manage_templates'))}${mobileWaActionOption('wa-create-task','▣','Crear tarea',linked?(has('can_manage_agenda')?`Vinculada a ${linkHint}`:'No tienes permiso para crear tareas'):linkHint,linked&&has('can_manage_agenda'))}${mobileWaActionOption('wa-create-opportunity','◇','Crear oportunidad',linked?(has('can_view_sales')&&has('can_edit_sales')?`Vinculada a ${linkHint}`:'No tienes permiso para crear oportunidades'):linkHint,linked&&has('can_view_sales')&&has('can_edit_sales'))}${mobileWaActionOption('wa-show-labels','◆','Añadir etiqueta',linked?(has('can_manage_labels')?`Gestiona las etiquetas de ${linkHint}`:'No tienes permiso para gestionar etiquetas'):linkHint,linked&&has('can_manage_labels'))}</div>`;
   }
   function openMobileWaActions(trigger){
     if(!state.whatsapp.selectedId||state.whatsapp.sending)return;mobileWaSheetTrigger=trigger||null;if(trigger)trigger.setAttribute('aria-expanded','true');setMobileWaSheet('actions','Acciones del chat',renderMobileWaActions());
@@ -1764,13 +1799,13 @@ function crmInteractiveText(message){
     if(!has('can_use_whatsapp'))return `<div class="m-page">${pageHead('WhatsApp','home')}${empty('Acceso restringido','No tienes permiso para utilizar WhatsApp.')}</div>`;
     if(!chatId)return `<div class="m-page">${pageHead('WhatsApp','whatsapp')}${empty('Chat no encontrado','Vuelve a la lista de conversaciones.')}</div>`;
     const chat=mobileWaContactChat(chatId),id=String(chat.id||''),phone=id.includes('@g.us')?'Grupo':id.includes('@lid')?'Contacto de WhatsApp':`+${mobileWaNormalizePhone(id)}`,sameChat=String(state.whatsapp.selectedId)===String(chatId),busy=state.whatsapp.sending?' disabled':'',busyText=state.whatsapp.sending?'Hay un envío en curso…':'';
-    return `<div class="m-page m-wa-chat-page"><div class="m-wa-chat-head"><button class="m-back" data-action="wa-back-list" type="button" aria-label="${mobileWaBackTarget()==='whatsapp'?'Volver a conversaciones':'Volver a la ficha del contacto'}">‹</button><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-title"><strong>${esc(mobileWaChatName(chat))}</strong><small>${esc(phone)}</small></span><button class="m-back m-wa-refresh" data-action="wa-refresh-chat" type="button" aria-label="Actualizar chat">↻</button></div><div class="m-wa-contact-link">${renderMobileWaContactAction(chat)}</div><div id="mobileWaMessages" class="m-wa-messages" aria-live="polite">${sameChat?renderMobileWaMessages():skeleton()}</div><div class="m-wa-composer"><button class="m-secondary m-wa-attach" data-action="wa-attach" type="button" aria-label="Abrir acciones del chat" aria-haspopup="dialog" aria-controls="mobileWaActionSheet" aria-expanded="false"${busy}>＋</button><textarea id="mobileWaComposer" class="m-textarea" rows="1" maxlength="4096" placeholder="Escribe un mensaje"${busy}></textarea><button id="mobileWaSend" class="m-primary" data-action="wa-send" type="button"${busy}>Enviar</button><small id="mobileWaComposerMsg" class="m-form-msg">${esc(busyText)}</small></div></div>`;
+    return `<div class="m-page m-wa-chat-page"><div class="m-wa-chat-head"><button class="m-back" data-action="wa-back-list" type="button" aria-label="${mobileWaBackTarget()==='whatsapp'?'Volver a conversaciones':'Volver a la ficha del contacto'}">‹</button><span class="m-avatar m-wa-avatar">${esc(mobileWaInitials(chat))}</span><span class="m-wa-chat-title"><strong>${esc(mobileWaChatName(chat))}</strong><small>${esc(phone)}</small></span><button class="m-back m-wa-refresh" data-action="wa-refresh-chat" type="button" aria-label="Actualizar chat">↻</button></div><div class="m-wa-contact-link">${renderMobileWaContactAction(chat)}</div><div id="mobileWaMessages" class="m-wa-messages" aria-live="polite">${sameChat?renderMobileWaMessages():skeleton()}</div><div class="m-wa-composer"><button class="m-secondary m-wa-attach" data-action="wa-attach" type="button" aria-label="Abrir acciones del chat" aria-haspopup="dialog" aria-controls="mobileWaActionSheet" aria-expanded="false"${busy}>＋</button><textarea id="mobileWaComposer" class="m-textarea" rows="1" maxlength="4096" placeholder="Escribe un mensaje"${busy}></textarea><button id="mobileWaSend" class="m-primary" data-action="wa-send" type="button"${busy}>Enviar</button><div class="m-mobile-tools"><button data-action="wa-file-direct" type="button">Adjuntar</button><button data-action="wa-quick" type="button">Respuestas</button><button data-action="wa-show-templates" type="button">Plantillas</button><button data-action="wa-schedule" type="button">Programar</button></div><small id="mobileWaComposerMsg" class="m-form-msg">${esc(busyText)}</small></div></div>`;
   }
   function updateMobileWaMessagesDom({scrollBottom=false}={}){
     const box=byId('mobileWaMessages');if(!box)return;const previousTop=box.scrollTop,nearBottom=box.scrollHeight-box.scrollTop-box.clientHeight<90;box.innerHTML=renderMobileWaMessages();if(scrollBottom||nearBottom)setTimeout(()=>{box.scrollTop=box.scrollHeight;},20);else box.scrollTop=previousTop;
     const refresh=document.querySelector('[data-action="wa-refresh-chat"]');if(refresh)refresh.disabled=state.whatsapp.loadingHistory;
   }
-  const mobileWaHistorySignature=messages=>(messages||[]).map(message=>{const media=mobileWaMediaInfo(message);return `${message?.idMessage||''}:${mobileWaMessageTimestamp(message)}:${mobileWaMessageDirection(message)}:${mobileWaMessageText(message)}:${media.kind}:${media.url}`;}).join('|');
+  const mobileWaHistorySignature=messages=>(messages||[]).map(message=>{const media=mobileWaMediaInfo(message);return `${message?.idMessage||''}:${mobileWaMessageTimestamp(message)}:${mobileWaMessageDirection(message)}:${mobileWaMessageText(message)}:${media.kind}:${media.url}:${message?.statusMessage||message?.status||''}`;}).join('|');
   async function loadMobileWaHistory(chatId,{silent=false,scrollBottom=false}={}){
     if(!chatId||!has('can_use_whatsapp'))return;if(state.whatsapp.loadingHistory&&String(chatId)===String(state.whatsapp.historyLoadingId))return;
     const requestId=Number(state.whatsapp.historyRequestId||0)+1;state.whatsapp.historyRequestId=requestId;state.whatsapp.loadingHistory=true;state.whatsapp.historyLoadingId=chatId;state.whatsapp.historyError='';if(!silent)updateMobileWaMessagesDom();
@@ -1779,14 +1814,14 @@ function crmInteractiveText(message){
       if(Number(state.whatsapp.historyRequestId)!==requestId||String(state.whatsapp.selectedId)!==String(chatId))return;
       const recentLocal=state.whatsapp.messages.filter(message=>message?.__mobilePending&&!providerIds.has(String(message?.idMessage||''))&&Date.now()-Number(mobileWaMessageTimestamp(message)||0)*1000<120000),messages=[...providerMessages,...recentLocal];
       reopenMobileWaFromMessages(chatId,providerMessages);
-      const changed=mobileWaHistorySignature(messages)!==mobileWaHistorySignature(state.whatsapp.messages);state.whatsapp.messages=messages;if(changed||!silent)updateMobileWaMessagesDom({scrollBottom:scrollBottom||!silent});
+      const changed=mobileWaHistorySignature(messages)!==mobileWaHistorySignature(state.whatsapp.messages);state.whatsapp.messages=messages;if(!document.hidden)markMobileWaRead(chatId);if(changed||!silent)updateMobileWaMessagesDom({scrollBottom:scrollBottom||!silent});
     }catch(error){if(Number(state.whatsapp.historyRequestId)===requestId&&String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.historyError=error?.message||'No se pudo cargar el historial.';updateMobileWaMessagesDom();}}
     finally{if(Number(state.whatsapp.historyRequestId)!==requestId)return;state.whatsapp.loadingHistory=false;state.whatsapp.historyLoadingId='';const refresh=document.querySelector('[data-action="wa-refresh-chat"]');if(refresh)refresh.disabled=false;scheduleMobileWaRefresh();}
   }
   function scrollMobileWaBottom(){const box=byId('mobileWaMessages');if(box)setTimeout(()=>{box.scrollTop=box.scrollHeight;},20);}
   function markMobileWaRead(chatId){
-    const now=Date.now(),last=Number(state.whatsapp.readAt?.[chatId]||0);if(!chatId||now-last<60000)return;
-    state.whatsapp.readAt[chatId]=now;mobileWaApi('read',{chatId}).catch(()=>{});
+    const now=Date.now(),last=Number(state.whatsapp.readAt?.[chatId]||0);if(!chatId||now-last<1000)return;
+    state.whatsapp.readAt[chatId]=now;window.waApi('read',{chatId}).catch(()=>{});
   }
   function initMobileWhatsAppChat(chatId){
     if(!has('can_use_whatsapp')){stopMobileWaRefresh();return;}if(!chatId){go('whatsapp',true);return;}
@@ -1805,9 +1840,9 @@ function crmInteractiveText(message){
     if(state.whatsapp.sending)return;const chatId=state.whatsapp.selectedId,input=byId('mobileWaComposer'),message=clean(input?.value);if(!chatId||!message)return;
     setMobileWaSending(true,'Enviando…',chatId);
     try{
-      const result=await mobileWaApi('send',{chatId,message});if(input)input.value='';
+      const result=await mobileWaApi('send',{chatId,message,manualReply:true});if(input)input.value='';
       const local={type:'outgoing',outgoing:true,__mobilePending:true,idMessage:result?.idMessage||`local-${Date.now()}`,timestamp:Math.floor(Date.now()/1000),messageData:{typeMessage:'textMessage',textMessageData:{textMessage:message}}};
-      if(String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.messages.push(local);updateMobileWaMessagesDom({scrollBottom:true});}const chat=state.whatsapp.chats.find(row=>String(row.id)===String(chatId));if(chat)chat._lastMessage=local;toast('Mensaje enviado.','success');
+      if(String(state.whatsapp.selectedId)===String(chatId)){state.whatsapp.messages.push(local);updateMobileWaMessagesDom({scrollBottom:true});}const chat=state.whatsapp.chats.find(row=>String(row.id)===String(chatId));if(chat)chat._lastMessage=local;window.TPFInboxManual?.save(chatId,'waiting','Respuesta del cliente').catch(e=>toast('Mensaje enviado; no se pudo actualizar En espera.','error'));toast('Mensaje enviado.','success');
     }catch(error){const ambiguous=!error?.status;toast(ambiguous?'No se pudo confirmar el envío. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar.'),'error');}
     finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
   }
@@ -1815,7 +1850,7 @@ function crmInteractiveText(message){
   async function sendMobileWaFile(file,originChatId=''){
     if(!file||state.whatsapp.sending)return;if(file.size>2500000){toast('El archivo supera el límite de 2,5 MB.','error');return;}
     const chatId=clean(originChatId||state.whatsapp.selectedId),current=route();if(!chatId)return;if(chatId!==String(state.whatsapp.selectedId||'')||current.parts[0]!=='whatsapp-chat'||safeDecode(current.parts[1])!==chatId){toast('No se envió el archivo porque cambiaste de conversación.','error');return;}setMobileWaSending(true,'Enviando archivo…',chatId);
-    try{const dataUrl=await mobileWaFileDataUrl(file);await mobileWaApi('sendfile',{chatId,fileName:file.name||'archivo',mimeType:file.type||'application/octet-stream',dataUrl});toast('Archivo enviado.','success');await loadMobileWaHistory(chatId,{silent:true,scrollBottom:true});}
+    try{const dataUrl=await mobileWaFileDataUrl(file);await mobileWaApi('sendfile',{chatId,manualReply:true,fileName:file.name||'archivo',mimeType:file.type||'application/octet-stream',dataUrl});toast('Archivo enviado.','success');try{await window.TPFInboxManual?.save(chatId,'waiting','Respuesta del cliente')}catch(_){toast('Archivo enviado; no se pudo actualizar el estado.','error')}await loadMobileWaHistory(chatId,{silent:true,scrollBottom:true});}
     catch(error){const ambiguous=!error?.status;toast(ambiguous?'No se pudo confirmar el archivo. Revisa el chat antes de volver a enviarlo.':(error?.message||'No se pudo enviar el archivo.'),'error');}
     finally{setMobileWaSending(false,'');scheduleMobileWaRefresh();}
   }
@@ -1831,7 +1866,7 @@ function crmInteractiveText(message){
   function stopMobileWaRefresh(){if(mobileWaRefreshTimer){clearTimeout(mobileWaRefreshTimer);mobileWaRefreshTimer=null;}}
   function scheduleMobileWaRefresh(){
     stopMobileWaRefresh();const current=route(),page=current.parts[0];if(!has('can_use_whatsapp')||!['whatsapp','whatsapp-chat'].includes(page)||document.hidden)return;
-    mobileWaRefreshTimer=setTimeout(async()=>{mobileWaRefreshTimer=null;const latest=route();if(latest.parts[0]==='whatsapp')await loadMobileWaChats({silent:true,light:true});else if(latest.parts[0]==='whatsapp-chat')await loadMobileWaHistory(safeDecode(latest.parts[1]),{silent:true});scheduleMobileWaRefresh();},page==='whatsapp-chat'?20000:180000);
+    mobileWaRefreshTimer=setTimeout(async()=>{mobileWaRefreshTimer=null;const latest=route();if(latest.parts[0]==='whatsapp')await loadMobileWaChats({silent:true,light:true});else if(latest.parts[0]==='whatsapp-chat')await Promise.all([loadMobileWaHistory(safeDecode(latest.parts[1]),{silent:true}),loadMobileWaArchiveStates(),window.TPFPrivateReads?.sync(),window.TPFInboxManual?.sync()]);scheduleMobileWaRefresh();},20000);
   }
 
   function renderScreenCheck(){
@@ -1970,6 +2005,15 @@ function crmInteractiveText(message){
     if(action==='wa-close-sheet')closeMobileWaSheet();
     if(action==='wa-choose-file'){const chatId=mobileWaSheetChatId();if(!chatId)return;state.whatsapp.pendingFileChatId=chatId;closeMobileWaSheet(false);byId('mobileWhatsAppFileInput').click();}
     if(action==='wa-show-templates')openMobileWaTemplates();
+    if(action==='contact-offer'||action==='wa-offer')openMobileSharedOffer(target.dataset.id);
+    if(action==='contact-direct')openMobileDirectSale(target.dataset.id);
+    if(action==='contact-schedule-whatsapp'||action==='wa-schedule')openMobileSharedSchedule(target.dataset.id);
+    if(action==='wa-wait'){closeMobileWaSheet(false);window.TPFInboxManual?.open('waiting');}
+    if(action==='wa-remind'){closeMobileWaSheet(false);window.TPFInboxManual?.open('snoozed');}
+    if(action==='wa-auto-settings')window.TPFWaAutoReplies?.open();
+    if(action==='wa-quick')openMobileQuickReplies();
+    if(action==='wa-quick-use')insertMobileQuickReply(Number(target.dataset.index));
+    if(action==='wa-file-direct'){state.whatsapp.pendingFileChatId=state.whatsapp.selectedId;byId('mobileWhatsAppFileInput').click();}
     if(action==='wa-use-template')useMobileWaTemplate(target.dataset.index);
     if(action==='wa-create-task')openMobileWaLinkedAction('task');
     if(action==='wa-create-opportunity')openMobileWaLinkedAction('opportunity');
@@ -2003,6 +2047,56 @@ function crmInteractiveText(message){
     if(action==='logout')signOut();
     if(action==='open-desktop')location.href='/';
   }
+
+  let sharedContact=null,automaticAt=0;
+  const mobileUnread={};
+  window.sb=client;
+  Object.defineProperty(window,'perms',{configurable:true,get:()=>state.perms});
+  Object.defineProperty(window,'currentContact',{configurable:true,get:()=>state.contacts.find(c=>String(c.id)===route().parts[1])||mobileWaFindContact(state.whatsapp.selectedId)||sharedContact});
+  const liveBridge={get chats(){return state.whatsapp.chats},set chats(v){state.whatsapp.chats=v},get filter(){return state.whatsapp.filter},set filter(v){state.whatsapp.filter=v},get selected(){return mobileWaSelectedChat()},get contact(){return mobileWaFindContact(state.whatsapp.selectedId)},unread:mobileUnread,livePreview:{}};
+  window.waLiveState=liveBridge;
+  window.waMeta=id=>mobileWaArchiveState(id);
+  window.waMessageTimestamp=m=>mobileWaArchiveSeconds(mobileWaMessageTimestamp(m));
+  window.waMessageDirection=mobileWaMessageDirection;
+  window.waApi=mobileWaApi;
+  window.waChatServerUnread=mobileWaUnread;
+  window.waUnreadCount=id=>mobileWaUnread(mobileWaSelectedChat(id));
+  window.waMetaSave=(id,changes)=>{state.whatsapp.archiveStates[id]={...mobileWaArchiveState(id),...changes};updateMobileWaListDom();};
+  window.renderWhatsAppChats=()=>{if(route().parts[0]==='whatsapp')updateMobileWaListDom();else updateMobileWhatsAppNav();};
+  window.crmCan=has;
+  window.showToast=(message,error)=>toast(message,error?'error':'success');
+  window.renderContactProfile=()=>refreshData({silent:true});
+  window.TPFModules={register(name,module){try{module.install?.()}catch(e){console.error('MOBILE_SHARED_MODULE',name,e)}},report(name,error){console.warn(name,error)}};
+  window.addEventListener?.('tpf:sales-updated',()=>{if(state.user)refreshData({silent:true});});
+  window.addEventListener?.('tpf:wa-shared-state',()=>{if(state.user&&has('can_use_whatsapp')){loadMobileWaArchiveStates().then(()=>window.renderWhatsAppChats());window.TPFPrivateReads?.sync();}});
+  function mobileSharedBadge(chat){const kind=window.TPFAutomationInbox?.category(chat),label={unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:'Automático',snoozed:'Aplazada'}[kind];return label?`<span class="m-inbox-badge ${esc(kind)}">${esc(label)}</span><small class="m-inbox-reason">${esc(window.TPFInboxManual?.describe(chat)||'')}</small>`:'';}
+  async function loadMobileAutomaticKinds(){if(Date.now()-automaticAt<90000)return;automaticAt=Date.now();await window.TPFAutomationInbox?.reload();}
+  async function openMobileSharedOffer(id){
+    if(!has('can_edit_sales')||!has('can_use_whatsapp'))return toast('No tienes permiso para enviar ofertas.','error');
+    const contact=id?state.contacts.find(c=>String(c.id)===String(id)):mobileWaFindContact(state.whatsapp.selectedId);
+    if(!contact)return toast('Selecciona primero la ficha del cliente.','error');
+    closeMobileWaSheet(false);sharedContact=contact;
+    try{await window.openOfferComposerForContact(contact.id)}catch(e){toast(e.message||'No se pudo abrir la oferta.','error');}
+  }
+  function openMobileDirectSale(id){if(!has('can_edit_sales'))return;sharedContact=state.contacts.find(c=>String(c.id)===String(id));if(sharedContact)window.TPFOpenMobileDirectSale?.();}
+  function openMobileSharedSchedule(id){
+    if(!has('can_schedule_whatsapp'))return toast('No tienes permiso para programar WhatsApp.','error');
+    const contact=id?state.contacts.find(c=>String(c.id)===String(id)):mobileWaFindContact(state.whatsapp.selectedId);
+    const phone=contact?.phone||mobileWaNormalizePhone(state.whatsapp.selectedId);if(!phone||String(state.whatsapp.selectedId).includes('@g.us'))return toast('Selecciona un contacto con teléfono.','error');
+    window.openWaScheduleV3?.({phone,name:contact?.fullName||mobileWaChatName(mobileWaSelectedChat()),contactId:contact?.id||null,message:byId('mobileWaComposer')?.value||''});
+  }
+  const mobileQuickReplies=[
+    {name:'Pedir factura',text:'Hola, {nombre}. ¿Puedes enviarnos una foto o PDF de la factura para revisarla? Gracias.'},
+    {name:'Confirmar recepción',text:'Hola, {nombre}. Hemos recibido la información. La revisaremos y te avisaremos en cuanto tengamos novedades.'},
+    {name:'Pedir documentación',text:'Hola, {nombre}. Para continuar la gestión necesitamos la documentación pendiente. ¿Puedes enviárnosla por aquí? Gracias.'}
+  ];
+  function openMobileQuickReplies(){setMobileWaSheet('quick-replies','Respuestas rápidas',mobileQuickReplies.map((r,i)=>`<button class="m-wa-sheet-option" data-action="wa-quick-use" data-index="${i}" type="button"><span><b>${esc(r.name)}</b><small>${esc(r.text)}</small></span></button>`).join('')+'<p>Se añade al borrador. Revisa el texto antes de enviar.</p>');}
+  function insertMobileQuickReply(index){const id=mobileWaSheetChatId(),r=mobileQuickReplies[index],input=byId('mobileWaComposer');if(!id||!r||!input)return;const text=resolveMobileWaTemplate(r.text,id);input.value=input.value.trim()?input.value+'\n\n'+text:text;closeMobileWaSheet();input.focus();}
+  async function loadMobileSharedOffers(id){const target=byId('mobileSharedOffers');if(!target)return;try{const rows=await window.TPFWhatsappOfferSummary(id);if(!target.isConnected||route().parts[1]!==id)return;target.innerHTML=rows.length?rows.map(r=>`<section class="m-info-card"><h3>${esc(r.title)}</h3><b>${esc(r.amount)}</b><p>${esc(r.status)}</p>${r.followupHtml}</section>`).join(''):empty('Sin ofertas','Todavía no hay ofertas para este contacto.');}catch(e){if(target.isConnected)target.textContent='No se pudieron cargar las ofertas. Vuelve a abrir esta pestaña.';}}
+  window.openWhatsAppTemplatePicker=async options=>{
+    const d=document.createElement('dialog');d.className='m-shared-template-dialog';d.innerHTML='<h2>Elegir plantilla</h2><input type="search" placeholder="Buscar plantilla" aria-label="Buscar plantilla"><div data-list>Cargando…</div><button type="button" data-close>Cerrar</button>';document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.onclose=()=>d.remove();d.showModal();
+    try{const {data,error}=await client.rpc('wa_list_templates');if(error)throw error;const renderList=()=>{const q=d.querySelector('input').value.toLowerCase(),list=d.querySelector('[data-list]');list.replaceChildren();for(const row of data||[]){if(!(row.name+' '+row.body).toLowerCase().includes(q))continue;const b=document.createElement('button');b.type='button';b.textContent=row.name;b.onclick=()=>{options.onSelect?.({template:row,text:String(row.body||'').replace(/\{nombre\}/g,String(options.context?.name||'').split(/\s+/)[0])});d.close();};list.append(b);}};d.querySelector('input').oninput=renderList;renderList();}catch(e){d.querySelector('[data-list]').textContent=e.message;}
+  };
 
   boot();
 })();

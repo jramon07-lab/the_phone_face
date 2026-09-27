@@ -1,0 +1,30 @@
+/* Existing PC flows sized for the iPhone; mobile keeps the approved light theme. */
+.tpfUnifiedMobile .m-mobile-tools{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;width:100%}
+.tpfUnifiedMobile .m-mobile-tools button{min-height:44px;padding:8px 2px;border:1px solid #dce4ef;border-radius:9px;background:#fff;color:#245fba;font-size:12px}
+.tpfUnifiedMobile .m-inbox-badge{display:inline-block;width:fit-content;margin-top:5px;padding:3px 7px;border-radius:7px;font-size:11px;background:#eaf2ff;color:#245fba}
+.tpfUnifiedMobile .m-inbox-badge.unanswered{background:#fff0cc;color:#855000}
+.tpfUnifiedMobile .m-inbox-reason{display:block;white-space:normal;font-size:11px;color:#667085}
+.tpfUnifiedMobile #mobileWaStatus{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.tpfUnifiedMobile #mobileWaStatus button{font-size:12px;min-height:40px;padding:8px}
+.tpfUnifiedMobile .m-wa-filters{flex-wrap:wrap;overflow:visible}
+.tpfUnifiedMobile .m-wa-filter{font-size:12px;min-height:40px}
+.tpfUnifiedMobile .opShell{height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));max-height:100dvh;width:100%;border-radius:0;background:#fff;color:#1d2939}
+.tpfUnifiedMobile .opModal{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);z-index:10000}
+.tpfUnifiedMobile .opGrid,.tpfUnifiedMobile .opEditorGrid{grid-template-columns:minmax(0,1fr)}
+.tpfUnifiedMobile .opBody{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.tpfUnifiedMobile .opPanel{min-width:0;padding:12px}
+.tpfUnifiedMobile .opTabs{overflow:auto;flex-wrap:nowrap}
+.tpfUnifiedMobile .opTabs button{flex-shrink:0;min-height:44px}
+.tpfUnifiedMobile .opShell input:not([type=checkbox]):not([type=radio]),.tpfUnifiedMobile .opShell textarea,.tpfUnifiedMobile .opShell select{font-size:16px;max-width:100%;box-sizing:border-box}
+.tpfUnifiedMobile .opHead{padding:12px}.tpfUnifiedMobile .opHead h2{font-size:20px}
+.tpfUnifiedMobile .opOfferFooter{flex-wrap:wrap;gap:8px;padding-bottom:12px}
+.tpfUnifiedMobile .opClose,.tpfUnifiedMobile .opActions button{min-height:44px}
+.tpfUnifiedMobile dialog{box-sizing:border-box;max-width:calc(100vw - 20px);max-height:85dvh;overflow:auto;background:white;color:#1d2939;border:1px solid #dce4ef;border-radius:14px}
+.tpfUnifiedMobile dialog input,.tpfUnifiedMobile dialog textarea,.tpfUnifiedMobile dialog select{font-size:16px;max-width:100%;box-sizing:border-box}
+.tpfUnifiedMobile dialog button{min-height:44px;border:1px solid #dce4ef;background:#f5f8ff;color:#245fba;border-radius:8px;padding:8px 12px}
+.tpfUnifiedMobile .m-shared-template-dialog [data-list]{display:grid;gap:8px;margin:12px 0}
+.tpfUnifiedMobile #mobileSharedOffers h3{margin:0 0 8px;font-size:16px}
+.tpfUnifiedMobile #tpfSched3 .tpfS3{max-height:90dvh;width:calc(100vw - 16px)}
+.tpfUnifiedMobile #tpfSched3 input,.tpfUnifiedMobile #tpfSched3 textarea,.tpfUnifiedMobile #tpfSched3 select{font-size:16px}
+
+.tpfUnifiedMobile .m-wa-delivery.read{color:#008dc9}.tpfUnifiedMobile .m-wa-delivery.failed{color:#b42318}

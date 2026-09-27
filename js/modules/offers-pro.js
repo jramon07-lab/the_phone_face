@@ -144,6 +144,7 @@ function openDirectSale(){
   const name=$('contactName')?.value||c.fullName||c.data?.['NOMBRE Y APELLIDOS']||'Contacto';$('directSaleContact').innerHTML=`<span class="directSaleAvatar">${esc(firstName(name).slice(0,2).toUpperCase())}</span><span>${esc(name)}</span>`;
   renderDirectSaleOperator();updateDirectSaleInfo();$('directSaleModal').classList.remove('hidden');setTimeout(()=>$('directSalePrice')?.focus(),50);
 }
+window.TPFOpenMobileDirectSale=openDirectSale;
 function closeDirectSale(){if(!busy)$('directSaleModal')?.classList.add('hidden')}
 async function submitDirectSale(){
   if(busy)return;const c=current(),price=Number(String($('directSalePrice')?.value||'').replace(',','.')),sendMessage=!!$('directSaleSend')?.checked;
