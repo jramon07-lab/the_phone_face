@@ -120,7 +120,7 @@
   function ensureTab(){
     const view=document.getElementById('view-whatsapplive'),tabs=view?.querySelector('.waTabs');if(!tabs)return;
     if(!view.classList.contains('waInboxWorkspace'))view.classList.add('waInboxWorkspace');
-    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['all','Todos','']];
+    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['all','Todos',''],['contacts','Clientes',''],['groups','Grupos',''],['unread','No leídos',''],['favorites','Favoritos',''],['archived','Archivados',''],['snoozed','Aplazados','']];
     const more=tabs.querySelector('.waCleanFilters');
     for(const [key,label,id] of labels){
       let button=view.querySelector('[data-wa-tab="'+key+'"]');
@@ -129,7 +129,7 @@
       tabs.insertBefore(button,more||null);
       button.classList.toggle('active',(liveState()?.filter||'all')===key);
     }
-    if(more){for(const button of [...tabs.querySelectorAll(':scope > [data-wa-tab]')])if(!labels.some(x=>x[0]===button.dataset.waTab))more.lastChild.append(button);}
+    if(more)more.hidden=true;
     const page=view.querySelector('.waLivePage'),body=view.querySelector('.waLiveLayout');
     // Place navigation above the three existing panes, preserving all native controls.
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);

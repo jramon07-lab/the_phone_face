@@ -36,7 +36,7 @@ assert.equal((message.match(/2 líneas de 30 GB/g)||[]).length,1,'extra lines ar
 assert.ok(message.indexOf('2 líneas de 30 GB')<message.indexOf('Netflix incluido'),'mobile lines appear before content services');
 assert.match(message,/75,00 €\/mes/);
 assert.match(message,/Precio válido este mes/);
-assert.doesNotMatch(message,/NOMBRE INTERNO|Netflix interno|Vodafone/,'internal catalog names are never sent to the customer');
+assert.doesNotMatch(message,/NOMBRE INTERNO|Netflix interno/,'internal catalog names are never sent to the customer');
 assert.doesNotMatch(message,/principales|adicional|× 2/i,'customer copy omits internal line wording and multiplication text');
 assert.doesNotMatch(message,/Fibra 600 Mb|Amazon incluido/,'replaced commercial features are removed');
 const hiddenMessage=api.buildMessage(offer,{gb:1,netflix:1,extra:2},'Ana García','',75,{netflix:false,extra:false});
@@ -237,3 +237,6 @@ assert.doesNotMatch(counterNetflixSql,/VDF · ESTÁNDAR/);
 assert.match(source,/\$\('opSubmit'\)\.onclick=\(\)=>submitOffer\(false\)/);
 assert.doesNotMatch(source,/\$\('opSubmit'\)\.onclick=submitOffer/);
 console.log('PASS: dynamic offer pricing, message composition, safe catalog, lifecycle and operator routing.');
+
+assert.match(api.buildMessage(offer,{},'María José'),/Hola María José, te envío la oferta de Vodafone/);
+assert.doesNotMatch(api.buildMessage(offer,{},'María José','',52,{},true),/Vodafone/);

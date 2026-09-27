@@ -108,23 +108,36 @@ const root=path.resolve(__dirname,'../..');
  await page.addScriptTag({path:root+'/js/modules/whatsapp-quick-replies.js'});
  await page.addScriptTag({path:root+'/js/modules/whatsapp-composer-layout.js'});
  await page.evaluate(()=>{window.sentByFixture=0;document.getElementById('waComposerSend').onclick=()=>sentByFixture++;document.getElementById('waComposerText').value='Borrador anterior';});
- await page.click('#waQuickRepliesBtn');await page.fill('#waQuickRepliesPanel input','factura');
+ await page.evaluate(()=>{waLiveState.contact.data.NOMBRE='Ana María';window.waLoadTemplates=()=>[{name:'DEMO',text:'No es una respuesta rápida'}]});
+ await page.click('#waQuickRepliesBtn');assert.equal(await page.locator('#waQuickRepliesPanel [data-list] button').count(),3);const qr=await page.locator('#waQuickRepliesPanel').boundingBox();assert(qr.y>=0&&qr.height<=380);await page.fill('#waQuickRepliesPanel input','factura');
  assert.equal(await page.locator('#waQuickRepliesPanel [data-list] button').count(),1);
  await page.click('#waQuickRepliesPanel [data-list] button');
- assert.match(await page.inputValue('#waComposerText'),/^Borrador anterior\n\nHola, Ana/);
+ assert.match(await page.inputValue('#waComposerText'),/^Borrador anterior\n\nHola, Ana María/);
  assert.equal(await page.evaluate(()=>sentByFixture),0);
  await page.click('#waQuickRepliesBtn');await page.evaluate(()=>{waLiveState.selected={id:'other-chat',name:'Otro'};document.getElementById('waChatName').textContent='Otro';});await page.waitForTimeout(200);assert.equal(await page.locator('#waQuickRepliesPanel').count(),0);
  await page.click('#waQuickRepliesBtn');await page.keyboard.press('Escape');assert.equal(await page.locator('#waQuickRepliesPanel').count(),0);
 
  await page.evaluate(()=>{window.toolbarClicks=[];for(const id of ['waAttachBtn','waTemplateBtn','waScheduleBtn'])document.getElementById(id).onclick=()=>toolbarClicks.push(id);});
  await page.click('#waAttachBtn');
- await page.click('#waComposerMore summary');await page.click('#waTemplateBtn');
+ await page.click('#waTemplateBtn');
  await page.click('#waComposerMore summary');await page.click('#waScheduleBtn');
  assert.deepEqual(await page.evaluate(()=>toolbarClicks),['waAttachBtn','waTemplateBtn','waScheduleBtn']);
  await page.evaluate(async()=>{demoFailSave=false;const c=waLiveState.chats[3];await TPFInboxManual.save(c.id,'pending');c._lastIncomingAt=fixtureNow;c._lastMessage={timestamp:Date.now()/1000+5,direction:'out',idMessage:'human-new'};});
  assert.equal(await page.evaluate(()=>TPFAutomationInbox.category(waLiveState.chats[3])),'waiting');
  await page.click('#waComposerMore summary');await page.locator('#waScheduleBtn').waitFor({state:'visible'});await page.keyboard.press('Escape');
  for(const width of [1366,1280]){await page.setViewportSize({width,height:844});const b=await page.locator('#waComposerActions').boundingBox();assert(b.x>=0&&b.x+b.width<=width+1,'composer toolbar fits '+width);}
+ await page.addScriptTag({path:root+'/js/modules/whatsapp-template-picker-direct.js'});
+ await page.evaluate(()=>{window.waLoadTemplates=()=>[{name:'Oferta A',category:'VODAFONE',text:'Hola {nombre}'},{name:'Oferta B',category:'Vodafone',text:'Hola {nombre}'},{name:'Oferta C',category:'MASMOVIL',text:'Hola {nombre}'},{name:'Oferta D',category:'MásMóvil',text:'Hola {nombre}'},{name:'DEMO · Oferta',text:'Ejemplo'}];});
+ for(const width of [1280,1051,390]){
+  await page.setViewportSize({width,height:768});
+  await page.evaluate(()=>openWhatsAppTemplatePicker({context:{firstName:'Ana María'},onSelect:({text})=>window.pickedText=text}));
+  assert.equal(await page.locator('#tpfDirectCats [data-filter="Vodafone"]').count(),1);
+  assert.equal(await page.locator('#tpfDirectCats [data-filter="MásMóvil"]').count(),1);
+  const boxes=await page.locator('#tpfDirectCats,#tpfDirectList').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height}}));
+  assert(boxes[0].height>30&&boxes[1].height>40&&boxes[0].bottom<=boxes[1].top+1&&boxes[1].bottom<=768,'template categories and list fit');
+  await page.click('#tpfDirectCats [data-filter="Vodafone"]');assert.equal(await page.locator('.tpfDRow').count(),2);
+  await page.locator('.tpfDUse').first().click();assert.equal(await page.evaluate(()=>pickedText),'Hola Ana María');
+ }
  await page.setViewportSize({width:1366,height:768});await page.screenshot({path:'/workspace/scratch/9a46ab1abca3/whatsapp-layout-final.png'});
  assert.deepEqual(errors,[]);await browser.close();console.log('PASS: actual stable markup and chat renderer; category counts, resolve, incoming, automatic retention, desktop/mobile tabs; zero page errors');
 })().catch(e=>{console.error(e);process.exit(1)});

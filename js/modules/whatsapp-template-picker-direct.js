@@ -47,7 +47,10 @@ function isFavourite(template,index,stored=favouriteKeys()){
 }
 
 function category(template){
-  return String(template?.category||'').trim()||'Sin categoría';
+  if(/^DEMO\b/i.test(template?.name||''))return 'Ejemplos';
+  const raw=String(template?.category||'').trim();
+  const key=searchText(raw).replace(/\s+/g,'');
+  return ({masmovil:'MásMóvil',vodafone:'Vodafone',orange:'Orange',yoigo:'Yoigo',o2:'O2',lowi:'Lowi'})[key]||raw||'Sin categoría';
 }
 
 function searchText(value){
@@ -59,9 +62,9 @@ function digits(value){
 }
 
 function currentWhatsappContact(){
-  let selected=null;
+  let selected=null,record=null;
   try{
-    if(typeof waLiveState!=='undefined')selected=waLiveState?.selected||null;
+    if(typeof waLiveState!=='undefined'){selected=waLiveState?.selected||null;record=waLiveState?.contact;}
   }catch(_){}
 
   const fullName=String(
@@ -80,7 +83,7 @@ function currentWhatsappContact(){
   return{
     name:fullName,
     fullName,
-    firstName:fullName.split(/\s+/)[0]||'',
+    firstName:String(record?.data?.NOMBRE||'').trim()||fullName.split(/\s+/)[0]||'',
     phone,
     dni:String($('contactDni')?.value||'').trim()
   };
@@ -96,7 +99,7 @@ function normaliseContext(given){
   return{
     name:fullName,
     fullName,
-    firstName:String(source.firstName||'').trim()||fullName.split(/\s+/)[0]||'',
+    firstName:String(source.firstName||(!given?fallback.firstName:'')||'').trim()||fullName.split(/\s+/)[0]||'',
     phone:digits(source.phone||fallback.phone),
     dni:String(source.dni||fallback.dni||'').trim()
   };
@@ -105,11 +108,11 @@ function normaliseContext(given){
 function resolveVariables(text,givenContext){
   const context=normaliseContext(givenContext);
   let resolved=String(text||'')
-    .replace(/\{\{contacto\.nombre_completo\}\}/gi,context.fullName)
+    .replace(/\{\{contacto\.nombre_completo\}\}/gi,context.firstName)
     .replace(/\{\{contacto\.nombre\}\}/gi,context.firstName)
     .replace(/\{\{contacto\.telefono\}\}/gi,context.phone)
     .replace(/\{\{contacto\.(?:dni|dni \/ nif|nif)\}\}/gi,context.dni)
-    .replace(/\{nombre_completo\}/gi,context.fullName)
+    .replace(/\{nombre_completo\}/gi,context.firstName)
     .replace(/\{nombre\}/gi,context.firstName)
     .replace(/\{telefono\}/gi,context.phone)
     .replace(/\{dni\}/gi,context.dni);
@@ -129,17 +132,17 @@ function ensureStyles(){
   style.textContent=`
     #tpfDirectPickerModal{position:fixed;inset:0;z-index:210000;background:#10182870;display:grid;place-items:center;padding:18px}
     .tpfDirectPickerCard{width:min(860px,94vw);max-height:92dvh;display:flex;flex-direction:column;background:#fff;border-radius:18px;box-shadow:0 24px 70px #0004;overflow:hidden}
-    .tpfDirectPickerHead{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px 14px;border-bottom:1px solid #eaecf0}
+    .tpfDirectPickerHead{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px 14px;border-bottom:1px solid #eaecf0}
     .tpfDirectPickerHead h2{margin:0;font-size:22px}.tpfDirectPickerHead p{margin:3px 0 0;color:#667085;font-size:13px}
     .tpfDirectClose{width:42px;height:42px;flex:0 0 auto;border:1px solid #d0d5dd;border-radius:10px;background:#fff;font-size:22px;cursor:pointer}
-    #tpfDirectTools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 22px 8px}
+    #tpfDirectTools{flex-shrink:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:14px 22px 8px}
     #tpfDirectTools input,#tpfDirectTools button{height:44px;border:1px solid #d0d5dd;border-radius:10px;background:#fff;padding:0 13px;font:inherit}
     #tpfDirectTools button{font-weight:700;cursor:pointer}
-    #tpfDirectCats{display:flex;gap:8px;overflow:auto;padding:2px 22px 11px;scrollbar-width:thin}
+    #tpfDirectCats{flex-shrink:0;display:flex;flex-wrap:wrap;gap:8px;max-height:130px;overflow:auto;padding:2px 22px 11px;scrollbar-width:thin}
     .tpfDCat{border:1px solid #e1e5eb;background:#fff;border-radius:999px;padding:7px 11px;white-space:nowrap;font-weight:700;font-size:12px;cursor:pointer}
     .tpfDCat.on{background:#172033;color:#fff;border-color:#172033}
-    #tpfDirectList{padding:8px 22px 22px;display:flex;flex-direction:column;gap:9px;overflow:auto}
-    .tpfDRow{border:1px solid #e4e7ec;border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;background:#fff}
+    #tpfDirectList{flex:1 1 auto;min-height:0;padding:8px 22px 22px;display:flex;flex-direction:column;gap:9px;overflow:auto}
+    .tpfDRow{flex-shrink:0;border:1px solid #e4e7ec;border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;background:#fff}
     .tpfDFav{border:0;background:transparent;padding:4px;font-size:22px;line-height:1;color:#667085;cursor:pointer}.tpfDFav.on{color:#e3a008}
     .tpfDMain{min-width:0}.tpfDMain b{display:block;font-size:15px}.tpfDBadge{display:inline-flex;margin-top:5px;border-radius:999px;background:#f2f4f7;color:#475467;padding:4px 8px;font-size:11px;font-weight:700}
     .tpfDText{color:#667085;margin-top:7px;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -148,7 +151,7 @@ function ensureStyles(){
     @media(max-width:650px){
       #tpfDirectPickerModal{padding:10px}.tpfDirectPickerCard{width:calc(100vw - 20px);max-height:94dvh}
       .tpfDirectPickerHead{padding:15px 14px 12px}#tpfDirectTools{grid-template-columns:1fr;padding:12px 14px 7px}
-      #tpfDirectCats{padding:2px 14px 9px}#tpfDirectList{padding:7px 14px 14px}.tpfDRow{grid-template-columns:auto minmax(0,1fr)}
+      #tpfDirectCats{padding:2px 14px 9px}#tpfDirectList{flex:1 1 auto;min-height:0;padding:7px 14px 14px}.tpfDRow{grid-template-columns:auto minmax(0,1fr)}
       .tpfDUse{grid-column:1/-1;width:100%}
     }
   `;

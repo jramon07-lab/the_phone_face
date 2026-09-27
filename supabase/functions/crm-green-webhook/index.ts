@@ -25,7 +25,7 @@ function phoneToChat(ctx:any){
   return digits.length>=8&&digits.length<=15?`${digits}@c.us`:"";
 }
 function messageVars(value:string,ctx:any){return String(value||"")
-  .replaceAll("{nombre}",String(ctx?.name||""))
+  .replaceAll("{nombre}",String(ctx?.recipient_first_name||((ctx?.contract_party?.recipient==="holder")?ctx.contract_party.holder_first_name:ctx?.contact_data?.NOMBRE)||String(ctx?.name||"").trim().split(/\s+/)[0]||""))
   .replaceAll("{dni}",String(ctx?.dni||""))
   .replaceAll("{telefono}",String(ctx?.phone||""))
   .replaceAll("{operador}",String(ctx?.operator||""))
