@@ -774,6 +774,7 @@
   function mountContactDocuments(id){
     const contact=state.contacts.find(c=>String(c.id)===String(id));if(!contact||!has('can_view_database'))return;
     window.TPFMobileDocuments?.mount(byId('mobileContactDocuments'),{client,contact,userId:state.user?.id,
+      createTask:has('can_manage_agenda')?files=>{documentTaskDraft={contactId:String(id),files};go('new-task/'+encodeURIComponent(id)+'?fromDocument=1');}:null,
       isCurrent:()=>!!state.user&&has('can_view_database')&&route().parts[0]==='contact'&&route().parts[1]===String(id)&&state.profileTab==='documents',
       update:row=>{const index=state.contacts.findIndex(c=>String(c.id)===String(row.id));if(index>=0)state.contacts[index]=mapContact(row);}
     });
@@ -1191,10 +1192,12 @@
     if(!Number.isFinite(new Date(starts).getTime())||(reminder&&!Number.isFinite(new Date(reminder).getTime())))throw new Error('La fecha no es válida.');
     return window.TPFTaskModel.payload({...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked});
   }
+  let documentTaskDraft=null;
+  function taskDocumentLinks(description){const urls=[...new Set(String(description||'').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<>"']+/g)||[])];return urls.length?`<div class="m-info-card"><b>Archivos de la tarea</b>${urls.map((url,i)=>`<p><a class="m-secondary" target="_blank" rel="noopener noreferrer" href="${esc(url)}">Abrir archivo ${i+1} ↗</a></p>`).join('')}</div>`:'';}
   function renderNewTask(contactId){
     const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
-    const back=mobileWaReturnPath(contactId,'task');
-    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskFields('newTask',{title:'Llamar a '+contact.fullName,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
+    const back=mobileWaReturnPath(contactId,'task'),files=route().query.get('fromDocument')==='1'&&documentTaskDraft?.contactId===String(contactId)?documentTaskDraft.files:[],draft=files.length?{title:'Revisar '+files[0].name,description:files.map(f=>'Archivo: '+f.name+'\n'+f.webViewLink).join('\n\n')}:{title:'Llamar a '+contact.fullName};
+    return `<div class="m-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:16px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskDocumentLinks(draft.description)}${taskFields('newTask',{...draft,starts_at:new Date(Date.now()+3600000)})}<button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg"></p></div>`;
   }
   function ensureTaskDetail(id){if(!has('can_view_agenda')&&!has('can_manage_agenda'))return;if(taskDetail.id!==String(id))loadTaskDetail(id);}
   async function loadTaskDetail(id){
@@ -1210,7 +1213,7 @@
     const editor=taskDetail;if(editor.id!==String(id)||editor.loading)return `<div class="m-page">${head}${skeleton()}</div>`;
     if(!editor.row)return `<div class="m-page">${head}${empty('No disponible',editor.error||'La tarea ya no existe.')}<button class="m-secondary" data-action="reload-task" data-id="${esc(id)}">Reintentar</button></div>`;
     const row=editor.row,canEdit=has('can_manage_agenda');
-    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description)}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
   }
   function mergeTaskChange(id,row){
     if(row){const index=state.tasks.findIndex(item=>String(item.id)===String(id));if(index>=0)state.tasks[index]=row;else state.tasks.push(row);}
