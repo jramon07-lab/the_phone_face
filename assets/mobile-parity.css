@@ -95,3 +95,20 @@ html:not(.m-keyboard-open) .tpfUnifiedMobile .m-app{top:0;bottom:0;height:auto;m
 .tpfUnifiedMobile #tpfSched3 .tpfS3f button{flex:1 1 0;min-width:0;width:auto;white-space:normal}
 .tpfUnifiedMobile .m-contact-compose header>div{min-width:0;overflow-wrap:anywhere}
 .tpfUnifiedMobile .m-contact-compose header button{flex:0 0 44px}
+
+/* Compact contact profile: six actions, inline call and a single tab strip. */
+.tpfUnifiedMobile .m-contact-profile .m-page-head{margin-bottom:10px;min-height:44px}
+.tpfUnifiedMobile .m-contact-identity{padding:10px;gap:10px;margin:0 0 8px;border-radius:13px}
+.tpfUnifiedMobile .m-contact-identity>div:nth-child(2){flex:1;min-width:0}
+.tpfUnifiedMobile .m-contact-identity .m-avatar{width:40px;height:40px;flex-basis:40px;font-size:14px}
+.tpfUnifiedMobile .m-contact-identity h1{font-size:17px;line-height:1.2}
+.tpfUnifiedMobile .m-contact-identity p{margin-top:3px;font-size:12px}
+.tpfUnifiedMobile .m-contact-call{display:grid;place-items:center;flex:0 0 44px;min-height:44px;border:1px solid #dce4ef;border-radius:10px;background:#f5f8ff;color:#245fba;font-size:22px;text-decoration:none}
+.tpfUnifiedMobile .m-contact-action-grid{gap:5px;margin-bottom:8px}
+.tpfUnifiedMobile .m-contact-action-grid button{padding:6px 4px;min-height:44px;font-size:12px}
+.tpfUnifiedMobile .m-contact-tabs{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:3px;margin:8px 0;padding:0 0 3px;scrollbar-width:thin}
+.tpfUnifiedMobile .m-contact-tabs button{flex:0 0 auto;min-height:44px;padding:7px 10px;white-space:nowrap;font-size:12px;border-radius:8px}
+.tpfUnifiedMobile .m-contact-profile .m-info-card{padding:12px;border-radius:13px}
+.tpfUnifiedMobile #mobileSharedOffers h3{font-size:15px;line-height:1.3;margin-bottom:6px}
+.tpfUnifiedMobile #mobileSharedOffers p{margin:8px 0;font-size:14px}
+.tpfUnifiedMobile #mobileSharedOffers button{min-height:44px}
