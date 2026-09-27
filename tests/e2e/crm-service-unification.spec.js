@@ -14,7 +14,7 @@ const READ_RPCS = new Set([
   'crm_list_automations', 'crm_list_custom_fields', 'crm_list_labels', 'crm_list_offer_followup_events',
   'crm_list_system_events', 'crm_offer_delivery_status', 'crm_offer_followup_latest',
   'crm_system_health_snapshot', 'crm_welcome_capability', 'crm_contact_authorship',
-  'wa_get_messages', 'wa_list_templates'
+  'wa_get_messages', 'wa_list_templates', 'crm_whatsapp_internal_reads'
 ]);
 const GREEN_READ = new Map([
   ['state', 'GET'], ['settings', 'GET'], ['summary', 'GET'], ['chats', 'GET'],
@@ -170,10 +170,8 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
         if(view==='whatsapplive'){
           await expect(page.locator('#waSideTabs')).toHaveCount(1);
-          await page.locator('.waCleanFilters>summary').click();
           await expect(page.locator('[data-wa-tab="archived"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="automatic"]')).toBeVisible();
-          await page.locator('.waCleanFilters>summary').click();
           const row=page.locator('#waLiveChats .waChatRow').first();
           if(await row.count()){
             await row.click();

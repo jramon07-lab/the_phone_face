@@ -164,7 +164,7 @@
       if(!labels[key])return;
       const badge=document.createElement('span');badge.className='waInboxFlag '+key;badge.textContent=labels[key];
       let host=row.querySelector('.waChatMeta');if(!host){host=document.createElement('div');host.className='waChatMeta';row.querySelector('.waChatRowMain')?.append(host);}host.append(badge);
-      const detail=window.TPFInboxManual?.describe(chat);if(detail){const note=document.createElement('small');note.className='waInboxReason';note.textContent=detail;host.append(note);}
+      const detail=window.TPFInboxManual?.describe(chat)||(key==='unanswered'?'Revisar mensaje del cliente':'');if(detail){const note=document.createElement('small');note.className='waInboxReason';note.textContent=detail;host.append(note);}
     });decorateHeader();
   }
   function openAutomaticTab(tab){

@@ -8,8 +8,8 @@ const offers=fs.readFileSync('js/modules/offers-pro.js','utf8');
 const errors=fs.readFileSync('js/modules/automations-execution-controls.js','utf8');
 const sql=fs.readFileSync('db/proposals/vodafone-day-one-variants.sql','utf8');
 
-assert.match(archive,/Archivar conversación/);
-assert.match(archive,/Desarchivar/);
+assert.match(archive,/Resolver/);
+assert.match(archive,/Reabrir/);
 assert.match(archive,/Deshacer/);
 assert.doesNotMatch(waFixes,/b\.textContent=done\?'✓ Atendida':'✓ Marcar atendida'/);
 

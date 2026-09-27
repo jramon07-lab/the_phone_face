@@ -123,14 +123,14 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
       await one.page.locator('#waArchiveChat').click();
       await expect(two.page.locator('#waArchiveChat')).toContainText('Desarchivar',{timeout:35000});
       await two.page.locator('#waArchiveChat').click();
-      await expect(one.page.locator('#waArchiveChat')).toContainText('Archivar conversación',{timeout:35000});
+      await expect(one.page.locator('#waArchiveChat')).toContainText('Resolver',{timeout:35000});
     });
     await test.step('Un archivo rechazado avisa y no deja los PCs con estados diferentes',async()=>{
       archiveControl.failWrites=true;
       await one.page.locator('#waArchiveChat').click();
       await expect(one.page.locator('#waArchiveSaveError')).toContainText('No se confirmó el cambio de archivo');
-      await expect(one.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
-      await expect(two.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
+      await expect(one.page.locator('#waArchiveChat')).toContainText('Resolver');
+      await expect(two.page.locator('#waArchiveChat')).toContainText('Resolver');
       expect(archive.get(A).archived).toBe(false);archiveControl.failWrites=false;
     });
     await test.step('Archivar y deshacer con guardado lento conserva el último cambio',async()=>{
@@ -141,9 +141,9 @@ test('Dos PCs: actualizan sin avisos, recuperan red y no mezclan chats',async({b
       }finally{releaseWrite();archiveControl.holdWrite=null;}
       await expect(one.page.locator('#waArchiveSaveError')).toHaveCount(0);
       await expect.poll(()=>archive.get(A).archived).toBe(false);
-      await expect(one.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
+      await expect(one.page.locator('#waArchiveChat')).toContainText('Resolver');
       await two.page.evaluate(()=>window.dispatchEvent(new Event('focus')));
-      await expect(two.page.locator('#waArchiveChat')).toContainText('Archivar conversación');
+      await expect(two.page.locator('#waArchiveChat')).toContainText('Resolver');
     });
 
     await test.step('Una respuesta atrasada de A no se dibuja dentro de B ni borra su borrador',async()=>{

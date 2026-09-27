@@ -28,7 +28,7 @@ for(const [field,section] of [['contactName',null],['contactNickname',null],['co
 for(const s of ['#waFieldMore','#waField-contactObservations','#waField-contactNotes'])if(await page.locator(s).getAttribute('open')!==null)await page.locator(s+' > summary').click();
 await page.locator('#waContactPanel').evaluate(el=>el.scrollTop=0);
 await expect(page.locator('[data-wa-tab="archived"]')).toBeHidden();
-await page.locator('.waCleanFilters summary').click();await expect(page.locator('.waCleanFilters [popover]')).toBeVisible();await shot(page,'wa-filters');await fits(page,'.waCleanFilters [popover]');await page.locator('.waCleanFilters [popover]').screenshot({path:test.info().outputPath('wa-filter-options.png')});await page.locator('[data-wa-tab="groups"]').click();await expect(page.locator('[data-wa-tab="groups"]')).toHaveClass(/active/);await page.locator('[data-wa-tab="all"]').click();
+await expect(page.locator('.waCleanFilters [popover]')).toBeVisible();await shot(page,'wa-filters');await fits(page,'.waCleanFilters [popover]');await page.locator('.waCleanFilters [popover]').screenshot({path:test.info().outputPath('wa-filter-options.png')});await page.locator('[data-wa-tab="groups"]').click();await expect(page.locator('[data-wa-tab="groups"]')).toHaveClass(/active/);await page.locator('[data-wa-tab="all"]').click();
 await page.locator('#waScheduleBtn').click();await expect(page.locator('#tpfSched3')).toBeVisible();
 for(const height of [950,700]){await page.setViewportSize({width:1440,height});await fits(page,'#tpfS3save');await page.locator('.tpfS3b').evaluate(el=>el.scrollTop=el.scrollHeight);await fits(page,'#tpfS3save');}
 await page.locator('#tpfSched3').screenshot({path:test.info().outputPath('wa-schedule.png'),mask:[page.locator('#tpfS3phone,#tpfS3msg,#tpfS3contact')],maskColor:'#dce5ef'});
@@ -42,6 +42,6 @@ await page.locator('#waCleanReview').click();await expect(page.locator('.tpfRevi
 await page.locator('[data-wa-side-tab="work"]').click();await page.locator('#waSideNewTask').click();await expect(page.locator('#agendaCreateCard')).toBeVisible();await page.locator('#agendaCloseCreate').click();
 await page.locator('#waSideNewOpp').click();await expect(page.locator('#oppDetailModal')).toBeVisible();await page.locator('#oppModalClose').click();await expect(page.locator('#contactModal')).toBeHidden();
 await page.locator('#waCleanExpand').click();await expect(page.locator('#view-whatsapplive')).not.toHaveClass(/waCleanFullscreen/);
-await page.locator('.waCleanFilters summary').click();await expect(page.locator('[data-wa-tab="groups"]')).toBeVisible();await fits(page,'[data-wa-tab="archived"]');await page.locator('[data-wa-tab="all"]').click();
+await expect(page.locator('[data-wa-tab="groups"]')).toBeVisible();await fits(page,'[data-wa-tab="archived"]');await page.locator('[data-wa-tab="all"]').click();
 await page.locator('.waChatTopActions .waCleanMore summary').click();await expect(page.locator('#waMediaChat')).toBeVisible();await page.locator('#waMediaChat').click();await expect(page.locator('#waMediaModal')).toBeVisible();
 });

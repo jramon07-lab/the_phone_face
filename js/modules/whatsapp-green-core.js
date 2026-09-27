@@ -85,6 +85,8 @@ function waChatServerPreview(c){
   return "";
 }
 function waChatServerUnread(c){
+  const internal=typeof window!=="undefined"?window.TPFPrivateReads?.count(c?.id):null;
+  if(internal!==null&&internal!==undefined)return internal;
   const vals=[
     c?.unreadCount,
     c?.unreadMessagesCount,
