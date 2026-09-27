@@ -751,7 +751,7 @@
     const opps=relatedOpportunities(id),tasks=relatedTasks(id),overview=contactMobileOverview(opps,tasks);const tab=state.profileTab;
     let body='';
     if(tab==='summary')body=`<button id="mobileSummaryOffer" class="m-summary-offer" data-action="profile-tab" data-tab="offers" type="button"><small>Última oferta</small><b>Cargando…</b><span>Ver ofertas ›</span></button><div class="m-info-card m-contact-summary">
-      ${infoRow('Teléfonos',contactPhones(contact).map(p=>p.label).join('\n'))}${infoRow('DNI / NIF',contact.dni)}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
+      ${copyableContactRow('Teléfonos',contactPhones(contact).map(p=>p.label),'teléfono')}${copyableContactRow('DNI / NIF',[contact.dni],'DNI')}${contactTextCard(contact,'observations')}${contactTextCard(contact,'notes')}${infoRow('Banco / IBAN',contact.bank)}${infoRow('Correo electrónico',contact.email)}
     </div>${mobileRelationsSummary(contact)}`;
     if(tab==='opportunities')body=opps.length?`<div class="m-list">${opps.map(opportunityCard).join('')}</div>`:empty('Sin oportunidades','Este contacto todavía no tiene oportunidades.');
     if(tab==='offers')body='<div id="mobileSharedOffers">Cargando ofertas…</div>';
@@ -838,6 +838,20 @@
     const model=contactHistory;if(model.id!==String(id)||model.loading)return skeleton();
     if(model.error)return `${empty('No se pudo cargar',model.error)}<button class="m-secondary" data-action="contact-history-reload" data-id="${esc(id)}">Reintentar</button>`;
     return `<div class="m-contact-history"><button class="m-secondary" data-action="contact-history-reload" data-id="${esc(id)}">Actualizar historial</button><p class="m-subtitle">Actividad registrada y última actualización de tareas y oportunidades.</p>${model.rows.length?model.rows.map(row=>`<article class="m-info-card"><small>${esc(dateTime(row.at))}</small><h3>${esc(row.title)}</h3><p>${esc(row.text)}</p>${row.path?`<button class="m-ghost" data-action="route" data-route="${esc(row.path)}">Ver detalle ›</button>`:''}</article>`).join(''):empty('Sin actividad','Todavía no hay actividad registrada para este contacto.')}${model.more?`<button class="m-secondary" data-action="contact-history-more" data-id="${esc(id)}">Cargar más actividad</button>`:''}</div>`;
+  }
+  function copyableContactRow(label,values,kind){
+    const items=values.filter(Boolean);
+    return `<div class="m-info-row m-copy-field"><span>${esc(label)}</span>${items.length?items.map(value=>`<div class="m-copy-value"><b>${esc(value)}</b><button type="button" class="m-copy-button" data-action="copy-contact-value" data-value="${esc(value)}" aria-label="Copiar ${esc(kind)}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg></button></div>`).join(''):'<b>—</b>'}</div>`;
+  }
+  async function copyContactValue(button){
+    const value=button.dataset.value;if(!value)return;
+    let input;
+    try{
+      if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(value);
+      else{input=document.createElement('textarea');input.value=value;input.readOnly=true;input.style.cssText='position:fixed;top:0;left:0;opacity:0;font-size:16px';document.body.appendChild(input);input.focus();input.select();input.setSelectionRange(0,value.length);if(!document.execCommand('copy'))throw new Error('copy');}
+      toast('Copiado','success');
+    }catch(_){toast('No se pudo copiar. Mantén pulsado el dato para seleccionarlo.','error');}
+    finally{if(input)input.remove();}
   }
   function infoRow(label,value){return `<div class="m-info-row"><span>${esc(label)}</span><b>${esc(value||'—')}</b></div>`;}
 
@@ -1986,6 +2000,7 @@ function crmInteractiveText(message){
       else if(destination==='whatsapp'&&current!=='whatsapp-chat')state.whatsapp.listScroll=0;
       go(destination);
     }
+    if(action==='copy-contact-value')await copyContactValue(target);
     if(action==='back')goBack(target.dataset.fallback||'home');
     if(action==='quick-scan'){closeMobileWaSheet(false);resetDraft();go('scan');}
     if(action==='quick-manual'){closeMobileWaSheet(false);resetDraft();go('detected');}
