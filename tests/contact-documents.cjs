@@ -2,13 +2,14 @@ const assert=require('node:assert/strict');
 Object.assign(process.env,{SUPABASE_SERVICE_ROLE_KEY:'test-service',SUPABASE_ANON_KEY:'test-anon',GOOGLE_DRIVE_CLIENT_ID:'test-client',GOOGLE_DRIVE_CLIENT_SECRET:'test-secret',CRM_BACKUP_ENCRYPTION_KEY:'test-encryption'});
 const handler=require('../api/crm-documents.js'),T=handler._test;
 const rid='11111111-1111-1111-1111-111111111111',fid='folder_test_123456';
+let oauthError=null;
 let permission={user_id:rid,is_admin:true,can_edit_records:true},savedLink={version:1,provider:'google_drive',folder_id:fid,folder_name:'Carpeta'},patch=null,emptyPatch=false,calls=[];
 const row=()=>({id:rid,source_sheet:'BASE DE DATOS',data:{NOMBRE:'Contacto',NOTAS:'Conservar',TPF_TITULAR:{same:false,holder_name:'Titular'},TPF_DOCUMENTS:savedLink}});
 const response=(body,status=200,headers={})=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json',...headers}});
 global.fetch=async(url,options={})=>{calls.push({url,options});
  if(url.includes('current_user_permissions'))return response(permission);
  if(url.includes('crm_external_credentials'))return response([{encrypted_value:T.seal({refresh_token:'test-refresh'})}]);
- if(url.includes('oauth2.googleapis.com'))return response({access_token:'test-google-access'});
+ if(url.includes('oauth2.googleapis.com'))return oauthError?response({error:oauthError},oauthError==='invalid_grant'?400:503):response({access_token:'test-google-access'});
  if(url.includes('/rest/v1/records')){if(options.method==='PATCH'){patch=JSON.parse(options.body);return response(emptyPatch?[]:[{...row(),...patch}]);}return response([row()]);}
  if(url.includes('/upload/drive'))return response({},200,{location:'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'});
  if(url.includes('/drive/v3/files/root_test_123456'))return response({id:'root_test_123456',name:'Clientes',mimeType:'application/vnd.google-apps.folder'});
@@ -23,6 +24,9 @@ async function invoke(action,body={},method,extraHeaders={}){let result;const re
  for(const bad of ['https://evil.test/folders/'+fid,'javascript:alert(1)','folder/../../secret'])assert.throws(()=>T.folderId(bad));
  assert.throws(()=>T.adapter({version:1,provider:'onedrive'}));
  const s=await invoke('status');assert.equal(s.body.connected,true);assert.ok(!JSON.stringify(s).includes('test-refresh'));
+ oauthError='invalid_grant';const expired=await invoke('status');assert.equal(expired.body.connected,false);assert.equal(expired.body.reconnectRequired,true);assert.equal((await invoke('list')).body.code,'GOOGLE_RECONNECT_REQUIRED');
+ oauthError='temporarily_unavailable';assert.equal((await invoke('status')).status,503);oauthError=null;
+ const mobileAuth=await invoke('authorize',{mobile:true});assert.equal(T.unseal(new URL(mobileAuth.body.url).searchParams.get('state')).returnTo,'/movil/#/contact/'+rid);
  const a=await invoke('authorize');assert.equal(a.status,200);assert.equal(new URL(a.body.url).searchParams.get('redirect_uri').includes('crm-documents'),true);
  let d=await invoke('list');assert.equal(d.status,200);assert.equal(d.body.files.length,1);
  d=await invoke('link',{confirmed:true,expectedLink:savedLink,folderId:fid});assert.equal(d.status,200);assert.equal(patch.data.NOTAS,'Conservar');assert.equal(patch.data.TPF_TITULAR.holder_name,'Titular');assert.equal(patch.data.NOMBRE,'Contacto');assert.equal(patch.data.TPF_DOCUMENTS.provider,'google_drive');
