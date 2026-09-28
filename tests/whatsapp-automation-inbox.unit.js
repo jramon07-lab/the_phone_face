@@ -176,3 +176,22 @@ assert(api.facets(actual).includes('automatic'));assert(api.facets(actual).inclu
 api.ingestBusiness([{id:'receipt-offer',opportunity_id:'receipt-opp',status:'accepted',snapshot:{recipient_phone:'600000001'}}],[]);
 assert(api.facets(actual).includes('processing'));assert(!api.facets(actual).includes('automatic'));
 console.log('Confirmed recipient classification survives asynchronous receipt loading and preserves offer phases');
+
+// A closed sale returns to archive after a real reply, even after a new incoming.
+inbox.ingestBusiness([offer('won')],[saleOpp]);
+chatMeta={};context.TPFInboxManual.category=()=>null;
+context.waLiveState.livePreview={};sample._lastIncomingAt=now+100;
+sample._lastMessage={timestamp:now+100,direction:'in',idMessage:'after-close-in'};
+assert.deepEqual(kinds(),['unanswered']);
+sample._lastMessage={timestamp:now+110,direction:'out',idMessage:'real-reply'};
+assert.deepEqual(kinds(),['archived'],'a real reply after closure resolves attention');
+sample._lastMessage={timestamp:now+120,direction:'in',idMessage:'new-question'};
+assert.deepEqual(kinds(),['unanswered']);
+chatMeta={archived:true,archivedAt:now+130};assert.deepEqual(kinds(),['archived'],'attending also archives');
+const followup={id:'3m',status:'pending',action_type:'send_template',run_at:iso(now+86400),context:{phone},automation:{trigger_config:{automation_code:'o2_security_3_months'}}};
+inbox.ingestFollowups([followup,{...followup,id:'done',status:'done'},{...followup,id:'cancelled',status:'cancelled'},{...followup,id:'month',action_type:'record_sale_month'}]);
+assert.equal(inbox.followups(sample).length,1);
+assert.equal(inbox.matchesFilter(sample,'aftercare'),true,'three month view includes archived chats');
+assert.deepEqual(kinds(),['archived'],'follow-up does not reopen or reclassify chats');
+inbox.ingestFollowups([{...followup,status:'done'}]);assert.equal(inbox.matchesFilter(sample,'aftercare'),false);
+console.log('Won reply/attend archival and three-month scheduled view OK');
