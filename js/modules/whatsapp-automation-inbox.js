@@ -5,7 +5,7 @@
   const REFRESH_MS=90000;
   const MANUAL_KEY='tpf_wa_manual_outgoing_v1';
   const SEND_ACTIONS=['send_template','send_whatsapp_now','__send_whatsapp'];
-  let latestAutomaticByPhone=new Map();
+  let latestAutomaticByPhone=new Map(),deliveredOfferPhones=new Map(),businessSource=null;
   let manualCache=null;
   let loading=false;
   let timer=0;
@@ -62,12 +62,15 @@
     return localPhone(context.phone||context.contact_phone||context.contract_party?.recipient_phone||context.contact_data?.['TELÉFONO']||'');
   }
   function ingestJobs(rows){
-    const next=new Map();
+    const next=new Map(),delivered=new Map();
     for(const row of rows||[]){
-      const receipt=row.action_config?.__delivery_receipt,phone=jobPhone(row)||localPhone(receipt?.chatId),id=String(receipt?.idMessage||'');
+      const receipt=row.action_config?.__delivery_receipt,phone=localPhone(receipt?.chatId)||jobPhone(row),id=String(receipt?.idMessage||'');
+      const offerId=String(row.context?.offer_instance_id||''),recipient=phoneKey(receipt?.chatId),at=seconds(row.completed_at||row.updated_at);
+      if(offerId&&recipient&&id&&(!delivered.has(offerId)||at>delivered.get(offerId).at))delivered.set(offerId,{phone:recipient,at});
       if(phone&&id){if(!next.has(phone))next.set(phone,new Set());next.get(phone).add(id);}
     }
-    latestAutomaticByPhone=next;
+    latestAutomaticByPhone=next;deliveredOfferPhones=delivered;
+    if(businessSource)ingestBusiness(businessSource.offers,businessSource.opportunities);
     return next.size;
   }
   async function loadAutomaticSends(){
@@ -97,10 +100,11 @@
   // Only actual offer instances drive commercial tabs. Legacy opportunities
   // (including annual reviews in Este mes) are used only to resolve the recipient.
   function ingestBusiness(offers,opportunities){
+    businessSource={offers,opportunities};
     const oppById=new Map(opportunities.map(o=>[String(o.id),o])),next=new Map();
     for(const offer of offers){
       const o=oppById.get(String(offer.opportunity_id));
-      const key=phoneKey(offer.snapshot?.recipient_phone||o?.contract_party?.recipient_phone||o?.phone);if(!key)continue;
+      const key=phoneKey(deliveredOfferPhones.get(String(offer.id))?.phone||offer.snapshot?.recipient_phone||o?.contract_party?.recipient_phone||o?.phone);if(!key)continue;
       const item=next.get(key)||{automatic:false,processing:false,paused:false,wonAt:0,declinedAt:0,plans:[]};
       if(['following','queued','paused','error'].includes(offer.status)){item.automatic=true;if(offer.status==='paused')item.paused=true;}
       if(['accepted','processed'].includes(offer.status))item.processing=true;
@@ -313,7 +317,7 @@
       let tries=0;const wait=setInterval(()=>{tries++;if(wrapRenderer()||tries>40)clearInterval(wait)},100);
     }
     reload();
-    window.addEventListener('tpf:sales-updated',()=>loadBusiness(true));
+    window.addEventListener('tpf:sales-updated',reload);
     window.addEventListener('tpf:tasks-changed',()=>loadBusiness(true));
     window.addEventListener('focus',()=>loadBusiness(true));
     setInterval(()=>{if(!document.hidden&&!document.getElementById('view-whatsapplive')?.classList.contains('hidden')&&[...businessByPhone.values()].some(x=>x.plans.length))window.renderWhatsAppChats?.();},20000);

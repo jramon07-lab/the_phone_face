@@ -446,14 +446,25 @@ async function loadWhatsAppLive(){
   try{
     $("waLiveStatus").textContent="Conectando…";
     $("waLiveStatus").className="waLiveStatus";
-    const [state,summaryR]=await Promise.all([waApi("state"),waApi("summary")]);
-    const st=String(state.state||state.data?.stateInstance||state.stateInstance||"").toLowerCase();
-    const connected=st==="authorized"||st==="online"||st==="connected";
-    $("waLiveStatus").textContent=connected?"Conectado":"Estado: "+(st||"desconocido");
-    $("waLiveStatus").className="waLiveStatus "+(connected?"ok":"error");
-    if(!summaryR?.degraded)waApplySummaryChats(summaryR.chats);
-    if(!summaryR?.degraded)waSharedSyncStatus(true);else waSharedSyncStatus(false);
-    renderWhatsAppChats();
+    // Connection and list loading are independent: a slow summary must not
+    // keep an already-authorized session labelled as "Conectando".
+    const stateRequest=waApi("state").then(state=>{
+      const st=String(state.state||state.data?.stateInstance||state.stateInstance||"").toLowerCase();
+      const connected=st==="authorized"||st==="online"||st==="connected";
+      $("waLiveStatus").dataset.syncDelayed='0';
+      $("waLiveStatus").textContent=connected?"Conectado":"Estado: "+(st||"desconocido");
+      $("waLiveStatus").className="waLiveStatus "+(connected?"ok":"error");
+      return connected;
+    }).catch(()=>{$("waLiveStatus").textContent="No se pudo comprobar la conexión";$("waLiveStatus").className="waLiveStatus warn";return false});
+    const summaryRequest=waApi("summary").then(summary=>{
+      if(!summary?.degraded){waApplySummaryChats(summary.chats);renderWhatsAppChats();}
+      return summary;
+    }).catch(error=>{
+      if(!waLiveState.chats?.length)$("waLiveChats").innerHTML=`<div class="waLiveEmpty">${esc(error.message||"No se pudieron cargar las conversaciones")}</div>`;
+      return {degraded:true};
+    });
+    const [connected,summaryR]=await Promise.all([stateRequest,summaryRequest]);
+    if(connected){if(!summaryR?.degraded)waSharedSyncStatus(true);else waSharedSyncStatus(false);}
 
     if(waLiveState.selected){
       const still=waLiveState.chats.find(c=>c.id===waLiveState.selected.id);

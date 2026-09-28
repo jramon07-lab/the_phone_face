@@ -164,3 +164,15 @@ sample._lastMessage={timestamp:now+1,idMessage:'new-incoming',direction:'in'};as
 inbox.ingestJobs([{context:{phone},completed_at:iso(now)}]);sample._lastMessage={timestamp:now,idMessage:'native-phone-reply',direction:'out'};
 assert.equal(inbox.isAutomaticWaiting(sample),false,'historical jobs without receipts cannot label a phone reply automatic');
 console.log('Provider receipts distinguish native phone replies without timestamp guessing');
+
+// Delivery-confirmed recipient wins over an obsolete offer snapshot, even
+// when offer data loads before the provider receipts.
+api.ingestBusiness([{id:'receipt-offer',opportunity_id:'receipt-opp',status:'following',snapshot:{recipient_phone:'600000001'}}],[{id:'receipt-opp',phone:'600000002'}]);
+api.ingestJobs([{context:{offer_instance_id:'receipt-offer',phone:'600000001'},action_config:{__delivery_receipt:{chatId:'34600000002@c.us',idMessage:'confirmed'}},completed_at:new Date().toISOString()}]);
+const actual={id:'34600000002@c.us',_lastIncomingAt:now,_lastMessage:{direction:'in',timestamp:now}};
+assert.equal(api.business(actual).automatic,true);
+assert.equal(api.business({id:'34600000001@c.us'}),undefined,'Old snapshot must not classify another conversation');
+assert(api.facets(actual).includes('automatic'));assert(api.facets(actual).includes('unanswered'),'A reply keeps the automatic phase and needs attention');
+api.ingestBusiness([{id:'receipt-offer',opportunity_id:'receipt-opp',status:'accepted',snapshot:{recipient_phone:'600000001'}}],[]);
+assert(api.facets(actual).includes('processing'));assert(!api.facets(actual).includes('automatic'));
+console.log('Confirmed recipient classification survives asynchronous receipt loading and preserves offer phases');
