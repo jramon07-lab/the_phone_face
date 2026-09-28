@@ -184,8 +184,8 @@
  function arrangeSecondary(){
   if(!mounted)return;
   const relations=$('tpfContactPartySummary');
-  if(relations){moveSecondary(relations,left,left.querySelector('.contactLabelsBox'));}
-  const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
+  if(relations){moveSecondary(relations,left);}
+  const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);if(relations&&relations.nextElementSibling!==labels)left.insertBefore(relations,labels);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
   if(info.parentElement!==left)left.append(info);
   for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner')])moveSecondary(node,info.lastElementChild);
  }
