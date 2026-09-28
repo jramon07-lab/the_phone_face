@@ -238,6 +238,7 @@
 
   function ensureTab(){
     const view=document.getElementById('view-whatsapplive'),tabs=view?.querySelector('.waTabs');if(!tabs)return;
+    view.classList.toggle('waAftercareView',liveState()?.filter==='aftercare');
     if(!view.classList.contains('waInboxWorkspace'))view.classList.add('waInboxWorkspace');
     const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['processing','En tramitación','waProcessingCount'],['aftercare','Seguimiento 3 meses','waAftercareCount'],['declined','No interesados','waDeclinedCount'],['all','Todos','waCount_all'],['contacts','Clientes','waCount_contacts'],['groups','Grupos','waCount_groups'],['unread','No leídos','waCount_unread'],['favorites','Favoritos','waCount_favorites'],['archived','Archivados','waCount_archived'],['snoozed','Aplazados','waCount_snoozed']];
     const more=tabs.querySelector('.waCleanFilters');
@@ -315,7 +316,7 @@
   function styles(){
     if(document.getElementById('tpfWaAutomationInboxCss'))return;
     const style=document.createElement('style');style.id='tpfWaAutomationInboxCss';
-    style.textContent=`#view-whatsapplive #waArchiveDeclined[hidden]{display:none!important}.waInboxFlag.declined,.m-inbox-badge.declined{background:#fff0ed;color:#a33b28}.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
+    style.textContent=`#view-whatsapplive.waAftercareView .waChatMeta{flex-wrap:wrap!important}#view-whatsapplive.waAftercareView .waInboxReason{display:block;flex:0 0 100%;width:100%;white-space:normal;margin-top:5px;line-height:1.4;color:#475569}#view-whatsapplive #waArchiveDeclined[hidden]{display:none!important}.waInboxFlag.declined,.m-inbox-badge.declined{background:#fff0ed;color:#a33b28}.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
     document.head.appendChild(style);
   }
   function bindManualComposer(){
