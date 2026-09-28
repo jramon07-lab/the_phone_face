@@ -27,7 +27,7 @@ const toast={textContent:'',className:'',classList:classes()};
 const formNodes={
   mobileWaActionSheet:sheet,mobileApp:{inert:false},mobileWaComposer:composer,mobileToast:toast,
   contactOppTitle:{value:'Renovación móvil'},contactOppStage:{value:'stage-1'},contactOppDate:{value:'2026-09-30'},contactOppAmount:{value:'25,50'},contactOppNotes:{value:'Desde WhatsApp'},mobileContactOppMsg:{textContent:''},
-  newTaskTitle:{value:'Llamar al cliente'},newTaskStarts:{value:'2026-09-03T10:30'},newTaskNotes:{value:'Tarea desde el chat'},mobileTaskMsg:{textContent:''}
+  newTaskTitle:{value:'Llamar al cliente'},newTaskStartsDate:{value:'2026-09-03'},newTaskStartsTime:{value:'10:30'},newTaskNotes:{value:'Tarea desde el chat'},mobileTaskMsg:{textContent:''}
 };
 const actionButtons={
   '[data-action="save-contact-opportunity"]':{disabled:false},
@@ -131,6 +131,8 @@ async function run(){
   assert.equal(location.hash,'#/new-task/contact-1?chat=34695661409%40c.us');
   assert.match(api.renderNewTask('contact-1'),/data-fallback="whatsapp-chat\/34695661409%40c\.us"/);
   await api.saveTask('contact-1');
+  assert.equal(formNodes.mobileTaskMsg.textContent,'Guardando…','La validación del formulario debe permitir guardar');
+  assert.ok(inserts.length,'Crear tarea debe persistir una fila');
   assert.equal(inserts.at(-1).table,'agenda_items');
   assert.equal(inserts.at(-1).row.related_record_id,'contact-1');
   assert.equal(location.hash,'#/whatsapp-chat/34695661409%40c.us');
