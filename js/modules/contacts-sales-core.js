@@ -698,7 +698,8 @@ function renderSales(){
     ? (salesCache.fields||[]).map(f=>`<span class="fieldChip">${esc(f.label)} · ${esc(f.field_type)}</span>`).join("")
     : '<span class="small">Aún no hay campos personalizados.</span>';
 
-  $("salesBoard").innerHTML=stages.map(s=>{
+  // Build only the active representation; hidden cards also trigger decorators.
+  if(salesCurrentView!=="list")$("salesBoard").innerHTML=stages.map(s=>{
     const stageOpps=opps.filter(o=>String(o.stage_id)===String(s.id));
     const amount=stageOpps.reduce((sum,o)=>sum+Number(o.amount||0),0);
     return `<div class="stage" data-stage="${s.id}">

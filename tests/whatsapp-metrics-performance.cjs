@@ -31,3 +31,8 @@ let hidden=false,redraws=0;
 const inboxContext={document:{hidden:false},$:()=>({classList:{contains:()=>hidden}}),window:{renderWhatsAppChats(){redraws++}},controls(){},loading:false,generation:0,busy:new Set(),rows:new Map(),db:()=>({from:()=>({select:()=>({order:()=>({limit:()=>Promise.resolve({data:[]})})})})}),console};
 vm.runInNewContext(manual.slice(manual.indexOf('function refresh(){'),manual.indexOf('async function save(')),inboxContext);
 (async()=>{await inboxContext.sync(true);assert.equal(redraws,1);hidden=true;await inboxContext.sync(true);assert.equal(redraws,1);hidden=false;await inboxContext.sync();assert.equal(redraws,2);console.log('Message actions sort once; inbox polling renders once only on the visible desktop view');})().catch(e=>{console.error(e);process.exitCode=1});
+
+// Opening analytics must populate immediately, not wait for the next timer.
+nodes.waAnalyticsBtn={};nodes.waAnalyticsModal.classList.remove=()=>{visible=true};visible=false;
+vm.runInContext(source.slice(source.indexOf('$("waAnalyticsBtn").onclick='),source.indexOf('\n$("waAnalyticsClose").onclick=')),c);
+const writesBefore=hiddenWrites;nodes.waAnalyticsBtn.onclick();assert.equal(hiddenWrites,writesBefore+1);

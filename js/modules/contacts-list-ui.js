@@ -146,8 +146,28 @@ async function fetchAllContacts(){
 async function loadGlobalLabels(){
  try{let rows;if(typeof window.crmLoadLabels==='function')rows=await window.crmLoadLabels();else if(typeof crmLoadLabels==='function')rows=await crmLoadLabels();else{const r=await sb.rpc('crm_list_labels');if(r.error)throw r.error;rows=r.data;}state.labels=Array.isArray(rows)?rows:[];}catch(e){state.labels=[];console.warn('Etiquetas contactos',e);}renderLabelOptions();return state.labels;
 }
+// Share pending reads only within this contact snapshot. Reloads get a new map.
+const contactLabelReads=new WeakMap();
 async function getContactLabels(id){
- if(state.labelsByContact.has(id))return state.labelsByContact.get(id);const cache=state.labelsByContact;let rows=[];try{if(typeof window.crmGetContactLabels==='function')rows=await window.crmGetContactLabels(id);else if(typeof crmGetContactLabels==='function')rows=await crmGetContactLabels(id);else{const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:id});if(r.error)throw r.error;rows=r.data;}rows=Array.isArray(rows)?rows:[];}catch(e){rows=[];}if(state.labelsByContact===cache&&!state.labelsAllLoaded)cache.set(id,rows);return state.labelsByContact.get(id)||rows;
+ const cache=state.labelsByContact;
+ if(cache.has(id))return cache.get(id);
+ let pending=contactLabelReads.get(cache);
+ if(!pending){pending=new Map();contactLabelReads.set(cache,pending);}
+ if(pending.has(id))return pending.get(id);
+ const request=(async()=>{
+  let rows=[];
+  try{
+   if(typeof window.crmGetContactLabels==='function')rows=await window.crmGetContactLabels(id);
+   else if(typeof crmGetContactLabels==='function')rows=await crmGetContactLabels(id);
+   else{const r=await sb.rpc('crm_get_contact_labels',{p_contact_id:id});if(r.error)throw r.error;rows=r.data;}
+   rows=Array.isArray(rows)?rows:[];
+   // A newer edit or a full label refresh wins over this earlier read.
+   if(state.labelsByContact===cache&&!state.labelsAllLoaded&&!cache.has(id))cache.set(id,rows);
+  }catch(e){/* Leave failures uncached so the next refresh can retry. */}
+  return state.labelsByContact.get(id)||rows;
+ })();
+ pending.set(id,request);
+ try{return await request;}finally{pending.delete(id);}
 }
 let contactsLoad=null,contactsReloadPending=false,contactsStale=false,editRequest=0;
 function loadContacts(force=false){

@@ -1687,7 +1687,8 @@ function setSalesView(mode){
   document.querySelector(".salesBoardViewport")?.classList.toggle("hidden",isList);
   $("salesViewBoard")?.classList.toggle("activeViewBtn",!isList);
   $("salesViewList")?.classList.toggle("activeViewBtn",isList);
-  if(isList)renderSalesList();
+  // The board is deferred while the list is active; rebuild it when shown.
+  if(isList)renderSalesList();else renderSales();
   try{localStorage.setItem("tpf_sales_view",salesCurrentView)}catch(e){}
 }
 if($("salesViewBoard"))$("salesViewBoard").onclick=()=>setSalesView("board");

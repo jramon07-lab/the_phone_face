@@ -1681,7 +1681,7 @@ function waSharedIncomingAt(value){
   const live=waLiveState.livePreview[id];
   return Math.max(Number(chat?._lastIncomingAt||0),last&&waMessageDirection(last)==='in'?Number(waMessageTimestamp(last)||0):0,live&&!live.outgoing?Number(live.timestamp||0):0);
 }
-$("waAnalyticsBtn").onclick=()=>{waUpdateAdvancedMetrics();$("waAnalyticsModal").classList.remove("hidden")};
+$("waAnalyticsBtn").onclick=()=>{$("waAnalyticsModal").classList.remove("hidden");waUpdateAdvancedMetrics()};
 $("waAnalyticsClose").onclick=()=>$("waAnalyticsModal").classList.add("hidden");$("waAnalyticsModal").onclick=e=>{if(e.target===$("waAnalyticsModal"))$("waAnalyticsModal").classList.add("hidden")};
 
 const _waUpdateStats20=waUpdateStats;
