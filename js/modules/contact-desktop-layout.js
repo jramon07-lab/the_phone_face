@@ -152,7 +152,8 @@
   if(!mounted||!data)return;
   const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
   const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
-  fields.forEach((node,index)=>{node.style.gridRow=String(index+3);const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(index+3);label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',node.matches('textarea'));}});
+  let row=2;
+  fields.forEach(node=>{const multiline=node.matches('textarea');const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(row);label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',multiline);}node.style.gridRow=String(multiline?row+1:row);node.placeholder='Sin añadir';row+=multiline?2:1;});
   const current=[...data.children].filter(node=>fields.includes(node));
   if(current.every((node,i)=>node===fields[i]))return;
   const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
@@ -161,7 +162,7 @@
  if(data)new MutationObserver(orderFields).observe(data,{childList:true});
  function fitContactText(){
   if(!mounted||modal.classList.contains('hidden'))return;
-  for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','36px');field.style.setProperty('--contact-text-height',Math.min(160,Math.max(36,field.scrollHeight+2))+'px');}
+  for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','44px');field.style.setProperty('--contact-text-height',Math.min(110,Math.max(44,field.scrollHeight+2))+'px');}
  }
  if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
  window.addEventListener('tpf:contact-updated',fitContactText);
@@ -247,7 +248,7 @@
   const contactId=contact.id;
   tabBeforeCreate=selected;embeddedCreate=true;
   taskTrigger=e.target.closest('#cpNewTask,#cpSideNewTask');
-  contactWasInert=modal.inert;modal.inert=true;
+  contactWasInert=modal.inert;
   modal.classList.add('cpRefTaskInside');select('tareas');
   window.openAgendaComposer({customerName:$('contactName')?.value||'',phone:$('contactPhone')?.value||'',contactId,type:'Tarea'}, {
    onCancel:restoreComposer,
