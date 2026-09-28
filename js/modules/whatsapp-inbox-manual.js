@@ -50,22 +50,6 @@ function controls(){
  if(host&&!document.querySelector('[data-wa-tab="snoozed"]')){const b=document.createElement('button');b.type='button';b.dataset.waTab='snoozed';b.textContent='Aplazados';host.append(b);}
 }
 
-// Offer a separate, explicit close action after a known sale moves to Tramitado.
-const saleStages=new Map();
-window.addEventListener('tpf:sales-updated',event=>{
- const opportunities=event.detail?.opportunities;if(!Array.isArray(opportunities))return;
- let stages=[];try{stages=salesCache.stages||[]}catch(_){}
- for(const opp of opportunities){const old=saleStages.get(String(opp.id));saleStages.set(String(opp.id),String(opp.stage_id));if(old===undefined||old===String(opp.stage_id))continue;
- const stage=stages.find(s=>String(s.id)===String(opp.stage_id));if(String(stage?.name||'').toLowerCase().trim()!=='tramitado')continue;
- const phone=String(opp.phone||'').replace(/\D/g,'').slice(-9);if(phone.length!==9)continue;
- const chat=state()?.chats?.find(c=>String(c.id).split('@')[0].replace(/\D/g,'').slice(-9)===phone);if(!chat)continue;
- $('waSaleResolvedNotice')?.remove();const notice=document.createElement('div');notice.id='waSaleResolvedNotice';notice.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:95000;background:white;border:1px solid #dce4ee;box-shadow:0 8px 35px #15253f30;border-radius:10px;padding:16px;max-width:90vw';
- const label=document.createElement('p');label.textContent='Venta tramitada: '+(chat.name||opp.client_name||'Cliente')+'. ¿Marcar también la conversación como atendida?';notice.append(label);
- const close=document.createElement('button');close.textContent='Resolver conversación';close.onclick=()=>{window.waMetaSave?.(chat.id,{archived:true,archivedAt:Math.floor(Date.now()/1000)},{render:true});notice.remove();refresh();};
- const dismiss=document.createElement('button');dismiss.textContent='Mantener abierta';dismiss.className='secondary';dismiss.onclick=()=>notice.remove();notice.append(close,dismiss);document.body.append(notice);
- }
-});
-
 window.TPFInboxManual={category,describe,save,sync,open};
 const style=document.createElement('style');style.textContent='#waInboxDialog{width:min(440px,90vw);padding:26px;border:1px solid #dde5ef;border-radius:12px;color:#20344f;box-shadow:0 16px 60px #15253f30}#waInboxDialog::backdrop{background:#15253f30}#waInboxDialog h2{margin:0 0 12px;font-size:20px}#waInboxDialog p{font-size:13px;line-height:1.6}#waInboxDialog label{display:block;font-size:13px;margin:16px 0}#waInboxDialog input,#waInboxDialog select{display:block;width:100%;padding:11px;margin-top:8px;box-sizing:border-box}#waInboxDialog footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.waInboxSafe{background:#edf7f1;color:#2f7150;padding:12px;border-radius:7px}.waInboxError{color:#b42318}.waInboxReason{display:block;font-size:10px;color:#667085;white-space:normal;margin-top:5px}#view-whatsapplive .waChatTopActions{flex-wrap:wrap}#view-whatsapplive #waWaitManual,#view-whatsapplive #waSnoozeManual{font-size:11px;padding:7px!important}';document.head.append(style);
  function install(){controls();sync();setInterval(()=>{if(!document.hidden){sync();refresh();}},20000);window.addEventListener('focus',sync);window.addEventListener('online',sync);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});}

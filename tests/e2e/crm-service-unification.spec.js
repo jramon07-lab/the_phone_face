@@ -186,6 +186,7 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
           await expect(page.locator('#waSideTabs')).toHaveCount(1);
           await expect(page.locator('[data-wa-tab="archived"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="automatic"]')).toBeVisible();
+          await expect(page.locator('[data-wa-tab="processing"]')).toBeVisible();
           const row=page.locator('#waLiveChats .waChatRow').first();
           if(await row.count()){
             await row.click();
@@ -451,4 +452,19 @@ test('WhatsApp: búsqueda entre bandejas y lista estable al escribir y refrescar
   return {global:outcomes.every(Boolean),stable,anchor:Math.abs(next.getBoundingClientRect().top-y)<2};
  });
  expect(result).toEqual({global:true,stable:true,anchor:true});
+ const phases=await page.evaluate(async()=>{
+   const id='34600123456@c.us',chat={id,name:'Cliente de prueba',_lastMessage:{timestamp:100,direction:'in'}};
+   window.waMessageTimestamp=m=>m?.timestamp||0;window.waMessageDirection=m=>m?.direction;
+   waLiveState.chats=[chat];document.getElementById('waLiveSearch').value='';
+   TPFAutomationInbox.ingestBusiness([{id:'offer',opportunity_id:'new',status:'following',snapshot:{recipient_phone:'34600123456'}}],[{id:'old',phone:'600123456',stage_id:'this-month'},{id:'new',phone:'600123456'}]);
+   waLiveState.filter='automatic';renderWhatsAppChats();await Promise.resolve();
+   const box=document.getElementById('waLiveChats'),both=box.textContent.includes('Pendiente')&&box.textContent.includes('Oferta en seguimiento');
+   waLiveState.filter='unanswered';renderWhatsAppChats();await Promise.resolve();const pending=box.querySelectorAll('.waChatRow').length===1;
+   TPFAutomationInbox.ingestBusiness([{id:'offer',opportunity_id:'new',status:'processed',snapshot:{recipient_phone:'34600123456'}}],[{id:'old',phone:'600123456',stage_id:'this-month'},{id:'new',phone:'600123456'}]);
+   chat._lastMessage={timestamp:110,direction:'out'};waLiveState.filter='processing';renderWhatsAppChats();await Promise.resolve();
+   const processing=box.textContent.includes('En tramitación')&&!box.textContent.includes('Pendiente');
+   waLiveState.filter='waiting';renderWhatsAppChats();await Promise.resolve();
+   return {both,pending,processing,notWaiting:box.querySelectorAll('.waChatRow').length===0};
+ });
+ expect(phases).toEqual({both:true,pending:true,processing:true,notWaiting:true});
 });

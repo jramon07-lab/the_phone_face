@@ -96,29 +96,76 @@
     }catch(error){console.warn('Bandeja de WhatsApp automáticos',error)}
     finally{loading=false}
   }
+  let businessByPhone=new Map(),businessLoading=false,businessAt=0;
+  function phoneKey(value){const p=localPhone(value);return p.length>=8?p:'';}
+  // Only actual offer instances drive commercial tabs. Legacy opportunities
+  // (including annual reviews in Este mes) are used only to resolve the recipient.
+  function ingestBusiness(offers,opportunities){
+    const oppById=new Map(opportunities.map(o=>[String(o.id),o])),next=new Map();
+    for(const offer of offers){
+      const o=oppById.get(String(offer.opportunity_id));
+      const key=phoneKey(offer.snapshot?.recipient_phone||o?.contract_party?.recipient_phone||o?.phone);if(!key)continue;
+      const item=next.get(key)||{automatic:false,processing:false,paused:false,wonAt:0};
+      if(['following','queued','paused','error'].includes(offer.status)){item.automatic=true;if(offer.status==='paused')item.paused=true;}
+      if(['accepted','processed'].includes(offer.status))item.processing=true;
+      if(offer.status==='won')item.wonAt=Math.max(item.wonAt,seconds(offer.status_changed_at||offer.updated_at));
+      next.set(key,item);
+    }
+    businessByPhone=next;
+  }
+  function business(chat){return String(chat?.id||'').includes('@g.us')?null:businessByPhone.get(phoneKey(chat?.id));}
+  async function loadBusiness(force=false){
+    const db=database();if(!db||businessLoading||(!force&&Date.now()-businessAt<30000))return;
+    businessLoading=true;
+    async function all(table,columns){const rows=[];for(let start=0;;start+=500){const {data,error}=await db.from(table).select(columns).order('id').range(start,start+499);if(error)throw error;rows.push(...(data||[]));if((data||[]).length<500)return rows;}}
+    try{
+      if(db.auth?.getSession){const {data}=await db.auth.getSession();if(!data?.session)return;}
+      const [offers,opps]=await Promise.all([all('crm_offer_instances','id,opportunity_id,status,snapshot,status_changed_at,updated_at'),all('sales_opportunities','id,phone,contract_party')]);
+      ingestBusiness(offers,opps);businessAt=Date.now();window.renderWhatsAppChats?.();
+    }catch(e){console.warn('No se pudo actualizar la fase de las ofertas de WhatsApp',e)}finally{businessLoading=false;}
+  }
+  async function reload(){await Promise.all([loadAutomaticSends(),loadBusiness(true)]);}
   function meta(chat){return window.waMeta?.(chat.id)||{}}
   function incoming(chat){return Math.max(Number(chat?._lastIncomingAt||0),Number(meta(chat).lastIncomingAt||0),!preview(chat).outgoing?preview(chat).timestamp:0)}
-  function category(chat){
-    const m=meta(chat),last=preview(chat),inc=incoming(chat);
-    if(m.archived)return 'archived';
-    const manualState=window.TPFInboxManual?.category(chat,inc,{...last,automatic:isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage)});if(manualState)return manualState;
-    if(last.outgoing&&window.TPFWaAutoReplies?.isReply(last.idMessage))return 'unanswered';
-    if(isAutomaticWaiting(chat)){
-      const manual=Number(manualMap()[chatPhone(chat)]||0)/1000;
-      if(inc>Math.max(manual,Number(m.archivedAt||0)))return 'unanswered';
-      return 'automatic';
-    }
-    return last.timestamp?(last.outgoing?'waiting':'unanswered'):'all';
+  function facets(chat){
+    const m=meta(chat),last=preview(chat),inc=incoming(chat),phase=business(chat);
+    const manual=window.TPFInboxManual?.category(chat,inc,{...last,automatic:isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage)});
+    const automaticMessage=isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage);
+    const resolved=!!m.archived&&inc<=Number(m.archivedAt||0);
+    const pending=!resolved&&(manual==='unanswered'||(!['waiting','snoozed'].includes(manual)&&inc>0&&(!last.outgoing||automaticMessage)));
+    const businessOpen=!!(phase?.automatic||phase?.processing);
+    const remainingWork=businessOpen;
+    const wonArchived=!!phase?.wonAt&&!remainingWork&&!pending&&!manual&&inc<=phase.wonAt&&Number(m.reopenedAt||0)<=phase.wonAt;
+    if((m.archived&&!businessOpen&&inc<=Number(m.archivedAt||Infinity))||wonArchived)return ['archived'];
+    const kinds=[];
+    if(pending)kinds.push('unanswered');
+    else if(manual)kinds.push(manual);
+    if(phase?.automatic)kinds.push('automatic');
+    if(phase?.processing)kinds.push('processing');
+    // A scheduled after-sale message alone does not start an offer workflow.
+    return kinds.length?kinds:['all'];
+  }
+  function category(chat){return facets(chat)[0];}
+  function matchesFilter(chat,filter){
+    const kinds=facets(chat),archived=kinds.includes('archived');
+    if(filter==='archived')return archived;
+    if(archived)return false;
+    if(['automatic','processing','waiting','unanswered','snoozed'].includes(filter))return kinds.includes(filter);
+    if(filter==='groups')return String(chat.id).includes('@g.us');
+    if(filter==='contacts')return String(chat.id).includes('@c.us');
+    if(filter==='unread')return Math.max(Number(window.waUnreadCount?.(chat.id)||0),Number(window.waChatServerUnread?.(chat)||0))>0;
+    if(filter==='favorites')return !!(meta(chat).favorite||meta(chat).pinned);
+    return true;
   }
   function automaticChats(){return (liveState()?.chats||[]).filter(c=>category(c)==='automatic')}
   function updateAutomaticCount(){
     const rows=liveState()?.chats||[];
-    const counts={automatic:0,unanswered:0,waiting:0,all:0,contacts:0,groups:0,unread:0,favorites:0,archived:0,snoozed:0};
+    const counts={processing:0,automatic:0,unanswered:0,waiting:0,all:0,contacts:0,groups:0,unread:0,favorites:0,archived:0,snoozed:0};
     for(const c of rows){
-      const key=category(c),m=window.waMeta?.(c.id)||{};
+      const kinds=facets(c),key=kinds[0],m=window.waMeta?.(c.id)||{};
       if(key==='archived'){counts.archived++;continue;}
       counts.all++;
-      if(['automatic','unanswered','waiting','snoozed'].includes(key))counts[key]++;
+      for(const kind of ['automatic','processing','unanswered','waiting','snoozed'])if(kinds.includes(kind))counts[kind]++;
       if(String(c.id).includes('@c.us'))counts.contacts++;
       if(String(c.id).includes('@g.us'))counts.groups++;
       if(m.favorite||m.pinned)counts.favorites++;
@@ -133,7 +180,7 @@
   function ensureTab(){
     const view=document.getElementById('view-whatsapplive'),tabs=view?.querySelector('.waTabs');if(!tabs)return;
     if(!view.classList.contains('waInboxWorkspace'))view.classList.add('waInboxWorkspace');
-    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['all','Todos','waCount_all'],['contacts','Clientes','waCount_contacts'],['groups','Grupos','waCount_groups'],['unread','No leídos','waCount_unread'],['favorites','Favoritos','waCount_favorites'],['archived','Archivados','waCount_archived'],['snoozed','Aplazados','waCount_snoozed']];
+    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['processing','En tramitación','waProcessingCount'],['all','Todos','waCount_all'],['contacts','Clientes','waCount_contacts'],['groups','Grupos','waCount_groups'],['unread','No leídos','waCount_unread'],['favorites','Favoritos','waCount_favorites'],['archived','Archivados','waCount_archived'],['snoozed','Aplazados','waCount_snoozed']];
     const more=tabs.querySelector('.waCleanFilters');
     for(const [key,label,id] of labels){
       let button=view.querySelector('[data-wa-tab="'+key+'"]');
@@ -148,27 +195,26 @@
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);
     let info=document.getElementById('waInboxHelp');
     if(!info){info=document.createElement('div');info.id='waInboxHelp';info.setAttribute('role','status');document.getElementById('waLiveSearch')?.parentElement.after(info);}
-    const messages={unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que esperan respuesta del cliente.',snoozed:'Conversaciones aplazadas hasta la fecha elegida.',automatic:'Último envío automático. Las respuestas pasan a Pendientes.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas o archivadas.'};
+    const messages={unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas hasta la fecha elegida.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
     info.textContent=messages[liveState()?.filter||'all']||'Filtra tus conversaciones.';
     updateAutomaticCount();decorateHeader();
   }
   function decorateHeader(){
     const button=document.getElementById('waArchiveChat'),chatId=liveState()?.selected?.id;
-    if(button&&chatId){const archived=!!window.waMeta?.(chatId)?.archived;button.textContent=archived?'Reabrir':'✓ Resolver';button.title=archived?'Volver a conversaciones':'Archivar conversación resuelta. Los seguimientos continúan.';}
+    if(button&&chatId){const chat=(liveState()?.chats||[]).find(c=>c.id===chatId),archived=chat?facets(chat).includes('archived'):!!window.waMeta?.(chatId)?.archived;button.textContent=archived?'Reabrir':'✓ Resolver';button.title=archived?'Volver a conversaciones':'Archivar conversación resuelta. Los seguimientos continúan.';}
   }
   function decorateAutomaticRows(){
     const rows=new Map((liveState()?.chats||[]).map(c=>[String(c.id),c]));
     document.querySelectorAll('#waLiveChats .waChatRow').forEach(row=>{
       const chat=rows.get(row.dataset.waChatId);if(!chat)return;
-      const key=category(chat),labels={automatic:'Automático',waiting:'Esperando respuesta',unanswered:'Pendiente',snoozed:'Aplazada'};
-      const detail=window.TPFInboxManual?.describe(chat)||(key==='unanswered'?'Revisar mensaje del cliente':'');
-      const signature=JSON.stringify([key,detail]);
+      const kinds=facets(chat),labels={automatic:business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',waiting:'Esperando respuesta',unanswered:'Pendiente',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};
+      const detail=window.TPFInboxManual?.describe(chat)||(kinds.includes('unanswered')?'Revisar mensaje del cliente':'');
+      const signature=JSON.stringify([kinds.map(k=>labels[k]),detail]);
       if(row.__tpfInboxDecoration===signature)return;
       row.__tpfInboxDecoration=signature;
       row.querySelectorAll('.waMiniFlag,.waAutomaticFlag,.waInboxFlag,.waInboxReason').forEach(x=>x.remove());
-      if(!labels[key])return;
-      const badge=document.createElement('span');badge.className='waInboxFlag '+key;badge.textContent=labels[key];
-      let host=row.querySelector('.waChatMeta');if(!host){host=document.createElement('div');host.className='waChatMeta';row.querySelector('.waChatRowMain')?.append(host);}host.append(badge);
+      let host=row.querySelector('.waChatMeta');if(!host){host=document.createElement('div');host.className='waChatMeta';row.querySelector('.waChatRowMain')?.append(host);}
+      for(const kind of kinds){const badge=document.createElement('span');badge.className='waInboxFlag '+kind;badge.textContent=labels[kind]||kind;host.append(badge);}
       if(detail){const note=document.createElement('small');note.className='waInboxReason';note.textContent=detail;host.append(note);}
     });decorateHeader();
   }
@@ -182,19 +228,19 @@
     const base=window.renderWhatsAppChats;
     if(typeof base!=='function'||base.__tpfAutomationInbox)return false;
     const wrapped=function(...args){
+      if(!document.getElementById('waLiveChats'))return base.apply(this,args);
       const state=liveState();if(!state)return base.apply(this,args);
       const chats=state.chats,filter=state.filter||'all';
-      if(!String(document.getElementById('waLiveSearch')?.value||'').trim()&&['automatic','waiting','unanswered','snoozed'].includes(filter)){
-        state.chats=(chats||[]).filter(c=>category(c)===filter);state.filter='all';
-      }
-      try{return base.apply(this,args)}finally{state.chats=chats;state.filter=filter;updateAutomaticCount();queueMicrotask(decorateAutomaticRows);}
+      if(!String(document.getElementById('waLiveSearch')?.value||'').trim())state.chats=(chats||[]).filter(c=>matchesFilter(c,filter));
+      state.filter='all';state.__inboxPrefiltered=true;state.__inboxFilter=filter;
+      try{return base.apply(this,args)}finally{state.chats=chats;state.filter=filter;delete state.__inboxPrefiltered;delete state.__inboxFilter;updateAutomaticCount();queueMicrotask(decorateAutomaticRows);}
     };
     wrapped.__tpfAutomationInbox=true;window.renderWhatsAppChats=wrapped;return true;
   }
   function styles(){
     if(document.getElementById('tpfWaAutomationInboxCss'))return;
     const style=document.createElement('style');style.id='tpfWaAutomationInboxCss';
-    style.textContent=`#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
+    style.textContent=`.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
     document.head.appendChild(style);
   }
   function bindManualComposer(){
@@ -215,8 +261,12 @@
     const selected=document.getElementById('waChatName');if(selected)new MutationObserver(()=>{decorateHeader();}).observe(selected,{childList:true});
     const view=document.getElementById('view-whatsapplive');if(view)new MutationObserver(()=>{if(!view.classList.contains('hidden'))ensureTab();}).observe(view,{attributes:true,attributeFilter:['class']});
     document.addEventListener('click',event=>{
+      if(event.target.closest?.('#waArchiveChat')){
+        const chat=liveState()?.selected;
+        if(chat&&facets(chat).includes('archived')&&!meta(chat).archived){event.preventDefault();event.stopImmediatePropagation();window.waMetaSave?.(chat.id,{archived:false},{render:true});window.renderWhatsAppChats?.();return;}
+      }
       const tab=event.target.closest?.('#view-whatsapplive [data-wa-tab]');
-      if(tab&&['automatic','waiting','unanswered','snoozed','all'].includes(tab.dataset.waTab)){
+      if(tab&&['automatic','processing','waiting','unanswered','snoozed','all','archived','contacts','groups','unread','favorites'].includes(tab.dataset.waTab)){
         event.preventDefault();event.stopImmediatePropagation();openAutomaticTab(tab);
       }
       if(tab)setTimeout(()=>{ensureTab();updateAutomaticCount();if(tab.dataset.waTab==='automatic')decorateAutomaticRows()},0);
@@ -225,12 +275,14 @@
     if(!wrapRenderer()){
       let tries=0;const wait=setInterval(()=>{tries++;if(wrapRenderer()||tries>40)clearInterval(wait)},100);
     }
-    loadAutomaticSends();
+    reload();
+    window.addEventListener('tpf:sales-updated',()=>loadBusiness(true));
+    window.addEventListener('tpf:followup-ready',()=>loadBusiness());
     clearInterval(timer);timer=setInterval(()=>{
       const view=document.getElementById('view-whatsapplive');
-      if(view&&!view.classList.contains('hidden'))loadAutomaticSends();
+      if(view&&!view.classList.contains('hidden'))reload();
     },REFRESH_MS);
   }
-  window.TPFAutomationInbox={isAutomaticWaiting,category,ingestJobs,reload:loadAutomaticSends};
+  window.TPFAutomationInbox={isAutomaticWaiting,category,facets,matchesFilter,business,ingestBusiness,ingestJobs,reload};
   M.register('whatsapp-automation-inbox',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();

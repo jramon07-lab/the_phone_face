@@ -54,7 +54,7 @@ function response(status,payload){return {ok:status>=200&&status<300,status,asyn
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 
 async function run(){
-  assert.deepEqual(Array.from(api.MOBILE_WA_FILTERS),['unanswered','waiting','automatic','all','unread','contacts','groups','archived','snoozed']);
+  assert.deepEqual(Array.from(api.MOBILE_WA_FILTERS),['unanswered','waiting','automatic','processing','all','unread','contacts','groups','archived','snoozed']);
   assert.equal(api.MOBILE_WA_PAGE_SIZE,60);
   assert.equal(api.mobileWaNormalizePhone('+34 695 661 409@c.us'),'34695661409');
   assert.equal(api.mobileWaNormalizePhone('123456789012345@lid'),'');
@@ -66,10 +66,10 @@ async function run(){
   ];
   api.state.whatsapp.chats=chats;
   api.state.whatsapp.archiveStates={};
-  assert.deepEqual(plain(api.mobileWaFilterCounts()),{unanswered:0,waiting:0,automatic:0,snoozed:0,all:3,unread:2,contacts:2,groups:1,archived:0});
+  assert.deepEqual(plain(api.mobileWaFilterCounts()),{unanswered:0,waiting:0,automatic:0,processing:0,snoozed:0,all:3,unread:2,contacts:2,groups:1,archived:0});
 
   api.state.whatsapp.archiveStates['34600111222@c.us']={archived:true,archivedAt:50};
-  assert.deepEqual(plain(api.mobileWaFilterCounts()),{unanswered:0,waiting:0,automatic:0,snoozed:0,all:2,unread:1,contacts:1,groups:1,archived:1});
+  assert.deepEqual(plain(api.mobileWaFilterCounts()),{unanswered:0,waiting:0,automatic:0,processing:0,snoozed:0,all:2,unread:1,contacts:1,groups:1,archived:1});
   api.state.whatsapp.filter='archived';api.state.whatsapp.query='';
   assert.deepEqual(Array.from(api.mobileWaFilteredChats(),chat=>chat.id),['34600111222@c.us']);
   api.state.whatsapp.archiveStates={};

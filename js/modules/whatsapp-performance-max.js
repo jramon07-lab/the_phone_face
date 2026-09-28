@@ -62,6 +62,7 @@ function waPerformanceMatches(chat,query){
 function waPerformanceFilterRows(chats,filter,query){
   let rows=[...(Array.isArray(chats)?chats:[])];
   const f=String(filter||'all');
+  if(waLiveState.__inboxPrefiltered)return String(query||'').trim()?rows.filter(c=>waPerformanceMatches(c,query)):rows;
   if(String(query||'').trim())return rows.filter(c=>waPerformanceMatches(c,query));
   if(f==='groups')rows=rows.filter(c=>String(c?.id||'').includes('@g.us'));
   if(f==='contacts')rows=rows.filter(c=>String(c?.id||'').includes('@c.us'));
@@ -307,7 +308,7 @@ function install(){
       const enhancedRender=function(){
         const search=document.getElementById('waLiveSearch');
         const query=String(search?.value||'').trim();
-        const filter=String(waLiveState.filter||'all');
+        const filter=String(waLiveState.__inboxFilter||waLiveState.filter||'all');
         const key=`${query?'search':filter}\u0000${waPerformanceText(query)}`;
         const keyChanged=key!==waPerformancePage.key;
         if(keyChanged){waPerformancePage.key=key;waPerformancePage.limit=CHAT_PAGE_SIZE}

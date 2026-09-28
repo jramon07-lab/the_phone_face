@@ -99,7 +99,7 @@
   const CONTACT_FILTERS=['all','opportunities','tasks','untracked','incomplete'];
   const CONTACT_PAGE_SIZE=60;
   const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
-  const MOBILE_WA_FILTERS=['unanswered','waiting','automatic','all','unread','contacts','groups','archived','snoozed'];
+  const MOBILE_WA_FILTERS=['unanswered','waiting','automatic','processing','all','unread','contacts','groups','archived','snoozed'];
   const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
   const taskIsPending=task=>taskStatus(task)==='pending';
@@ -1602,19 +1602,19 @@ function crmInteractiveText(message){
     return [...(chats||[])].filter(chat=>chat?.id).sort((a,b)=>mobileWaChatTimestamp(b)-mobileWaChatTimestamp(a)||mobileWaChatName(a).localeCompare(mobileWaChatName(b),'es'));
   }
   const mobileWaArchiveState=chatId=>state.whatsapp.archiveStates?.[String(chatId)]||{archived:false,archivedAt:0};
-  const mobileWaIsArchived=chatId=>!!mobileWaArchiveState(chatId).archived;
+  const mobileWaChatIsArchived=chat=>window.TPFAutomationInbox?.facets?window.TPFAutomationInbox.facets(chat).includes('archived'):!!mobileWaArchiveState(chat?.id).archived;
+  const mobileWaIsArchived=chatId=>{const chat=state.whatsapp.chats?.find(c=>String(c.id)===String(chatId));return chat?mobileWaChatIsArchived(chat):!!mobileWaArchiveState(chatId).archived;};
   function mobileWaFilterCounts(chats=state.whatsapp.chats){
-    const rows=chats||[],active=rows.filter(chat=>!mobileWaIsArchived(chat.id)),archived=rows.filter(chat=>mobileWaIsArchived(chat.id));const kinds=Object.fromEntries(['unanswered','waiting','automatic','snoozed'].map(k=>[k,active.filter(c=>window.TPFAutomationInbox?.category(c)===k).length]));return {...kinds,all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
+    const rows=chats||[],active=rows.filter(chat=>!mobileWaChatIsArchived(chat)),archived=rows.filter(chat=>mobileWaChatIsArchived(chat));const kinds=Object.fromEntries(['unanswered','waiting','automatic','processing','snoozed'].map(k=>[k,active.filter(c=>window.TPFAutomationInbox?.matchesFilter(c,k)).length]));return {...kinds,all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
   }
   function mobileWaFilteredChats(){
     const query=clean(state.whatsapp.query).toLowerCase(),queryDigits=digits(query),filter=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
     return mobileWaSortedChats().filter(chat=>{
-      const group=String(chat.id||'').includes('@g.us'),archived=mobileWaIsArchived(chat.id);
-      if(filter==='archived'&&!archived)return false;
-      if(filter!=='archived'&&archived)return false;
-      if(['unanswered','waiting','automatic','snoozed'].includes(filter)&&window.TPFAutomationInbox?.category(chat)!==filter)return false;
-      if(filter==='unread'&&mobileWaUnread(chat)<1)return false;
-      if(filter==='contacts'&&group)return false;if(filter==='groups'&&!group)return false;
+      const group=String(chat.id||'').includes('@g.us'),archived=mobileWaChatIsArchived(chat);
+      if(!query){
+        if(window.TPFAutomationInbox?.matchesFilter){if(!window.TPFAutomationInbox.matchesFilter(chat,filter))return false;}
+        else {if(filter==='archived'?!archived:archived)return false;if(filter==='unread'&&mobileWaUnread(chat)<1)return false;if(filter==='contacts'&&group)return false;if(filter==='groups'&&!group)return false;}
+      }
       const haystack=`${mobileWaChatName(chat)} ${mobileWaFindContact(chat.id)?.nickname||''} ${mobileWaNormalizePhone(chat.id)}`.toLowerCase();
       return !query||haystack.includes(query)||(queryDigits.length>=3&&digits(haystack).includes(queryDigits));
     });
@@ -1652,7 +1652,7 @@ function crmInteractiveText(message){
   }
   function renderMobileWaFilters(){
     const counts=mobileWaFilterCounts(),active=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
-    const options=[['unanswered','Pendientes'],['waiting','En espera'],['automatic','Automáticos'],['all','Todos'],['unread','No leídos'],['contacts','Clientes'],['groups','Grupos'],['archived','Archivados'],['snoozed','Aplazados']];
+    const options=[['unanswered','Pendientes'],['waiting','En espera'],['automatic','Automáticos'],['processing','En tramitación'],['all','Todos'],['unread','No leídos'],['contacts','Clientes'],['groups','Grupos'],['archived','Archivados'],['snoozed','Aplazados']];
     return options.map(([key,label])=>`<button class="m-wa-filter ${active===key?'active':''}" data-action="wa-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
   }
   function renderMobileWaChatRow(chat){
@@ -1701,7 +1701,7 @@ function crmInteractiveText(message){
         let query=client.from('crm_whatsapp_chat_state').select('chat_id,archived,archived_at,reopened_at,updated_at').order('chat_id',{ascending:true}).limit(500);
         if(after)query=query.gt('chat_id',after);
         const {data,error}=await query;if(error)throw error;const page=data||[];
-        for(const row of page)next[String(row.chat_id)]={archived:!!row.archived,archivedAt:mobileWaArchiveSeconds(row.archived_at),updatedAt:mobileWaArchiveSeconds(row.updated_at)};
+        for(const row of page)next[String(row.chat_id)]={archived:!!row.archived,archivedAt:mobileWaArchiveSeconds(row.archived_at),reopenedAt:mobileWaArchiveSeconds(row.reopened_at),updatedAt:mobileWaArchiveSeconds(row.updated_at)};
         if(page.length<500)break;const last=String(page[page.length-1].chat_id);if(last<=after)throw Error('Lectura incompleta de archivados');after=last;
       }
       state.whatsapp.archiveStates=next;return next;
@@ -1714,7 +1714,7 @@ function crmInteractiveText(message){
     const current=mobileWaArchiveState(chatId);if(!current.archived)return false;const incoming=(messages||[]).filter(message=>mobileWaMessageDirection(message)==='in').some(message=>mobileWaArchiveSeconds(mobileWaMessageTimestamp(message))>Number(current.archivedAt||0));if(!incoming)return false;state.whatsapp.archiveStates[String(chatId)]={...current,archived:false,updatedAt:Date.now()/1000};saveMobileWaArchiveState(chatId,false).catch(()=>{});return true;
   }
   async function toggleMobileWaArchive(){
-    const chatId=String(state.whatsapp.selectedId||'');if(!chatId)return;const previous=mobileWaArchiveState(chatId),archived=!previous.archived,archivedAt=archived?Date.now()/1000:Number(previous.archivedAt||0);state.whatsapp.archiveStates[chatId]={...previous,archived,archivedAt,updatedAt:Date.now()/1000};closeMobileWaSheet(false);if(archived)go('whatsapp',true);else render();
+    const chatId=String(state.whatsapp.selectedId||'');if(!chatId)return;const previous=mobileWaArchiveState(chatId),archived=!mobileWaIsArchived(chatId),archivedAt=archived?Date.now()/1000:Number(previous.archivedAt||0);state.whatsapp.archiveStates[chatId]={...previous,archived,archivedAt,reopenedAt:archived?previous.reopenedAt:Date.now()/1000,updatedAt:Date.now()/1000};closeMobileWaSheet(false);if(archived)go('whatsapp',true);else render();
     try{await saveMobileWaArchiveState(chatId,archived,archivedAt);toast(archived?'Conversación archivada. Volverá si el cliente escribe.':'Conversación devuelta a activas.','success');}catch(error){state.whatsapp.archiveStates[chatId]=previous;render();toast(error?.message||'No se pudo cambiar el archivo.','error');}
   }
   function mergeMobileChats(rows){
@@ -2163,7 +2163,7 @@ function crmInteractiveText(message){
   window.TPFModules={register(name,module){try{module.install?.()}catch(e){console.error('MOBILE_SHARED_MODULE',name,e)}},report(name,error){console.warn(name,error)}};
   window.addEventListener?.('tpf:sales-updated',()=>{if(state.user)refreshData({silent:true});});
   window.addEventListener?.('tpf:wa-shared-state',()=>{if(state.user&&has('can_use_whatsapp')){loadMobileWaArchiveStates().then(()=>window.renderWhatsAppChats());window.TPFPrivateReads?.sync();}});
-  function mobileSharedBadge(chat){const kind=window.TPFAutomationInbox?.category(chat),label={unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:'Automático',snoozed:'Aplazada'}[kind];return label?`<span class="m-inbox-badge ${esc(kind)}">${esc(label)}</span><small class="m-inbox-reason">${esc(window.TPFInboxManual?.describe(chat)||'')}</small>`:'';}
+  function mobileSharedBadge(chat){const kinds=window.TPFAutomationInbox?.facets(chat)||[],labels={unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:window.TPFAutomationInbox?.business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};return kinds.map(kind=>`<span class="m-inbox-badge ${esc(kind)}">${esc(labels[kind]||kind)}</span>`).join('')+`<small class="m-inbox-reason">${esc(window.TPFInboxManual?.describe(chat)||'')}</small>`;}
   async function loadMobileAutomaticKinds(){if(Date.now()-automaticAt<90000)return;automaticAt=Date.now();await window.TPFAutomationInbox?.reload();}
   async function openMobileSharedOffer(id){
     if(!has('can_edit_sales')||!has('can_use_whatsapp'))return toast('No tienes permiso para enviar ofertas.','error');
