@@ -1402,11 +1402,15 @@
           <span class="small">Selecciona una coincidencia para vincular la oportunidad con su ficha.</span>
           <div id="oppContactMatches" class="oppContactMatches hidden"></div>
         </label>
-        <label>Importe
+        <label class="full">Importe
           <input id="oppModalAmount" type="number" step="0.01" placeholder="0,00">
         </label>
-        <label>Fecha prevista
+        <label>Fecha prevista de cierre
           <input id="oppModalDate" type="date">
+        </label>
+        <label>Fecha de activación
+          <input id="oppModalActivation" type="text" readonly placeholder="Sin registrar" aria-describedby="oppActivationHelp">
+          <span id="oppActivationHelp" class="small">Fecha real de instalación registrada desde el Excel.</span>
         </label>
         <label class="full">Columna / Estado
           <select id="oppModalStage"></select>
@@ -1560,11 +1564,11 @@
 <script src="/js/modules/contact-party.js?v=20260906-sales-identity-1"></script>
 <script src="/js/core/00-bootstrap.js?v=20260919-google-session-recheck-stable-1"></script>
 <script src="/js/core/api-auth.js?v=20260925-download-2"></script>
-<script src="/js/modules/contacts-sales-core.js?v=20260928-installed-1"></script>
+<script src="/js/modules/contacts-sales-core.js?v=20260928-activation-1"></script>
 <script src="/js/modules/whatsapp-scheduling-core.js?v=20260928-crm-performance-1"></script>
 <script src="/js/modules/agenda-core.js?v=20260928-workspace-1"></script>
 <script src="/js/modules/opportunity-notes.js?v=20260920-editor-4"></script>
-<script src="/js/core/20-main.js?v=20260928-installed-1"></script>
+<script src="/js/core/20-main.js?v=20260928-activation-1"></script>
 <script src="/js/modules/whatsapp-green-core.js?v=20260928-avatar-valid-1"></script>
 <script src="/js/modules/automations-core.js?v=20260928-stats-ready-1"></script>
 <script src="/js/core/30-enhancements.js"></script>
@@ -1621,7 +1625,7 @@
 <script src="/js/modules/agenda-settings-labels.js?v=20260906-consolidation-1"></script>
 <script src="/js/modules/stable-navigation-failsafe.js?v=20260918-nav-failsafe-1"></script>
 <script src="/js/modules/email-m365.js?v=20260920-reference-1"></script>
-<script src="/js/modules/crm-reference-layout.js?v=20260920-admin-sections-1"></script>
+<script src="/js/modules/crm-reference-layout.js?v=20260928-activation-1"></script>
 <script src="/js/modules/admin-sections.js?v=20260920-admin-sections-1"></script>
 <script src="/js/modules/copyable-data.js?v=20260928-search-scoped-1"></script>
 <script src="/js/modules/whatsapp-workspace-design.js?v=20260928-stable-scroll-2"></script>

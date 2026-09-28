@@ -316,6 +316,7 @@ function openContactNewOpportunity(){
   $("oppModalOpenContact").dataset.recordId=currentContact.id;
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
+  $("oppModalActivation").value="";
   $("oppModalNotes").value="";
   $("oppModalStage").innerHTML=stages.map(s=>
     `<option value="${s.id}" ${String(s.id)===String(stage.id)?"selected":""}>${esc(s.name)}</option>`

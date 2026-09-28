@@ -505,6 +505,7 @@ window.openOpportunityCard=(id)=>{
   pendingOpportunityRecordId=o.record_id||null;
   $("oppModalAmount").value=o.amount??"";
   $("oppModalDate").value=o.expected_date||"";
+  $("oppModalActivation").value=o.installation_date?fmtDateOnly(o.installation_date):"";
   if(window.TPFOpportunityNotes)window.TPFOpportunityNotes.fill($("oppModalNotes"),o.notes);else $("oppModalNotes").value=o.notes||"";
 
   $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
@@ -522,7 +523,6 @@ window.openOpportunityCard=(id)=>{
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
   const meta=[];
   if(stage?.name)meta.push(`Columna actual: ${stage.name}`);
-  if(o.installation_date)meta.push(`Instalación: ${fmtDateOnly(o.installation_date)}`);
   if(o.annual_review_date)meta.push(`Revisión anual: ${fmtDateOnly(o.annual_review_date)}`);
   if(o.import_reference&&o.amount==null)meta.push('Sin precio · Revisar');
   if(o.created_at)meta.push(`Creada: ${new Date(o.created_at).toLocaleString("es-ES")}`);
@@ -678,6 +678,7 @@ window.newOppInStage=async(stageId)=>{
   $("oppModalOpenContact").dataset.recordId="";
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
+  $("oppModalActivation").value="";
   if(window.TPFOpportunityNotes)window.TPFOpportunityNotes.fill($("oppModalNotes"),"");else $("oppModalNotes").value="";
   $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
     `<option value="${s.id}" ${String(s.id)===String(stage.id)?"selected":""}>${esc(s.name)}</option>`
@@ -1240,6 +1241,7 @@ window.openOpportunityFull=async(id)=>{
     <div class="oppSummaryMetrics">
       <div class="oppField oppAmount"><span>Importe de la oportunidad</span><strong>${oppVal(data.amount!=null?fmtMoney(data.amount):"")}</strong></div>
       <div class="oppField"><span>Fecha prevista de cierre</span><strong>${oppVal(data.expected_date?fmtDateOnly(data.expected_date):"")}</strong></div>
+      <div class="oppField"><span>Fecha de activación</span><strong>${oppVal(data.installation_date?fmtDateOnly(data.installation_date):"Sin registrar")}</strong></div>
       <div class="oppField"><span>Estado / columna</span><strong>${oppVal(stageName)}</strong></div>
     </div>
     <section class="oppField oppReadNotes"><h3>Notas de la oportunidad</h3><p>${noteParts.internal?oppVal(noteParts.internal):'Esta oportunidad todavía no tiene notas.'}</p></section>
@@ -1958,6 +1960,7 @@ function openNewOpportunityInStage(stageId){
   pendingOpportunityRecordId=null;
   $("oppModalAmount").value="";
   $("oppModalDate").value="";
+  $("oppModalActivation").value="";
   if(window.TPFOpportunityNotes)window.TPFOpportunityNotes.fill($("oppModalNotes"),"");else $("oppModalNotes").value="";
   $("oppModalStage").innerHTML=(salesCache.stages||[]).map(s=>
     `<option value="${s.id}" ${String(s.id)===String(stageId)?"selected":""}>${esc(s.name)}</option>`
