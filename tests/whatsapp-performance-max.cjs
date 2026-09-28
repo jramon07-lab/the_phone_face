@@ -181,7 +181,14 @@ async function run(){
   await api.waPerformanceLoadAvatar('grupo@g.us');
   assert.equal(avatarCalls,2,'la cola no debe pedir avatares sin un chatId individual válido');
 
-  console.log('WhatsApp performance max OK');
+  search.value='';state.filter='unanswered';state.__inboxPrefiltered=true;
+  state.chats=Array.from({length:49},(_,i)=>({id:'pending-'+i+'@c.us',name:'Pendiente '+i}));
+  api.waPerformancePage.key='';context.renderWhatsAppChats();flushFrames();
+  assert.equal(rowCount(),40);assert.match(list.innerHTML,/40 de 49 conversaciones/);
+  list.scrollTop=800;list.dispatch('scroll');flushFrames();
+  assert.equal(rowCount(),49);assert.match(list.innerHTML,/49 de 49 conversaciones · Final de la lista/);
+  assert.doesNotMatch(list.innerHTML,/class="waLiveEmpty waLiveLoadMore"/);
+  console.log('WhatsApp performance max OK; all 49 pending rows reachable with explicit end indicator');
 }
 
 run().catch(error=>{console.error(error);process.exitCode=1});

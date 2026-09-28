@@ -8,6 +8,7 @@
   let latestAutomaticByPhone=new Map(),deliveredOfferPhones=new Map(),businessSource=null;
   let manualCache=null;
   let followupsByPhone=new Map();
+  let sharedMessages=new Map(),sharedMessagesLoading=false;
   let loading=false;
   let timer=0;
 
@@ -42,6 +43,27 @@
     rows[phone]=Date.now();
     try{localStorage.setItem(MANUAL_KEY,JSON.stringify(rows))}catch(_){}
   }
+  function ingestMessageSummary(rows){sharedMessages=new Map((rows||[]).map(r=>[String(r.chat_id),r]));}
+  function sharedMessage(chat){
+    const row=sharedMessages.get(String(chat?.id||''));
+    const activity=Number(chat?.lastMessageTime||chat?.lastMessageTimestamp||chat?.timestamp||chat?.lastActivityTime||0);
+    // An incomplete historical record must not override a newer provider activity.
+    return row&&Number(row.ts||0)>=activity?row:null;
+  }
+  async function loadMessageSummary(){
+    const client=database();if(!client?.rpc||sharedMessagesLoading)return;
+    sharedMessagesLoading=true;
+    try{
+      if(client.auth?.getSession){const {data}=await client.auth.getSession();if(!data?.session)return;}
+      const rows=[];let after='';
+      for(;;){const {data,error}=await client.rpc('crm_whatsapp_message_summary',{p_after:after});if(error)throw error;
+        rows.push(...(data||[]));if((data||[]).length<500)break;
+        const next=String(data[data.length-1].chat_id);if(next<=after)throw Error('Resumen de mensajes incompleto');after=next;
+      }
+      ingestMessageSummary(rows);window.renderWhatsAppChats?.();
+    }catch(error){console.warn('No se pudo sincronizar el resumen compartido de WhatsApp',error);}
+    finally{sharedMessagesLoading=false;}
+  }
   function preview(chat){
     const id=String(chat?.id||'');
     const candidate=liveState()?.livePreview?.[id]||null;
@@ -50,6 +72,8 @@
     const last=live||(chat?._lastMessage||null);
     const timestamp=Number(live?.timestamp||(typeof window.waMessageTimestamp==='function'?window.waMessageTimestamp(last):0)||chat?.lastMessageTime||chat?.lastMessageTimestamp||chat?.timestamp||chat?.lastActivityTime||0);
     const outgoing=typeof live?.outgoing==='boolean'?live.outgoing:(typeof window.waMessageDirection==='function'?window.waMessageDirection(last)==='out':false);
+    const shared=sharedMessage(chat);
+    if(shared&&Number(shared.ts||0)>=Math.max(Number(live?.timestamp||0),storedTimestamp))return {timestamp:Number(shared.ts),outgoing:shared.direction==='out',idMessage:String(shared.id_message||'')};
     return {timestamp,outgoing,idMessage:String(last?.idMessage||last?.id_message||'')};
   }
   function isAutomaticWaiting(chat){
@@ -169,9 +193,9 @@
       ingestBusiness(offers,opps);if(revision===declineRevision)ingestDeclineArchives(archives);businessAt=Date.now();window.renderWhatsAppChats?.();
     }catch(e){console.warn('No se pudo actualizar la fase de las ofertas de WhatsApp',e)}finally{businessLoading=false;}
   }
-  async function reload(){await Promise.all([loadAutomaticSends(),loadBusiness(true),loadFollowups()]);}
+  async function reload(){await Promise.all([loadAutomaticSends(),loadBusiness(true),loadFollowups(),loadMessageSummary()]);}
   function meta(chat){return window.waMeta?.(chat.id)||{}}
-  function incoming(chat){return Math.max(Number(chat?._lastIncomingAt||0),Number(meta(chat).lastIncomingAt||0),!preview(chat).outgoing?preview(chat).timestamp:0)}
+  function incoming(chat){return Math.max(Number(sharedMessage(chat)?.last_incoming_at||0),Number(chat?._lastIncomingAt||0),Number(meta(chat).lastIncomingAt||0),!preview(chat).outgoing?preview(chat).timestamp:0)}
   function workPlan(chat){
     const m=meta(chat),manualAt=window.TPFInboxManual?.since?.(chat)||0;
     return (business(chat)?.plans||[]).filter(p=>manualAt<=p.setAt&&Number(m.archivedAt||0)<Math.max(p.setAt,p.at)).sort((a,b)=>a.at-b.at)[0]||null;
@@ -353,7 +377,7 @@
         event.preventDefault();event.stopImmediatePropagation();openAutomaticTab(tab);
       }
       if(tab)setTimeout(()=>{ensureTab();updateAutomaticCount();if(tab.dataset.waTab==='automatic')decorateAutomaticRows()},0);
-      if(event.target.closest?.('.nav[data-view="whatsapplive"],#waLiveRefresh'))setTimeout(loadAutomaticSends,180);
+      if(event.target.closest?.('.nav[data-view="whatsapplive"],#waLiveRefresh'))setTimeout(()=>{loadAutomaticSends();loadMessageSummary();},180);
     },true);
     if(!wrapRenderer()){
       let tries=0;const wait=setInterval(()=>{tries++;if(wrapRenderer()||tries>40)clearInterval(wait)},100);
@@ -361,7 +385,7 @@
     reload();
     window.addEventListener('tpf:sales-updated',reload);
     window.addEventListener('tpf:tasks-changed',()=>loadBusiness(true));
-    window.addEventListener('focus',()=>loadBusiness(true));
+    window.addEventListener('focus',()=>{loadBusiness(true);loadMessageSummary();});
     setInterval(()=>{if(!document.hidden&&!document.getElementById('view-whatsapplive')?.classList.contains('hidden')&&[...businessByPhone.values()].some(x=>x.plans.length))window.renderWhatsAppChats?.();},20000);
     window.addEventListener('tpf:followup-ready',()=>loadBusiness());
     clearInterval(timer);timer=setInterval(()=>{
@@ -369,6 +393,6 @@
       if(!document.hidden&&(!view||!view.classList.contains('hidden')))reload();
     },REFRESH_MS);
   }
-  window.TPFAutomationInbox={isAutomaticWaiting,category,facets,matchesFilter,business,workPlan,describe,ingestBusiness,ingestDeclineArchives,archiveDeclined,ingestJobs,ingestFollowups,followups,reload};
+  window.TPFAutomationInbox={ingestMessageSummary,isAutomaticWaiting,category,facets,matchesFilter,business,workPlan,describe,ingestBusiness,ingestDeclineArchives,archiveDeclined,ingestJobs,ingestFollowups,followups,reload};
   M.register('whatsapp-automation-inbox',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();

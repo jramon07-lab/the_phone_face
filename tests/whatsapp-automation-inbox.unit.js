@@ -205,3 +205,18 @@ assert.deepEqual(kinds(),['unanswered']);
 sample._lastMessage={timestamp:now+20,direction:'out'};assert.deepEqual(kinds(),['archived']);
 inbox.ingestBusiness([offer('following')],[imported]);assert.deepEqual(kinds(),['automatic'],'another genuine active offer remains open');
 console.log('Imported installations without offers preserve WhatsApp attention and archive after reply');
+
+// Both PCs use persisted history, including messages outside the provider journal window.
+const sharedContext={...context,waLiveState:{livePreview:{}},waMeta:()=>({}),TPFModules:{register(){}}};sharedContext.window=sharedContext;
+vm.runInNewContext(fs.readFileSync('js/modules/whatsapp-automation-inbox.js','utf8'),sharedContext);
+const sharedApi=sharedContext.TPFAutomationInbox;
+const older=now-20*86400,oldChat={id:'shared@c.us',lastMessageTime:older};
+sharedApi.ingestMessageSummary([{chat_id:oldChat.id,id_message:'old-in',direction:'in',ts:older,last_incoming_at:older,last_outgoing_at:older-10}]);
+assert.equal(sharedApi.matchesFilter(oldChat,'unanswered'),true,'cold PC sees historical pending from shared data');
+sharedContext.waLiveState.livePreview[oldChat.id]={timestamp:older-100,outgoing:true,idMessage:'stale-out'};
+assert.equal(sharedApi.matchesFilter(oldChat,'unanswered'),true,'old browser cache cannot hide the shared incoming');
+sharedApi.ingestMessageSummary([{chat_id:oldChat.id,id_message:'reply',direction:'out',ts:older+1,last_incoming_at:older,last_outgoing_at:older+1}]);
+assert.equal(sharedApi.matchesFilter(oldChat,'unanswered'),false,'shared manual reply resolves historical pending on both PCs');
+sharedContext.waLiveState.livePreview[oldChat.id]={timestamp:older+2,outgoing:false,idMessage:'fresh-in'};
+assert.equal(sharedApi.matchesFilter(oldChat,'unanswered'),true,'new live incoming wins over older shared snapshot');
+console.log('Shared historical inbox classification: cold session, stale cache, answered and new incoming OK');

@@ -323,6 +323,7 @@ function install(){
           const remaining=rows.length-visible.length;
           html+=`<button type="button" class="waLiveEmpty waLiveLoadMore" style="display:block;width:100%;border:0;background:#fff;cursor:pointer">Mostrar más (${remaining})</button>`;
         }
+        if(rows.length)html+=`<div class="waListProgress" role="status" style="padding:10px;text-align:center;font-size:12px;color:#64748b">${visible.length} de ${rows.length} conversaciones${visible.length===rows.length?' · Final de la lista':''}</div>`;
         // Background refreshes must not destroy the list when nothing changed.
         if(box.__tpfListHtml!==html){
           const oldTop=Number(box.scrollTop||0),bounds=box.getBoundingClientRect?.();
