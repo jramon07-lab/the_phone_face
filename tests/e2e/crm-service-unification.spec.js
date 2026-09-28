@@ -187,6 +187,16 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
           await expect(page.locator('[data-wa-tab="archived"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="automatic"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="processing"]')).toBeVisible();
+          const originalViewport=page.viewportSize();
+          for(const width of [1280,1366]){
+            await page.setViewportSize({width,height:768});
+            const tabs=await page.locator('#view-whatsapplive .waLivePage>.waTabs').evaluate(el=>{
+              const buttons=[...el.querySelectorAll(':scope>button[data-wa-tab]')].filter(b=>b.getBoundingClientRect().width);
+              return {count:buttons.length,tops:buttons.map(b=>Math.round(b.getBoundingClientRect().top)),fits:el.scrollWidth<=el.clientWidth+1};
+            });
+            expect(tabs.count).toBe(11);expect(new Set(tabs.tops).size).toBe(1);expect(tabs.fits).toBe(true);
+          }
+          await page.setViewportSize(originalViewport);
           const row=page.locator('#waLiveChats .waChatRow').first();
           if(await row.count()){
             await row.click();

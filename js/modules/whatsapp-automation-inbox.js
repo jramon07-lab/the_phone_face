@@ -201,7 +201,7 @@
   }
   function decorateHeader(){
     const button=document.getElementById('waArchiveChat'),chatId=liveState()?.selected?.id;
-    if(button&&chatId){const chat=(liveState()?.chats||[]).find(c=>c.id===chatId),archived=chat?facets(chat).includes('archived'):!!window.waMeta?.(chatId)?.archived;button.textContent=archived?'Reabrir':'✓ Resolver';button.title=archived?'Volver a conversaciones':'Archivar conversación resuelta. Los seguimientos continúan.';}
+    if(button&&chatId){const chat=(liveState()?.chats||[]).find(c=>c.id===chatId),archived=chat?facets(chat).includes('archived'):!!window.waMeta?.(chatId)?.archived;button.textContent=archived?'Reabrir':'✓ Marcar como atendido';button.title=archived?'Volver a conversaciones':'Quitar de Pendientes. Conserva las ofertas activas; sin ellas, pasa a Archivados.';button.setAttribute('aria-label',button.textContent);}
   }
   function decorateAutomaticRows(){
     const rows=new Map((liveState()?.chats||[]).map(c=>[String(c.id),c]));

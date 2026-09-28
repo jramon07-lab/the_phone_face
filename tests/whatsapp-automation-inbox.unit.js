@@ -94,3 +94,14 @@ inbox.ingestJobs([{context:{phone},completed_at:new Date((now+90)*1000).toISOStr
 assert.deepEqual(kinds(),['archived'],'after-sale automatic message must keep a resolved chat archived');
 sample._lastMessage={timestamp:now+95,direction:'in'};assert.deepEqual(kinds(),['unanswered']);
 console.log('WhatsApp commercial phases, legacy reviews, multiple offers and after-sale OK');
+
+for(const status of ['following','accepted','processed']){
+ inbox.ingestBusiness([offer(status)],[saleOpp]);
+ chatMeta={archived:true,archivedAt:now+200};sample._lastMessage={timestamp:now+100,direction:'in'};
+ assert.deepEqual(kinds(),[status==='following'?'automatic':'processing'],'attending keeps the commercial phase');
+ assert.equal(inbox.matchesFilter(sample,'archived'),false);
+ sample._lastMessage={timestamp:now+201,direction:'in'};
+ assert.ok(kinds().includes('unanswered'),'new incoming needs attention again');
+}
+inbox.ingestBusiness([],[]);chatMeta={archived:true,archivedAt:now+300};
+assert.deepEqual(kinds(),['archived'],'attended chat without active offer is archived');

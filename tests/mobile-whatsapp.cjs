@@ -122,7 +122,7 @@ async function run(){
   api.state.whatsapp.selectedId='34695661409@c.us';
   api.state.perms={is_admin:true};
   const actions=api.renderMobileWaActions();
-  for(const label of ['Resolver conversación','Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
+  for(const label of ['Marcar como atendido','Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
   api.state.whatsapp.archiveStates['34695661409@c.us']={archived:true,archivedAt:100};
   assert.match(api.renderMobileWaActions(),/Reabrir conversación/);
   assert.equal(api.reopenMobileWaFromMessages('34695661409@c.us',[{type:'incoming',timestamp:99,message:'Antiguo'}]),false);

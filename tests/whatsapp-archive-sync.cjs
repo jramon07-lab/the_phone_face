@@ -29,7 +29,7 @@ vm.runInContext(moduleSource,context);
 context.window.waMetaSave('chat',{archived:true});
 assert.equal(meta.chat.archived,true);
 assert.ok(meta.chat.archivedAt>0);
-assert.equal(button.textContent,'✓ Resolver');
+assert.equal(button.textContent,'✓ Marcar como atendido');
 context.window.waRefreshChatTopButtons();
 assert.equal(button.textContent,'↥ Reabrir');
 context.window.waTrackDirection('chat',{direction:'in',timestamp:meta.chat.archivedAt-1});
