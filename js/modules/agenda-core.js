@@ -126,9 +126,13 @@ function syncAgendaFilterUi(){
   const status=$("agendaFilter")?.value||"pending";
   if($("agendaFilterSummary"))$("agendaFilterSummary").textContent=(statuses[status]||status)+" · "+(periods[agendaDateFilter]||periods.all);
 }
-async function loadAgenda(){
+let agendaSnapshot=null,agendaCustomerTimer,agendaCustomerRevision=0;
+async function loadAgenda(options={}){
   if(!(perms?.is_admin||perms?.can_view_agenda||perms?.can_manage_agenda))return;
   const revision=++agendaLoadVersion;
+  const snapshot=agendaSnapshot;
+  const cached=options?.searchOnly===true&&snapshot&&Date.now()-snapshot.at<30000;
+  if(!cached)agendaSnapshot=null;
   const status=$("agendaFilter")?.value||"pending",now=new Date();let range=agendaDateRange(agendaDateFilter,now);if(window.TPFAgendaClean?.range())range=window.TPFAgendaClean.range();
   if(agendaDateFilter==="all"&&!window.TPFAgendaClean?.range()&&!$("agendaCalendar").classList.contains("hidden")){const start=new Date(agendaCalendarMonth.getFullYear(),agendaCalendarMonth.getMonth(),1);start.setDate(start.getDate()-((start.getDay()+6)%7));const end=new Date(start);end.setDate(end.getDate()+42);range={start,end};}
   let q=sb.from("agenda_items").select("*").or("whatsapp_enabled.is.null,whatsapp_enabled.eq.false").order("starts_at",{ascending:true}).limit(300);
@@ -141,15 +145,16 @@ async function loadAgenda(){
   syncAgendaFilterUi();
   const searchText=String($("agendaSearch")?.value||"").trim();
   const contactSearch=searchText.length>=2?sb.rpc("search_records",{search_text:searchText,sheet_filter:"BASE DE DATOS",result_limit:100}):Promise.resolve({data:[]});
-  const [one,two,contacts]=await Promise.all([q,agendaLoadStats(),contactSearch]);
+  const [one,two,contacts]=await Promise.all([cached?{data:snapshot.rows}:q,cached?snapshot.stats:agendaLoadStats(),contactSearch]);
   if(revision!==agendaLoadVersion)return;
   if(one.error){$("agendaList").innerHTML=`<div class="agendaEmpty">${esc(one.error.message)}</div>`;return}
   let rows=visibleRows(one.data||[],contacts?.data||[]);
- const contactCache=await agendaLoadLinkedContacts(rows);
+ const contactCache=cached?snapshot.contacts:await agendaLoadLinkedContacts(one.data||[]);
  if(revision!==agendaLoadVersion)return;
  agendaContactCache=contactCache;
  await Promise.all(rows.map(async row=>{row.__contact=await agendaResolveContact(row,contactCache)}));
   if(revision!==agendaLoadVersion)return;
+  if(!cached)agendaSnapshot={rows:one.data||[],stats:two,contacts:contactCache,at:Date.now()};
   rows=window.TPFAgendaClean?.filter(rows)||rows;
   window.__agendaRows=one.data||[];
   if(!two.error)updateStats(two.data||[]);else window.TPFAgendaClean?.countsError();
@@ -158,7 +163,7 @@ async function loadAgenda(){
 }
 $("agendaFilter").onchange=loadAgenda;
 $("agendaRefresh").onclick=loadAgenda;
-$("agendaSearch").oninput=()=>{clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(loadAgenda,180)};
+$("agendaSearch").oninput=()=>{clearTimeout(agendaSearchTimer);++agendaLoadVersion;agendaSearchTimer=setTimeout(()=>loadAgenda({searchOnly:true}),180)};
 $("agendaQuickFilters").onclick=e=>{const b=e.target.closest("[data-agenda-period]");if(!b)return;agendaDateFilter=b.dataset.agendaPeriod;loadAgenda()};
 $("agendaListView").onclick=()=>{$("agendaList").classList.remove("hidden");$("agendaCalendar").classList.add("hidden");$("agendaListView").classList.add("active");$("agendaCalendarView").classList.remove("active");loadAgenda()};
 $("agendaCalendarView").onclick=()=>{$("agendaList").classList.add("hidden");$("agendaCalendar").classList.remove("hidden");$("agendaCalendarView").classList.add("active");$("agendaListView").classList.remove("active");loadAgenda()};
@@ -221,7 +226,7 @@ $("agendaManageTypes").onclick=()=>$("agendaTypeModal").classList.remove("hidden
 $("agendaAddType").onclick=async()=>{const name=$("agendaNewTypeName").value.trim();if(!name)return;if(agendaTypes.some(t=>t.name.toLowerCase()===name.toLowerCase()))return alert("Ese tipo ya existe.");agendaTypes.push({name,icon:$("agendaNewTypeIcon").value,color:$("agendaNewTypeColor").value});await saveAgendaTypes();$("agendaNewTypeName").value=""};
 $("agendaTypeList").onclick=async e=>{const b=e.target.closest("[data-remove-type]");if(b){agendaTypes.splice(Number(b.dataset.removeType),1);await saveAgendaTypes()}};
 $("agendaList").onclick=e=>{const a=e.target.closest("[data-open-agenda]"),c=e.target.closest("[data-complete-agenda]"),m=e.target.closest("[data-more-agenda]");if(a)return openAgendaItem(a.dataset.openAgenda);if(c)return completeAgenda(c.dataset.completeAgenda);if(m){document.querySelector(".agendaPopMenu")?.remove();const id=m.dataset.moreAgenda,menu=document.createElement("div");menu.className="agendaPopMenu";menu.innerHTML='<button data-agenda-edit>Editar</button><button data-agenda-cancel>Cancelar recordatorio</button><button class="danger" data-agenda-delete>Eliminar</button>';document.body.appendChild(menu);const box=m.getBoundingClientRect();menu.style.left=Math.min(box.left,innerWidth-210)+"px";menu.style.top=(box.bottom+5)+"px";menu.onclick=ev=>{if(ev.target.closest("[data-agenda-edit]"))editAgendaItem(id);if(ev.target.closest("[data-agenda-cancel]"))cancelAgenda(id);if(ev.target.closest("[data-agenda-delete]"))deleteAgenda(id);menu.remove()}}};
-$("agendaCustomer").oninput=()=>{delete $("agendaCustomer").dataset.contactId;clearTimeout(agendaSearchTimer);agendaSearchTimer=setTimeout(async()=>{const q=$("agendaCustomer").value.trim(),box=$("agendaCustomerResults");if(q.length<2){box.innerHTML="";return}const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:8});box.__rows=data||[];box.innerHTML=(data||[]).map((r,i)=>{const d=r.data||{},name=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"Cliente",phone=d["TELÉFONO"]||d.TELEFONO||"",dni=d["DNI / NIF"]||d.DNI||"";return `<button type="button" class="agendaCustomerResult" data-customer-result="${i}"><b>${esc(name)}</b><small>${esc(phone)} ${esc(dni)}</small></button>`}).join("")},220)};
+$("agendaCustomer").oninput=()=>{delete $("agendaCustomer").dataset.contactId;const revision=++agendaCustomerRevision;clearTimeout(agendaCustomerTimer);agendaCustomerTimer=setTimeout(async()=>{const q=$("agendaCustomer").value.trim(),box=$("agendaCustomerResults");if(q.length<2){box.innerHTML="";return}const {data}=await sb.rpc("search_records",{search_text:q,sheet_filter:"BASE DE DATOS",result_limit:8});if(revision!==agendaCustomerRevision||$("agendaCustomer").value.trim()!==q)return;box.__rows=data||[];box.innerHTML=(data||[]).map((r,i)=>{const d=r.data||{},name=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"Cliente",phone=d["TELÉFONO"]||d.TELEFONO||"",dni=d["DNI / NIF"]||d.DNI||"";return `<button type="button" class="agendaCustomerResult" data-customer-result="${i}"><b>${esc(name)}</b><small>${esc(phone)} ${esc(dni)}</small></button>`}).join("")},220)};
 $("agendaCustomerResults").onclick=e=>{const b=e.target.closest("[data-customer-result]");if(!b)return;const r=$("agendaCustomerResults").__rows[Number(b.dataset.customerResult)]||{},d=r.data||{};$("agendaCustomer").value=d["NOMBRE Y APELLIDOS"]||d.NOMBRE||d.CLIENTE||"";$("agendaCustomer").dataset.contactId=r.id||"";$("agendaPhone").value=d["TELÉFONO"]||d.TELEFONO||"";$("agendaCustomerResults").innerHTML=""};
 function syncAgendaEditor(){
   const card=$("agendaCreateCard"),heading=card.querySelector('.agendaComposerHead h2,.agendaComposerHead h3');

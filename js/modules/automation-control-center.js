@@ -141,7 +141,7 @@ function ensureLaunchers(){
  $('view-whatsapplive')?.querySelector('.ccLaunch')?.remove();
  const waHead=$('view-whatsapp')?.querySelector('.wapHeaderActions,.pageHeader');launchButton(waHead,'Control de envíos');
 }
-function bind(){if(state.bound)return;state.bound=true;css();ensureLaunchers();document.addEventListener('click',event=>{if(event.target.closest?.('.nav[data-view="automations"],.nav[data-view="whatsapp"]'))setTimeout(ensureLaunchers,180)},true);document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('ccPanel'))close()});const observer=new MutationObserver(()=>setTimeout(ensureLaunchers,30));observer.observe(document.body,{childList:true,subtree:true});state.timer=setInterval(()=>{if($('ccPanel'))load()},60000)}
+function bind(){if(state.bound)return;state.bound=true;css();ensureLaunchers();document.addEventListener('click',event=>{if(event.target.closest?.('.nav[data-view="automations"],.nav[data-view="whatsapp"]'))setTimeout(ensureLaunchers,180)},true);document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('ccPanel'))close()});let launcherTimer=null;const observer=new MutationObserver(()=>{if(launcherTimer!==null)return;launcherTimer=setTimeout(()=>{launcherTimer=null;ensureLaunchers()},60)});for(const id of ['view-automations','view-whatsapp','view-whatsapplive']){const root=$(id);if(root)observer.observe(root,{childList:true,subtree:true})}state.timer=setInterval(()=>{if($('ccPanel'))load()},60000)}
 window.TPFAutomationControlCenter={statusOf,operatorOf,makeRows,open:panel,reload:()=>load(true)};
 M.register('automation-control-center',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();

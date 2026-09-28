@@ -164,11 +164,25 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
       await test.step(`Abrir ${view}`, async () => {
         const nav = page.locator(`.nav[data-view="${view}"]`).first();
         await expect(nav).toBeVisible();
+        const navigationStarted=Date.now();
         await nav.click();
         await expect(page.locator(`#view-${view}`)).toBeVisible();
+        console.log("CRM_VIEW_VISIBLE_MS",JSON.stringify({view,elapsedMs:Date.now()-navigationStarted}));
         // A visible section alone is insufficient: the normal navigation must
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
+        const searchSelector={dashboard:'#tdWorkSearch',sales:'#salesSearch',agenda:'#agendaSearch'}[view];
+        if(searchSelector){
+          const input=page.locator(searchSelector);await expect(input).toBeVisible();
+          await page.evaluate(()=>{window.__searchLongTasks=[];window.__searchPerf=new PerformanceObserver(list=>{for(const entry of list.getEntries())window.__searchLongTasks.push(entry.duration)});window.__searchPerf.observe({type:'longtask',buffered:false});});
+          const started=Date.now();await input.pressSequentially('zzzz rendimiento teclado');
+          await expect(input).toHaveValue('zzzz rendimiento teclado');
+          // Includes the debounce window. Never submit or send the synthetic text.
+          await page.waitForTimeout(250);
+          const timing=await page.evaluate(()=>{window.__searchPerf.disconnect();return {longTasks:window.__searchLongTasks.length,longestMs:Math.round(Math.max(0,...window.__searchLongTasks))}});
+          console.log('CRM_SEARCH_TYPING',JSON.stringify({view,elapsedMs:Date.now()-started,...timing}));
+          await input.fill('');
+        }
         if(view==='database'){
           const search=page.locator('#tpfContactsSearch');await expect(search).toBeVisible();
           await page.evaluate(()=>{window.__typingTasks=[];window.__typingObserver=new PerformanceObserver(list=>{for(const e of list.getEntries())window.__typingTasks.push(e.duration)});window.__typingObserver.observe({type:'longtask',buffered:false});});

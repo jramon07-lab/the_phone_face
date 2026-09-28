@@ -133,6 +133,8 @@ function build(){
   D.built=true;bind();
 }
 
+let workSearchTimer;
+function renderWorkSearch(){if(!D.data||!dashboardOpen())return;const d=D.data,map=new Map(d.stages.map(s=>[String(s.id),s])),pending=d.tasks.filter(t=>status(t.status||'pending')==='pending');renderPriority(d,map,pending)}
 function bind(){
   $('dashRefresh').onclick=load;
   const openNewOpp=()=>runAction(openNewOpportunity);$('dashNewOpp').onclick=openNewOpp;$('dashNewOppDetail').onclick=openNewOpp;
@@ -142,7 +144,7 @@ function bind(){
   $('tdActivityMore').onclick=()=>{D.activityAll=!D.activityAll;renderActivity()};
   $('tdUpcomingMore').onclick=()=>{D.upcomingAll=!D.upcomingAll;renderHomePanels()};
   $('tdWorkSearch').value=D.query;$('tdPageSize').value=D.pageSize;
-  $('tdWorkSearch').oninput=e=>{D.query=e.target.value;D.page=0;renderHomePanels()};
+  $('tdWorkSearch').oninput=e=>{D.query=e.target.value;D.page=0;clearTimeout(workSearchTimer);workSearchTimer=setTimeout(renderWorkSearch,160)};
   $('tdClearSearch').onclick=()=>{D.query='';D.page=0;$('tdWorkSearch').value='';renderHomePanels();$('tdWorkSearch').focus()};
   $('tdPageSize').onchange=e=>{D.pageSize=['10','25','50','all'].includes(e.target.value)?e.target.value:'10';D.page=0;renderHomePanels()};
   $('tdPrevPage').onclick=()=>{D.page=Math.max(0,D.page-1);renderHomePanels()};

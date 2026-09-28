@@ -586,13 +586,19 @@ function waIsDue(row){
   const when=row.whatsapp_scheduled_at||row.starts_at;
   return !when || new Date(when).getTime()<=Date.now();
 }
-async function loadWhatsappPrograms(){
+let waProgramsSnapshot=null,waProgramsLoadRevision=0;
+async function loadWhatsappPrograms(options={}){
   if(!$("waRows"))return;
-  const {data,error}=await sb.from("agenda_items")
+  const revision=++waProgramsLoadRevision;
+  const cached=options?.searchOnly===true&&waProgramsSnapshot&&Date.now()-waProgramsSnapshot.at<30000;
+  if(!cached)waProgramsSnapshot=null;
+  const {data,error}=cached?{data:waProgramsSnapshot.data}:await sb.from("agenda_items")
     .select("*")
     .eq("whatsapp_enabled",true)
     .order("whatsapp_scheduled_at",{ascending:true})
     .limit(300);
+  if(revision!==waProgramsLoadRevision)return;
+  if(!error&&!cached)waProgramsSnapshot={data:data||[],at:Date.now()};
 
   if(error){
     $("waRows").innerHTML=`<tr><td colspan="6">${esc(error.message)}</td></tr>`;

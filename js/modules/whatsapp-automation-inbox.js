@@ -316,7 +316,7 @@
     window.addEventListener('tpf:sales-updated',()=>loadBusiness(true));
     window.addEventListener('tpf:tasks-changed',()=>loadBusiness(true));
     window.addEventListener('focus',()=>loadBusiness(true));
-    setInterval(()=>{if(!document.hidden&&[...businessByPhone.values()].some(x=>x.plans.length))window.renderWhatsAppChats?.();},20000);
+    setInterval(()=>{if(!document.hidden&&!document.getElementById('view-whatsapplive')?.classList.contains('hidden')&&[...businessByPhone.values()].some(x=>x.plans.length))window.renderWhatsAppChats?.();},20000);
     window.addEventListener('tpf:followup-ready',()=>loadBusiness());
     clearInterval(timer);timer=setInterval(()=>{
       const view=document.getElementById('view-whatsapplive');

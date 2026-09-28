@@ -113,7 +113,8 @@ if(salesScrollEl){
 }
 
 
-$("salesSearch").oninput=renderSales;
+let salesSearchTimer;
+$("salesSearch").oninput=()=>{clearTimeout(salesSearchTimer);salesSearchTimer=setTimeout(renderSales,160)};
 $("salesStageFilter").onchange=renderSales;
 $("salesSort").onchange=renderSales;
 $("salesReload").onclick=loadSales;
@@ -970,7 +971,8 @@ loadSession();
 
 
 if($("waFilter"))$("waFilter").onchange=loadWhatsappPrograms;
-if($("waSearch"))$("waSearch").oninput=loadWhatsappPrograms;
+let waProgramsSearchTimer;
+if($("waSearch"))$("waSearch").oninput=()=>{clearTimeout(waProgramsSearchTimer);waProgramsSearchTimer=setTimeout(()=>loadWhatsappPrograms({searchOnly:true}),180)};
 if($("waReload"))$("waReload").onclick=loadWhatsappPrograms;
 document.querySelectorAll('[data-view="whatsapp"]').forEach(btn=>{
   btn.addEventListener("click",()=>setTimeout(loadWhatsappPrograms,0));
@@ -2302,12 +2304,13 @@ window.purgeTrash=async(id)=>{
 };
 $("trashRefresh").onclick=loadTrash;
 
-let globalSearchTimer=null;
+let globalSearchTimer=null,globalSearchRevision=0;
 $("globalSearch").addEventListener("input",()=>{
-  clearTimeout(globalSearchTimer);const q=$("globalSearch").value.trim();
+  const revision=++globalSearchRevision;clearTimeout(globalSearchTimer);const q=$("globalSearch").value.trim();
   if(q.length<2){$("globalSearchResults").classList.add("hidden");return}
   globalSearchTimer=setTimeout(async()=>{
     const {data}=await sb.rpc("search_records",{search_text:q||null,sheet_filter:"BASE DE DATOS",result_limit:8});
+    if(revision!==globalSearchRevision||$("globalSearch").value.trim()!==q)return;
     const rows=(data||[]).slice(0,8);
     $("globalSearchResults").innerHTML=rows.map(r=>{const d=r.data||{};const name=d["NOMBRE Y APELLIDOS"]||d["NOMBRE"]||d["CLIENTE"]||"Contacto";const phone=d["TELÉFONO"]||d["TELEFONO"]||"";const dni=d["DNI / NIF"]||d["DNI"]||"";return `<div class="gsr"><div class="gsrMain" onclick="openGlobalContact('${r.id}')"><b>${esc(name)}</b><small>${esc(phone)} ${dni?"· "+esc(dni):""}</small></div><div class="gsrActions"><button class="secondary miniAction" onclick="event.stopPropagation();openGlobalContact('${r.id}')">Abrir</button><button class="secondary miniAction" onclick="event.stopPropagation();openGlobalContact('${r.id}')">Editar</button></div></div>`}).join("")||'<div class="gsr"><small>Sin resultados</small></div>';
     $("globalSearchResults").classList.remove("hidden");
