@@ -20,24 +20,24 @@ vm.runInNewContext(fs.readFileSync('js/modules/whatsapp-automation-inbox.js','ut
 const api=context.TPFAutomationInbox;
 assert.ok(api,'El módulo debe exponer su diagnóstico');
 const now=Math.floor(Date.now()/1000);
-api.ingestJobs([{context:{phone:'34695661409'},completed_at:new Date(now*1000).toISOString()}]);
+api.ingestJobs([{context:{phone:'34695661409'},action_config:{__delivery_receipt:{idMessage:'auto-1'}},completed_at:new Date(now*1000).toISOString()}]);
 
 const chat={id:'34695661409@c.us',_lastMessage:{timestamp:now,direction:'out'}};
-context.waLiveState.livePreview[chat.id]={timestamp:now,outgoing:true};
+context.waLiveState.livePreview[chat.id]={timestamp:now,outgoing:true,idMessage:'auto-1'};
 assert.equal(api.isAutomaticWaiting(chat),true,'El último envío automático debe salir de Conversaciones');
 
 context.waLiveState.livePreview[chat.id]={timestamp:now+30,outgoing:false};
 assert.equal(api.isAutomaticWaiting(chat),false,'La respuesta del cliente debe devolver el chat a Conversaciones');
 
-context.waLiveState.livePreview[chat.id]={timestamp:now+1800,outgoing:true};
+context.waLiveState.livePreview[chat.id]={timestamp:now+1800,outgoing:true,idMessage:'phone-1'};
 assert.equal(api.isAutomaticWaiting(chat),false,'Un envío manual posterior no puede quedar clasificado como automático');
 
-context.waLiveState.livePreview[chat.id]={timestamp:now+30,outgoing:true};
+context.waLiveState.livePreview[chat.id]={timestamp:now+30,outgoing:true,idMessage:'phone-2'};
 storage.set('tpf_wa_manual_outgoing_v1',JSON.stringify({'695661409':(now+30)*1000}));
 // Vuelve a cargar el módulo para comprobar la caché manual desde el almacenamiento.
 const second={...context,TPFModules:{register(){}},TPFAutomationInbox:undefined};second.window=second;
 vm.runInNewContext(fs.readFileSync('js/modules/whatsapp-automation-inbox.js','utf8'),second,{filename:'whatsapp-automation-inbox.js'});
-second.TPFAutomationInbox.ingestJobs([{context:{contact_phone:'695661409'},completed_at:new Date(now*1000).toISOString()}]);
+second.TPFAutomationInbox.ingestJobs([{context:{contact_phone:'695661409'},action_config:{__delivery_receipt:{idMessage:'auto-1'}},completed_at:new Date(now*1000).toISOString()}]);
 assert.equal(second.TPFAutomationInbox.isAutomaticWaiting(chat),false,'Escribir manualmente debe devolver el chat a Conversaciones');
 
 console.log('WhatsApp automation inbox OK');
@@ -151,3 +151,16 @@ inbox.ingestBusiness([{...planned,status:'won'}],[saleOpp]);assert.deepEqual(kin
 inbox.ingestBusiness([],[]);assert.deepEqual(kinds(),['all'],'reply without an offer remains in Todos');
 sample._lastMessage={timestamp:now+10,direction:'in'};assert.deepEqual(kinds(),['unanswered'],'next customer reply needs attention');
 console.log('Linked offer plans: future, due, incoming, attendance, edits, completion and multiple offers OK');
+
+// Real provider IDs distinguish phone replies even at exactly the same time.
+context.waLiveState.livePreview={};chatMeta={};context.TPFInboxManual.category=()=>null;context.TPFInboxManual.since=()=>0;
+inbox.ingestBusiness([offer('following')],[saleOpp]);
+inbox.ingestJobs([{context:{phone},action_config:{__delivery_receipt:{idMessage:'offer-auto',acceptedAt:iso(now)}},updated_at:iso(now)}]);
+sample._lastIncomingAt=now-100;sample._lastMessage={timestamp:now,idMessage:'offer-auto',direction:'out'};
+assert.deepEqual(kinds(),['unanswered','automatic'],'automatic receipt does not resolve customer attention');
+sample._lastMessage={timestamp:now,idMessage:'native-phone-reply',direction:'out'};
+assert.deepEqual(kinds(),['automatic'],'native phone reply at the same second removes message attention');
+sample._lastMessage={timestamp:now+1,idMessage:'new-incoming',direction:'in'};assert.deepEqual(kinds(),['unanswered','automatic']);
+inbox.ingestJobs([{context:{phone},completed_at:iso(now)}]);sample._lastMessage={timestamp:now,idMessage:'native-phone-reply',direction:'out'};
+assert.equal(inbox.isAutomaticWaiting(sample),false,'historical jobs without receipts cannot label a phone reply automatic');
+console.log('Provider receipts distinguish native phone replies without timestamp guessing');

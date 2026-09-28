@@ -189,7 +189,7 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
           await expect(page.locator('[data-wa-tab="processing"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="declined"]')).toBeVisible();
           const originalViewport=page.viewportSize();
-          for(const width of [1280,1366]){
+          for(const width of [1280,1366,1920,2560]){
             await page.setViewportSize({width,height:768});
             const tabs=await page.locator('#view-whatsapplive .waLivePage>.waTabs').evaluate(el=>{
               const buttons=[...el.querySelectorAll(':scope>button[data-wa-tab]')].filter(b=>b.getBoundingClientRect().width);
@@ -483,7 +483,14 @@ test('WhatsApp: búsqueda entre bandejas y lista estable al escribir y refrescar
    const due=box.querySelectorAll('.waChatRow').length===1&&box.textContent.includes('Próxima acción vencida');
    plan.plan_task.status='completed';TPFAutomationInbox.ingestBusiness([plan],[]);renderWhatsAppChats();await Promise.resolve();
    const completed=box.querySelectorAll('.waChatRow').length===0;
-   return {both,pending,processing,notWaiting,planned,due,completed};
+   TPFAutomationInbox.ingestJobs([{context:{phone:'34600123456'},action_config:{__delivery_receipt:{idMessage:'auto-test'}}}]);
+   chat._lastIncomingAt=100;chat._lastMessage={timestamp:120,direction:'out',idMessage:'auto-test'};renderWhatsAppChats();await Promise.resolve();
+   const autoPending=box.querySelectorAll('.waChatRow').length===1;
+   chat._lastMessage={timestamp:120,direction:'out',idMessage:'phone-test'};renderWhatsAppChats();await Promise.resolve();
+   const phoneResolved=box.querySelectorAll('.waChatRow').length===0;
+   waLiveState.filter='automatic';renderWhatsAppChats();await Promise.resolve();
+   const offerPreserved=box.querySelectorAll('.waChatRow').length===1;
+   return {both,pending,processing,notWaiting,planned,due,completed,autoPending,phoneResolved,offerPreserved};
  });
- expect(phases).toEqual({both:true,pending:true,processing:true,notWaiting:true,planned:true,due:true,completed:true});
+ expect(phases).toEqual({both:true,pending:true,processing:true,notWaiting:true,planned:true,due:true,completed:true,autoPending:true,phoneResolved:true,offerPreserved:true});
 });

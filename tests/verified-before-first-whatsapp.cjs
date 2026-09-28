@@ -40,3 +40,11 @@ const legacy={id:'r2',data:{NOMBRE:'Pilar',APELLIDOS:'',APODO:'','TELÉFONO':'62
 assert.ok(api.savedVerification(legacy,{id:'34622222222@c.us',name:'Otro nombre'}),'the earlier CRM+Google-only marker must remain verified');
 
 console.log('CRM+Google verified contacts keep the chosen identity for their first matching WhatsApp.');
+
+let parses=0;context.JSON={stringify:JSON.stringify,parse(value){parses++;return JSON.parse(value)}};
+for(let i=0;i<2500;i++)api.whatsappDisplayIdentity(chat);
+assert.equal(parses,0,'unchanged identity maps must not be parsed again per chat');
+row.data.APODO='Nuevo apodo';row.data.TPF_CONTACT_VERIFIED.signature=JSON.stringify(['r1','611111111','Antonio','','Nuevo apodo']);api.rememberUnifiedName(chat,row);
+assert.equal(api.whatsappDisplayIdentity(chat).nickname,'Nuevo apodo','same-tab edits invalidate the raw-value cache');
+const before=parses;for(let i=0;i<2500;i++)api.whatsappDisplayIdentity(chat);assert.equal(parses,before);
+console.log('Identity cache reuses unchanged maps and reflects edits immediately');

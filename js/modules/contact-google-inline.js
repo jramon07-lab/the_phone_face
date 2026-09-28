@@ -310,10 +310,18 @@
     } catch (_) {}
     window.dispatchEvent(new Event("tpf:wa-identity-updated"));
   }
+  const displayIdentityCache=new Map();
+  function displayIdentityMap(key){
+    try{
+      const raw=localStorage.getItem(key)||'{}',cached=displayIdentityCache.get(key);
+      if(cached?.raw===raw)return cached.value;
+      const value=JSON.parse(raw)||{};displayIdentityCache.set(key,{raw,value});return value;
+    }catch(_){displayIdentityCache.delete(key);return {};}
+  }
   function whatsappDisplayIdentity(chat) {
     const id = safe(chat?.id),
-      saved = readUnifiedNames()[id],
-      bound = safe(readBindings()[id]);
+      saved = displayIdentityMap(UNIFIED_KEY)[id],
+      bound = safe(displayIdentityMap(BIND_KEY)[id]);
     return saved?.name && bound && safe(saved.recordId) === bound
       ? {
           name: safe(saved.name),

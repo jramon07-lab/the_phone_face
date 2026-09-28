@@ -3,8 +3,6 @@
   const M=window.TPFModules;if(!M)return;
 
   const REFRESH_MS=90000;
-  const MATCH_BEFORE_SECONDS=180;
-  const MATCH_AFTER_SECONDS=900;
   const MANUAL_KEY='tpf_wa_manual_outgoing_v1';
   const SEND_ACTIONS=['send_template','send_whatsapp_now','__send_whatsapp'];
   let latestAutomaticByPhone=new Map();
@@ -54,13 +52,10 @@
     return {timestamp,outgoing,idMessage:String(last?.idMessage||last?.id_message||'')};
   }
   function isAutomaticWaiting(chat){
-    const phone=chatPhone(chat),sentAt=Number(latestAutomaticByPhone.get(phone)||0);
-    if(!phone||!sentAt)return false;
     const last=preview(chat);
-    if(!last.outgoing||!last.timestamp)return false;
-    if(last.timestamp<sentAt-MATCH_BEFORE_SECONDS||last.timestamp>sentAt+MATCH_AFTER_SECONDS)return false;
-    const manualAt=Number(manualMap()[phone]||0)/1000;
-    return !(manualAt>=sentAt-MATCH_BEFORE_SECONDS&&manualAt>=last.timestamp-MATCH_BEFORE_SECONDS);
+    // Match the actual provider receipt, never a time window: phone replies can
+    // arrive in the same second as an automatic send.
+    return last.outgoing&&!!last.idMessage&&!!latestAutomaticByPhone.get(chatPhone(chat))?.has(last.idMessage);
   }
   function jobPhone(row){
     const context=row?.context||{};
@@ -69,8 +64,8 @@
   function ingestJobs(rows){
     const next=new Map();
     for(const row of rows||[]){
-      const phone=jobPhone(row),stamp=seconds(row.completed_at||row.updated_at);
-      if(phone&&stamp>Number(next.get(phone)||0))next.set(phone,stamp);
+      const receipt=row.action_config?.__delivery_receipt,phone=jobPhone(row)||localPhone(receipt?.chatId),id=String(receipt?.idMessage||'');
+      if(phone&&id){if(!next.has(phone))next.set(phone,new Set());next.get(phone).add(id);}
     }
     latestAutomaticByPhone=next;
     return next.size;
@@ -83,11 +78,11 @@
       if(client.auth?.getSession){const {data}=await client.auth.getSession();if(!data?.session)return;}
       const since=new Date(Date.now()-120*86400000).toISOString();
       const result=await client.from('crm_server_automation_jobs')
-        .select('id,action_type,context,completed_at,updated_at')
-        .eq('status','done')
+        .select('id,action_type,context,action_config,completed_at,updated_at')
+        .in('status',['done','pending','running','failed'])
         .in('action_type',SEND_ACTIONS)
-        .gte('completed_at',since)
-        .order('completed_at',{ascending:false})
+        .gte('updated_at',since)
+        .order('updated_at',{ascending:false})
         .limit(1000);
       if(result.error)throw result.error;
       ingestJobs(result.data||[]);
@@ -282,7 +277,7 @@
   function styles(){
     if(document.getElementById('tpfWaAutomationInboxCss'))return;
     const style=document.createElement('style');style.id='tpfWaAutomationInboxCss';
-    style.textContent=`#waArchiveDeclined[hidden]{display:none!important}.waInboxFlag.declined,.m-inbox-badge.declined{background:#fff0ed;color:#a33b28}.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
+    style.textContent=`#view-whatsapplive #waArchiveDeclined[hidden]{display:none!important}.waInboxFlag.declined,.m-inbox-badge.declined{background:#fff0ed;color:#a33b28}.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
     document.head.appendChild(style);
   }
   function bindManualComposer(){

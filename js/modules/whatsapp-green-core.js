@@ -1324,9 +1324,10 @@ window.addEventListener("storage",e=>{if(e.key!==WA_META_KEY)return;waMetaCache=
 function waPruneHistoryStore(all,limit=WA_HISTORY_LOCAL_CHATS){const entries=Object.entries(all||{});if(entries.length<=limit)return all||{};entries.sort((a,b)=>{const last=rows=>Number(waMessageTimestamp(rows?.[rows.length-1])||0);return last(b[1]?.messages||b[1])-last(a[1]?.messages||a[1])});return Object.fromEntries(entries.slice(0,limit))}
 function waCacheHistory(chatId,rows){try{let all=JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}");all[chatId]=(rows||[]).slice(-WA_HISTORY_LIMIT);all=waPruneHistoryStore(all);localStorage.setItem(WA_HISTORY_KEY,JSON.stringify(all))}catch(e){}}
 function waCachedHistory(chatId){try{return JSON.parse(localStorage.getItem(WA_HISTORY_KEY)||"{}")[chatId]||[]}catch(e){return []}}
-function waIsUnanswered(chatId){
+function waIsUnanswered(value){
+  const chatId=typeof value==='object'?value?.id:value;
   if(waMeta(chatId).archived)return false;
-  const chat=(waLiveState.chats||[]).find(c=>String(c.id)===String(chatId));
+  const chat=value&&typeof value==='object'?value:(waLiveState.chats||[]).find(c=>String(c.id)===String(chatId));
   const shared=chat?._lastMessage||chat?.lastMessage;
   const live=waLiveState.livePreview?.[chatId];
   const message=live&&Number(live.timestamp||0)>Number(waMessageTimestamp(shared)||0)?live:shared;
@@ -1335,7 +1336,7 @@ function waIsUnanswered(chatId){
 function waUpdateStats(){
   const chats=waLiveState.chats||[];
   const unread=chats.reduce((n,c)=>n+waUnreadCount(c.id),0);
-  const waiting=chats.filter(c=>waIsUnanswered(c.id)).length;
+  const waiting=chats.filter(c=>waIsUnanswered(c)).length;
   if($("waStatUnread"))$("waStatUnread").textContent=unread;
   if($("waStatWaiting"))$("waStatWaiting").textContent=waiting;
 }
@@ -1642,15 +1643,17 @@ function waFmtDuration(sec){
   return (sec/3600).toFixed(sec<7200?1:0)+" h";
 }
 function waUpdateAdvancedMetrics(){
-  const chats=waLiveState.chats||[],unread=chats.reduce((n,c)=>n+waUnreadCount(c.id),0),waiting=chats.filter(c=>waIsUnanswered(c.id)).length;
+  const chats=waLiveState.chats||[],unread=chats.reduce((n,c)=>n+waUnreadCount(c.id),0),waiting=chats.filter(c=>waIsUnanswered(c)).length;
   const handled=chats.filter(c=>Number(c._lastOutgoingAt||0)>0).length,durs=waResponseDurations(),avg=durs.length?durs.reduce((a,b)=>a+b,0)/durs.length:NaN;
   if($("waStatHandled"))$("waStatHandled").title='Conversaciones con respuesta enviada en los últimos 7 días';
   if($("waStatAvgResponse"))$("waStatAvgResponse").title='Estimación entre los últimos mensajes recibidos y enviados de los últimos 7 días';
   if($("waStatAvgResponse"))$("waStatAvgResponse").textContent=waFmtDuration(avg);
   if($("waStatHandled"))$("waStatHandled").textContent=handled;
   if($("waAUnread"))$("waAUnread").textContent=unread;if($("waAWaiting"))$("waAWaiting").textContent=waiting;if($("waAHandled"))$("waAHandled").textContent=handled;if($("waAAvg"))$("waAAvg").textContent=waFmtDuration(avg);
-  const waitingRows=chats.filter(c=>waIsUnanswered(c.id)).map(c=>({c,age:Math.max(0,Math.floor(Date.now()/1000)-waSharedIncomingAt(c.id))})).sort((a,b)=>b.age-a.age);
+  if($("waAnalyticsModal")&&!$("waAnalyticsModal").classList.contains("hidden")){
+  const waitingRows=chats.filter(c=>waIsUnanswered(c)).map(c=>({c,age:Math.max(0,Math.floor(Date.now()/1000)-waSharedIncomingAt(c))})).sort((a,b)=>b.age-a.age);
   if($("waAnalyticsWaitingList"))$("waAnalyticsWaitingList").innerHTML=waitingRows.map(({c,age})=>`<div class="waWaitingRow" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}');$('waAnalyticsModal').classList.add('hidden')"><div><b>${esc(c.name||waNormalizePhone(c.id)||"WhatsApp")}</b><small>${esc(waNormalizePhone(c.id))}</small></div><small>${esc(waFmtDuration(age))} esperando</small></div>`).join("")||'<div class="small">Ninguna conversación pendiente.</div>';
+  }
   waRenderSla();
 }
 function waRenderSla(){
@@ -1660,8 +1663,9 @@ function waRenderSla(){
   $("waSlaState").textContent=`Pendiente de respuesta · ${waFmtDuration(age)}`;
   $("waSlaState").className="waSlaState "+(age>=7200?"danger":age>=1800?"warn":"");
 }
-function waSharedIncomingAt(id){
-  const chat=waLiveState.chats.find(c=>c.id===id),last=chat?._lastMessage||chat?.lastMessage;
+function waSharedIncomingAt(value){
+  const id=typeof value==='object'?value?.id:value;
+  const chat=value&&typeof value==='object'?value:waLiveState.chats.find(c=>c.id===id),last=chat?._lastMessage||chat?.lastMessage;
   const live=waLiveState.livePreview[id];
   return Math.max(Number(chat?._lastIncomingAt||0),last&&waMessageDirection(last)==='in'?Number(waMessageTimestamp(last)||0):0,live&&!live.outgoing?Number(live.timestamp||0):0);
 }
