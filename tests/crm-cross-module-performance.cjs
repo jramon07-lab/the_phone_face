@@ -36,5 +36,13 @@ function clock(){let id=0;const jobs=new Map();return {setTimeout(fn){jobs.set(+
  // Dashboard search updates only its results, not unrelated panels.
  const dash=read('js/modules/dashboard-performance-guard.js');let priority=0,unrelated=0;const dashboard={D:{data:{stages:[],tasks:[]}},Map,dashboardOpen:()=>true,status:String,renderPriority(){priority++},renderUpcoming(){unrelated++},renderFocus(){unrelated++},renderCommercial(){unrelated++}};
  vm.runInNewContext(dash.slice(dash.indexOf('function renderWorkSearch()'),dash.indexOf('function bind(){')),dashboard);dashboard.renderWorkSearch();assert.equal(priority,1);assert.equal(unrelated,0);
+ // Label filtering keeps card/input identity and restores matches when clearing.
+ const cards=['Vodafone','Orange','VIP'].map(name=>({style:{display:''},querySelector:()=>({textContent:name})})),empty={style:{}},footer={};
+ const labelView={classList:{contains:()=>false},querySelectorAll:()=>cards,querySelector:selector=>selector==='.lmFooter'?footer:selector==='.lmEmpty'?empty:{}};
+ const labels={window:{TPFModules:{register(){}}},document:{getElementById:()=>labelView},clearTimeout(){},setTimeout(){}};
+ vm.createContext(labels);vm.runInContext(read('js/modules/labels-modern-ui.js').replace("M.register('labels-modern-ui'","window.checks={state,filterCards};M.register('labels-modern-ui'"),labels);
+ labels.window.checks.state.q='vod';labels.window.checks.filterCards();assert.deepEqual(cards.map(c=>c.style.display),['','none','none']);assert.equal(footer.textContent,'Mostrando 1 etiqueta');
+ labels.window.checks.state.q='missing';labels.window.checks.filterCards();assert.equal(empty.style.display,'');
+ labels.window.checks.state.q='';labels.window.checks.filterCards();assert.deepEqual(cards.map(c=>c.style.display),['','','']);assert.equal(empty.style.display,'none');
  console.log('PASS shared UI: coalesced observers/search, scoped dashboard updates, fresh and race-safe Agenda cache.');
 })().catch(error=>{console.error(error);process.exitCode=1});

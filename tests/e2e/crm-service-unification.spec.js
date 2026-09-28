@@ -149,7 +149,7 @@ test.beforeAll(async () => {
   expect(await verifyHealth(origin, expectation(), process.env.VERCEL_AUTOMATION_BYPASS_SECRET), 'Commit, rama y entorno exactos antes de abrir una sesión').toBe(true);
 });
 
-test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lectura', async ({ context, page }) => {
+test('PC: demo, ocho pantallas y conexión real de WhatsApp y Google, solo lectura', async ({ context, page }) => {
   test.setTimeout(150000);
   const origin = crmOrigin(process.env.VERCEL_PREVIEW_URL || process.env.PLAYWRIGHT_BASE_URL);
   const report = await installReadOnlyGuard(context, page, origin);
@@ -160,7 +160,7 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
     await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
     await page.locator('#signin').click();
     await expect(page.locator('#app')).toBeVisible({ timeout: 35000 });
-    for (const view of ['dashboard', 'database', 'sales', 'agenda', 'whatsapplive', 'automations', 'settings']) {
+    for (const view of ['dashboard', 'database', 'sales', 'agenda', 'whatsapplive', 'automations', 'labels', 'settings']) {
       await test.step(`Abrir ${view}`, async () => {
         const nav = page.locator(`.nav[data-view="${view}"]`).first();
         await expect(nav).toBeVisible();
@@ -171,7 +171,7 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
         // A visible section alone is insufficient: the normal navigation must
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
-        const searchSelector={dashboard:'#tdWorkSearch',sales:'#salesSearch',agenda:'#agendaSearch'}[view];
+        const searchSelector={dashboard:'#tdWorkSearch',sales:'#salesSearch',agenda:'#agendaSearch',labels:'#lmSearch'}[view];
         if(searchSelector){
           const input=page.locator(searchSelector);await expect(input).toBeVisible();
           await page.evaluate(()=>{window.__searchLongTasks=[];window.__searchPerf=new PerformanceObserver(list=>{for(const entry of list.getEntries())window.__searchLongTasks.push(entry.duration)});window.__searchPerf.observe({type:'longtask',buffered:false});});
