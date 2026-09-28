@@ -456,8 +456,16 @@ async function loadWhatsAppLive(){
       $("waLiveStatus").className="waLiveStatus "+(connected?"ok":"error");
       return connected;
     }).catch(()=>{$("waLiveStatus").textContent="No se pudo comprobar la conexión";$("waLiveStatus").className="waLiveStatus warn";return false});
+    let summaryReady=false;
+    // On a fresh page, show the basic list without waiting for message journals.
+    // Existing conversations remain visible during every later refresh.
+    if(!waLiveState.chats?.length)void waApi("chats").then(result=>{
+      if(!summaryReady&&!waLiveState.chats?.length&&Array.isArray(result?.chats)){
+        waLiveState.chats=result.chats;renderWhatsAppChats();
+      }
+    }).catch(()=>{}); // The summary path reports errors and schedules recovery.
     const summaryRequest=waApi("summary").then(summary=>{
-      if(!summary?.degraded){waApplySummaryChats(summary.chats);renderWhatsAppChats();}
+      if(!summary?.degraded){summaryReady=true;waApplySummaryChats(summary.chats);renderWhatsAppChats();}
       return summary;
     }).catch(error=>{
       if(!waLiveState.chats?.length)$("waLiveChats").innerHTML=`<div class="waLiveEmpty">${esc(error.message||"No se pudieron cargar las conversaciones")}</div>`;
@@ -469,16 +477,16 @@ async function loadWhatsAppLive(){
     if(waLiveState.selected){
       const still=waLiveState.chats.find(c=>c.id===waLiveState.selected.id);
       if(still)waLiveState.selected={...waLiveState.selected,...still};
-      await loadWaHistory(false);
+      // History must not hold the initial list/loading lock or stop recovery.
+      void Promise.resolve(loadWaHistory(false)).catch(()=>waSharedSyncStatus(false));
     }
-    startWaPolling();
     // Activa la recepción por cola HTTP solo si la instancia aún no la tiene activada.
     waApi("ensure").catch(()=>{});
   }catch(e){
     $("waLiveStatus").textContent="Error de conexión";
     $("waLiveStatus").className="waLiveStatus error";
-    $("waLiveChats").innerHTML=`<div class="waLiveEmpty">${esc(e.message||"No se pudo conectar")}</div>`;
-  }finally{waLiveState.loading=false}
+    if(!waLiveState.chats?.length)$("waLiveChats").innerHTML=`<div class="waLiveEmpty">${esc(e.message||"No se pudo conectar")}</div>`;
+  }finally{waLiveState.loading=false;startWaPolling()}
 }
 
 function renderWhatsAppChats(){

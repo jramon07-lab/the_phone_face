@@ -378,16 +378,28 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, changed: false, settings: { ...(current || {}), webhookUrlToken: current?.webhookUrlToken ? "configured" : "" } });
     }
 
+    // The initial list and enriched summary share the same provider read.
+    const loadChatList = () => cachedGreenRead("chats", { freshMs: 30000, staleMs: 300000 }, async () => {
+      const data = await greenFetch("getChats");
+      return { ok: true, chats: Array.isArray(data) ? data.filter(c => c && c.id) : [] };
+    });
+
     if (req.method === "GET" && action === "summary") {
       const minutes = Math.max(60, Math.min(43200, Number(req.query.minutes || 10080)));
       const result = await cachedGreenRead(`summary:${minutes}`, { freshMs: 15000, staleMs: 600000 }, async () => {
-        const chatsData = await greenFetch("getChats");
-        const chats = Array.isArray(chatsData) ? chatsData.filter(c => c && c.id) : [];
-
-        const [incoming, outgoing] = await Promise.all([
-          greenFetchUrl(`${apiUrl("lastIncomingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastIncomingMessages"),
-          greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastOutgoingMessages")
-        ]);
+        const startedAt=Date.now(),timings={};
+        const timed=async(name,read)=>{const at=Date.now();try{return await read()}finally{timings[name]=Date.now()-at;}};
+        // Independent reads must not add their latencies together.
+        const [chatResult, incoming, outgoing] = await Promise.all([
+          timed('chats',loadChatList),
+          timed('incoming',()=>greenFetchUrl(`${apiUrl("lastIncomingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastIncomingMessages")),
+          timed('outgoing',()=>greenFetchUrl(`${apiUrl("lastOutgoingMessages")}?minutes=${minutes}`, {method:"GET"}, "lastOutgoingMessages"))
+        ]).finally(()=>{
+          const totalMs=Date.now()-startedAt;
+          if(totalMs>=1500)console.info?.('GREEN summary timing',JSON.stringify({totalMs,...timings}));
+        });
+        if(chatResult.degraded)throw Object.assign(new Error("Lista de WhatsApp pendiente de sincronizar"),{status:chatResult.providerStatus||503});
+        const chats = chatResult.value.chats;
 
         const latest = new Map(), lastIncomingAt = new Map(), lastOutgoingAt = new Map();
         for (const [rows, times] of [[incoming, lastIncomingAt], [outgoing, lastOutgoingAt]]) {
@@ -421,11 +433,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "GET" && action === "chats") {
-      const result = await cachedGreenRead("chats", { freshMs: 30000, staleMs: 300000 }, async () => {
-        const data = await greenFetch("getChats");
-        const chats = Array.isArray(data) ? data.filter((c) => c && c.id) : [];
-        return { ok: true, chats };
-      });
+      const result = await loadChatList();
       return sendCachedGreenRead(res, result);
     }
 
