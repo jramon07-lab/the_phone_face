@@ -1552,13 +1552,16 @@ $("waSaveInternalNote").onclick=()=>{const id=waLiveState.selected?.id;if(id){wa
 
 /* Extend chat open */
 const _selectWhatsAppChatTotal=window.selectWhatsAppChat;
+let waLatestChatOpen=0;
 window.selectWhatsAppChat=async(chatId)=>{
+  const request=++waLatestChatOpen;
   const id=String(chatId||"");
   waReadSuppressUntil[id]=Date.now()+15000;
   waSetLastReadAt(id,Math.floor(Date.now()/1000));
   waSetUnread(id,0);
 
   await _selectWhatsAppChatTotal(chatId);
+  if(request!==waLatestChatOpen||waLiveState.selected?.id!==id)return;
 
   // Tras cargar historial, usar también el timestamp del último mensaje visible
   // como corte de lectura para bloquear eventos antiguos que sigan en la cola.
