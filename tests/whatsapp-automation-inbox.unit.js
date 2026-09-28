@@ -195,3 +195,13 @@ assert.equal(inbox.matchesFilter(sample,'aftercare'),true,'three month view incl
 assert.deepEqual(kinds(),['archived'],'follow-up does not reopen or reclassify chats');
 inbox.ingestFollowups([{...followup,status:'done'}]);assert.equal(inbox.matchesFilter(sample,'aftercare'),false);
 console.log('Won reply/attend archival and three-month scheduled view OK');
+
+chatMeta={};sample._lastIncomingAt=now-20;
+sample._lastMessage={timestamp:now,direction:'out'};
+const imported={...saleOpp,import_reference:'shop:line',installation_date:'2026-09-05',installation_recorded_at:iso(now+1)};
+inbox.ingestBusiness([],[imported]);assert.deepEqual(kinds(),['archived']);
+sample._lastIncomingAt=now+10;sample._lastMessage={timestamp:now+10,direction:'in'};
+assert.deepEqual(kinds(),['unanswered']);
+sample._lastMessage={timestamp:now+20,direction:'out'};assert.deepEqual(kinds(),['archived']);
+inbox.ingestBusiness([offer('following')],[imported]);assert.deepEqual(kinds(),['automatic'],'another genuine active offer remains open');
+console.log('Imported installations without offers preserve WhatsApp attention and archive after reply');

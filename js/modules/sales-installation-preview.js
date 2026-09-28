@@ -1,55 +1,96 @@
-/* Read-only reconciliation of installed sales. No contact, opportunity or job writes. */
+/* Monthly installed-sales reconciliation. Confirmation uses an atomic, admin-only RPC. */
 (function(){
 'use strict';
-const $=id=>document.getElementById(id),mode='COMPROBAR VENTAS';let generation=0;
+const $=id=>document.getElementById(id),mode='COMPROBAR VENTAS';let generation=0,rows=[],contacts=[],opps=[],busy=false;
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const html=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid'}).format(new Date());
 function date(value){
- if(value instanceof Date)return [value.getFullYear(),String(value.getMonth()+1).padStart(2,'0'),String(value.getDate()).padStart(2,'0')].join('-');
- if(typeof value==='number')return new Date(Date.UTC(1899,11,30)+Math.round(value)*86400000).toISOString().slice(0,10);
- const s=String(value||'').trim(),m=s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
- const out=m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:s.slice(0,10);
- return /^\d{4}-\d{2}-\d{2}$/.test(out)&&Number.isFinite(Date.parse(out))?out:'';
+ let out='';
+ if(value instanceof Date){if(!Number.isFinite(value.getTime()))return '';out=[value.getFullYear(),String(value.getMonth()+1).padStart(2,'0'),String(value.getDate()).padStart(2,'0')].join('-');}
+ else if(typeof value==='number'){if(!Number.isFinite(value)||value<36526||value>100000)return '';out=new Date(Date.UTC(1899,11,30)+Math.floor(value)*86400000).toISOString().slice(0,10);}
+ else {const s=String(value||'').trim(),m=s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);out=m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:s;}
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(out))return '';
+ const d=new Date(out+'T12:00:00Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===out?out:'';
 }
-function months(value,n){if(!value)return '';const [y,m,d]=value.split('-').map(Number),target=new Date(Date.UTC(y,m-1+n,1));target.setUTCDate(Math.min(d,new Date(Date.UTC(target.getUTCFullYear(),target.getUTCMonth()+1,0)).getUTCDate()));return target.toISOString().slice(0,10);}
+function months(value,n){if(!date(value))return '';const [y,m,d]=value.split('-').map(Number),target=new Date(Date.UTC(y,m-1+n,1));target.setUTCDate(Math.min(d,new Date(Date.UTC(target.getUTCFullYear(),target.getUTCMonth()+1,0)).getUTCDate()));return target.toISOString().slice(0,10);}
 const display=v=>v?v.split('-').reverse().join('/'):'Sin fecha';
 const name=r=>r.data?.['NOMBRE Y APELLIDOS']||[r.data?.NOMBRE,r.data?.APELLIDOS].filter(Boolean).join(' ');
-function analyse(rows,contacts,opps){
+const canonical=v=>({VODAFONE:'Vodafone',O2:'O2',MASMOVIL:'MásMóvil',YOIGO:'Yoigo',ORANGE:'Orange',LOWI:'Lowi',JAZZTEL:'Jazztel'}[norm(v)]||String(v||'').trim());
+function validPrice(value){return value===''||value==null||Number.isFinite(Number(value))&&Number(value)>=0&&Number(value)<=1000000;}
+function payload(r){return {dni:norm(r.DNI),operator:canonical(r.Operador),activation_date:date(r.Fecha_Activacion),orderline:String(r.OrderLine||'').trim(),transaction:String(r.Transaccion||'').trim(),cancelled:String(r.Cancelada||''),shop:String(r.Tienda||'8554'),month:String(r.Mes_Venta||''),activation_original:String(r.Fecha_Activacion??'')};}
+function analyse(raw,clients,sales){
  const seen=new Set();
- return rows.filter(r=>String(r.DNI||'').trim()&&String(r.Transaccion||'').trim()).map(r=>{
-  const dni=norm(r.DNI),operator=String(r.Operador||''),installed=date(r.Fecha_Activacion),key=String(r.OrderLine||r.Transaccion),duplicate=seen.has(key);seen.add(key);
-  const matches=contacts.filter(c=>[c.data?.DNI,c.data?.['DNI / NIF'],c.data?.TPF_TITULAR?.holder_dni].some(d=>norm(d)===dni));
+ return raw.filter(r=>Object.keys(r).some(k=>['DNI','OrderLine','Transaccion','Operador','Fecha_Activacion'].includes(k)&&String(r[k]??'').trim())).map(r=>{
+  const p=payload(r),dni=p.dni,operator=p.operator,installed=p.activation_date,key=p.shop+':'+p.orderline,duplicate=seen.has(key)&&!!p.orderline;seen.add(key);
+  const matches=dni?clients.filter(c=>[c.data?.DNI,c.data?.['DNI / NIF'],c.data?.TPF_TITULAR?.holder_dni].some(d=>norm(d)===dni)):[];
   const ids=new Set(matches.map(c=>c.id));
-  const related=opps.filter(o=>ids.has(o.record_id)||norm(o.contract_party?.holder_dni)===dni);
-  const candidates=related.filter(o=>norm(o.title).includes(norm(operator))||norm(o.contract_party?.operator)===norm(operator));
-  const exact=related.find(o=>o.import_reference===key);
-  let action=duplicate?'Duplicada en Excel':!installed?'Revisar fecha de activación':norm(r.Cancelada)==='SI'?'Cancelada: no importar':matches.length===0?'Cliente no encontrado':matches.length>1?'Revisar titular / gestor':exact?'Ya importada':related.length?'Revisar oportunidad existente':'Crear en Ganado';
-  return {dni,operator,client:matches.map(name).join(' / ')||'Sin identificar',installed,review:months(installed,12),next:months(installed,11),action,expected:exact?.expected_date||candidates[0]?.expected_date||'',product:r.Producto||r.Tarifa||'',key,contactId:matches.length===1?matches[0].id:null};
+  const related=sales.filter(o=>ids.has(o.record_id)||dni&&norm(o.contract_party?.holder_dni)===dni);
+  const candidates=related.filter(o=>operator&&(norm(o.title).includes(norm(operator))||norm(o.installation_operator)===norm(operator)));
+  const exact=sales.find(o=>p.orderline&&o.import_reference===key);
+  let issue=duplicate?'Duplicada en Excel':!dni?'Falta DNI':!operator?'Falta operador':!p.orderline?'Falta OrderLine':!installed||installed>today()||installed<'2000-01-01'?'Fecha de activación obligatoria y válida':norm(p.cancelled)==='SI'?'Cancelada: no importar':matches.length===0?'Cliente no encontrado':matches.length>1?'Revisar titular / gestor':'';
+  const choice=exact?.id||(candidates.length?'':'new');
+  return {dni,operator,client:matches.map(name).join(' / ')||'Sin identificar',installed,review:months(installed,12),next:months(installed,11),issue,action:issue|| (exact?'Ya importada':candidates.length?'Revisar oportunidad existente':'Crear en Ganado'),expected:exact?.expected_date||candidates[0]?.expected_date||'',key,contactId:matches.length===1?matches[0].id:null,payload:p,candidates,choice,amount:exact?.amount??'',imported:!!exact,opportunityId:exact?.id||null,selected:!issue&&choice==='new'};
  });
 }
-async function all(table,columns,filter){const rows=[];for(let start=0;;start+=500){let query=sb.from(table).select(columns).order('id').range(start,start+499);if(filter)query=query.eq(...filter);const {data,error}=await query;if(error)throw error;rows.push(...(data||[]));if((data||[]).length<500)return rows;}}
+async function all(table,columns,filter){const result=[];for(let start=0;;start+=500){let q=sb.from(table).select(columns).order('id').range(start,start+499);if(filter)q=q.eq(...filter);const {data,error}=await q;if(error)throw error;result.push(...(data||[]));if((data||[]).length<500)return result;}}
+async function refreshSources(){[contacts,opps]=await Promise.all([all('records','id,data',['source_sheet','BASE DE DATOS']),all('sales_opportunities','id,record_id,title,amount,expected_date,contract_party,installation_date,installation_operator,import_reference,annual_review_date')]);}
+function sourceMonth(p){const raw=String(p.month||'');const d=date(raw);if(d)return d.slice(0,7)+'-01';const names=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'],m=raw.toUpperCase().match(/^([A-Z]+)(20\d{2})$/);if(m&&names.includes(m[1]))return m[2]+'-'+String(names.indexOf(m[1])+1).padStart(2,'0')+'-01';return (p.activation_date||today()).slice(0,7)+'-01';}
+function eligible(r){return !r.imported&&!r.issue&&!!r.ledgerId&&!!r.choice&&validPrice(r.amount);}
+function render(){
+ const filter=$('installedFilter')?.value||'all';const shown=rows.map((r,i)=>({r,i})).filter(({r})=>filter==='all'||filter==='pending'&&(!r.imported||r.amount===''||r.amount==null)||filter==='price'&&(r.amount===''||r.amount==null));
+ $('previewHead').innerHTML='<tr>'+['Importar','Cliente / DNI','Operador','Oportunidad','Importe (€)','Previsión de cierre','Instalación','Próximo · 11 meses','Revisión · 12 meses'].map(x=>'<th>'+x+'</th>').join('')+'</tr>';
+ $('previewRows').innerHTML=shown.map(({r,i})=>{
+ const original=opps.find(o=>o.id===r.choice),price=original?.amount??r.amount;
+ const choice=r.imported?'<b>Importada · Ganado</b>':r.issue?'<span class="installedWarn">'+html(r.issue)+'</span>':'<select aria-label="Oportunidad de '+html(r.client)+'" data-installed-choice="'+i+'"><option value="">Seleccionar…</option>'+r.candidates.map(o=>'<option value="'+html(o.id)+'" '+(r.choice===o.id?'selected':'')+'>'+html(o.title)+(o.installation_date?' · '+display(o.installation_date):'')+'</option>').join('')+'<option value="new" '+(r.choice==='new'?'selected':'')+'>Crear nueva en Ganado</option></select>';
+ const amount='<input type="number" min="0" max="1000000" step="0.01" placeholder="Sin precio" aria-label="Importe de '+html(r.client)+'" value="'+html(price)+'" data-installed-amount="'+i+'" '+(original?.amount!=null?'readonly':'')+'><small data-price-note="'+i+'">'+(price===''||price==null?'Sin precio · Revisar':'')+'</small>'+(r.imported&&original?.amount==null?'<button type="button" data-installed-price-save="'+i+'">Guardar importe</button>':'');
+ return '<tr>'+['<input type="checkbox" aria-label="Importar '+html(r.client)+'" data-installed-select="'+i+'" '+(r.selected?'checked':'')+' '+(!eligible(r)?'disabled':'')+'>','<b>'+html(r.client)+'</b><small>'+html(r.dni)+'</small>',html(r.operator),choice,amount,display(r.choice==='new'?'':original?.expected_date||r.expected),display(r.installed),display(r.next),display(r.review)].map(v=>'<td>'+v+'</td>').join('')+'</tr>';
+ }).join('');
+ updateButton();
+ const created=rows.filter(r=>r.imported).length,ready=rows.filter(eligible).length;
+ $('importInfo').textContent=`${rows.length} ventas · ${created} ya importadas · ${ready} listas · ${rows.length-created-ready} pendientes. Se conserva el teléfono del CRM y la previsión existente. Sin importe: «Sin precio · Revisar». La confirmación programa solo seguimientos futuros; no envía mensajes ahora.`;
+}
+function updateButton(){const n=rows.filter(r=>r.selected&&eligible(r)).length;$('runImport').disabled=busy||!n;$('runImport').textContent='Confirmar '+n+' venta'+(n===1?'':'s');}
 async function preview(){
- const version=++generation,file=$('excelFile')?.files[0];$('runImport').disabled=true;
- if(!file){$('importInfo').textContent='Selecciona el Excel de ventas instaladas.';return;}
- $('importMapping')?.classList.add('hidden');$('importInfo').textContent='Comprobando DNI y oportunidades. No se guardará ningún cambio…';
+ const version=++generation,file=$('excelFile')?.files[0];$('runImport').disabled=true;rows=[];
+ if(!file){$('importInfo').textContent='Selecciona el Excel del mes.';return;}
+ $('importMapping')?.classList.add('hidden');$('importInfo').textContent='Comprobando ventas y guardando pendientes…';
  try{
-  const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});const sheet=book.SheetNames.find(n=>n==='Export')||book.SheetNames[0];
-  const rows=XLSX.utils.sheet_to_json(book.Sheets[sheet],{defval:'',raw:true});
-  if(!rows.length||!['DNI','Fecha_Activacion','Transaccion','Operador'].every(k=>k in rows[0]))throw Error('Este modo necesita DNI, Operador, Transaccion y Fecha_Activacion.');
-  const [contacts,opps]=await Promise.all([all('records','id,data',['source_sheet','BASE DE DATOS']),all('sales_opportunities','id,record_id,title,expected_date,contract_party')]);
+  const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false}),sheet=book.SheetNames.find(n=>n==='Export')||book.SheetNames[0],raw=XLSX.utils.sheet_to_json(book.Sheets[sheet],{defval:'',raw:true});
+  if(!raw.length||!['DNI','Fecha_Activacion','OrderLine','Operador'].every(k=>k in raw[0]))throw Error('Faltan columnas obligatorias: DNI, Operador, OrderLine o Fecha_Activacion.');
+  await refreshSources();if(version!==generation||$('destination').value!==mode)return;
+  rows=analyse(raw,contacts,opps);
+  for(const r of rows){if(!r.payload.orderline||r.issue==='Duplicada en Excel')continue;const record={source_key:r.key,source_file:file.name,sale_month:sourceMonth(r.payload),payload:r.payload};const {error}=await sb.from('crm_sales_import_rows').upsert(record,{onConflict:'source_key',ignoreDuplicates:true});if(error)throw error;}
+  const saved=await all('crm_sales_import_rows','id,source_key,payload,opportunity_id');
+  for(const r of rows){const row=saved.find(x=>x.source_key===r.key);r.ledgerId=row?.id;
+   if(row&&['dni','operator','activation_date','orderline','cancelled'].some(k=>row.payload[k]!==r.payload[k])){
+    const conflict=['dni','operator','activation_date','orderline','cancelled'].some(k=>row.payload[k]&&row.payload[k]!==r.payload[k]);
+    if(!row.opportunity_id&&!conflict){const {error}=await sb.from('crm_sales_import_rows').update({payload:r.payload,source_file:file.name,sale_month:sourceMonth(r.payload)}).eq('id',row.id).is('opportunity_id',null);if(error)throw error;}
+    else {r.issue='La referencia guardada tiene otros datos: revisar';r.selected=false;}
+   }
+  }
   if(version!==generation||$('destination').value!==mode)return;
-  const result=analyse(rows,contacts,opps);window.TPFInstallationPreview.last=result;
-  $('previewHead').innerHTML='<tr>'+['Cliente / DNI','Operador y producto','Resultado','Previsión actual (se conserva)','Instalación','Próximo · 11 meses','Revisión · 12 meses'].map(x=>'<th>'+x+'</th>').join('')+'</tr>';
-  $('previewRows').innerHTML=result.map(r=>'<tr>'+['<b>'+html(r.client)+'</b><br>'+html(r.dni),html(r.operator)+'<br>'+html(r.product),html(r.action),display(r.expected),display(r.installed),display(r.next),display(r.review)].map(v=>'<td>'+v+'</td>').join('')+'</tr>').join('');
-  const creates=result.filter(r=>r.action==='Crear en Ganado').length;
-  $('importInfo').textContent=`Prueba sin guardar: ${result.length} ventas · ${creates} para crear · ${result.length-creates} para revisar. Teléfonos y previsiones existentes se conservan. Fechas base de revisión; se ajustan al horario comercial. No se envía ni programa ningún WhatsApp en esta prueba.`;
- }catch(e){if(version===generation)$('importInfo').textContent='No se ha importado nada: '+e.message;}
+  window.TPFInstallationPreview.last=rows;render();
+ }catch(e){$('runImport').disabled=true;$('importInfo').textContent='No se han importado ventas: '+e.message;}
 }
-function bind(){const select=$('destination');if(!select)return;const option=document.createElement('option');option.value=mode;option.textContent='COMPROBAR VENTAS INSTALADAS (prueba)';select.append(option);
- document.addEventListener('click',event=>{if(select.value!==mode)return;if(event.target.closest?.('#previewImport,#runImport')){event.preventDefault();event.stopImmediatePropagation();if(event.target.closest('#previewImport'))preview();}},true);
- select.addEventListener('change',()=>{generation++;if(select.value===mode){$('runImport').disabled=true;$('importMapping')?.classList.add('hidden');$('importInfo').textContent='Comprobación de ventas por DNI. Pulsa Vista previa; no modifica datos.';}});
- $('excelFile')?.addEventListener('change',()=>{generation++;});
+async function history(){const version=++generation;$('importInfo').textContent='Cargando comprobaciones guardadas…';try{await refreshSources();const stored=await all('crm_sales_import_rows','id,source_key,payload,sale_month,opportunity_id');const month=$('installedMonth').value;const selected=stored.filter(r=>!month||r.sale_month.slice(0,7)===month);const raw=selected.map(r=>({DNI:r.payload.dni,Operador:r.payload.operator,OrderLine:r.payload.orderline,Transaccion:r.payload.transaction,Fecha_Activacion:r.payload.activation_date,Cancelada:r.payload.cancelled,Tienda:r.payload.shop,Mes_Venta:r.payload.month}));if(version!==generation)return;rows=analyse(raw,contacts,opps);rows.forEach((r,i)=>r.ledgerId=selected[i].id);window.TPFInstallationPreview.last=rows;render();}catch(e){$('importInfo').textContent=e.message;}}
+async function importSelected(){if(busy)return;const selected=rows.filter(r=>r.selected&&eligible(r));if(!selected.length)return;
+ if(!confirm(`Confirmar ${selected.length} venta(s) como Ganado. Se conservarán los teléfonos y previsiones existentes. Se programarán los seguimientos futuros que falten, sin mensajes inmediatos. ¿Importar?`))return;
+ busy=true;updateButton();let done=0,errors=[];
+ try{for(const r of selected){const result=await sb.rpc('crm_import_installed_sale',{p_row_id:r.ledgerId,p_contact_id:r.contactId,p_opportunity_id:r.choice==='new'?null:r.choice,p_amount:r.amount===''||r.amount==null?null:Number(r.amount)});if(result.error){errors.push(r.client+': '+result.error.message);continue;}r.imported=true;r.opportunityId=result.data.id;r.choice=result.data.id;r.selected=false;done++;}
+ await refreshSources();for(const r of rows){const o=opps.find(x=>x.id===r.opportunityId);if(o)r.amount=o.amount??'';}render();window.dispatchEvent(new CustomEvent('tpf:sales-updated'));window.TPFAutomationInbox?.reload();$('importInfo').textContent=`${done} ventas confirmadas. `+(errors.length?errors.join(' · '):'Sin mensajes inmediatos. Las filas pendientes siguen guardadas para revisar.');
+ }finally{busy=false;updateButton();}
 }
-window.TPFInstallationPreview={analyse,date,months};
+async function savePrice(i){const r=rows[i];if(!r?.opportunityId||r.amount===''||!validPrice(r.amount))return;const {error}=await sb.from('sales_opportunities').update({amount:Number(r.amount)}).eq('id',r.opportunityId).is('amount',null);if(error){$('importInfo').textContent=error.message;return;}await refreshSources();render();window.dispatchEvent(new CustomEvent('tpf:sales-updated'));}
+function bind(){const select=$('destination');if(!select)return;const option=document.createElement('option');option.value=mode;option.textContent='COMPROBAR VENTAS DEL MES';select.append(option);
+ const box=document.createElement('div');box.id='installedTools';box.hidden=true;box.innerHTML='<style>#installedTools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}#installedTools[hidden]{display:none}#view-import:has(#installedTools:not([hidden])) #previewRows td{vertical-align:top;min-width:95px}#previewRows [data-installed-amount]{width:105px}#previewRows [data-installed-choice]{max-width:210px}#previewRows small{display:block;margin-top:5px;color:#996300}.installedWarn{color:#b42318;font-weight:600}</style><label>Mes <input id="installedMonth" type="month" value="'+today().slice(0,7)+'"></label><button type="button" id="installedHistory">Ver comprobaciones guardadas</button><label>Mostrar <select id="installedFilter"><option value="all">Todas</option><option value="pending">Pendientes de revisar</option><option value="price">Sin precio</option></select></label><span>Vacía el mes para consultar todos.</span>';$('importInfo').before(box);
+ $('installedHistory').onclick=history;$('installedFilter').onchange=render;
+ document.addEventListener('click',e=>{if(select.value!==mode)return;const b=e.target.closest?.('#previewImport,#runImport,[data-installed-price-save]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(b.id==='previewImport')preview();else if(b.id==='runImport')importSelected().catch(err=>$('importInfo').textContent=err.message);else savePrice(Number(b.dataset.installedPriceSave));},true);
+ $('previewRows').addEventListener('change',e=>{if(select.value!==mode)return;const el=e.target;if(el.dataset.installedSelect!=null){rows[el.dataset.installedSelect].selected=el.checked;updateButton();}if(el.dataset.installedChoice!=null){const r=rows[el.dataset.installedChoice];r.choice=el.value;r.selected=eligible(r);render();}});
+ $('previewRows').addEventListener('input',e=>{const el=e.target;if(el.dataset.installedAmount!=null){const r=rows[el.dataset.installedAmount];r.amount=el.value;$('previewRows').querySelector('[data-price-note="'+el.dataset.installedAmount+'"]').textContent=el.value===''?'Sin precio · Revisar':validPrice(el.value)?'':'Importe no válido';updateButton();}});
+ select.addEventListener('change',()=>{generation++;box.hidden=select.value!==mode;if(select.value===mode){$('runImport').disabled=true;$('importMapping')?.classList.add('hidden');$('importInfo').textContent='Carga el Excel del mes o revisa pendientes guardados. La fecha de activación es obligatoria.';$('runImport').textContent='Confirmar ventas';}else $('runImport').textContent='Confirmar importación';});
+ $('excelFile')?.addEventListener('change',()=>{generation++;rows=[];if(select.value===mode)$('runImport').disabled=true;});
+}
+window.TPFInstallationPreview={analyse,date,months,validPrice,sourceMonth};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();

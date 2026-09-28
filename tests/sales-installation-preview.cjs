@@ -11,3 +11,12 @@ assert.equal(api.analyse([sale],[contact,{id:'manager',data:{TPF_TITULAR:{holder
 console.log('PASS: installed-sales preview preserves expected dates, DNI matching, duplicates and calendar boundaries');
 
 assert.equal(api.date(46270),'2026-09-05');
+
+assert.equal(api.date('31/02/2026'),'');
+assert.equal(api.date('29/02/2024'),'2024-02-29');
+assert.equal(api.analyse([{...sale,Fecha_Activacion:''}],[contact],[])[0].selected,false);
+assert.equal(api.analyse([{...sale,DNI:''}],[contact],[])[0].issue,'Falta DNI');
+assert.equal(api.validPrice(-1),false);assert.equal(api.validPrice('abc'),false);assert.equal(api.validPrice(''),true);
+assert.equal(api.sourceMonth({month:'September2026'}),'2026-09-01');
+assert.equal(api.analyse([sale],[contact],[{id:'imported',import_reference:'8554:1',amount:null}])[0].imported,true);
+console.log('Monthly dates, missing data, price validation and stable references OK');

@@ -728,7 +728,7 @@ function renderSales(){
         </div>
         ${window.TPFOfferFollowup?.html(o.id,true)||""}
         <div class="oppFooter">
-          <span class="oppAmount">${esc(fmtMoney(o.amount||0))}</span>
+          <span class="oppAmount">${esc(o.import_reference&&o.amount==null?'Sin precio · Revisar':fmtMoney(o.amount||0))}</span>
           <select onclick="event.stopPropagation()" onchange="event.stopPropagation();moveOpp('${o.id}',this.value)">
             ${stages.map(x=>`<option value="${x.id}" ${x.id===o.stage_id?"selected":""}>${esc(x.name)}</option>`).join("")}
           </select>

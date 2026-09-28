@@ -148,6 +148,13 @@
       }
       next.set(key,item);
     }
+    // Imported installations are closed sales even without an offer configurator instance.
+    for(const o of opportunities){
+      if(!o.import_reference||!o.installation_date||!o.installation_recorded_at)continue;
+      const key=phoneKey(o.contract_party?.recipient_phone||o.phone);if(!key)continue;
+      const item=next.get(key)||{automatic:false,processing:false,paused:false,wonAt:0,declinedAt:0,plans:[]};
+      item.wonAt=Math.max(item.wonAt,seconds(o.installation_recorded_at));next.set(key,item);
+    }
     businessByPhone=next;
   }
   function business(chat){return String(chat?.id||'').includes('@g.us')?null:businessByPhone.get(phoneKey(chat?.id));}
@@ -158,7 +165,7 @@
     async function all(table,columns,key='id'){const rows=[];for(let start=0;;start+=500){const {data,error}=await db.from(table).select(columns).order(key).range(start,start+499);if(error)throw error;rows.push(...(data||[]));if((data||[]).length<500)return rows;}}
     try{
       if(db.auth?.getSession){const {data}=await db.auth.getSession();if(!data?.session)return;}
-      const [offers,opps,archives]=await Promise.all([all('crm_offer_instances','id,opportunity_id,status,snapshot,status_changed_at,updated_at,customer_declined_at,next_action,next_action_at,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)'),all('sales_opportunities','id,phone,contract_party'),all('crm_whatsapp_chat_state','chat_id,declined_archived_at','chat_id')]);
+      const [offers,opps,archives]=await Promise.all([all('crm_offer_instances','id,opportunity_id,status,snapshot,status_changed_at,updated_at,customer_declined_at,next_action,next_action_at,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)'),all('sales_opportunities','id,phone,contract_party,import_reference,installation_date,installation_recorded_at'),all('crm_whatsapp_chat_state','chat_id,declined_archived_at','chat_id')]);
       ingestBusiness(offers,opps);if(revision===declineRevision)ingestDeclineArchives(archives);businessAt=Date.now();window.renderWhatsAppChats?.();
     }catch(e){console.warn('No se pudo actualizar la fase de las ofertas de WhatsApp',e)}finally{businessLoading=false;}
   }

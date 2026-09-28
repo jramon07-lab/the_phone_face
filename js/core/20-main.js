@@ -522,6 +522,9 @@ window.openOpportunityCard=(id)=>{
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(o.stage_id));
   const meta=[];
   if(stage?.name)meta.push(`Columna actual: ${stage.name}`);
+  if(o.installation_date)meta.push(`Instalación: ${fmtDateOnly(o.installation_date)}`);
+  if(o.annual_review_date)meta.push(`Revisión anual: ${fmtDateOnly(o.annual_review_date)}`);
+  if(o.import_reference&&o.amount==null)meta.push('Sin precio · Revisar');
   if(o.created_at)meta.push(`Creada: ${new Date(o.created_at).toLocaleString("es-ES")}`);
   if(o.updated_at)meta.push(`Actualizada: ${new Date(o.updated_at).toLocaleString("es-ES")}`);
   $("oppMetaInfo").textContent=meta.join(" · ");
@@ -1665,7 +1668,7 @@ function renderSalesList(){
       <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
       <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
       <div class="tpfSalesPhone" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(o.phone||"—")}</div>
-      <div>${esc(fmtMoney(o.amount||0))}</div>
+      <div>${esc(o.import_reference&&o.amount==null?'Sin precio · Revisar':fmtMoney(o.amount||0))}</div>
       <div>
         <select onclick="event.stopPropagation()" onchange="event.stopPropagation();moveOpp('${o.id}',this.value)">
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
