@@ -248,3 +248,43 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocuments
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProFilePanel p{font-size:12px!important;line-height:1.6!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpDocMore{position:relative;font-size:12px}.cpDocMore>summary{padding:8px 10px;cursor:pointer;border:1px solid #dce4ef;border-radius:4px;list-style:none}.cpDocMore[open]>div{position:absolute;top:100%;right:0;background:white;padding:8px;border:1px solid #dce4ef;box-shadow:0 8px 24px #10234416;z-index:5;width:220px}.cpDocMore>div button,.cpDocMore>div a{display:block;width:100%;text-align:left;margin:3px 0}
 }
+
+/* Compact review proposal: scoped to desktop, awaiting visual approval. */
+@media(min-width:1024px){
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpTop{min-height:24px!important;padding:3px 18px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference >.contactProfile>.cpIdentity{padding:6px 18px 8px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference >.contactProfile>.cpRefTabs{margin-bottom:10px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:254px minmax(0,1fr)!important;gap:14px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{padding:10px 13px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar{margin-bottom:3px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input{min-height:30px!important;height:30px!important;font-size:13px!important;color:#25364b!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label.tpfInlineEditableLabel{min-height:30px!important;padding-top:4px!important;padding-bottom:4px!important;color:#334155!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactObservations,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactNotes{min-height:36px!important;height:var(--contact-text-height,36px)!important;margin-bottom:3px!important;padding:6px!important;font-size:13px!important;color:#334155!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData input::placeholder,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData textarea::placeholder{color:#65758a!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpProRelationsPreview{gap:3px!important;padding:8px 0!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpProRelationsPreview:has(>button:only-child){display:none!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow summary{padding:7px 0!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpLeft>.contactLabelsBox{padding:9px 13px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpProSummary h2{font-size:19px!important;margin-bottom:7px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpProNext{padding:8px 12px!important;margin-bottom:8px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpProMetrics button{min-height:43px!important;padding:7px 12px!important;font-size:13px!important;color:#334155!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpProMetrics b{font-size:20px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfSummaryAccordion{gap:9px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTrigger{min-height:34px!important;padding:6px 10px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTitle{font-size:13px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody{padding:8px 10px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] #cpTasks>.cpTaskWrap{min-height:46px!important;padding:7px!important;display:flex!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] #cpTasks .cpTaskButton{flex:1!important;padding:0!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] #cpTasks .cpTaskActions{flex:none!important;margin:0!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] #cpTasks .cpTaskButton b{font-size:13px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] .cpOfferCard{padding:0!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] .cpOfferTop{gap:8px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] .cpOfferCard .ofItem{gap:3px 8px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpProRecentDocs{padding:10px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity{padding:10px!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfRecentActivity p{font-size:12px!important;color:#526277!important;line-height:1.45!important;margin:8px 0!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-tpf-summary-group=opportunities]{grid-column:1!important;grid-row:3!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-tpf-summary-group=programs]{grid-column:2!important;grid-row:3!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus{grid-row:4!important;}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpProOppDetail{background:#f8faff!important;padding:15px!important;border:1px solid #dae4f0!important;border-radius:6px!important;}
+}
