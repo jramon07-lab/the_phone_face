@@ -37,10 +37,14 @@ function renderAgendaCreateDetails(meta={}){
   set("agendaCreateResult",meta.result||"");set("agendaCreateLocation",meta.location||"");
   set("agendaCreateWhatsappMessage",meta.whatsapp_message||"");set("agendaCreateCustom",meta.custom||"")
 }
+function agendaTaskAttachments(meta){
+  return (Array.isArray(meta?.attachments)?meta.attachments:[]).filter(f=>{try{const u=new URL(f?.url);return u.protocol==='https:'&&!u.username&&!u.password&&['drive.google.com','docs.google.com'].includes(u.hostname)}catch(_){return false}}).map(f=>({id:String(f.id||''),name:String(f.name||'Archivo'),url:f.url}));
+}
+let agendaAttachmentDraft=[];
 function agendaCreateMeta(){
   const value=id=>$(id)?.value?.trim?.()||"";
   const meta={priority:value("agendaCreatePriority"),duration:value("agendaCreateDuration"),result:value("agendaCreateResult"),location:value("agendaCreateLocation"),whatsapp_message:value("agendaCreateWhatsappMessage"),custom:value("agendaCreateCustom")};
-  return Object.fromEntries(Object.entries(meta).filter(([,v])=>v!==""))
+  return {...Object.fromEntries(Object.entries(meta).filter(([,v])=>v!=="")),...(agendaAttachmentDraft.length?{attachments:agendaAttachmentDraft.map(x=>({...x}))}:{})}
 }
 function selectAgendaType(type,meta={}){
   const wanted=String(type||"").trim(),found=agendaTypes.find(t=>agendaTypeKey(t.name)===agendaTypeKey(wanted));
@@ -192,6 +196,7 @@ function mountAgendaComposerOverlay(enable){
 }
 function setAgendaComposer(open){window.TPFAgendaCompact?.create(open);const card=$("agendaCreateCard");card.classList.toggle("open",open);card.setAttribute("aria-hidden",String(!open));window.dispatchEvent(new CustomEvent("tpf:editor-baseline",{detail:{root:card}}));document.body.classList.toggle("agendaComposerOpen",open);if(open){card.scrollTop=0;setTimeout(()=>$("agendaTitle")?.focus(),30)}else{$("agendaTypeModal")?.classList.add("hidden");mountAgendaComposerOverlay(false)}}
 function resetAgendaComposer(){
+  agendaAttachmentDraft=[];document.getElementById("cpProTaskAttachments")?.remove();
   ["agendaTitle","agendaDescription","agendaCustomer","agendaPhone","agendaStarts","agendaReminder"].forEach(id=>{const node=$(id);if(node)node.value=""});
   delete $("agendaCustomer")?.dataset.contactId;document.querySelectorAll(".agendaReminderPreset").forEach(box=>box.checked=false);
   if($("agendaNotifyApp"))$("agendaNotifyApp").checked=true;if($("agendaNotifyEmail"))$("agendaNotifyEmail").checked=false;if($("agendaSyncGoogle"))$("agendaSyncGoogle").checked=false;
@@ -200,6 +205,9 @@ function resetAgendaComposer(){
 let agendaEditingRow=null;
 function fillAgendaComposer(prefill={}){
   resetAgendaComposer();
+  agendaAttachmentDraft=agendaTaskAttachments(prefill.meta||prefill.agenda_meta);
+  document.getElementById('cpProTaskAttachments')?.remove();
+  if(agendaAttachmentDraft.length){const section=document.createElement('section');section.id='cpProTaskAttachments';section.className='cpProAttachments';section.innerHTML='<b>Archivos de la tarea</b>'+agendaAttachmentDraft.map(f=>'<a target="_blank" rel="noopener noreferrer" href="'+esc(f.url)+'">'+esc(f.name)+' ↗</a>').join('');$('agendaDescription')?.before(section);}
   if(!agendaEditingRow)prefill={...(window.TPFAgendaDefaults?.get()||{}),...prefill};
   const set=(id,value)=>{const node=$(id);if(node&&value!=null)node.value=String(value)};
   set("agendaTitle",prefill.title||"");set("agendaDescription",prefill.description||prefill.notes||"");
@@ -265,3 +273,4 @@ window.deleteAgenda=async id=>{if(!confirm("¿Eliminar este recordatorio?"))retu
 loadAgendaTypes().catch(renderTypeChoices);
 
 for(const name of ['tpf:contact-updated','tpf:contact-created','tpf:contacts-loaded'])window.addEventListener(name,()=>{window.TPFRecordLinks.invalidate(sb);agendaContactCache.clear();});
+

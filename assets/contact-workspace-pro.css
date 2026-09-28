@@ -1,0 +1,57 @@
+/* Desktop customer workspace. Native mobile screens and business actions keep their contracts. */
+.cpProDialog{border:1px solid #dbe3ee;border-radius:14px;padding:0;width:min(860px,94vw);max-height:88dvh;color:#243247;background:#fff;box-shadow:0 24px 80px #13243d33}
+.cpProDialog::backdrop{background:#15263d66}.cpProDialog header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #e4eaf2}.cpProDialog h2{margin:0;font-size:20px}.cpProDialog header button{font-size:24px;border:0;background:transparent}.cpProDialogBody{padding:22px;overflow:auto}.cpProDialog button{cursor:pointer;border:1px solid #d6dfeb;border-radius:7px;background:#fff;color:#24569b;padding:9px 13px;font:inherit}.cpProPeople{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}.cpProPerson{display:flex;flex-direction:column;gap:10px;padding:18px;border:1px solid #e1e7ef;border-radius:10px}.cpProPerson small{font-weight:600;color:#66758a}.cpProPerson strong{font-size:18px}.cpProPerson button{align-self:flex-start}.cpProNotice{padding:14px;background:#edf4ff;border-radius:8px;line-height:1.6}.cpProActions{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}.cpProActions .cpProDanger{color:#b42318;border-color:#f2d4d1}.cpProDialog iframe{display:block;width:100%;height:54dvh;border:1px solid #e1e7ef;border-radius:8px}.cpProDialog a{color:#175cd3}.cpProFileTools{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}.cpProFileTools a{padding:9px 12px;border:1px solid #d6dfeb;border-radius:7px;text-decoration:none}
+.cpProFiltered{display:none!important}.cpProToolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0 18px}.cpProToolbar>div{display:flex;gap:5px}.cpProToolbar input{flex:1;min-width:140px}.cpProToolbar button[aria-pressed=true]{color:#155eef;background:#edf4ff;border-color:#bcd2fc}.cpProDocGrid{display:grid;grid-template-columns:minmax(0,1fr);gap:0}.cpProDocGrid .tpfDocsFile{grid-template-columns:44px minmax(0,1fr) auto auto!important;gap:12px!important}.cpProFileIcon{width:40px;height:48px;background:#edf4ff;display:grid;place-items:center;border-radius:6px;font-size:11px;color:#185abc;font-weight:700}.cpProDocGrid .tpfDocsFile>button{width:auto!important}.cpProDocGrid .tpfDocsFile small{font-size:12px}.cpProDocGrid .tpfDocsFile b{font-size:14px}.cpProAttachments{padding:12px;border:1px solid #dbe4ef;border-radius:8px;margin:12px 0}.cpProAttachments a{display:block;margin:7px 0;color:#175cd3}.cpProDocCount{color:#66758a;font-size:12px}
+@media(min-width:1024px){
+ #contactModal.tpfContactDesktop.tpfContactReference{background:#f6f8fc!important}
+ #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile{background:#f6f8fc!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpTop{min-height:32px!important;padding:7px 22px!important;background:#fff!important}
+ #contactModal.tpfContactDesktop.tpfContactReference>.contactProfile>.cpIdentity{padding:10px 22px 14px!important;background:#fff!important;grid-template-columns:50px minmax(160px,1fr) auto!important;gap:3px 14px!important;border-bottom:1px solid #e2e8f1!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpAvatar{width:48px!important;height:48px!important;font-size:19px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference #cpProfileDisplayName{font-size:23px!important;line-height:1.25}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpBadge{display:none!important}
+ #contactModal.tpfContactDesktop.tpfContactReference #cpProVerification{grid-column:2;grid-row:2;justify-self:start;border:0;border-radius:5px;padding:3px 7px;background:#fff3e5;color:#975919;font-size:11px;cursor:pointer}
+ #contactModal.tpfContactDesktop.tpfContactReference #cpProVerification.verified{background:#eaf8f0;color:#187048}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpQuick{gap:6px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpQuick button{font-size:12px!important;min-height:36px!important;padding:7px 10px!important;min-width:0!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow{margin:10px 22px!important;gap:10px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow summary{padding:10px 12px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs{margin:0 22px 14px!important;background:transparent!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpRefTabs button{min-height:42px!important;padding:10px 18px!important;font-size:13px!important;flex:0 0 auto!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:280px minmax(0,1fr)!important;padding:0 22px 26px!important;gap:18px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpRight{border:0!important;background:transparent!important}
+ #contactModal.tpfContactDesktop.tpfContactReference #cpRefPanel{padding:0!important;min-height:440px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpData{padding:16px!important;background:#fff!important;border-radius:10px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpLeft{gap:12px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpSideSection{background:#fff!important;padding:18px!important;border:1px solid #e0e7f1!important;border-radius:10px!important;box-shadow:none!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpSideTitle{margin-bottom:12px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpSideTitle b{font-size:18px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpData>label{font-size:12px!important;line-height:1.5!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpData>input,#contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{font-size:13px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfContactExtra{background:#fff;border-radius:10px}
+ #cpProSummary{margin-bottom:18px}#cpProSummary h2{font-size:22px;margin:3px 0 14px}.cpProMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.cpProMetrics button{display:flex;flex-direction:column;gap:4px;align-items:flex-start;background:#fff;border:1px solid #dfe7f1;border-radius:9px;padding:14px;text-align:left;color:#526174;font-size:12px;cursor:pointer}.cpProMetrics b{font-size:24px;color:#243247}.cpProNext{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:12px;background:#eaf3ff;border:1px solid #cedffc;border-radius:9px;padding:13px 16px}.cpProNext div{display:flex;flex-direction:column;gap:4px}.cpProNext small,.cpProNext span{color:#526a8e;font-size:12px}.cpProNext button{background:#fff;color:#155eef;border:1px solid #c2d5f4;border-radius:6px;padding:8px 12px;cursor:pointer}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryAccordion{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryGroup{margin:0!important;background:#fff!important;border:1px solid #dfe7f1!important;border-radius:10px!important;min-width:0}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryHeading{padding:7px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryTitle{font-size:15px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryBody .cpSideSection{border:0!important;padding:12px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference #cpAutomationStatus{grid-column:1/-1}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpRight:not([data-cp-ref-selected=resumen]) #cpProSummary{display:none}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] #cpProOppTools{display:none}
+ #contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedCard{border:1px solid #dde6f1!important;border-radius:9px!important;background:#fff!important;padding:16px!important;margin-bottom:10px!important;box-shadow:none!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpTaskWrap{border:1px solid #e1e8f0!important;border-radius:9px!important;background:#fff!important;padding:10px 12px!important;margin:10px 0!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpTaskButton{background:transparent!important;text-align:left!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpNoteCard{border:1px solid #dde6f0!important;border-radius:10px!important;padding:18px!important;background:#fff!important;box-shadow:none!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpCenter{padding:18px!important;background:#fff!important;border:1px solid #e0e7f1!important;border-radius:10px!important;min-height:0!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpEvent{padding:16px 8px 16px 42px!important;font-size:13px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpEventBody small{font-size:12px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpEventBody b{font-size:14px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpEventBody div{font-size:13px!important}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpProToolbar input,#contactModal.tpfContactDesktop.tpfContactReference .cpProToolbar select{padding:9px 11px!important;border:1px solid #d8e1ed;border-radius:7px;font-size:13px}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpProToolbar button{padding:8px 10px;font-size:12px;min-width:0}
+ #contactModal.tpfContactDesktop.tpfContactReference .cpRefDocActions{gap:8px}.cpProDocGrid .tpfDocsFile{padding:14px 0!important}
+}
+@media(min-width:1024px) and (max-width:1250px){#contactModal.tpfContactDesktop.tpfContactReference .cpColumns{grid-template-columns:245px minmax(0,1fr)!important;padding:0 14px 20px!important;gap:12px!important}#contactModal.tpfContactDesktop.tpfContactReference .tpfSummaryAccordion{grid-template-columns:1fr!important}.cpProMetrics{gap:7px}.cpProMetrics button{padding:10px}}
+@media(max-width:1023px){#cpProVerification,#cpProSummary,#cpProOppTools,#cpProHistoryTools{display:none!important}}
+
+.cpProFileIcon img{width:40px;height:48px;object-fit:cover;border-radius:6px}.cpProDocGrid .tpfDocsFile[hidden]{display:none!important}
