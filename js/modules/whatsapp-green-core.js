@@ -313,6 +313,8 @@ function waApplyAvatar(el,url,initials){
 async function waLoadAvatar(chatId){
   const id=String(chatId||"");
   if(!id)return "";
+  // The avatar endpoint only supports individual phone identifiers.
+  if(!/^\d{10,15}@c\.us$/.test(id))return "";
   if(Object.prototype.hasOwnProperty.call(waLiveState.avatars,id))return waLiveState.avatars[id];
   if(waLiveState.avatarPending[id])return waLiveState.avatarPending[id];
   waLiveState.avatarPending[id]=(async()=>{
