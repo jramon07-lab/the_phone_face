@@ -31,7 +31,7 @@ function showFilePanel(title){
 function recentDocuments(){
  const right=modal.querySelector('.cpRight');if(!right||!desktop())return;
  let section=$('cpProRecentDocs');
- if(!section){section=document.createElement('section');section.id='cpProRecentDocs';section.innerHTML='<header><h3>Documentos recientes</h3><button type="button">Ver todos</button></header><div></div>';section.querySelector('button').onclick=()=>$('cpRefTab-documentos')?.click();right.append(section)}
+ if(!section){section=document.createElement('section');section.id='cpProRecentDocs';section.innerHTML='<header><h3>Documentos recientes</h3><button type="button">Ver todos</button></header><div></div>';section.querySelector('button').onclick=()=>$('cpRefTab-documentos')?.click();($('tpfSummaryAccordion')||right).append(section)}
  const files=[...$('cpDocumentsPending')?.querySelectorAll('[data-doc-row]')||[]].slice(0,3),body=section.lastElementChild;
  const key=JSON.stringify([current()?.id,files.map(f=>[f.dataset.docRow,f.textContent])]);if(body.dataset.key===key)return;body.dataset.key=key;
  body.replaceChildren();

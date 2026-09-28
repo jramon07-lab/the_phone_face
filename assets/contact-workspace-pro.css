@@ -148,3 +148,24 @@
  body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending.cpProWithPreview{padding-right:0!important}
  .cpProFilePanel{position:relative;width:auto;min-height:460px;border-left:0;border-top:1px solid #dfe6f0;margin-top:18px;padding:14px 0}
 }
+@media(min-width:1024px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{display:flex!important;flex-direction:column!important;gap:0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label.tpfLongFieldLabel,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label.tpfInlineEditableLabel{display:block!important;position:relative!important;flex:none!important;width:100%!important;height:auto!important;min-height:20px!important;padding:0 58px 0 0!important;margin:12px 0 2px!important;border:0!important;font-size:11px!important;line-height:20px!important;pointer-events:auto!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>input,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label:has(.tpfInlineContactPencil)+input,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label:has(.tpfInlineContactPencil)+textarea{flex:none!important;width:100%!important;height:auto!important;min-height:23px!important;max-height:100px!important;padding:0!important;margin:0!important;font-size:12px!important;line-height:1.55!important;text-overflow:clip!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>textarea{height:var(--contact-text-height,36px)!important;white-space:pre-wrap!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactEditBar button,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactProtectedHint{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpLeft{display:flex!important;flex-direction:column!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{order:1!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow{order:2!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .contactLabelsBox{order:3!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpOfferChecks{display:none!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpOfferCard .cpOfferMeta{margin:8px 0!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfSummaryAccordion>.tpfRecentActivity{grid-column:2!important;grid-row:2!important;align-self:start!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfSummaryAccordion>#cpProRecentDocs{grid-column:1!important;grid-row:2!important;align-self:start!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-tpf-summary-group=opportunities]{grid-row:3!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference [data-tpf-summary-group=programs]{grid-row:4!important}
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfSummaryAccordion>#cpAutomationStatus{grid-row:5!important}
+}
+@media(min-width:1024px) and (max-width:1250px){
+ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #tpfSummaryAccordion>*{grid-column:1!important;grid-row:auto!important}
+}

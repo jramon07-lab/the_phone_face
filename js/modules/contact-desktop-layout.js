@@ -75,6 +75,8 @@
   const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
   for(const [button,title] of summaryActions){title.append(button);}summaryActions.clear();
   [...root.querySelectorAll('[data-cp-ref-pane]')].forEach(section=>panel.appendChild(section));
+  if(root.contains(recent))right.append(recent);
+  const recentDocs=$('cpProRecentDocs');if(recentDocs&&root.contains(recentDocs))right.append(recentDocs);
   root.remove();
  }
  function mountSummaryAction(block,key,items){
@@ -108,6 +110,8 @@
   makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
   const offersGroup=makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers]);
   if(automation&&(automation.parentElement!==root||automation.previousElementSibling!==offersGroup))offersGroup.after(automation);
+  if(recent.parentElement!==root)root.append(recent);
+  const recentDocs=$('cpProRecentDocs');if(recentDocs&&recentDocs.parentElement!==root)root.append(recentDocs);
  }
  function refreshSummaryMetrics(){
   panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));
