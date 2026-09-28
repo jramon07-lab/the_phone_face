@@ -261,57 +261,50 @@ async function hydrateWaMedia(){
   const current=()=>waLiveState.selected?.id===chatId&&waLiveState.selectionVersion===selection;
   if(!chatId)return;
   const nodes=[...document.querySelectorAll('#waMessages [data-wa-media-id]')];
+  // Replace only the placeholder: keep audio playback, selection and message DOM intact.
+  const paint=(idMessage,url)=>{
+    if(!current())return;
+    const msg=(waLiveState.history||[]).find(x=>String(x?.idMessage||'')===idMessage);
+    const live=[...document.querySelectorAll('#waMessages [data-wa-media-id]')].find(n=>n.dataset.waMediaId===idMessage);
+    if(!live)return;
+    if(!url||!msg){
+      live.className='waMediaUnavailable';live.textContent='Archivo no disponible';
+      live.removeAttribute('data-wa-media-id');return;
+    }
+    msg.messageData=msg.messageData||{};
+    msg.messageData.fileMessageData=msg.messageData.fileMessageData||{};
+    msg.messageData.fileMessageData.downloadUrl=url;
+    const box=document.getElementById('waMessages');
+    const bottom=box.scrollHeight-box.clientHeight-box.scrollTop<32;
+    const oldHeight=box.scrollHeight,oldTop=box.scrollTop;
+    const above=live.getBoundingClientRect().bottom<=box.getBoundingClientRect().top;
+    // The caption already exists beside the loading placeholder.
+    live.outerHTML=waMediaHtml({...waMediaInfo(msg),url,caption:''},idMessage);
+    if(bottom)box.scrollTop=box.scrollHeight;
+    else if(above)box.scrollTop=oldTop+box.scrollHeight-oldHeight;
+  };
   for(const node of nodes){
     if(!current())return;
-    const idMessage=String(node.dataset.waMediaId||"");
+    const idMessage=String(node.dataset.waMediaId||'');
     if(!idMessage)continue;
     const key=`${chatId}::${idMessage}`;
-
-    if(waMediaCache.has(key)){
-      const cached=waMediaCache.get(key);
-      if(cached){
-        const msg=(waLiveState.history||[]).find(x=>String(x?.idMessage||"")===idMessage);
-        if(msg){
-          msg.messageData=msg.messageData||{};
-          msg.messageData.fileMessageData=msg.messageData.fileMessageData||{};
-          msg.messageData.fileMessageData.downloadUrl=cached;
-        }
-        renderWaMessages(false);
-        return;
-      }
-      node.className="waMediaUnavailable";
-      node.textContent="Archivo no disponible";
-      node.removeAttribute("data-wa-media-id");
-      continue;
-    }
-
+    if(waMediaCache.has(key)){paint(idMessage,waMediaCache.get(key));continue;}
     if(waMediaPending.has(key))continue;
     waMediaPending.add(key);
     try{
-      const r=await waApi("file",{chatId,idMessage});
-      const url=String(r?.downloadUrl||"").trim();
+      const r=await waApi('file',{chatId,idMessage});
+      const url=String(r?.downloadUrl||'').trim();
       waMediaCache.set(key,url||null);
-      if(!current())return;
-      if(!url)throw new Error("Archivo no disponible");
-
-      const msg=(waLiveState.history||[]).find(x=>String(x?.idMessage||"")===idMessage);
-      if(msg){
-        msg.messageData=msg.messageData||{};
-        msg.messageData.fileMessageData=msg.messageData.fileMessageData||{};
-        msg.messageData.fileMessageData.downloadUrl=url;
-      }
-      renderWaMessages(false);
-      return; // render recrea nodos, siguiente pasada continúa
+      paint(idMessage,url);
     }catch(e){
-      waMediaCache.set(key,null);
-      node.className="waMediaUnavailable";
-      node.textContent="Archivo no disponible";
-      node.removeAttribute("data-wa-media-id");
+      // A temporary network failure must not poison this file's cache forever.
+      paint(idMessage,null);
     }finally{
       waMediaPending.delete(key);
     }
   }
 }
+
 function waApplyAvatar(el,url,initials){
   if(!el)return;
   if(url){el.classList.add("hasPhoto");el.style.backgroundImage=`url("${String(url).replaceAll('"','%22')}")`;el.textContent="";}
