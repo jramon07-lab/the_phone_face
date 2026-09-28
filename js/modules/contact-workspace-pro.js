@@ -142,7 +142,7 @@ if(typeof nativeComposer==='function'){
  };
 }
 observe($('agendaCreateCard'),()=>{if(!$('agendaCreateCard')?.classList.contains('open'))document.body.classList.remove('cpWorkspaceTask');},{attributes:true,attributeFilter:['class']});
-function refresh(){document.body.classList.toggle('cpWorkspaceOpen',desktop()&&!modal.classList.contains('hidden'));if(modal.classList.contains('hidden'))return;watchSources();verification();opportunities();opportunityDetail();history();summary();recentDocuments();relationsPreview();}
+function refresh(){document.body.classList.toggle('cpWorkspaceOpen',desktop()&&!modal.classList.contains('hidden'));if(modal.classList.contains('hidden'))return;for(const [id,label] of [['cpSideNewOpp','+ Oportunidad'],['cpSideNewTask','+ Nueva tarea']]){const b=$(id);if(b){const text=b.closest('.tpfSummaryHeading')?'＋':label;if(b.textContent!==text)b.textContent=text;}}watchSources();verification();opportunities();opportunityDetail();history();summary();recentDocuments();relationsPreview();}
 document.addEventListener('click',e=>{if(desktop()&&e.target.closest('#tpfContactPartySummary [data-rel-holders] > summary')){e.preventDefault();e.stopImmediatePropagation();openRelations()}else if(e.target.closest('[data-cp-ref-tab]'))queue()},true);
 window.addEventListener('tpf:contact-open',()=>{closeDialog();selectedOpp='';oppFilter='active';oppQuery='';historyQuery='';historyType='all';for(const id of ['cpProOppTools','cpProHistoryTools']){const root=$(id);if(root){root.querySelector('input').value='';if(root.querySelector('select'))root.querySelector('select').value='all'}}queue()});
 window.addEventListener('tpf:contact-updated',queue);

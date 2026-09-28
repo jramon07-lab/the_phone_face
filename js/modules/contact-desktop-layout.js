@@ -141,7 +141,7 @@
  recentHead.className='tpfRecentHeading';recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',e=>{e.preventDefault();select('historial',true);});
  recentHead.append(recentTitle,recentMore);recent.append(recentHead,recentBody);
  function refreshRecent(){
-  const entries=[...$('cpTimeline')?.children||[]].slice(0,3).map(node=>{const copy=node.cloneNode(true);copy.querySelectorAll('button,input,select,textarea').forEach(control=>control.remove());return copy.textContent.trim();}).filter(Boolean);
+  const entries=[...$('cpTimeline')?.querySelectorAll('.cpEvent')||[]].slice(0,3).map(node=>[node.querySelector('small')?.textContent,node.querySelector('b')?.textContent,node.querySelector('.cpEventBody>div')?.textContent].filter(Boolean).join(' · '));
   const texts=entries.length?entries:['Sin actividad reciente.'];const key=JSON.stringify(texts);
   if(recentBody.dataset.content===key)return;recentBody.dataset.content=key;
   recentBody.replaceChildren(...texts.map(text=>{const line=document.createElement('p');line.textContent=text;return line;}));
@@ -193,7 +193,7 @@
   if(relations){ensureLinkRow();const google=$('tpfGoogleInlineCard');moveSecondary(relations,linkRow,google?.parentElement===linkRow?google:null);}
   const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
   if(info.parentElement!==left)left.append(info);
-  for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner')])moveSecondary(node,info.lastElementChild);
+  for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner'),left.querySelector('.contactCustomFieldsBox')])moveSecondary(node,info.lastElementChild);
  }
  function restoreSecondary(){for(const [node,anchor] of secondaryPositions){if(anchor.parentNode)anchor.after(node);anchor.remove();}secondaryPositions.clear();info.remove();}
  let secondaryTimer=0;
