@@ -1,0 +1,18 @@
+/* Retired standalone templates must never reappear under the current library. */
+.referenceWorkspace main > #view-wa-templates { display:none!important; }
+/* Show a lightweight first-load state until the current module has built its UI. */
+#view-dashboard:not(.tpfDashPro) > *,
+#view-database:not(.tpfContactsEnhanced) > *,
+#view-labels:not(.tpfLabelsModern) > *,
+#view-automations:not(.tpfAutoPro) > * { visibility:hidden; }
+#view-dashboard:not(.tpfDashPro)::before,
+#view-database:not(.tpfContactsEnhanced)::before,
+#view-labels:not(.tpfLabelsModern)::before,
+#view-automations:not(.tpfAutoPro)::before {
+ content:"Preparando pantalla…"; display:block; padding:20px; color:#526176;
+}
+.referenceWorkspace main > section[data-tpf-refreshing]:not(.hidden)::after {
+ content:attr(data-tpf-refreshing); position:fixed; right:24px; bottom:28px;
+ padding:6px 10px; border:1px solid #dbe4ef; border-radius:8px;
+ background:#fff; color:#526176; font-size:12px; z-index:20; pointer-events:none;
+}

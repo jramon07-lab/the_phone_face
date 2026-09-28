@@ -82,6 +82,26 @@ $("signup").onclick=async()=>{
 };
 $("logout").onclick=async()=>{await sb.auth.signOut({scope:'local'});location.reload()};
 
+// A navigation ticket prevents delayed screens from reopening after another menu.
+window.tpfNavigationRevision=0;
+document.addEventListener('click',e=>{
+ const nav=e.target?.closest?.('.nav[data-view]');
+ if(nav)window.tpfNavigationRevision++;
+},true);
+function tpfLoadView(view,loader){
+ const section=$("view-"+view),ticket=window.tpfNavigationRevision;
+ section?.setAttribute('aria-busy','true');
+ section?.setAttribute('data-tpf-refreshing','Actualizando…');
+ let timer;
+ const finish=()=>{clearTimeout(timer);if(section?.dataset.tpfLoadTicket===String(ticket)){
+  section.removeAttribute('aria-busy');section.removeAttribute('data-tpf-refreshing');
+ }};
+ if(section)section.dataset.tpfLoadTicket=String(ticket);
+ timer=setTimeout(finish,15000);
+ try{return Promise.resolve(loader()).catch(e=>{console.error('Carga de '+view,e)}).finally(finish)}
+ catch(e){finish();console.error('Carga de '+view,e)}
+}
+
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{
  if(n.dataset.view==="system" && !perms?.is_admin){alert("Solo el administrador puede ver Estado del sistema.");return}
  closeOpenDetailScreensForNavigation();
@@ -97,17 +117,17 @@ document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{
    $("searchSheet").value=n.dataset.sheet||"";
    if(n.dataset.sheet){$("searchText").value="";$("searchBtn").click();}
  }
- if(n.dataset.view==="dashboard")loadDashboard();
- if(n.dataset.view==="alerts")loadAlerts();
- if(n.dataset.view==="trash")loadTrash();
- if(n.dataset.view==="whatsapplive")loadWhatsAppLive();
- if(n.dataset.view==="sales")loadSales();
- if(n.dataset.view==="agenda")loadAgenda();
- if(n.dataset.view==="whatsapp")loadWhatsappPrograms();
+ if(n.dataset.view==="dashboard")tpfLoadView("dashboard",()=>loadDashboard());
+ if(n.dataset.view==="alerts")tpfLoadView("alerts",()=>loadAlerts());
+ if(n.dataset.view==="trash")tpfLoadView("trash",()=>loadTrash());
+ if(n.dataset.view==="whatsapplive")tpfLoadView("whatsapplive",()=>loadWhatsAppLive());
+ if(n.dataset.view==="sales")tpfLoadView("sales",()=>loadSales());
+ if(n.dataset.view==="agenda")tpfLoadView("agenda",()=>loadAgenda());
+ if(n.dataset.view==="whatsapp")tpfLoadView("whatsapp",()=>loadWhatsappPrograms());
  if(n.dataset.view==="settings"){loadGoogleSettings();loadNotifySettings();}
- if(n.dataset.view==="automations")loadAutomations();
- if(n.dataset.view==="users")loadUsersAdmin();
- if(n.dataset.view==="system")loadSystemStatus();
+ if(n.dataset.view==="automations")tpfLoadView("automations",()=>loadAutomations());
+ if(n.dataset.view==="users")tpfLoadView("users",()=>loadUsersAdmin());
+ if(n.dataset.view==="system")tpfLoadView("system",()=>loadSystemStatus());
 });
 
 let lastSearchRows=[];
