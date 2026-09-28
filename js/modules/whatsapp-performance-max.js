@@ -308,7 +308,7 @@ function install(){
         const search=document.getElementById('waLiveSearch');
         const query=String(search?.value||'').trim();
         const filter=String(waLiveState.filter||'all');
-        const key=`${filter}\u0000${waPerformanceText(query)}`;
+        const key=`${query?'search':filter}\u0000${waPerformanceText(query)}`;
         const keyChanged=key!==waPerformancePage.key;
         if(keyChanged){waPerformancePage.key=key;waPerformancePage.limit=CHAT_PAGE_SIZE}
         const rows=waPerformanceFilterRows(waLiveState.chats,filter,query);
@@ -318,13 +318,26 @@ function install(){
         const visible=rows.slice(0,waPerformancePage.limit);
         const box=document.getElementById('waLiveChats');if(!box)return;
         waPerformanceBindList(box);
-        const oldTop=Number(box.scrollTop||0);
-        box.innerHTML=visible.map(waPerformanceRenderRow).join('')||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
+        let html=visible.map(waPerformanceRenderRow).join('')||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
         if(rows.length>visible.length){
           const remaining=rows.length-visible.length;
-          box.insertAdjacentHTML('beforeend',`<button type="button" class="waLiveEmpty waLiveLoadMore" style="display:block;width:100%;border:0;background:#fff;cursor:pointer">Mostrar más (${remaining})</button>`);
+          html+=`<button type="button" class="waLiveEmpty waLiveLoadMore" style="display:block;width:100%;border:0;background:#fff;cursor:pointer">Mostrar más (${remaining})</button>`;
         }
-        box.scrollTop=keyChanged?0:oldTop;
+        // Background refreshes must not destroy the list when nothing changed.
+        if(box.__tpfListHtml!==html){
+          const oldTop=Number(box.scrollTop||0),bounds=box.getBoundingClientRect?.();
+          const anchor=!keyChanged&&oldTop>0&&bounds?[...box.querySelectorAll('.waChatRow')].find(row=>row.getBoundingClientRect().bottom>bounds.top):null;
+          const anchorId=anchor?.dataset.waChatId,anchorTop=anchor?.getBoundingClientRect().top;
+          box.innerHTML=html;box.__tpfListHtml=html;
+          box.scrollTop=keyChanged?0:oldTop;
+          const restore=()=>{
+            const row=anchorId?[...box.querySelectorAll('.waChatRow')].find(row=>row.dataset.waChatId===anchorId):null;
+            if(row)box.scrollTop+=row.getBoundingClientRect().top-anchorTop;
+          };
+          restore();
+          // Inbox badges are added by the outer renderer in a microtask.
+          if(anchorId){const expected=box.scrollTop;queueMicrotask(()=>queueMicrotask(()=>{if(box.__tpfListHtml===html&&box.scrollTop===expected)restore()}));}
+        }else if(keyChanged)box.scrollTop=0;
         waPerformanceScheduleVisibleAvatars(visible.map(c=>c.id));
       };
       enhancedRender.__tpfPerformanceMax=true;

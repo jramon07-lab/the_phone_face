@@ -413,3 +413,42 @@ test('Plan compartido: pausa, aviso interno y fecha Madrid sin envío (datos sin
  const calls=await page.evaluate(()=>saved);expect(calls).toHaveLength(1);expect(calls[0].name).toBe('crm_save_offer_work_plan');expect(calls[0].args.p_at).toBe('2026-09-28T08:00:00.000Z');expect(calls[0].args.p_pause).toBe(true);expect(calls[0].args.p_next_action).toBe('Revisar oferta');expect(calls[0].args.p_remind).toBe(true);
  expect(await page.evaluate(()=>TPFOfferWorkPlan.madrid('2026-12-28T10:00'))).toBe('2026-12-28T09:00:00.000Z');
 });
+
+test('WhatsApp: búsqueda entre bandejas y lista estable al escribir y refrescar',async({page,context})=>{
+ const fs=require('node:fs');await context.route('**/*',route=>route.abort());
+ await page.setContent('<style>#waLiveChats{height:300px;overflow:auto}.waChatRow{height:80px}.waChatMeta{height:20px}</style><input id="waLiveSearch"><textarea id="waComposerText"></textarea><div id="waLiveChats"></div>');
+ await page.evaluate(()=>{
+  window.fixtureModules={};window.TPFModules={register:(name,module)=>fixtureModules[name]=module};
+  window.waLiveState={filter:'all',selected:null,avatars:{},avatarPending:{},livePreview:{},chats:Array.from({length:35},(_,i)=>({id:`34600000${String(i).padStart(3,'0')}@c.us`,name:'Persona '+i}))};
+  waLiveState.chats.push({id:'grupo@g.us',name:'Objetivo grupo',timestamp:1});
+  window.renderWhatsAppChats=()=>{};window.hydrateWaAvatars=()=>{};window.waApi=async()=>({urlAvatar:''});
+  window.waMeta=()=>({});window.waUnreadCount=()=>0;window.waChatServerUnread=()=>0;window.waIsUnanswered=()=>false;
+  window.waNormalizePhone=id=>id;window.waTime=()=>'';window.esc=value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;');
+  window.waApplyAvatar=()=>{};
+ });
+ for(const file of ['whatsapp-performance-max','whatsapp-five-fixes']){
+  await page.addScriptTag({content:fs.readFileSync('js/modules/'+file+'.js','utf8')});
+  await page.evaluate(name=>fixtureModules[name].install(),file);
+ }
+ await page.addScriptTag({content:fs.readFileSync('js/modules/whatsapp-automation-inbox.js','utf8').replace('window.TPFAutomationInbox={','window.__fixtureWrap=wrapRenderer;window.TPFAutomationInbox={')});
+ await page.evaluate(()=>window.__fixtureWrap());
+ const result=await page.evaluate(async()=>{
+  const search=document.getElementById('waLiveSearch'),box=document.getElementById('waLiveChats');
+  const outcomes=[];
+  search.value='Objetivo';
+  for(const filter of ['unanswered','waiting','automatic','all','contacts','groups','archived','snoozed']){
+   waLiveState.filter=filter;renderWhatsAppChats();await Promise.resolve();
+   outcomes.push(box.querySelectorAll('.waChatRow').length===1&&box.textContent.includes('Objetivo grupo')&&waLiveState.filter===filter);
+  }
+  search.value='';waLiveState.filter='all';renderWhatsAppChats();await Promise.resolve();
+  box.scrollTop=600;const top=box.scrollTop,first=box.firstElementChild;
+  const composer=document.getElementById('waComposerText');composer.focus();composer.value='Borrador sin enviar';composer.dispatchEvent(new Event('input'));
+  for(let i=0;i<5;i++){renderWhatsAppChats();await Promise.resolve();}
+  const stable=box.firstElementChild===first&&box.scrollTop===top&&composer.value==='Borrador sin enviar';
+  const bounds=box.getBoundingClientRect(),anchor=[...box.querySelectorAll('.waChatRow')].find(n=>n.getBoundingClientRect().bottom>bounds.top),id=anchor.dataset.waChatId,y=anchor.getBoundingClientRect().top;
+  waLiveState.chats.unshift({id:'nuevo@g.us',name:'Nuevo entrante'});renderWhatsAppChats();await Promise.resolve();await Promise.resolve();await Promise.resolve();
+  const next=[...box.querySelectorAll('.waChatRow')].find(n=>n.dataset.waChatId===id);
+  return {global:outcomes.every(Boolean),stable,anchor:Math.abs(next.getBoundingClientRect().top-y)<2};
+ });
+ expect(result).toEqual({global:true,stable:true,anchor:true});
+});

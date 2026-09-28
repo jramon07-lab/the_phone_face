@@ -42,3 +42,21 @@ assert.equal(second.TPFAutomationInbox.isAutomaticWaiting(chat),false,'Escribir 
 
 console.log('WhatsApp automation inbox OK');
 
+
+// Exercise the actual outer wrapper: it must not pre-filter global search.
+const search={value:'cliente'};
+context.document.getElementById=id=>id==='waLiveSearch'?search:null;
+context.document.querySelector=()=>null;
+context.document.querySelectorAll=()=>[];
+let rendered=[];
+context.waLiveState.chats=[{id:'a@c.us',name:'cliente A'},{id:'b@g.us',name:'cliente B'}];
+context.renderWhatsAppChats=()=>{rendered=context.waLiveState.chats.map(c=>c.id)};
+const wrappedSource=fs.readFileSync('js/modules/whatsapp-automation-inbox.js','utf8').replace('window.TPFAutomationInbox={','window.__wrapInbox=wrapRenderer;window.TPFAutomationInbox={');
+vm.runInNewContext(wrappedSource,context);
+context.__wrapInbox();
+for(const filter of ['unanswered','waiting','automatic','snoozed','groups','archived']){
+ context.waLiveState.filter=filter;context.renderWhatsAppChats();
+ assert.deepEqual(rendered,['a@c.us','b@g.us'],'global search must bypass '+filter);
+ assert.equal(context.waLiveState.filter,filter);
+}
+search.value='';context.waLiveState.filter='automatic';context.renderWhatsAppChats();assert.equal(rendered.length,0,'clearing search restores the chosen category');

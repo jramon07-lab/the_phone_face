@@ -161,11 +161,15 @@
     document.querySelectorAll('#waLiveChats .waChatRow').forEach(row=>{
       const chat=rows.get(row.dataset.waChatId);if(!chat)return;
       const key=category(chat),labels={automatic:'Automático',waiting:'Esperando respuesta',unanswered:'Pendiente',snoozed:'Aplazada'};
+      const detail=window.TPFInboxManual?.describe(chat)||(key==='unanswered'?'Revisar mensaje del cliente':'');
+      const signature=JSON.stringify([key,detail]);
+      if(row.__tpfInboxDecoration===signature)return;
+      row.__tpfInboxDecoration=signature;
       row.querySelectorAll('.waMiniFlag,.waAutomaticFlag,.waInboxFlag,.waInboxReason').forEach(x=>x.remove());
       if(!labels[key])return;
       const badge=document.createElement('span');badge.className='waInboxFlag '+key;badge.textContent=labels[key];
       let host=row.querySelector('.waChatMeta');if(!host){host=document.createElement('div');host.className='waChatMeta';row.querySelector('.waChatRowMain')?.append(host);}host.append(badge);
-      const detail=window.TPFInboxManual?.describe(chat)||(key==='unanswered'?'Revisar mensaje del cliente':'');if(detail){const note=document.createElement('small');note.className='waInboxReason';note.textContent=detail;host.append(note);}
+      if(detail){const note=document.createElement('small');note.className='waInboxReason';note.textContent=detail;host.append(note);}
     });decorateHeader();
   }
   function openAutomaticTab(tab){
@@ -180,7 +184,7 @@
     const wrapped=function(...args){
       const state=liveState();if(!state)return base.apply(this,args);
       const chats=state.chats,filter=state.filter||'all';
-      if(['automatic','waiting','unanswered','snoozed'].includes(filter)){
+      if(!String(document.getElementById('waLiveSearch')?.value||'').trim()&&['automatic','waiting','unanswered','snoozed'].includes(filter)){
         state.chats=(chats||[]).filter(c=>category(c)===filter);state.filter='all';
       }
       try{return base.apply(this,args)}finally{state.chats=chats;state.filter=filter;updateAutomaticCount();queueMicrotask(decorateAutomaticRows);}

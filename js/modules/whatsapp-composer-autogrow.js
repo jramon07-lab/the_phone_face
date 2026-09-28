@@ -19,7 +19,7 @@ function install(){
       #view-whatsapplive .waLiveLayout{flex:1 1 auto!important;min-height:0!important}
       #view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive,#view-whatsapplive .waMessages{min-height:0!important}
       #view-whatsapplive .waComposer{align-items:flex-end!important;flex:0 0 auto!important;margin-bottom:0!important;padding-bottom:10px!important}
-      #view-whatsapplive .waComposerTextWrap textarea{display:block!important;width:100%!important;height:42px;min-height:42px!important;max-height:144px!important;line-height:20px!important;overflow-y:hidden;resize:none!important;transition:height .1s ease}
+      #view-whatsapplive .waComposerTextWrap textarea{display:block!important;width:100%!important;height:42px;min-height:42px!important;max-height:144px!important;line-height:20px!important;overflow-y:hidden;resize:none!important;transition:none}
       #view-whatsapplive .waComposerMsg{flex:0 0 18px!important;min-height:18px!important}
     `;document.head.appendChild(style);
   }

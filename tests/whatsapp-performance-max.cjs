@@ -35,7 +35,7 @@ function eventTarget(){
 
 const search=Object.assign(eventTarget(),{value:''});
 const list=Object.assign(eventTarget(),{
-  innerHTML:'',scrollTop:0,scrollHeight:1000,clientHeight:240,avatarNodes:[],
+  _html:'',writes:0,get innerHTML(){return this._html},set innerHTML(value){this.writes++;this._html=value},scrollTop:0,scrollHeight:1000,clientHeight:240,avatarNodes:[],
   insertAdjacentHTML(_where,value){this.innerHTML+=String(value)},
   querySelectorAll(selector){return selector==='[data-wa-avatar-id]'?this.avatarNodes:[]},
   contains(node){return this.avatarNodes.includes(node)},
@@ -133,6 +133,7 @@ async function run(){
   context.renderWhatsAppChats();flushFrames();
   assert.equal(rowCount(),40,'la primera pintura debe estar acotada');
   assert.match(list.innerHTML,/waLiveLoadMore[^>]*>Mostrar más \(121\)<\/button>/);
+  const writes=list.writes;context.renderWhatsAppChats();flushFrames();assert.equal(list.writes,writes,'identical background refresh must preserve the DOM');
   list.scrollTop=800;list.dispatch('scroll');flushFrames();
   assert.equal(rowCount(),80,'el scroll debe cargar el siguiente lote');
   assert.match(list.innerHTML,/Mostrar más \(81\)/);
