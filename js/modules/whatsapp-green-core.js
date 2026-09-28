@@ -257,9 +257,12 @@ const waMediaPending=new Set();
 
 async function hydrateWaMedia(){
   const chatId=waLiveState.selected?.id;
+  const selection=waLiveState.selectionVersion;
+  const current=()=>waLiveState.selected?.id===chatId&&waLiveState.selectionVersion===selection;
   if(!chatId)return;
   const nodes=[...document.querySelectorAll('#waMessages [data-wa-media-id]')];
   for(const node of nodes){
+    if(!current())return;
     const idMessage=String(node.dataset.waMediaId||"");
     if(!idMessage)continue;
     const key=`${chatId}::${idMessage}`;
@@ -288,6 +291,7 @@ async function hydrateWaMedia(){
       const r=await waApi("file",{chatId,idMessage});
       const url=String(r?.downloadUrl||"").trim();
       waMediaCache.set(key,url||null);
+      if(!current())return;
       if(!url)throw new Error("Archivo no disponible");
 
       const msg=(waLiveState.history||[]).find(x=>String(x?.idMessage||"")===idMessage);
@@ -583,6 +587,15 @@ async function loadWaHistory(scrollBottom=true){
 }
 function renderWaMessages(scrollBottom){
   const box=$("waMessages");
+  if(!box)return;
+  const selection=waLiveState.selectionVersion;
+  const previousTop=box.scrollTop;
+  const atBottom=box.scrollHeight-box.clientHeight-previousTop<32;
+  const top=box.getBoundingClientRect().top;
+  const anchor=[...box.querySelectorAll('.waMsg[data-wa-message-id]')].find(n=>n.getBoundingClientRect().bottom>top);
+  const anchorId=anchor?.dataset.waMessageId;
+  const anchorOffset=anchor?anchor.getBoundingClientRect().top-top:0;
+  if(box._waMediaLoadHandler)box.removeEventListener('load',box._waMediaLoadHandler,true);
   const rows=[...(waLiveState.history||[])].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0));
   box.innerHTML=rows.map(m=>{
     const dir=waMessageDirection(m);
@@ -595,10 +608,25 @@ function renderWaMessages(scrollBottom){
     if(!isMedia&&!text&&(rawType==="textmessage"||rawType==="extendedtextmessage"))return "";
     const body=!isMedia&&text?esc(text):(!isMedia?esc(`[${info.type||m?.messageData?.typeMessage||m?.typeMessage||"Mensaje"}]`):"");
     const cls=isMedia?" hasMedia":"";
-    return `<div class="waMsg ${dir}"><div class="waBubble${cls}">${mediaHtml||body}${isMedia&&text&&!info.caption?`<div class="waMediaCaption">${esc(text)}</div>`:""}<div class="waMsgMeta">${esc(waTime(waMessageTimestamp(m)))}</div></div></div>`;
+    return `<div class="waMsg ${dir}" data-wa-message-id="${esc(String(m?.idMessage||""))}"><div class="waBubble${cls}">${mediaHtml||body}${isMedia&&text&&!info.caption?`<div class="waMediaCaption">${esc(text)}</div>`:""}<div class="waMsgMeta">${esc(waTime(waMessageTimestamp(m)))}</div></div></div>`;
   }).join("")||'<div class="waLiveEmpty">No hay mensajes disponibles en este chat.</div>';
-  setTimeout(hydrateWaMedia,30);
-  if(scrollBottom)setTimeout(()=>{box.scrollTop=box.scrollHeight},80);
+  // Position before the browser paints; never show the top and jump 80ms later.
+  let expectedTop=previousTop;
+  const restore=(initial=false)=>{
+    if(waLiveState.selectionVersion!==selection)return;
+    // A late image must not drag the user back after they scroll manually.
+    if(!initial&&Math.abs(box.scrollTop-expectedTop)>2)return;
+    if(scrollBottom||atBottom)box.scrollTop=box.scrollHeight;
+    else{
+      const current=anchorId?[...box.querySelectorAll('.waMsg[data-wa-message-id]')].find(n=>n.dataset.waMessageId===anchorId):null;
+      box.scrollTop=current?box.scrollTop+current.getBoundingClientRect().top-box.getBoundingClientRect().top-anchorOffset:previousTop;
+    }
+    expectedTop=box.scrollTop;
+  };
+  restore(true);
+  box._waMediaLoadHandler=()=>restore();
+  box.addEventListener('load',box._waMediaLoadHandler,true);
+  setTimeout(()=>{if(waLiveState.selectionVersion===selection)hydrateWaMedia();},30);
 }
 
 async function matchWaContact(){

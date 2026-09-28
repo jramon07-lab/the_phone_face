@@ -96,7 +96,7 @@ function install(){
  document.addEventListener('click',e=>{if(e.target.closest('.nav[data-view="whatsapplive"],#waLiveChats'))setTimeout(refresh,150);});
  refresh();
 }
-function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;refresh();},120);}
+function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;refresh();});}
 function refresh(){
  if(!view.isConnected||view.classList.contains('hidden')||!$('waClientToggle'))return;
  const draft=$('tpfWaFinalReviewOpen')||view.querySelector('.waLiveHeaderActions>button[id*="Draft"]');if(draft&&!draft.closest('#waCleanTools'))$('waCleanTools')?.lastChild.append(draft);
