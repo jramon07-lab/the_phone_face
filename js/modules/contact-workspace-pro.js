@@ -18,6 +18,26 @@ function showDialog(title){
  d.addEventListener('close',()=>{d.remove();if(dialog===d)dialog=null;if(trigger?.isConnected)trigger.focus()},{once:true});
  document.body.append(d);d.showModal();dialog=d;return d;
 }
+function showFilePanel(title){
+ if(!desktop())return showDialog(title);
+ closeDialog();
+ const pane=$('cpDocumentsPending'),d=document.createElement('section');
+ d.className='cpProFilePanel';d.setAttribute('aria-label',title);
+ d.innerHTML='<header><h2>'+esc(title)+'</h2><button type="button" aria-label="Cerrar vista previa">×</button></header><div class="cpProDialogBody"></div>';
+ d.close=()=>{d.remove();pane?.classList.remove('cpProWithPreview');if(dialog===d)dialog=null};
+ d.querySelector('header button').onclick=d.close;
+ pane?.append(d);pane?.classList.add('cpProWithPreview');dialog=d;return d;
+}
+function recentDocuments(){
+ const right=modal.querySelector('.cpRight');if(!right||!desktop())return;
+ let section=$('cpProRecentDocs');
+ if(!section){section=document.createElement('section');section.id='cpProRecentDocs';section.innerHTML='<header><h3>Documentos recientes</h3><button type="button">Ver todos</button></header><div></div>';section.querySelector('button').onclick=()=>$('cpRefTab-documentos')?.click();right.append(section)}
+ const files=[...$('cpDocumentsPending')?.querySelectorAll('[data-doc-row]')||[]].slice(0,3),body=section.lastElementChild;
+ const key=JSON.stringify([current()?.id,files.map(f=>[f.dataset.docRow,f.textContent])]);if(body.dataset.key===key)return;body.dataset.key=key;
+ body.replaceChildren();
+ if(!files.length){const p=document.createElement('p');p.textContent='Consulta los archivos y la conexión en Documentos.';body.append(p)}
+ for(const file of files){const b=button(file.querySelector('b')?.textContent||'Documento',()=>{$('cpRefTab-documentos')?.click();file.querySelector('[data-doc-preview]')?.click()});const small=document.createElement('small');small.textContent=file.querySelector('small')?.textContent||'';b.append(small);body.append(b)}
+}
 function openRelations(){
  const c=current(),R=window.TPFContactRelations;if(!c?.id||!R)return;
  const d=showDialog('Titulares y gestores'),body=d.lastElementChild;body.textContent='Comprobando vínculos…';
@@ -71,13 +91,13 @@ function summary(){
  heading.querySelector('[data-next]')?.addEventListener('click',()=>next.click());
  heading.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{if(b.dataset.go==='offers'){const g=root.querySelector('[data-tpf-summary-group="offers"]');if(g?.dataset.tpfOpen!=='true')g?.querySelector('.tpfSummaryTrigger')?.click();g?.scrollIntoView({block:'nearest'})}else $('cpRefTab-'+b.dataset.go)?.click()});
 }
-function refresh(){if(modal.classList.contains('hidden'))return;watchSources();verification();opportunities();history();summary()}
+function refresh(){if(modal.classList.contains('hidden'))return;watchSources();verification();opportunities();history();summary();recentDocuments()}
 document.addEventListener('click',e=>{if(desktop()&&e.target.closest('#tpfContactPartySummary [data-rel-holders] > summary')){e.preventDefault();e.stopImmediatePropagation();openRelations()}else if(e.target.closest('[data-cp-ref-tab]'))queue()},true);
 window.addEventListener('tpf:contact-open',()=>{closeDialog();oppFilter='active';oppQuery='';historyQuery='';historyType='all';for(const id of ['cpProOppTools','cpProHistoryTools']){const root=$(id);if(root){root.querySelector('input').value='';if(root.querySelector('select'))root.querySelector('select').value='all'}}queue()});
 window.addEventListener('tpf:contact-updated',queue);
 observe(modal,queue,{attributes:true,attributeFilter:['class']});
-for(const id of ['cpOpportunities','cpTasks','cpTimeline'])observe($(id),queue);
+for(const id of ['cpOpportunities','cpTasks','cpTimeline','cpDocumentsPending'])observe($(id),queue);
 let google=null,offerList=null;function watchSources(){const node=$('tpfGoogleInlineCard');if(node&&node!==google){google=node;observe(node,queue,{childList:true,subtree:true,characterData:true})}const offers=$('cpOfferInstances');if(offers&&offers!==offerList){offerList=offers;observe(offers,queue)}}
 observe(modal.querySelector('.cpRight'),queue);observe(modal.querySelector('.tpfContactLinkRow'),queue);window.addEventListener('tpf:sales-updated',queue);
-window.TPFContactWorkspace={openRelations,refresh:queue,opportunityState,showDialog};queue();
+window.TPFContactWorkspace={openRelations,refresh:queue,opportunityState,showDialog,showFilePanel};queue();
 })();

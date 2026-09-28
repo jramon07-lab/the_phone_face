@@ -66,7 +66,7 @@ function bindDocumentTools(){
 }
 function openFile(f,preview){
  const W=window.TPFContactWorkspace,u=f&&fileUrl(f);if(!f||!W||!u)return;
- const target=id,e=epoch,d=W.showDialog(f.name),body=d.lastElementChild;
+ const target=id,e=epoch,d=(W.showFilePanel||W.showDialog)(f.name),body=d.lastElementChild;
  const safeId=/^[\w-]{10,200}$/.test(f.id),download=safeId?'https://drive.google.com/uc?export=download&id='+encodeURIComponent(f.id):u;
  body.innerHTML='<div class="cpProFileTools"><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Abrir en Drive ↗</a><a href="'+esc(download)+'" target="_blank" rel="noopener noreferrer">Descargar</a><button type="button" data-file-task>Crear tarea</button><button type="button" data-file-share>Compartir enlace</button>'+(status?.canUpload?'<button type="button" class="cpProDanger" data-file-trash>Enviar a papelera</button>':'')+'</div><p role="status"></p>'+(preview&&safeId?'<iframe title="Vista previa de '+esc(f.name)+'" src="https://drive.google.com/file/d/'+encodeURIComponent(f.id)+'/preview" referrerpolicy="no-referrer"></iframe><p class="small">Si Google solicita acceso, utiliza Abrir en Drive con tu cuenta conectada.</p>':'');
  const notice=body.querySelector('[role=status]');

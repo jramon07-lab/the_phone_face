@@ -26,7 +26,7 @@
  }
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
-  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['notas','Notas'],['documentos','Documentos'],['historial','Historial']
+  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['documentos','Documentos'],['notas','Notas'],['historial','Historial']
  ];
  panels.forEach(([key,label])=>{
   const b=document.createElement('button');b.type='button';b.id='cpRefTab-'+key;b.dataset.cpRefTab=key;b.textContent=label;b.setAttribute('role','tab');b.setAttribute('aria-controls','cpRefPanel');tabs.appendChild(b);
@@ -84,8 +84,8 @@
  function makeSummaryGroup(root,key,title,items){
   const existing=root.querySelector('[data-tpf-summary-group="'+key+'"]');
   if(existing){const body=existing.querySelector('.tpfSummaryBody');items.filter(Boolean).forEach(item=>{if(item.parentElement!==body)body.append(item);});mountSummaryAction(existing,key,items);setSummaryMetric(existing,summaryMetrics(key));return existing;}
-  const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen='false';
-  const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded','false');
+  const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen=String(key==='offers'||key==='tasks');
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded',block.dataset.tpfOpen);
   const label=document.createElement('span');label.className='tpfSummaryTitle';label.textContent=title;
   const metric=document.createElement('small');metric.className='tpfSummaryMetric';
   const arrow=document.createElement('span');arrow.className='tpfSummaryChevron';arrow.setAttribute('aria-hidden','true');arrow.textContent='⌄';
@@ -162,7 +162,7 @@
  window.addEventListener('tpf:contact-updated',fitContactText);
  window.addEventListener('tpf:contact-text-ready',fitContactText);
  const linkRow=document.createElement('div');linkRow.className='tpfContactLinkRow';
- function ensureLinkRow(){if(linkRow.parentElement!==profile)tabs.before(linkRow);}
+ function ensureLinkRow(){if(linkRow.parentElement!==left)left.append(linkRow);}
  let googleObserved=null;
  function compactGoogle(){
   const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
@@ -319,7 +319,7 @@
  moreMenu.addEventListener('click',e=>{if(e.target.closest('button'))closeMore();});
  document.addEventListener('click',e=>{if(!moreMenu.contains(e.target))closeMore();});
  moreMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMore();moreMenu.querySelector('summary').focus();}});
- window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=false;info.open=false;});
+ window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=true;info.open=false;});
  new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});
  if(quick)new MutationObserver(refreshHeader).observe(quick,{childList:true,subtree:true});
  // Reuse the existing read-only avatar loader and its shared in-memory cache.
