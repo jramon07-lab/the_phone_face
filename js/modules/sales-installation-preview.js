@@ -5,7 +5,7 @@ const $=id=>document.getElementById(id),mode='COMPROBAR VENTAS';let generation=0
 const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const html=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function date(value){
- if(value instanceof Date)return value.toISOString().slice(0,10);
+ if(value instanceof Date)return [value.getFullYear(),String(value.getMonth()+1).padStart(2,'0'),String(value.getDate()).padStart(2,'0')].join('-');
  if(typeof value==='number')return new Date(Date.UTC(1899,11,30)+Math.round(value)*86400000).toISOString().slice(0,10);
  const s=String(value||'').trim(),m=s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
  const out=m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:s.slice(0,10);
@@ -33,7 +33,7 @@ async function preview(){
  if(!file){$('importInfo').textContent='Selecciona el Excel de ventas instaladas.';return;}
  $('importMapping')?.classList.add('hidden');$('importInfo').textContent='Comprobando DNI y oportunidades. No se guardará ningún cambio…';
  try{
-  const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});const sheet=book.SheetNames.find(n=>n==='Export')||book.SheetNames[0];
+  const book=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:false});const sheet=book.SheetNames.find(n=>n==='Export')||book.SheetNames[0];
   const rows=XLSX.utils.sheet_to_json(book.Sheets[sheet],{defval:'',raw:true});
   if(!rows.length||!['DNI','Fecha_Activacion','Transaccion','Operador'].every(k=>k in rows[0]))throw Error('Este modo necesita DNI, Operador, Transaccion y Fecha_Activacion.');
   const [contacts,opps]=await Promise.all([all('records','id,data',['source_sheet','BASE DE DATOS']),all('sales_opportunities','id,record_id,title,expected_date,contract_party')]);

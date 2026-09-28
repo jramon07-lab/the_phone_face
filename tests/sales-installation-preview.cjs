@@ -9,3 +9,5 @@ assert.equal(api.analyse([{Comentario:'Filtros aplicados'}],[contact],[]).length
 assert.equal(api.months('2024-02-29',12),'2025-02-28');
 assert.equal(api.analyse([sale],[contact,{id:'manager',data:{TPF_TITULAR:{holder_dni:'12345678Z'}}}],[])[0].action,'Revisar titular / gestor');
 console.log('PASS: installed-sales preview preserves expected dates, DNI matching, duplicates and calendar boundaries');
+
+assert.equal(api.date(46270),'2026-09-05');
