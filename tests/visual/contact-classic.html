@@ -207,4 +207,10 @@ $('cpDocumentsPending').innerHTML='<div class="cpRefDrive"><strong>Documentos</s
 $('cpDocumentsPending').addEventListener('click',e=>{if(!e.target.matches('[data-doc-preview]'))return;const d=TPFContactWorkspace.showFilePanel(e.target.closest('[data-doc-row]').querySelector('b').textContent);d.lastElementChild.innerHTML='<div class="cpProFileTools"><button>Crear tarea</button><button>Compartir</button><button>Descargar</button></div><p>Vista previa de documento · Ejemplo de verificación</p>';});
 $('cpTasks').addEventListener('click',()=>openAgendaComposer());
 window.dispatchEvent(new CustomEvent('tpf:contact-open'));
+// Visual proposal only: static example relations, no record writes.
+const verify=document.createElement('button');verify.className='classicVerification';verify.textContent='Contacto verificado';$('cpProfileIdentityText').append(verify);
+$('tpfGoogleInlineCard').hidden=true;
+const party=$('tpfContactPartySummary');party.innerHTML='<details><summary>Titulares y gestores <span>1 vínculo</span></summary><div class="classicRelation"><small>Titular del contrato</small><strong>Ismael Demo</strong><button type="button">Ver ficha</button><small>Gestora</small><strong>Elena Demo</strong><button type="button">Gestionar vínculos</button></div></details>';
+const labels=document.querySelector('.contactLabelsBox');labels.before(party);
+
 $('tpfContactEditToggle').onclick=()=>{const editing=$('tpfContactEditToggle').textContent==='Editar datos';document.querySelectorAll('.cpData input,.cpData textarea').forEach(x=>x.readOnly=!editing);$('tpfContactEditToggle').textContent=editing?'Cancelar edición':'Editar datos';};</script></body></html>

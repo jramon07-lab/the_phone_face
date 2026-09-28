@@ -45,3 +45,15 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#con
 #contactModal #tpfContactPartySummary{border:1px solid #e0e6ed;border-radius:8px;padding:16px;font-size:12px;font-weight:600}
 #contactModal .cpDelete{background:white!important;color:#b42318!important;border:1px solid #eadbda!important;padding:8px 12px!important;text-align:left!important;font-size:12px!important}
 }
+
+@media(min-width:1024px){
+#contactModal .classicVerification{align-self:flex-start;border:0;border-radius:4px;padding:3px 7px;background:#e9f7ef;color:#176b42;font-size:12px;font-weight:600}
+#contactModal .cpBadge,#contactModal #tpfGoogleInlineCard,#contactModal .tpfContactLinkRow:empty{display:none!important}
+#contactModal .cpLeft>#tpfContactPartySummary{margin:0 0 12px!important;padding:13px 14px!important;border:1px solid #e0e6ed!important;background:#fff!important;border-radius:8px!important}
+#contactModal #tpfContactPartySummary summary{cursor:pointer;font-size:13px}
+#contactModal #tpfContactPartySummary summary span{font-size:11px;font-weight:400;color:#607086;margin-left:7px}
+#contactModal .classicRelation{display:grid;gap:7px;padding:14px 0 0}
+#contactModal .classicRelation small{font-size:11px;color:#607086;font-weight:400}
+#contactModal .classicRelation strong{font-size:13px}
+#contactModal .classicRelation button{justify-self:start;font-size:12px;padding:5px 8px;background:#fff;border:1px solid #d6e1ef;border-radius:5px;color:#185abb}
+}
