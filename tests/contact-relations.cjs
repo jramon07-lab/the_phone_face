@@ -24,6 +24,16 @@ function state(overrides={}){const s={root:{isConnected:true},ownerId:'manager',
  assert(!fixture.holderCard({record_id:'x',name:'<script>',dni:'<x>'},{}).includes('<script>'));
  const previousSb=context.sb;
  context.sb={from(){return {select(){return this;},eq(k,v){assert.equal(k,'source_sheet');assert.equal(v,'BASE DE DATOS');return this;},async in(k,ids){assert.equal(k,'id');assert.equal(ids.length,2);return {data:[father]};}};}};
+ await R.validateContactRelations({TPF_RELACIONES:{managed_contacts:[{record_id:'father'},{record_id:'deleted'}]}},'manager').then(()=>assert.fail('missing holder accepted'),e=>assert.match(e.message,/disponible/));
+ father.data.TPF_RELACIONES={managed_contacts:[{record_id:'manager'}]};
+ context.sb={from(){return {select(){return this},eq(){return this},async in(){return {data:[father]}}}}};
+ await assert.rejects(()=>R.validateContactRelations({TPF_RELACIONES:{managed_contacts:[{record_id:'father'}]}},'manager'),/ya figura como gestor/);
+ delete father.data.TPF_RELACIONES;
+ await R.validateContactRelations({TPF_RELACIONES:{managed_contacts:[{record_id:'father'}]}},'manager');
+ await assert.rejects(()=>R.validateContactRelations({TPF_RELACIONES:{managed_contacts:[{record_id:'manager'}]}},'manager'),/consigo mismo/);
+ context.sb={from(){return {select(){return this},eq(){return this},async in(){return {error:Error('offline')}}}}};
+ await assert.rejects(()=>R.validateContactRelations({TPF_RELACIONES:{managed_contacts:[{record_id:'father'}]}},'manager'),/offline/);
+ context.sb={from(){return {select(){return this},eq(){return this},async in(){return {data:[father]}}}}};
  const holders=await fixture.currentHolders([{record_id:'father',name:'STALE'},{record_id:'deleted'}]);assert.equal(holders.length,1);assert.equal(holders[0].name,'Torcuato García González');
  const root=fields.tpfContactParty,display={textContent:'',innerHTML:'',append(){}},count={},add={};root.querySelector=q=>q==='[data-rel-list]'?display:q==='[data-rel-count]'?count:add;
  const editor={items:[{record_id:'father',name:'STALE'},{record_id:'deleted',name:'Deleted contact'}]};fixture.form(editor);
