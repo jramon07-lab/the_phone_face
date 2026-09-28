@@ -596,6 +596,7 @@ function renderWaMessages(scrollBottom){
   const anchorId=anchor?.dataset.waMessageId;
   const anchorOffset=anchor?anchor.getBoundingClientRect().top-top:0;
   if(box._waMediaLoadHandler)box.removeEventListener('load',box._waMediaLoadHandler,true);
+  for(const type of ['wheel','touchstart','pointerdown','keydown'])if(box._waScrollIntentHandler)box.removeEventListener(type,box._waScrollIntentHandler);
   const rows=[...(waLiveState.history||[])].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0));
   box.innerHTML=rows.map(m=>{
     const dir=waMessageDirection(m);
@@ -611,21 +612,23 @@ function renderWaMessages(scrollBottom){
     return `<div class="waMsg ${dir}" data-wa-message-id="${esc(String(m?.idMessage||""))}"><div class="waBubble${cls}">${mediaHtml||body}${isMedia&&text&&!info.caption?`<div class="waMediaCaption">${esc(text)}</div>`:""}<div class="waMsgMeta">${esc(waTime(waMessageTimestamp(m)))}</div></div></div>`;
   }).join("")||'<div class="waLiveEmpty">No hay mensajes disponibles en este chat.</div>';
   // Position before the browser paints; never show the top and jump 80ms later.
-  let expectedTop=previousTop;
+  let userMoved=false;
   const restore=(initial=false)=>{
     if(waLiveState.selectionVersion!==selection)return;
     // A late image must not drag the user back after they scroll manually.
-    if(!initial&&Math.abs(box.scrollTop-expectedTop)>2)return;
+    if(!initial&&userMoved)return;
     if(scrollBottom||atBottom)box.scrollTop=box.scrollHeight;
     else{
       const current=anchorId?[...box.querySelectorAll('.waMsg[data-wa-message-id]')].find(n=>n.dataset.waMessageId===anchorId):null;
       box.scrollTop=current?box.scrollTop+current.getBoundingClientRect().top-box.getBoundingClientRect().top-anchorOffset:previousTop;
     }
-    expectedTop=box.scrollTop;
+
   };
   restore(true);
   box._waMediaLoadHandler=()=>restore();
   box.addEventListener('load',box._waMediaLoadHandler,true);
+  box._waScrollIntentHandler=()=>{userMoved=true;};
+  for(const type of ['wheel','touchstart','pointerdown','keydown'])box.addEventListener(type,box._waScrollIntentHandler,{passive:true});
   setTimeout(()=>{if(waLiveState.selectionVersion===selection)hydrateWaMedia();},30);
 }
 
