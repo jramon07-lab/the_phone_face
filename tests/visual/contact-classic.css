@@ -37,3 +37,11 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocuments
 #contactModal .contactCustomFieldsBox{display:none}
 #contactModal .cpData #contactBank{font-size:12px!important;width:100%!important;text-overflow:clip!important}
 }
+@media(min-width:1024px){
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpDuplicateHint{display:none!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactBank{grid-column:1/-1!important;grid-row:8!important;width:100%!important;padding:5px 0!important;min-height:28px!important;height:28px!important;font-size:13px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactBank]{grid-column:1/-1!important;grid-row:7!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactEmail,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactEmail]{grid-row:9!important}
+#contactModal #tpfContactPartySummary{border:1px solid #e0e6ed;border-radius:8px;padding:16px;font-size:12px;font-weight:600}
+#contactModal .cpDelete{background:white!important;color:#b42318!important;border:1px solid #eadbda!important;padding:8px 12px!important;text-align:left!important;font-size:12px!important}
+}
