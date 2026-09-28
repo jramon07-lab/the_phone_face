@@ -24,8 +24,7 @@ function waPerformanceUnread(chat){
   return Math.max(local,server);
 }
 function waPerformanceUnanswered(chat){
-  const chatId=chat&&typeof chat==='object'?chat.id:chat;
-  return typeof waIsUnanswered==='function'&&waIsUnanswered(chatId);
+  return typeof waIsUnanswered==='function'&&waIsUnanswered(chat);
 }
 // In-memory CRM search index: no identity/verification writes and no persisted personal data.
 let waCrmSearchByPhone=new Map(),waCrmSearchAt=0,waCrmSearchLoading=false,waCrmSearchFailed=false,waCrmSearchVersion=0;

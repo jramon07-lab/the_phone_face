@@ -61,7 +61,7 @@ const context={
   _waRenderChatsBase:originalRender,
   hydrateWaAvatars:async()=>{},
   waMeta(id){return metas[id]||{}},
-  waIsUnanswered(id){return id==='waiting'},
+  waIsUnanswered(chat){assert.equal(typeof chat,'object');return chat.id==='waiting'},
   waUnreadCount(id){return id==='unread'?2:0},
   waChatServerUnread(chat){return Number(chat?.serverUnread||0)},
   waNormalizePhone(id){return String(id||'').replace(/\D/g,'')},

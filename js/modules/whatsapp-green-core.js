@@ -1362,7 +1362,7 @@ renderWhatsAppChats=function(){
   if(f==="contacts")rows=rows.filter(c=>String(c.id||"").includes("@c.us"));
   if(f==="unread")rows=rows.filter(c=>waUnreadCount(c.id)>0);
   if(f==="favorites")rows=rows.filter(c=>waMeta(c.id).favorite);
-  if(f==="unanswered")rows=rows.filter(c=>waIsUnanswered(c.id));
+  if(f==="unanswered")rows=rows.filter(c=>waIsUnanswered(c));
   if(f==="archived")rows=rows.filter(c=>waMeta(c.id).archived);
   if(f!=="archived")rows=rows.filter(c=>!waMeta(c.id).archived);
 
@@ -1395,7 +1395,7 @@ renderWhatsAppChats=function(){
     const extras=[];
     if(meta.pinned)extras.push("📌");
     if(meta.favorite)extras.push("★");
-    if(waIsUnanswered(c.id))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
+    if(waIsUnanswered(c))extras.push('<span class="waMiniFlag">Pendiente respuesta</span>');
 
     return `<div class="waChatRow${active}${unread?" waHasUnread":""}" data-wa-chat-id="${esc(c.id)}" onclick="selectWhatsAppChat('${String(c.id).replaceAll("'","\\'")}')">
       <div class="waAvatar${avatar?" hasPhoto":""}" data-wa-avatar-id="${esc(c.id)}" data-wa-initials="${esc(initials)}"${avStyle}>${avatar?"":esc(initials)}</div>
@@ -1436,8 +1436,9 @@ loadWaHistory=async function(scrollBottom=true){
 const _renderWaMessagesTotal=renderWaMessages;
 renderWaMessages=function(scrollBottom){
   _renderWaMessagesTotal(scrollBottom);
+  const orderedMessages=[...(waLiveState.history||[])].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0));
   [...$("waMessages").querySelectorAll(".waMsg")].forEach((node,i)=>{
-    const m=[...(waLiveState.history||[])].sort((a,b)=>Number(waMessageTimestamp(a)||0)-Number(waMessageTimestamp(b)||0))[i];
+    const m=orderedMessages[i];
     if(!m)return;node.dataset.waMsgIndex=String(i);node.title="Doble clic: crear tarea, recordatorio u oportunidad";
     node.ondblclick=()=>waOpenMessageActions(m);
   });

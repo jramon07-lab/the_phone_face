@@ -12,3 +12,22 @@ c.waUpdateAdvancedMetrics();assert.equal(nodes.waAWaiting.textContent,1250);asse
 visible=true;c.waUpdateAdvancedMetrics();assert.equal(hiddenWrites,1);assert.match(nodes.waAnalyticsWaitingList.html,/1250|esperando/);assert.equal(lookups,0);
 assert.equal(c.waIsUnanswered('1'),true,'single-chat callers remain supported');
 console.log('2500-chat metrics preserve counts with zero repeated searches and no hidden list redraw');
+
+// Message actions must sort once, preserving the message bound to each row.
+const start=source.indexOf('renderWaMessages=function(scrollBottom){');
+const end=source.indexOf('\nlet waSelectedActionMessage',start);
+let reads=0,action=null;
+const history=Array.from({length:200},(_,i)=>({timestamp:200-i}));
+const messageNodes=history.map(()=>({dataset:{}}));
+const msgContext={waLiveState:{history,selected:null},_renderWaMessagesTotal(){},$:()=>({querySelectorAll:()=>messageNodes}),waMessageTimestamp(m){reads++;return m.timestamp},waOpenMessageActions(m){action=m}};
+vm.runInNewContext(source.slice(start,end),msgContext);
+msgContext.renderWaMessages(false);
+assert.ok(reads<2000,'message actions must not sort the full history per row');
+messageNodes[0].ondblclick();assert.equal(action.timestamp,1);
+messageNodes[199].ondblclick();assert.equal(action.timestamp,200);
+// Polling refreshes once and does not redraw the desktop list on another screen.
+const manual=fs.readFileSync('js/modules/whatsapp-inbox-manual.js','utf8');
+let hidden=false,redraws=0;
+const inboxContext={document:{hidden:false},$:()=>({classList:{contains:()=>hidden}}),window:{renderWhatsAppChats(){redraws++}},controls(){},loading:false,generation:0,busy:new Set(),rows:new Map(),db:()=>({from:()=>({select:()=>({order:()=>({limit:()=>Promise.resolve({data:[]})})})})}),console};
+vm.runInNewContext(manual.slice(manual.indexOf('function refresh(){'),manual.indexOf('async function save(')),inboxContext);
+(async()=>{await inboxContext.sync(true);assert.equal(redraws,1);hidden=true;await inboxContext.sync(true);assert.equal(redraws,1);hidden=false;await inboxContext.sync();assert.equal(redraws,2);console.log('Message actions sort once; inbox polling renders once only on the visible desktop view');})().catch(e=>{console.error(e);process.exitCode=1});

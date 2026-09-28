@@ -16,11 +16,11 @@ function category(chat,incoming,last){
  return null;
 }
 function describe(chat){const r=rows.get(String(chat.id));if(!r)return '';const inc=Math.max(chat._lastIncomingAt||0,window.waMeta?.(chat.id)?.lastIncomingAt||0);if(inc>stamp(r.inbox_since))return '';if(r.inbox_state==='waiting')return r.inbox_reason+' · desde '+new Date(r.inbox_since).toLocaleDateString('es-ES');if(r.inbox_state==='snoozed')return (stamp(r.inbox_until)<=Date.now()/1000?'Recordatorio vencido: ':'Recordatorio: ')+new Date(r.inbox_until).toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'});return '';}
-function refresh(){window.renderWhatsAppChats?.();window.waRefreshChatTopButtons?.();controls();}
-async function sync(){
+function refresh(){const view=$('view-whatsapplive');if(document.hidden||view?.classList.contains('hidden'))return;window.renderWhatsAppChats?.();window.waRefreshChatTopButtons?.();controls();}
+async function sync(tick=false){
  if(loading||!db()?.from||document.hidden)return;loading=true;const revision=generation;
- try{if(db().auth?.getSession){const {data}=await db().auth.getSession();if(!data?.session)return;}const next=new Map();let after='';for(;;){let q=db().from('crm_whatsapp_chat_state').select('chat_id,inbox_state,inbox_reason,inbox_since,inbox_until').order('chat_id').limit(500);if(after)q=q.gt('chat_id',after);const {data,error}=await q;if(error)throw error;for(const r of data||[])next.set(r.chat_id,r);if((data||[]).length<500)break;after=data[data.length-1].chat_id;}if(revision===generation&&!busy.size){rows.clear();for(const [k,v] of next)rows.set(k,v);refresh();}}
- catch(e){console.warn('No se pudieron actualizar los estados de conversación',e)}finally{loading=false;}
+ try{if(db().auth?.getSession){const {data}=await db().auth.getSession();if(!data?.session)return;}const next=new Map();let after='';for(;;){let q=db().from('crm_whatsapp_chat_state').select('chat_id,inbox_state,inbox_reason,inbox_since,inbox_until').order('chat_id').limit(500);if(after)q=q.gt('chat_id',after);const {data,error}=await q;if(error)throw error;for(const r of data||[])next.set(r.chat_id,r);if((data||[]).length<500)break;after=data[data.length-1].chat_id;}if(revision===generation&&!busy.size){rows.clear();for(const [k,v] of next)rows.set(k,v);if(tick!==true)refresh();}}
+ catch(e){console.warn('No se pudieron actualizar los estados de conversación',e)}finally{loading=false;if(tick===true)refresh();}
 }
 async function save(id,kind,reason='',until=null){
  if(!id||busy.has(id))throw Error('Espera a que termine el guardado');if(!db()?.from)throw Error('No hay conexión');
@@ -52,6 +52,6 @@ function controls(){
 
 window.TPFInboxManual={since:chat=>stamp(rows.get(String(chat.id))?.inbox_since),category,describe,save,sync,open};
 const style=document.createElement('style');style.textContent='#waInboxDialog{width:min(440px,90vw);padding:26px;border:1px solid #dde5ef;border-radius:12px;color:#20344f;box-shadow:0 16px 60px #15253f30}#waInboxDialog::backdrop{background:#15253f30}#waInboxDialog h2{margin:0 0 12px;font-size:20px}#waInboxDialog p{font-size:13px;line-height:1.6}#waInboxDialog label{display:block;font-size:13px;margin:16px 0}#waInboxDialog input,#waInboxDialog select{display:block;width:100%;padding:11px;margin-top:8px;box-sizing:border-box}#waInboxDialog footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.waInboxSafe{background:#edf7f1;color:#2f7150;padding:12px;border-radius:7px}.waInboxError{color:#b42318}.waInboxReason{display:block;font-size:10px;color:#667085;white-space:normal;margin-top:5px}#view-whatsapplive .waChatTopActions{flex-wrap:wrap}#view-whatsapplive #waWaitManual,#view-whatsapplive #waSnoozeManual{font-size:11px;padding:7px!important}';document.head.append(style);
- function install(){controls();sync();setInterval(()=>{if(!document.hidden){sync();refresh();}},20000);window.addEventListener('focus',sync);window.addEventListener('online',sync);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});}
+ function install(){controls();sync();setInterval(()=>{if(!document.hidden){sync(true);}},20000);window.addEventListener('focus',sync);window.addEventListener('online',sync);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
