@@ -113,7 +113,7 @@ function buildCreateModal(){
 function bindUi(){
 
  document.addEventListener('click',e=>{const pencil=e.target.closest?.('.tpfContactPencil');if(!pencil)return;const r=rowById(pencil.dataset.id||pencil.closest('[data-contact-id]')?.dataset.contactId);if(!r)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();openEdit(r);},true);
- byId('tpfContactsSearch').addEventListener('input',e=>{state.filters.q=e.target.value;state.page=1;applyAndRender();});
+ let searchTimer;byId('tpfContactsSearch').addEventListener('input',e=>{state.filters.q=e.target.value;state.page=1;clearTimeout(searchTimer);searchTimer=setTimeout(applyAndRender,160);});
  bindModernFilters();
  byId('tpfContactsRefresh').onclick=()=>loadContacts(true);
  byId('tpfContactsFields').onclick=()=>byId('customFieldsManageBtn')?.click();
@@ -179,9 +179,11 @@ async function fetchOpportunities(){
 function renderSources(){const el=byId('tpfFilterSource');if(!el)return;const cur=state.filters.source;const values=[...new Set(state.rows.map(x=>x.source).filter(Boolean))].sort();el.innerHTML='<option value="">Todos</option>'+values.map(x=>`<option value="${esc(x)}">${esc(x==='BASE DE DATOS'?'Contactos':x)}</option>`).join('');el.value=cur;}
 function renderLabelOptions(){renderFilterLabels();const box=byId('tpfCreateLabels');const checked=new Set([...(box?.querySelectorAll('input:checked')||[])].map(x=>x.value));if(box)box.innerHTML=state.labels.length?state.labels.map((x,i)=>`<label class="tpfContactsLabelChoice"><input type="checkbox" value="${esc(labelId(x))}"><span class="tpfLabelChip ${labelColor(i)}">${esc(labelName(x))}</span></label>`).join(''):'<span class="small">No hay etiquetas creadas.</span>';box?.querySelectorAll('input').forEach(x=>x.checked=checked.has(x.value));byId('tpfContactsLabelsCount')&&(byId('tpfContactsLabelsCount').textContent=String(state.labels.length));window.TPFContactLabelPicker?.install(state.labels);}
 function applyFilters(){
- const f=state.filters,q=norm(f.q),name=norm(f.name),dni=norm(f.dni),phone=digits(f.phone),links=window.TPFRecordLinks,lookup=links?.index?.(state.rows);state.filtered=state.rows.filter(r=>{
+ const f=state.filters,q=norm(f.q),name=norm(f.name),dni=norm(f.dni),phone=digits(f.phone),links=window.TPFRecordLinks,needsOpportunities=!!(f.oppStatus||f.closeFrom||f.closeTo),matchingContacts=new Set();
+ if(needsOpportunities){const lookup=links?.index?.(state.rows);for(const o of state.opportunities){if(!opportunityMatchesFilters(o,f))continue;for(const id of links?.opportunityContacts?.(o,lookup)||[])matchingContacts.add(String(id));}}
+ state.filtered=state.rows.filter(r=>{
   if(q&&!norm([r.fullName,r.nickname,r.dni,r.phone,r.email,r.bank,r.source,window.TPFContactParty?.search(r)].join(' ')).includes(q))return false;if(name&&!norm([r.fullName,r.nickname,r.data?.TPF_TITULAR?.holder_name].join(' ')).includes(name))return false;if(dni&&!norm([r.dni,r.data?.TPF_TITULAR?.holder_dni].join(' ')).includes(dni))return false;if(phone&&![r.phone,r.data?.TPF_TITULAR?.holder_phone].some(value=>digits(value).includes(phone)))return false;if(f.source&&r.source!==f.source)return false;if(!matchesLabels(state.labelsByContact.get(r.id)||[],f))return false;
-  if(f.oppStatus||f.closeFrom||f.closeTo){const matches=state.opportunities.filter(o=>opportunityMatchesContact(o,r,links,lookup));if(!matches.some(o=>opportunityMatchesFilters(o,f)))return false;}
+  if(needsOpportunities&&!matchingContacts.has(String(r.id)))return false;
   return true;
  });const pages=Math.max(1,Math.ceil(state.filtered.length/state.pageSize));if(state.page>pages)state.page=pages;
 }

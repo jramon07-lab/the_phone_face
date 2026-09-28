@@ -6,7 +6,7 @@ const clean=value=>String(value??'').trim();
 const empty=value=>!clean(value)||/^(—|-|sin (tel[eé]fono|dni|nif|correo|notas|observaciones|indicar|datos).*|no disponible)$/i.test(clean(value));
 const fieldIds={contactName:'nombre',contactFirstName:'nombre',contactLastName:'apellidos',contactPhone:'teléfono',contactDni:'DNI / NIF',contactEmail:'correo',contactBank:'IBAN',contactNotes:'notas',contactObservations:'observaciones',tpfCreateFirst:'nombre',tpfCreateLast:'apellidos',tpfCreateNickname:'apodo',tpfCreatePhone:'teléfono',tpfCreateDni:'DNI / NIF',tpfCreateEmail:'correo',tpfCreateBank:'IBAN',tpfCreateNotes:'notas',tpfCreateObs:'observaciones',oppModalClient:'nombre',oppModalPhone:'teléfono',oppModalNotes:'notas de oportunidad',waInternalNote:'nota interna'};
 const textSelectors=[['[data-crm-summary="dni"]','DNI / NIF'],['[data-crm-summary="phone"]','teléfono'],['[data-crm-summary="holder"],[data-crm-summary="manager"],[data-crm-contact="name"]','nombre'],['[data-crm-summary="notes"],[data-crm-contact="notes"]','notas'],['[data-crm-contact="observations"]','observaciones'],['#waSidePhone,#waSidePhoneDetail','teléfono'],['#waSideDni,.tpfSalesDni','DNI / NIF'],['.tpfContactEmail','correo'],['#tpfContactsRows tr[data-contact-id]>td:nth-child(3)','DNI / NIF'],['#tpfContactsRows tr[data-contact-id]>td:nth-child(4)','teléfono'],['.salesPhoneLink,.salesClientPhone,#salesListRows .salesContact>div:first-child','teléfono']];
-const targets=new WeakMap(),buttons=new WeakMap();let scheduled=false;
+const targets=new WeakMap(),buttons=new WeakMap();let scheduled=false;const pendingRoots=new Set();
 function valueOf(target){
  if('value'in target)return clean(target.value);
  const clone=target.cloneNode(true);clone.querySelectorAll?.('.tpfCopyButton,[data-rel-copy]').forEach(x=>x.remove());
@@ -31,13 +31,19 @@ function fieldLabel(input){
  const clone=label.cloneNode(true);clone.querySelectorAll('input,textarea,select,button,.small').forEach(x=>x.remove());const text=clean(clone.textContent);
  return /^(tel[eé]fono(?: whatsapp)?|m[oó]vil|dni(?:\s*\/\s*nif)?|nif|correo(?: electr[oó]nico)?|e-?mail|iban|banco(?:\s*\/\s*iban)?|apodo|observaciones|notas(?: de (?:la |esta )?(?:oportunidad|ficha))?)\s*:?(?:\s*\*)?$/i.test(text)?text:'';
 }
-function scan(){
- scheduled=false;
- for(const input of document.querySelectorAll('input:not([type="password"]):not([type="hidden"]),textarea')){const label=fieldLabel(input);if(label)attach(input,label);}
- for(const [selector,label]of textSelectors)document.querySelectorAll(selector).forEach(node=>attach(node,label));
- document.querySelectorAll('.tpfContactCardMeta>span').forEach(node=>{if(/^(DNI|Tel[eé]fono):/.test(node.textContent))attach(node,node.textContent.split(':')[0]);});
+function scanRoot(root){
+ const query=selector=>[...(root.matches?.(selector)?[root]:[]),...(root.querySelectorAll?.(selector)||[])];
+ for(const input of query('input:not([type="password"]):not([type="hidden"]),textarea')){const label=fieldLabel(input);if(label)attach(input,label);}
+ for(const [selector,label]of textSelectors)query(selector).forEach(node=>attach(node,label));
+ query('.tpfContactCardMeta>span').forEach(node=>{if(/^(DNI|Tel[eé]fono):/.test(node.textContent))attach(node,node.textContent.split(':')[0]);});
 }
-function schedule(){if(scheduled)return;scheduled=true;setTimeout(scan,100);}
+function scan(){scheduled=false;const roots=[...pendingRoots];pendingRoots.clear();for(const root of roots)if(root===document||root.isConnected)scanRoot(root);}
+function schedule(root=document){
+ if(!root?.querySelectorAll)root=document;
+ if([...pendingRoots].some(parent=>parent===document||parent===root||parent.contains?.(root)))return;
+ for(const child of pendingRoots)if(root===document||root.contains?.(child))pendingRoots.delete(child);
+ pendingRoots.add(root);if(scheduled)return;scheduled=true;setTimeout(scan,100);
+}
 async function copy(value){
  if(empty(value))return false;
  if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(value);return true;}catch(_){}}
@@ -57,9 +63,14 @@ window.addEventListener('click',async event=>{
  notify(ok);
  setTimeout(()=>{if(button.isConnected){delete button.dataset.copied;button.title='Copiar '+entry.label;button.setAttribute('aria-label',button.title);}},1800);
 },true);
-new MutationObserver(records=>{if(records.some(record=>record.type==='childList'&&(targets.has(record.target)||[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&!node.matches?.('.tpfCopyButton,.tpfCopyStatus')))||record.type==='attributes'&&record.target.matches?.('.modalBack,.tpfContactsModalBack,#contactModal')))schedule();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+new MutationObserver(records=>{for(const record of records){
+ if(record.type==='attributes'&&record.target.matches?.('.modalBack,.tpfContactsModalBack,#contactModal'))schedule(record.target);
+ if(record.type!=='childList')continue;
+ if(targets.has(record.target)){attach(record.target,buttons.get(targets.get(record.target))?.label||'dato');continue;}
+ for(const node of record.addedNodes)if(node.nodeType===1&&!node.matches?.('.tpfCopyButton,.tpfCopyStatus'))schedule(node);
+}}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 // Typing changes only this field; never rescan the whole CRM per keystroke.
 document.addEventListener('input',event=>{const target=event.target,button=target&&targets.get(target);if(button){const hidden=empty(valueOf(target));if(button.hidden!==hidden)button.hidden=hidden;}},true);
 for(const event of ['tpf:contact-open','tpf:contact-updated','tpf:contacts-rendered','tpf:opportunity-party-preview'])window.addEventListener(event,schedule);
-window.TPFCopyData={valueOf,empty,copy,notify};scan();
+window.TPFCopyData={valueOf,empty,copy,notify};scanRoot(document);
 })();

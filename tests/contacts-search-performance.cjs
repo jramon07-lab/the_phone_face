@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const links=require('../js/modules/record-links.js');let indexes=0,relations=0;
+const window={TPFModules:{register(){}},TPFRecordLinks:{...links,index(rows){indexes++;return links.index(rows)},opportunityContacts(o,index){relations++;return links.opportunityContacts(o,index)}}};
+const source=fs.readFileSync('js/modules/contacts-list-ui.js','utf8').replace("M.register('contacts-list-ui',","window.test={state,applyFilters};M.register('contacts-list-ui',");
+vm.runInNewContext(source,{window,document:{},console});const {state,applyFilters}=window.test;
+state.rows=Array.from({length:3000},(_,i)=>({id:String(i),fullName:'Persona '+i,phone:'600'+String(i).padStart(6,'0'),data:{},nickname:'',dni:'',email:'',bank:'',source:'DATA'}));
+state.opportunities=Array.from({length:1000},(_,i)=>({id:'o'+i,record_id:String(i),status:i%2?'won':'open',expected_date:'2026-10-01'}));
+state.filters.q='persona 2999';applyFilters();assert.deepEqual(Array.from(state.filtered,r=>r.id),['2999']);assert.equal(indexes,0);assert.equal(relations,0,'text search must not compute opportunity relationships');
+state.filters.q='';state.filters.oppStatus='won';applyFilters();assert.equal(state.filtered.length,500);assert.equal(indexes,1);assert.equal(relations,500,'each matching opportunity is resolved once, not once per contact');
+state.filters.closeFrom='2026-11-01';applyFilters();assert.equal(state.filtered.length,0);
+console.log('3000-contact search skips unused relations; sales filtering resolves each matching opportunity once');

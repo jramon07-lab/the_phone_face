@@ -170,6 +170,16 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
         if(view==='database'){
+          const search=page.locator('#tpfContactsSearch');await expect(search).toBeVisible();
+          await page.evaluate(()=>{window.__typingTasks=[];window.__typingObserver=new PerformanceObserver(list=>{for(const e of list.getEntries())window.__typingTasks.push(e.duration)});window.__typingObserver.observe({type:'longtask',buffered:false});});
+          const typingStarted=Date.now();
+          await search.pressSequentially('zzzz rendimiento teclado');
+          await expect(search).toHaveValue('zzzz rendimiento teclado');
+          await expect(page.locator('#tpfContactsResultCount')).toHaveText('0 resultados');
+          const typingTasks=await page.evaluate(()=>{window.__typingObserver.disconnect();return {count:window.__typingTasks.length,longestMs:Math.round(Math.max(0,...window.__typingTasks))};});
+          console.log('CONTACT_SEARCH_TYPING_PERFORMANCE',JSON.stringify({...typingTasks,elapsedMs:Date.now()-typingStarted}));
+          await search.fill('');
+
           await page.locator('#tpfContactsFiltersToggle').click();
           const filters=page.locator('#tpfContactsFilters');
           await expect(filters).toHaveClass(/open/);

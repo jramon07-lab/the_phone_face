@@ -1,12 +1,13 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
-const callbacks={},nodes={},inputCallbacks={};let copied='',fallback=0,scans=0,timers=0;
+const callbacks={},nodes={},inputCallbacks={};let mutation;let copied='',fallback=0,scans=0,timers=0;
 function element(text=''){return {textContent:text,isConnected:true,dataset:{},style:{},classList:{add(){}},setAttribute(){},matches:()=>false,closest:()=>null,append(){},querySelectorAll:()=>[],cloneNode(){return element(this.textContent)},focus(){},select(){},remove(){}};}
 const document={body:{append(node){if(node.id)nodes[node.id]=node}},getElementById:id=>nodes[id],querySelectorAll:()=>{scans++;return []},createElement:()=>element(),addEventListener(name,handler){inputCallbacks[name]=handler},execCommand(){fallback++;return false;}};
-const context={window:{addEventListener:(name,handler)=>{callbacks[name]=handler}},document,navigator:{clipboard:{async writeText(value){copied=value}}},MutationObserver:class{observe(){}},setTimeout(){timers++},clearTimeout(){}};
+const context={window:{addEventListener:(name,handler)=>{callbacks[name]=handler}},document,navigator:{clipboard:{async writeText(value){copied=value}}},MutationObserver:class{constructor(fn){mutation=fn}observe(){}},setTimeout(fn){timers++;context.pending=fn},clearTimeout(){}};
 const source=fs.readFileSync('js/modules/copyable-data.js','utf8').replace('window.TPFCopyData={valueOf,empty,copy,notify}','window.TPFCopyData={valueOf,empty,copy,notify,attach}');
 vm.runInNewContext(source,context);const C=context.window.TPFCopyData;
 (async()=>{
+ const beforeGlobal=scans;let localScans=0;const added={nodeType:1,isConnected:true,matches:()=>false,querySelectorAll:()=>{localScans++;return []}};mutation([{type:'childList',target:{},addedNodes:[added],removedNodes:[]}]);context.pending();assert.equal(scans,beforeGlobal,'new local content must not scan the whole page');assert.ok(localScans>0);
  const scanCount=scans,timerCount=timers;for(let i=0;i<500;i++)inputCallbacks.input({target:{id:'waQuickMessage',value:'Mensaje '+i}});assert.equal(scans,scanCount);assert.equal(timers,timerCount,'typing a message must not schedule whole-page scans');
  assert.equal(C.empty('—'),true);assert.equal(C.empty('Sin teléfono'),true);assert.equal(C.empty('00000000T'),false);
  assert.equal(C.valueOf({value:' 600000001 '}),'600000001');assert.equal(C.valueOf(element('DNI: 00000000T')),'00000000T');
