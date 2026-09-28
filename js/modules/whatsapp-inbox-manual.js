@@ -50,7 +50,7 @@ function controls(){
  if(host&&!document.querySelector('[data-wa-tab="snoozed"]')){const b=document.createElement('button');b.type='button';b.dataset.waTab='snoozed';b.textContent='Aplazados';host.append(b);}
 }
 
-window.TPFInboxManual={category,describe,save,sync,open};
+window.TPFInboxManual={since:chat=>stamp(rows.get(String(chat.id))?.inbox_since),category,describe,save,sync,open};
 const style=document.createElement('style');style.textContent='#waInboxDialog{width:min(440px,90vw);padding:26px;border:1px solid #dde5ef;border-radius:12px;color:#20344f;box-shadow:0 16px 60px #15253f30}#waInboxDialog::backdrop{background:#15253f30}#waInboxDialog h2{margin:0 0 12px;font-size:20px}#waInboxDialog p{font-size:13px;line-height:1.6}#waInboxDialog label{display:block;font-size:13px;margin:16px 0}#waInboxDialog input,#waInboxDialog select{display:block;width:100%;padding:11px;margin-top:8px;box-sizing:border-box}#waInboxDialog footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}.waInboxSafe{background:#edf7f1;color:#2f7150;padding:12px;border-radius:7px}.waInboxError{color:#b42318}.waInboxReason{display:block;font-size:10px;color:#667085;white-space:normal;margin-top:5px}#view-whatsapplive .waChatTopActions{flex-wrap:wrap}#view-whatsapplive #waWaitManual,#view-whatsapplive #waSnoozeManual{font-size:11px;padding:7px!important}';document.head.append(style);
  function install(){controls();sync();setInterval(()=>{if(!document.hidden){sync();refresh();}},20000);window.addEventListener('focus',sync);window.addEventListener('online',sync);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync();});}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();

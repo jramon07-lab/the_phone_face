@@ -475,7 +475,15 @@ test('WhatsApp: búsqueda entre bandejas y lista estable al escribir y refrescar
    chat._lastMessage={timestamp:110,direction:'out'};waLiveState.filter='processing';renderWhatsAppChats();await Promise.resolve();
    const processing=box.textContent.includes('En tramitación')&&!box.textContent.includes('Pendiente');
    waLiveState.filter='waiting';renderWhatsAppChats();await Promise.resolve();
-   return {both,pending,processing,notWaiting:box.querySelectorAll('.waChatRow').length===0};
+   const notWaiting=box.querySelectorAll('.waChatRow').length===0;
+   const now=Date.now(),plan={id:'offer',opportunity_id:'new',status:'following',snapshot:{recipient_phone:'34600123456'},updated_at:new Date(now-60000).toISOString(),next_action:'Revisar documento',next_action_at:new Date(now+3600000).toISOString(),plan_task_id:'task',plan_task:{status:'pending',starts_at:new Date(now+3600000).toISOString(),title:'Revisar documento'}};
+   TPFAutomationInbox.ingestBusiness([plan],[]);waLiveState.filter='snoozed';renderWhatsAppChats();await Promise.resolve();
+   const planned=box.querySelectorAll('.waChatRow').length===1&&box.textContent.includes('Próxima acción: Revisar documento');
+   plan.plan_task.starts_at=new Date(now-1000).toISOString();TPFAutomationInbox.ingestBusiness([plan],[]);waLiveState.filter='unanswered';renderWhatsAppChats();await Promise.resolve();
+   const due=box.querySelectorAll('.waChatRow').length===1&&box.textContent.includes('Próxima acción vencida');
+   plan.plan_task.status='completed';TPFAutomationInbox.ingestBusiness([plan],[]);renderWhatsAppChats();await Promise.resolve();
+   const completed=box.querySelectorAll('.waChatRow').length===0;
+   return {both,pending,processing,notWaiting,planned,due,completed};
  });
- expect(phases).toEqual({both:true,pending:true,processing:true,notWaiting:true});
+ expect(phases).toEqual({both:true,pending:true,processing:true,notWaiting:true,planned:true,due:true,completed:true});
 });

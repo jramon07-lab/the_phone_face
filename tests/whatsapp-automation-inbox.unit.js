@@ -119,3 +119,35 @@ inbox.ingestBusiness([declinedOffer,{...offer('following'),id:'other'}],[saleOpp
 sample._lastMessage={timestamp:now+400,direction:'in'};chatMeta={archived:true,archivedAt:now+420};
 assert.deepEqual(kinds(),['automatic'],'archiving refusal preserves other active offers');
 console.log('Customer decline inbox and explicit archival OK');
+
+// Offer work plans share the existing Agenda task, never create a second reminder.
+const iso=s=>new Date(s*1000).toISOString();
+const planned={...offer('following'),updated_at:iso(now-3600),next_action:'Revisar documentación',next_action_at:iso(now+86400),plan_task_id:'existing-task',plan_task:{status:'pending',starts_at:iso(now+86400),title:'Revisar documentación'}};
+chatMeta={};sample._lastMessage={timestamp:now-7200,direction:'out'};
+context.TPFInboxManual.since=()=>0;
+inbox.ingestBusiness([planned],[saleOpp]);assert.deepEqual(kinds(),['snoozed','automatic']);
+assert.equal(inbox.workPlan(sample).at,now+86400);
+assert.match(inbox.describe(sample),/Próxima acción: Revisar documentación/);
+sample._lastMessage={timestamp:now-60,direction:'in'};assert.deepEqual(kinds(),['unanswered','automatic'],'new incoming interrupts future snooze');
+sample._lastMessage={timestamp:now,direction:'out'};assert.deepEqual(kinds(),['snoozed','automatic'],'manual reply returns to the remaining planned action');
+const due={...planned,plan_task:{...planned.plan_task,starts_at:iso(now-30)}};
+inbox.ingestBusiness([due],[saleOpp]);assert.deepEqual(kinds(),['unanswered','automatic'],'edited task date overrides old offer date');
+assert.match(inbox.describe(sample),/Próxima acción vencida/);
+chatMeta={archived:true,archivedAt:now-40};assert.deepEqual(kinds(),['unanswered','automatic'],'attending before the deadline does not swallow the reminder');
+chatMeta={archived:true,archivedAt:now};assert.deepEqual(kinds(),['automatic'],'attending after the deadline dismisses its pending badge');
+inbox.ingestBusiness([planned],[saleOpp]);assert.deepEqual(kinds(),['snoozed','automatic'],'a rescheduled future task reappears');
+chatMeta={};
+for(const status of ['completed','cancelled']){
+ inbox.ingestBusiness([{...planned,plan_task:{...planned.plan_task,status}}],[saleOpp]);assert.deepEqual(kinds(),['automatic'],status+' task removes the snooze');
+}
+inbox.ingestBusiness([{...planned,plan_task:null}],[saleOpp]);assert.deepEqual(kinds(),['automatic'],'inaccessible linked tasks cannot invent reminders');
+inbox.ingestBusiness([{...planned,plan_task:null,plan_task_id:null,next_action_at:null}],[saleOpp]);assert.deepEqual(kinds(),['automatic'],'deleted task clears the linked date');
+inbox.ingestBusiness([{...planned,plan_task:null,plan_task_id:null}],[saleOpp]);assert.deepEqual(kinds(),['snoozed','automatic'],'dated plan without an Agenda notification still classifies');
+context.TPFInboxManual.since=()=>now-10;context.TPFInboxManual.category=()=> 'waiting';
+assert.deepEqual(kinds(),['waiting','automatic'],'a later explicit wait takes precedence');
+context.TPFInboxManual.since=()=>0;context.TPFInboxManual.category=()=>null;
+inbox.ingestBusiness([planned,{...due,id:'second'}],[saleOpp]);assert.deepEqual(kinds(),['unanswered','automatic'],'earliest pending action wins across multiple real offers');
+inbox.ingestBusiness([{...planned,status:'won'}],[saleOpp]);assert.deepEqual(kinds(),['archived'],'old plans on closed offers do not reopen the sale');
+inbox.ingestBusiness([],[]);assert.deepEqual(kinds(),['all'],'reply without an offer remains in Todos');
+sample._lastMessage={timestamp:now+10,direction:'in'};assert.deepEqual(kinds(),['unanswered'],'next customer reply needs attention');
+console.log('Linked offer plans: future, due, incoming, attendance, edits, completion and multiple offers OK');

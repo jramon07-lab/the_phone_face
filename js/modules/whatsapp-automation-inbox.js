@@ -106,11 +106,16 @@
     for(const offer of offers){
       const o=oppById.get(String(offer.opportunity_id));
       const key=phoneKey(offer.snapshot?.recipient_phone||o?.contract_party?.recipient_phone||o?.phone);if(!key)continue;
-      const item=next.get(key)||{automatic:false,processing:false,paused:false,wonAt:0,declinedAt:0};
+      const item=next.get(key)||{automatic:false,processing:false,paused:false,wonAt:0,declinedAt:0,plans:[]};
       if(['following','queued','paused','error'].includes(offer.status)){item.automatic=true;if(offer.status==='paused')item.paused=true;}
       if(['accepted','processed'].includes(offer.status))item.processing=true;
       if(offer.status==='lost'&&offer.customer_declined_at)item.declinedAt=Math.max(item.declinedAt,seconds(offer.customer_declined_at));
       if(offer.status==='won')item.wonAt=Math.max(item.wonAt,seconds(offer.status_changed_at||offer.updated_at));
+      const task=offer.plan_task,at=seconds(task?.starts_at||offer.next_action_at);
+      // A linked task is authoritative. Completed/deleted tasks must not leave ghost reminders.
+      if(['following','queued','paused','error','accepted','processed'].includes(offer.status)&&at&&offer.next_action&&(!offer.plan_task_id||task?.status==='pending')){
+        item.plans.push({at,setAt:seconds(offer.updated_at),title:task?.title||offer.next_action});
+      }
       next.set(key,item);
     }
     businessByPhone=next;
@@ -123,22 +128,38 @@
     async function all(table,columns,key='id'){const rows=[];for(let start=0;;start+=500){const {data,error}=await db.from(table).select(columns).order(key).range(start,start+499);if(error)throw error;rows.push(...(data||[]));if((data||[]).length<500)return rows;}}
     try{
       if(db.auth?.getSession){const {data}=await db.auth.getSession();if(!data?.session)return;}
-      const [offers,opps,archives]=await Promise.all([all('crm_offer_instances','id,opportunity_id,status,snapshot,status_changed_at,updated_at,customer_declined_at'),all('sales_opportunities','id,phone,contract_party'),all('crm_whatsapp_chat_state','chat_id,declined_archived_at','chat_id')]);
+      const [offers,opps,archives]=await Promise.all([all('crm_offer_instances','id,opportunity_id,status,snapshot,status_changed_at,updated_at,customer_declined_at,next_action,next_action_at,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)'),all('sales_opportunities','id,phone,contract_party'),all('crm_whatsapp_chat_state','chat_id,declined_archived_at','chat_id')]);
       ingestBusiness(offers,opps);if(revision===declineRevision)ingestDeclineArchives(archives);businessAt=Date.now();window.renderWhatsAppChats?.();
     }catch(e){console.warn('No se pudo actualizar la fase de las ofertas de WhatsApp',e)}finally{businessLoading=false;}
   }
   async function reload(){await Promise.all([loadAutomaticSends(),loadBusiness(true)]);}
   function meta(chat){return window.waMeta?.(chat.id)||{}}
   function incoming(chat){return Math.max(Number(chat?._lastIncomingAt||0),Number(meta(chat).lastIncomingAt||0),!preview(chat).outgoing?preview(chat).timestamp:0)}
+  function workPlan(chat){
+    const m=meta(chat),manualAt=window.TPFInboxManual?.since?.(chat)||0;
+    return (business(chat)?.plans||[]).filter(p=>manualAt<=p.setAt&&Number(m.archivedAt||0)<Math.max(p.setAt,p.at)).sort((a,b)=>a.at-b.at)[0]||null;
+  }
+  function planCategory(chat){
+    const p=workPlan(chat);if(!p)return null;
+    const last=preview(chat),inc=incoming(chat),m=meta(chat);
+    const freshIncoming=inc>p.setAt&&inc>Number(m.archivedAt||0)&&(!last.outgoing||isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage));
+    return freshIncoming||p.at<=Date.now()/1000?'unanswered':'snoozed';
+  }
+  function describe(chat){
+    const p=workPlan(chat);if(!p)return window.TPFInboxManual?.describe(chat)||'';
+    if(planCategory(chat)==='unanswered'&&p.at>Date.now()/1000)return 'Revisar mensaje del cliente';
+    return (p.at<=Date.now()/1000?'Próxima acción vencida: ':'Próxima acción: ')+p.title+' · '+new Date(p.at*1000).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'});
+  }
   function facets(chat){
     const m=meta(chat),last=preview(chat),inc=incoming(chat),phase=business(chat);
-    const manual=window.TPFInboxManual?.category(chat,inc,{...last,automatic:isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage)});
+    const plan=planCategory(chat);
+    const manual=plan||window.TPFInboxManual?.category(chat,inc,{...last,automatic:isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage)});
     const automaticMessage=isAutomaticWaiting(chat)||!!window.TPFWaAutoReplies?.isReply(last.idMessage);
     const resolved=!!m.archived&&inc<=Number(m.archivedAt||0);
-    const pending=!resolved&&(manual==='unanswered'||(!['waiting','snoozed'].includes(manual)&&inc>0&&(!last.outgoing||automaticMessage)));
+    const pending=plan==='unanswered'||(!resolved&&(manual==='unanswered'||(!['waiting','snoozed'].includes(manual)&&inc>0&&(!last.outgoing||automaticMessage))));
     const dismissedAt=declineArchives.get(String(chat.id))||0;
     const declined=!!phase?.declinedAt&&!(dismissedAt>=phase.declinedAt&&inc<=dismissedAt&&Number(m.reopenedAt||0)<=dismissedAt);
-    const businessOpen=!!(phase?.automatic||phase?.processing||declined);
+    const businessOpen=!!(phase?.automatic||phase?.processing||declined||plan);
     const remainingWork=businessOpen;
     const wonArchived=!!phase?.wonAt&&!remainingWork&&!pending&&!manual&&inc<=phase.wonAt&&Number(m.reopenedAt||0)<=phase.wonAt;
     if((m.archived&&!businessOpen&&inc<=Number(m.archivedAt||Infinity))||wonArchived)return ['archived'];
@@ -201,7 +222,7 @@
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);
     let info=document.getElementById('waInboxHelp');
     if(!info){info=document.createElement('div');info.id='waInboxHelp';info.setAttribute('role','status');document.getElementById('waLiveSearch')?.parentElement.after(info);}
-    const messages={declined:'Clientes que pulsaron No me interesa. Atender conserva esta lista; Archivar los retira.',unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas hasta la fecha elegida.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
+    const messages={declined:'Clientes que pulsaron No me interesa. Atender conserva esta lista; Archivar los retira.',unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas y próximas acciones. Al llegar la fecha vuelven a Pendientes.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
     info.textContent=messages[liveState()?.filter||'all']||'Filtra tus conversaciones.';
     updateAutomaticCount();decorateHeader();
   }
@@ -229,7 +250,7 @@
     document.querySelectorAll('#waLiveChats .waChatRow').forEach(row=>{
       const chat=rows.get(row.dataset.waChatId);if(!chat)return;
       const kinds=facets(chat),labels={automatic:business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',declined:'No interesado',waiting:'Esperando respuesta',unanswered:'Pendiente',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};
-      const detail=window.TPFInboxManual?.describe(chat)||(kinds.includes('unanswered')?'Revisar mensaje del cliente':'');
+      const detail=describe(chat)||(kinds.includes('unanswered')?'Revisar mensaje del cliente':'');
       const signature=JSON.stringify([kinds.map(k=>labels[k]),detail]);
       if(row.__tpfInboxDecoration===signature)return;
       row.__tpfInboxDecoration=signature;
@@ -261,7 +282,7 @@
   function styles(){
     if(document.getElementById('tpfWaAutomationInboxCss'))return;
     const style=document.createElement('style');style.id='tpfWaAutomationInboxCss';
-    style.textContent=`.waInboxFlag.declined,.m-inbox-badge.declined{background:#fff0ed;color:#a33b28}.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
+    style.textContent=`#waArchiveDeclined[hidden]{display:none!important}.waInboxFlag.declined,.m-inbox-badge.declined{background:#fff0ed;color:#a33b28}.waInboxFlag.processing,.m-inbox-badge.processing{background:#eaf2ff;color:#175cd3}.waInboxFlag.archived,.m-inbox-badge.archived{background:#eef2f5;color:#475569}.waInboxFlag+.waInboxFlag,.m-inbox-badge+.m-inbox-badge{margin-left:4px}#view-whatsapplive .waAutomaticCount{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#e8efff;color:#315ea8;font-size:10px}#view-whatsapplive .waTabs button.active .waAutomaticCount{background:#fff;color:#172033}#view-whatsapplive .waAutomaticFlag{display:inline-flex;padding:3px 7px;border-radius:999px;background:#fff4d6;color:#8a5b00;font-size:9px;font-weight:800}#view-whatsapplive .waAutomaticCount[hidden]{display:none!important}`;
     document.head.appendChild(style);
   }
   function bindManualComposer(){
@@ -298,12 +319,15 @@
     }
     reload();
     window.addEventListener('tpf:sales-updated',()=>loadBusiness(true));
+    window.addEventListener('tpf:tasks-changed',()=>loadBusiness(true));
+    window.addEventListener('focus',()=>loadBusiness(true));
+    setInterval(()=>{if(!document.hidden&&[...businessByPhone.values()].some(x=>x.plans.length))window.renderWhatsAppChats?.();},20000);
     window.addEventListener('tpf:followup-ready',()=>loadBusiness());
     clearInterval(timer);timer=setInterval(()=>{
       const view=document.getElementById('view-whatsapplive');
-      if(view&&!view.classList.contains('hidden'))reload();
+      if(!document.hidden&&(!view||!view.classList.contains('hidden')))reload();
     },REFRESH_MS);
   }
-  window.TPFAutomationInbox={isAutomaticWaiting,category,facets,matchesFilter,business,ingestBusiness,ingestDeclineArchives,archiveDeclined,ingestJobs,reload};
+  window.TPFAutomationInbox={isAutomaticWaiting,category,facets,matchesFilter,business,workPlan,describe,ingestBusiness,ingestDeclineArchives,archiveDeclined,ingestJobs,reload};
   M.register('whatsapp-automation-inbox',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();

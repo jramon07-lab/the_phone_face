@@ -1159,7 +1159,7 @@
   }
   async function completeTask(id){
     if(!has('can_manage_agenda')||!confirm('¿Marcar esta tarea como completada?'))return;
-    try{const {error}=await client.from('agenda_items').update({status:'completed'}).eq('id',id).select('id').single();if(error)throw error;await refreshData({silent:true});render();toast('Tarea completada.','success');}catch(error){toast(error?.message||'No se pudo completar.','error');}
+    try{const {error}=await client.from('agenda_items').update({status:'completed'}).eq('id',id).select('id').single();if(error)throw error;window.dispatchEvent(new CustomEvent('tpf:tasks-changed'));await refreshData({silent:true});render();toast('Tarea completada.','success');}catch(error){toast(error?.message||'No se pudo completar.','error');}
   }
   function taskLocalValue(value){if(!value)return '';const date=new Date(value);if(Number.isNaN(date.getTime()))return '';date.setMinutes(date.getMinutes()-date.getTimezoneOffset());return date.toISOString().slice(0,16);}
   const MOBILE_TASK_DEFAULT_TYPES=['Tarea','Llamada','Cita','WhatsApp'];
@@ -1246,6 +1246,7 @@
     return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description,row.agenda_meta?.attachments||[])}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
   }
   function mergeTaskChange(id,row){
+    window.dispatchEvent(new CustomEvent('tpf:tasks-changed'));
     if(row){const index=state.tasks.findIndex(item=>String(item.id)===String(id));if(index>=0)state.tasks[index]=row;else state.tasks.push(row);}
     else state.tasks=state.tasks.filter(item=>String(item.id)!==String(id));
     state.agenda.requestId++;state.agenda.loaded=false;state.agenda.loading=false;
@@ -2164,7 +2165,7 @@ function crmInteractiveText(message){
   window.TPFModules={register(name,module){try{module.install?.()}catch(e){console.error('MOBILE_SHARED_MODULE',name,e)}},report(name,error){console.warn(name,error)}};
   window.addEventListener?.('tpf:sales-updated',()=>{if(state.user)refreshData({silent:true});});
   window.addEventListener?.('tpf:wa-shared-state',()=>{if(state.user&&has('can_use_whatsapp')){loadMobileWaArchiveStates().then(()=>window.renderWhatsAppChats());window.TPFPrivateReads?.sync();}});
-  function mobileSharedBadge(chat){const kinds=window.TPFAutomationInbox?.facets(chat)||[],labels={unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:window.TPFAutomationInbox?.business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',declined:'No interesado',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};return kinds.map(kind=>`<span class="m-inbox-badge ${esc(kind)}">${esc(labels[kind]||kind)}</span>`).join('')+`<small class="m-inbox-reason">${esc(window.TPFInboxManual?.describe(chat)||'')}</small>`;}
+  function mobileSharedBadge(chat){const kinds=window.TPFAutomationInbox?.facets(chat)||[],labels={unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:window.TPFAutomationInbox?.business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',declined:'No interesado',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};return kinds.map(kind=>`<span class="m-inbox-badge ${esc(kind)}">${esc(labels[kind]||kind)}</span>`).join('')+`<small class="m-inbox-reason">${esc(window.TPFAutomationInbox?.describe(chat)||window.TPFInboxManual?.describe(chat)||'')}</small>`;}
   async function loadMobileAutomaticKinds(){if(Date.now()-automaticAt<90000)return;automaticAt=Date.now();await window.TPFAutomationInbox?.reload();}
   async function openMobileSharedOffer(id){
     if(!has('can_edit_sales')||!has('can_use_whatsapp'))return toast('No tienes permiso para enviar ofertas.','error');
