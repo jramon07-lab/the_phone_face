@@ -201,11 +201,11 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
           const originalViewport=page.viewportSize();
           for(const width of [1280,1366,1920,2560]){
             await page.setViewportSize({width,height:768});
-            const tabs=await page.locator('#view-whatsapplive .waLivePage>.waTabs').evaluate(el=>{
+            await expect.poll(async()=>{const tabs=await page.locator('#view-whatsapplive .waLivePage>.waTabs').evaluate(el=>{
               const buttons=[...el.querySelectorAll(':scope>button[data-wa-tab]')].filter(b=>b.getBoundingClientRect().width);
               return {count:buttons.length,tops:buttons.map(b=>Math.round(b.getBoundingClientRect().top)),fits:el.scrollWidth<=el.clientWidth+1};
             });
-            expect(tabs.count).toBe(12);expect(new Set(tabs.tops).size).toBe(1);expect(tabs.fits).toBe(true);
+            return {count:tabs.count,lines:new Set(tabs.tops).size,fits:tabs.fits};},{message:'Las 12 pestañas deben caber después del ajuste de tamaño',timeout:5000}).toEqual({count:12,lines:1,fits:true});
           }
           await page.setViewportSize(originalViewport);
           const row=page.locator('#waLiveChats .waChatRow').first();
