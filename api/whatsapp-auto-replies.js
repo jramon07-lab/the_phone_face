@@ -28,6 +28,17 @@ async function run(){
   // Check disabled/edited state again before every claim.
   const [fresh]=await db('crm_whatsapp_reply_settings?id=eq.1&select=enabled,updated_at');if(!fresh?.enabled||fresh.updated_at!==config.updated_at)break;
   const key=crypto.createHash('sha256').update(row.chat_id+'|'+period).digest('hex');
+  // Avoid provider reads for an already handled closure (including uncertain sends).
+  const existing=await db('crm_whatsapp_reply_receipts?dedupe_key=eq.'+key+'&select=dedupe_key&limit=1');if(existing.length)continue;
+  // Native-phone replies may not yet be persisted by the incoming-only webhook.
+  // Read fresh provider history; an unavailable/incomplete history must not send a stale reply.
+  try{
+   const historyResponse=await fetch(BASE+'/waInstance'+encodeURIComponent(ID)+'/getChatHistory/'+encodeURIComponent(TOKEN),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId:row.chat_id,count:20}),signal:AbortSignal.timeout(8000)});
+   if(!historyResponse.ok)continue;
+   const history=await historyResponse.json();
+   if(!Array.isArray(history)||!history.some(m=>String(m.idMessage||'')===String(row.id_message)))continue;
+   if(history.some(m=>m.type==='outgoing'&&Number(m.timestamp)>=Number(row.ts)))continue;
+  }catch(_){continue;}
   let claim;try{claim=await db('crm_whatsapp_reply_receipts?on_conflict=dedupe_key','POST',{dedupe_key:key,chat_id:row.chat_id,incoming_id:row.id_message,closure:period,status:'reserved'},'resolution=ignore-duplicates,return=representation');}catch(e){throw e;}if(!claim?.length)continue;
   // A reserved/uncertain attempt is never automatically resent: a timeout may still have delivered it.
   try{

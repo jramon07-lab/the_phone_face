@@ -16,13 +16,15 @@ assert(C.eligible(row,date,'2026-09-26T20:00:00Z'));
 for(const patch of [{direction:'out'},{type_message:'audioMessage'},{chat_id:'1@g.us'},{ts:date/1000-600},{text_content:'Me interesa'}])assert(!C.eligible({...row,...patch},date,'2026-09-26T20:00:00Z'));
 const RealDate=Date;global.Date=class extends RealDate{constructor(...args){super(...(args.length?args:['2026-09-26T21:20:00Z']))}static now(){return date.getTime()}};
 Object.assign(process.env,{SUPABASE_SERVICE_ROLE_KEY:'test-service',GREEN_API_INSTANCE_ID:'test',GREEN_API_TOKEN:'test-token',CRON_SECRET:'test-cron',VERCEL_ENV:'production'});
-const handler=require('../api/whatsapp-auto-replies');let records=new Map(),sends=0,fail=false,answered=false;
+const handler=require('../api/whatsapp-auto-replies');let records=new Map(),sends=0,fail=false,answered=false,phoneAnswered=false,historyFails=false,historyMissing=false;
 global.fetch=async(url,opts={})=>{let value=[];const path=url.split('/rest/v1/')[1];
  if(path?.startsWith('crm_whatsapp_reply_settings'))value=[{...C.DEFAULTS,enabled:true,enabled_since:'2026-09-26T20:00:00Z',updated_at:'v1'}];
  else if(path?.startsWith('wa_messages?direction'))value=[row];
  else if(path?.startsWith('wa_messages?chat_id'))value=answered?[{id:1}]:[];
  else if(path?.startsWith('crm_whatsapp_reply_receipts?on_conflict')){const data=JSON.parse(opts.body);if(!records.has(data.dedupe_key)){records.set(data.dedupe_key,data);value=[data];}}
+ else if(path?.startsWith('crm_whatsapp_reply_receipts?dedupe_key')&&opts.method==='GET')value=records.has(path.split('eq.')[1].split('&')[0])?[{}]:[];
  else if(path?.startsWith('crm_whatsapp_reply_receipts?dedupe_key')){Object.assign(records.get(path.split('eq.')[1]),JSON.parse(opts.body));}
+ else if(url.includes('/getChatHistory/')){if(historyFails)throw Error('unavailable');value=historyMissing?[]:[{idMessage:row.id_message,type:'incoming',timestamp:row.ts},...(phoneAnswered?[{idMessage:'manual-phone',type:'outgoing',timestamp:row.ts+1}]:[])];}
  else if(url.includes('/sendMessage/')){sends++;if(fail)throw Error('timeout after possible delivery');value={idMessage:'receipt-1'};}
  else assert(path?.startsWith('crm_whatsapp_reply_receipts?created_at')||path==='wa_messages',url);
  return {ok:true,status:200,json:async()=>value};};
@@ -33,5 +35,9 @@ const call=async(secret='test-cron')=>{const result={setHeader(){},status(n){thi
  await call();assert.equal(sends,1);
  records.clear();fail=true;await call();await call();assert.equal(sends,2,'uncertain delivery must not retry');assert.equal([...records.values()][0].status,'uncertain');
  records.clear();answered=true;await call();assert.equal(sends,2,'human response prevents stale acknowledgement');
+ answered=false;fail=false;phoneAnswered=true;await call();assert.equal(sends,2,'native phone response prevents stale acknowledgement');
+ phoneAnswered=false;historyFails=true;await call();assert.equal(sends,2,'unavailable provider history must fail closed');
+ historyFails=false;historyMissing=true;await call();assert.equal(sends,2,'incomplete history must fail closed');
+ historyMissing=false;await call();assert.equal(sends,3,'unanswered verified incoming message receives acknowledgement');
  console.log('PASS: Madrid hours/DST, eligibility, auth, concurrent dedupe, uncertain send, answered chat');
 })().catch(e=>{console.error(e);process.exitCode=1});
