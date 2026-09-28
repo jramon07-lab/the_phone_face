@@ -1658,30 +1658,40 @@ if($("salesBulkMove"))$("salesBulkMove").onclick=moveSelectedSalesOpportunities;
 if($("salesBulkDelete"))$("salesBulkDelete").onclick=deleteSelectedSalesOpportunities;
 
 function renderSalesList(){
-  if(!$("salesListRows"))return;
+  const target=$("salesListRows"),view=$("salesListView");
+  if(!target)return;
   const stages=salesCache.stages||[];
-  const stageName=id=>stages.find(s=>String(s.id)===String(id))?.name||"";
   const rows=salesFilteredOpps();
 
-  $("salesListRows").innerHTML=rows.length?rows.map(o=>`
-    <div class="salesListRow" data-opp-id="${esc(o.id||'')}">
+  const markup=rows.length?rows.map(o=>`
+    <div class="salesListRow" data-compact="1" data-opp-id="${esc(o.id||'')}">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
-      <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title||"Oportunidad")}</button>
-      <div>${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}</div>
-      <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
-      <div class="tpfSalesPhone" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(o.phone||"—")}</div>
-      <div>${esc(o.import_reference&&o.amount==null?'Sin precio · Revisar':fmtMoney(o.amount||0))}</div>
+      <div class="salesIdentity">${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}
+        <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title||"Oportunidad")}</button>
+      </div>
+      <div class="salesContact">
+        <div class="tpfSalesPhone" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(o.phone||"—")}</div>
+        <div class="tpfSalesDni" data-record-id="${esc(o.record_id||'')}" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(window.TPFContactParty?.opportunityIdentity(o).dni||'—')}</div>
+      </div>
+      <div class="salesAmount">${esc(o.import_reference&&o.amount==null?'Sin precio · Revisar':fmtMoney(o.amount||0))}</div>
       <div>
         <select onclick="event.stopPropagation()" onchange="event.stopPropagation();moveOpp('${o.id}',this.value)">
           ${stages.map(s=>`<option value="${s.id}" ${String(s.id)===String(o.stage_id)?"selected":""}>${esc(s.name)}</option>`).join("")}
         </select>
-        ${window.TPFOfferFollowup?.html(o.id,true)||""}
       </div>
+      <div class="salesFollowup">${window.TPFOfferFollowup?.html(o.id,true)||"—"}</div>
       <div class="salesListDate"><input type="text" class="salesListDateInput" data-opp-id="${esc(o.id||'')}" data-original-date="${esc(o.expected_date||'')}" value="${esc(o.expected_date?fmtDateOnly(o.expected_date):'')}" placeholder="dd/mm/aaaa" inputmode="numeric" aria-label="Fecha de oportunidad"></div>
       <div class="salesListAction"><button type="button" class="tpfListMenuBtn" aria-label="Acciones de ${esc(o.title||'Oportunidad')}" title="Acciones">•••</button></div>
     </div>`).join("")
     : '<div class="cpEmpty" style="padding:20px">No hay oportunidades.</div>';
 
+  // Keep decorated rows, focus and scroll when a background refresh changes nothing.
+  if(target._salesMarkup!==markup){
+    const top=view?.scrollTop||0,left=view?.scrollLeft||0;
+    target.innerHTML=markup;
+    target._salesMarkup=markup;
+    if(view){view.scrollTop=top;view.scrollLeft=left;}
+  }
   updateSalesBulkUi();
 }
 
