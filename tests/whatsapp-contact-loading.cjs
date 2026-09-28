@@ -15,3 +15,18 @@ vm.createContext(c);vm.runInContext(source.slice(start,end),c);
  const failed=c.window.selectWhatsAppChat('c');await Promise.resolve();pending[2].reject(new Error('network'));await assert.rejects(failed,/network/);assert.equal(node('waContactCard').inert,false,'error must release the loading state');
  console.log('Contact placeholder preserves layout, ignores stale completion and releases on failure');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+// A slow opportunities/tasks response must not block an already matched client.
+(async()=>{
+ const begin=source.indexOf('async function matchWaContact('),finish=source.indexOf('\n\nfunction oppStageName',begin);
+ let release,ready=false,settled=false;
+ const state={selected:{id:'34600000000@c.us'},selectionVersion:1};
+ const ui=()=>({classList:{add(){},remove(){},toggle(){}},textContent:'',innerHTML:''});
+ const context={waLiveState:state,$:ui,waNormalizePhone:x=>x,waPhoneVariants:()=>['600000000'],contactField:(d,...keys)=>keys.map(k=>d[k]).find(Boolean)||'',sb:{rpc:async()=>({data:[{id:'client',data:{'TELÉFONO':'34600000000@c.us'}}]})},waContactLoading:v=>{ready=!v},loadWaContactSideData:()=>new Promise(r=>release=r)};
+ vm.createContext(context);vm.runInContext(source.slice(begin,finish),context);
+ const request=context.matchWaContact().then(()=>settled=true);
+ await new Promise(setImmediate);
+ assert.equal(ready,true,'client must be usable before related queries finish');assert.equal(settled,false);
+ release();await request;
+ console.log('Client fields unlock before secondary data queries finish');
+})().catch(e=>{console.error(e);process.exitCode=1});

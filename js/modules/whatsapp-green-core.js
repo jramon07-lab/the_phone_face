@@ -546,6 +546,7 @@ function waContactLoading(active){
     card.setAttribute('aria-busy','true');
     card.dataset.waLoading='true';
   }else{
+    if(card.dataset.waLoading!=='true')return;
     // Refresh field values synchronously before revealing the new contact.
     window.dispatchEvent(new Event('tpf:wa-contact-ready'));
     card.inert=false;
@@ -718,6 +719,8 @@ async function matchWaContact(){
   $("waSideOpenContact").classList.remove("hidden");
   $("waSideNotes").textContent=contactField(d,"NOTAS","NOTES","OBSERVACIONES")||"—";
 
+  // Client identity is ready; secondary queries must not keep its fields locked.
+  waContactLoading(false);
   await loadWaContactSideData(found,phone);
 }
 
