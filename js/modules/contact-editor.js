@@ -33,6 +33,8 @@ function syncNote(id){
 function enhance(back){
  if(!back||back.classList.contains('tpfContactEditor'))return;
  back.classList.add('tpfContactEditor');
+ // These are customer records, not the browser owner's payment/contact details.
+ for(const input of back.querySelectorAll('input,textarea,select'))input.setAttribute('autocomplete','off');
  const modal=back.querySelector('.tpfContactsModal');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','tpfContactEditorTitle');
  const title=back.querySelector('h3');title.id='tpfContactEditorTitle';
  const avatar=document.createElement('span');avatar.className='tpfEditorAvatar';avatar.id='tpfEditorAvatar';avatar.setAttribute('aria-hidden','true');title.parentElement.before(avatar);

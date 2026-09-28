@@ -18,7 +18,7 @@ function edit(id){
  if(!api()?.allowed()||!current()?.id)return;
  if(session){if(session.busy||dirty()){session.msg.textContent='Guarda o cancela antes de editar otro campo.';return;}close();}
  const c=current(),f=api().fields[id],host=view.querySelector('[data-wa-field="'+id+'"]')||$('waFieldIdentityEditors'),box=document.createElement('div');box.className='waFieldEditor';box.setAttribute('role','group');box.ariaLabel='Editar '+f.label;
- const original=api().read(c.data,f),values=f.identity?JSON.parse(original):[original],inputs=values.map((v,i)=>{const input=document.createElement(f.multiline?'textarea':'input');if(!f.multiline)input.type=f.type||'text';else input.rows=3;input.value=v;input.ariaLabel=f.identity?(i?'Apellidos':'Nombre'):f.label;box.append(input);return input;});
+ const original=api().read(c.data,f),values=f.identity?JSON.parse(original):[original],inputs=values.map((v,i)=>{const input=document.createElement(f.multiline?'textarea':'input');input.autocomplete='off';if(!f.multiline)input.type=f.type||'text';else input.rows=3;input.value=v;input.ariaLabel=f.identity?(i?'Apellidos':'Nombre'):f.label;box.append(input);return input;});
  const actions=document.createElement('div'),msg=document.createElement('p');msg.setAttribute('role','status');actions.className='waFieldActions';
  const cancel=btn('× Cancelar',()=>{if(!s.busy){close();view.querySelector('[data-wa-edit="'+id+'"]')?.focus();}}),save=btn('✓ Guardar',async()=>{
  if(s.busy||String(current()?.id)!==s.contactId)return;s.busy=true;save.disabled=cancel.disabled=true;inputs.forEach(i=>i.disabled=true);msg.textContent='Guardando…';

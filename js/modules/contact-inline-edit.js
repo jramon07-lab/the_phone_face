@@ -57,7 +57,7 @@ async function start(fieldId){
  const c=contact(),native=$(fieldId),label=document.querySelector('label[for="'+fieldId+'"]'),config=fields[fieldId];
  if(!c?.id||!native||!label)return;
  const box=document.createElement('div');box.className='tpfInlineContactEdit';box.style.gridRow=native.style.gridRow;box.setAttribute('role','group');box.setAttribute('aria-label','Editar '+config.label);
- const input=document.createElement(config.multiline?'textarea':'input');input.className='tpfInlineContactInput';if(!config.multiline)input.type=config.type||'text';else input.rows=3;input.setAttribute('aria-label',config.label);
+ const input=document.createElement(config.multiline?'textarea':'input');input.className='tpfInlineContactInput';input.autocomplete='off';if(!config.multiline)input.type=config.type||'text';else input.rows=3;input.setAttribute('aria-label',config.label);
  const original=read(c.data,config);input.value=original;
  const actions=document.createElement('div'),save=document.createElement('button'),cancel=document.createElement('button'),message=document.createElement('p');
  actions.className='tpfInlineContactActions';save.type=cancel.type='button';save.textContent='✓ Guardar';save.dataset.inlineSave='';cancel.textContent='× Cancelar';cancel.dataset.inlineCancel='';message.className='tpfInlineContactMessage';message.setAttribute('role','status');
