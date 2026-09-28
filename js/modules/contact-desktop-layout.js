@@ -153,7 +153,7 @@
   const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
   const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
   let row=2;
-  fields.forEach(node=>{const multiline=node.matches('textarea');const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(row);label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',multiline);}node.style.gridRow=String(multiline?row+1:row);node.placeholder='Sin añadir';row+=multiline?2:1;});
+  fields.forEach(node=>{const multiline=node.matches('textarea');const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(row);label.htmlFor=node.id;if(node.id==='contactEmail'){const text=[...label.childNodes].find(n=>n.nodeType===3);if(text)text.textContent='Correo';}label.classList.toggle('tpfLongFieldLabel',multiline);}node.style.gridRow=String(multiline?row+1:row);node.placeholder='Sin añadir';row+=multiline?2:1;});
   const current=[...data.children].filter(node=>fields.includes(node));
   if(current.every((node,i)=>node===fields[i]))return;
   const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
@@ -287,7 +287,7 @@
   if(!mounted)return;
   for(const card of modal.querySelectorAll('#cpOpportunities > .oppUnifiedCard,#cpTasks > .cpTaskWrap')){
    let detail=card.querySelector(':scope > .tpfWorkDetails');
-   if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent='Detalles';detail.append(title);card.append(detail);}
+   if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent=card.classList.contains('cpTaskWrap')?'⋯':'Detalles';title.setAttribute('aria-label',card.classList.contains('cpTaskWrap')?'Más acciones de la tarea':'Detalles de la oportunidad');detail.append(title);card.append(detail);}
    for(const node of card.querySelectorAll(':scope > .oppUnifiedClient,:scope > .oppUnifiedNotes,:scope > .cpAuthLine'))detail.append(node);
    const remove=card.querySelector('.oppUnifiedActions > .danger,.cpTaskActions > .dangerText');if(remove)detail.append(remove);
    const notes=card.querySelector('.oppUnifiedNotes');

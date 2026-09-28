@@ -200,7 +200,6 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#con
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactObservations,body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactNotes{padding:8px!important;width:100%!important;grid-column:1/-1!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>.tpfInlineContactEdit{grid-column:1/-1!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactNotes].tpfInlineEditableLabel:has(+textarea[readonly])::after{content:' 🔒'!important}
-body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactEmail]{font-size:0!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactEmail]::before{content:'Correo';font-size:12px}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] .cpProOppSplit{display:block!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected=resumen] .cpProOppDetail{display:none!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>#contactBank{font-size:11px!important}
 }
@@ -223,4 +222,16 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpSeparateI
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpSideTitle button{width:auto!important;min-width:32px!important;padding:6px 10px!important;height:32px!important;font-size:12px!important;background:#0863ed!important;color:#fff!important;border-radius:4px!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks .cpTaskButton{display:grid!important;grid-template-columns:1fr!important;gap:3px!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpTasks .cpTaskButton small{display:none!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactPhone],body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactDni],body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactBank],body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactEmail]{padding-right:calc(100% - 80px)!important;font-size:11px!important}
+}
+@media(min-width:1024px){body.tpfUnified.cpWorkspaceTask #contactModal.tpfContactDesktop.tpfContactReference .cpRight{padding-right:min(426px,39vw)!important}body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference.cpRefTaskInside .cpQuick{visibility:visible!important;opacity:.6!important}}
+@media(min-width:1024px){
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected] #cpTasks>.cpTaskWrap{display:flex!important;min-height:58px!important;align-items:center!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected] #cpTasks .tpfWorkDetails:has(button){display:block!important;flex:none!important;width:auto!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected] #cpTasks .tpfWorkDetails>summary{font-size:18px!important;padding:4px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpRight[data-cp-ref-selected] #cpTasks .cpTaskActions{flex:none!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .tpfContactLinkRow #tpfGoogleInlineCard{display:none!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>.contactCustomFieldsBox{grid-column:1/-1!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData .tpfLongFieldLabel{min-height:26px!important;padding:2px 28px 2px 0!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactEmail]{font-size:11px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData .tpfInlineEditableLabel>.tpfCopyButton{right:24px!important}
 }

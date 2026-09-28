@@ -57,7 +57,7 @@ function openRelations(){
 }
 function verification(){
  const identity=modal.querySelector('.cpIdentity'),source=$('tpfGoogleInlineCard');if(!identity||!desktop())return;
- let badge=$('cpProVerification');if(!badge){badge=button('Verificación pendiente',()=>{const card=$('tpfGoogleInlineCard'),details=card?.querySelector('details');if(details)details.open=!details.open;card?.scrollIntoView({block:'nearest',behavior:'auto'})});badge.id='cpProVerification';identity.append(badge)}
+ let badge=$('cpProVerification');if(!badge){badge=button('Verificación pendiente',()=>{const card=$('tpfGoogleInlineCard');if(!card)return;const anchor=document.createComment('verification origin');card.before(anchor);const d=showDialog('CRM, Google y WhatsApp'),details=card.querySelector('details'),wasOpen=details?.open;d.lastElementChild.append(card);if(details)details.open=true;d.addEventListener('close',()=>{if(anchor.isConnected){anchor.after(card);anchor.remove();}if(details)details.open=wasOpen;},{once:true})});badge.id='cpProVerification';identity.append(badge)}
  const status=source?.querySelector('.tpfGoogleInlineStatus'),text=status?.textContent?.trim()||'Verificación pendiente';
  if(badge.textContent!==text)badge.textContent=text;badge.classList.toggle('verified',!!status?.classList.contains('ok'));badge.title='Ver estado de CRM, Google y WhatsApp';
 }
