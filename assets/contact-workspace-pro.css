@@ -235,3 +235,16 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData .tpf
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData>label[for=contactEmail]{font-size:11px!important}
 body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData .tpfInlineEditableLabel>.tpfCopyButton{right:24px!important}
 }
+@media(min-width:1024px){
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .tpfDocsFile{display:grid!important;grid-template-columns:36px minmax(0,1fr) 40px 34px!important;gap:8px!important;align-items:center!important;border-bottom:1px solid #e8edf4!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .tpfDocsFile small{display:block!important;font-size:11px!important;color:#748094!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProToolbar{flex-direction:row!important;flex-wrap:nowrap!important;gap:8px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProToolbar input{width:auto!important;flex:1!important;min-width:0!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProToolbar select{width:100px!important;flex:none!important;margin:0!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpRefDrive{background:#fff!important;border:0!important;padding:0!important;min-height:32px!important;display:flex!important;align-items:center!important;gap:10px!important;justify-content:space-between!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpRefDrive strong{font-size:18px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProFilePanel header{display:flex!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProFileTools{display:flex!important;flex-wrap:wrap!important;gap:5px!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference #cpDocumentsPending .cpProFilePanel p{font-size:12px!important;line-height:1.6!important}
+body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpDocMore{position:relative;font-size:12px}.cpDocMore>summary{padding:8px 10px;cursor:pointer;border:1px solid #dce4ef;border-radius:4px;list-style:none}.cpDocMore[open]>div{position:absolute;top:100%;right:0;background:white;padding:8px;border:1px solid #dce4ef;box-shadow:0 8px 24px #10234416;z-index:5;width:220px}.cpDocMore>div button,.cpDocMore>div a{display:block;width:100%;text-align:left;margin:3px 0}
+}
