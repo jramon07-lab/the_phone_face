@@ -1472,6 +1472,6 @@ body.tpfUnified #view-whatsapplive.waInboxWorkspace #waArchiveChat{background:#1
 /* Keep all eleven inbox filters visible on laptop screens. */
 @media(min-width:1051px){
  body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs{flex-wrap:nowrap!important;gap:2px!important;padding:8px!important;overflow-x:auto!important}
- body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs>button{font-size:12px!important;padding:8px 5px!important;min-width:0!important;letter-spacing:0!important}
- body.tpfUnified #view-whatsapplive.waInboxWorkspace .waTabs .waAutomaticCount{min-width:14px;height:16px;padding:0 3px;margin-left:3px;font-size:9px;box-sizing:border-box}
+ body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs>button{flex:1 0 auto!important;font-size:13px!important;padding:8px 6px!important;min-width:0!important;letter-spacing:0!important}
+ body.tpfUnified #view-whatsapplive.waInboxWorkspace .waTabs .waAutomaticCount{min-width:14px;height:16px;padding:0 3px;margin-left:3px;font-size:10px;box-sizing:border-box}
 }
