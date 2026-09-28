@@ -26,7 +26,7 @@
  }
  const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
  const panels=[
-  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['documentos','Documentos'],['notas','Notas'],['historial','Historial']
+  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['notas','Notas'],['documentos','Documentos'],['historial','Historial']
  ];
  panels.forEach(([key,label])=>{
   const b=document.createElement('button');b.type='button';b.id='cpRefTab-'+key;b.dataset.cpRefTab=key;b.textContent=label;b.setAttribute('role','tab');b.setAttribute('aria-controls','cpRefPanel');tabs.appendChild(b);
@@ -75,8 +75,6 @@
   const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
   for(const [button,title] of summaryActions){title.append(button);}summaryActions.clear();
   [...root.querySelectorAll('[data-cp-ref-pane]')].forEach(section=>panel.appendChild(section));
-  if(root.contains(recent))right.append(recent);
-  const recentDocs=$('cpProRecentDocs');if(recentDocs&&root.contains(recentDocs))right.append(recentDocs);
   root.remove();
  }
  function mountSummaryAction(block,key,items){
@@ -86,8 +84,8 @@
  function makeSummaryGroup(root,key,title,items){
   const existing=root.querySelector('[data-tpf-summary-group="'+key+'"]');
   if(existing){const body=existing.querySelector('.tpfSummaryBody');items.filter(Boolean).forEach(item=>{if(item.parentElement!==body)body.append(item);});mountSummaryAction(existing,key,items);setSummaryMetric(existing,summaryMetrics(key));return existing;}
-  const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen=String(key==='offers'||key==='tasks');
-  const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded',block.dataset.tpfOpen);
+  const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen='false';
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded','false');
   const label=document.createElement('span');label.className='tpfSummaryTitle';label.textContent=title;
   const metric=document.createElement('small');metric.className='tpfSummaryMetric';
   const arrow=document.createElement('span');arrow.className='tpfSummaryChevron';arrow.setAttribute('aria-hidden','true');arrow.textContent='⌄';
@@ -103,7 +101,6 @@
   const root=panel.querySelector('#tpfSummaryAccordion')||document.createElement('div');
   root.id='tpfSummaryAccordion';root.className='tpfSummaryAccordion';
   if(!root.parentElement)panel.prepend(root);
-  const overview=$('cpProSummary');if(overview&&root.previousElementSibling!==overview)root.before(overview);
   const opp=sections.find(s=>s.dataset.cpRefPane==='oportunidades'),tasks=sections.find(s=>s.dataset.cpRefPane==='tareas'),programs=sections.find(s=>s.dataset.cpRefPane==='programados');
   const offers=sections.find(s=>s.dataset.cpRefPane==='ofertas'),automation=sections.find(s=>s.dataset.cpRefPane==='automatizaciones');
   makeSummaryGroup(root,'opportunities','Oportunidades',[opp]);
@@ -111,8 +108,6 @@
   makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
   const offersGroup=makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers]);
   if(automation&&(automation.parentElement!==root||automation.previousElementSibling!==offersGroup))offersGroup.after(automation);
-  if(recent.parentElement!==root)root.append(recent);
-  const recentDocs=$('cpProRecentDocs');if(recentDocs&&recentDocs.parentElement!==root)root.append(recentDocs);
  }
  function refreshSummaryMetrics(){
   panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));
@@ -141,7 +136,7 @@
  recentHead.className='tpfRecentHeading';recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',e=>{e.preventDefault();select('historial',true);});
  recentHead.append(recentTitle,recentMore);recent.append(recentHead,recentBody);
  function refreshRecent(){
-  const entries=[...$('cpTimeline')?.querySelectorAll('.cpEvent')||[]].slice(0,3).map(node=>[node.querySelector('small')?.textContent,node.querySelector('b')?.textContent,node.querySelector('.cpEventBody>div')?.textContent].filter(Boolean).join(' · '));
+  const entries=[...$('cpTimeline')?.children||[]].slice(0,3).map(node=>{const copy=node.cloneNode(true);copy.querySelectorAll('button,input,select,textarea').forEach(control=>control.remove());return copy.textContent.trim();}).filter(Boolean);
   const texts=entries.length?entries:['Sin actividad reciente.'];const key=JSON.stringify(texts);
   if(recentBody.dataset.content===key)return;recentBody.dataset.content=key;
   recentBody.replaceChildren(...texts.map(text=>{const line=document.createElement('p');line.textContent=text;return line;}));
@@ -152,8 +147,7 @@
   if(!mounted||!data)return;
   const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
   const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
-  let row=2;
-  fields.forEach(node=>{const multiline=node.matches('textarea');const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(row);label.htmlFor=node.id;if(node.id==='contactEmail'){const text=[...label.childNodes].find(n=>n.nodeType===3);if(text)text.textContent='Correo';}label.classList.toggle('tpfLongFieldLabel',multiline);}node.style.gridRow=String(multiline?row+1:row);node.placeholder='Sin añadir';row+=multiline?2:1;});
+  fields.forEach((node,index)=>{node.style.gridRow=String(index+3);const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(index+3);label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',node.matches('textarea'));}});
   const current=[...data.children].filter(node=>fields.includes(node));
   if(current.every((node,i)=>node===fields[i]))return;
   const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
@@ -162,13 +156,13 @@
  if(data)new MutationObserver(orderFields).observe(data,{childList:true});
  function fitContactText(){
   if(!mounted||modal.classList.contains('hidden'))return;
-  for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','44px');field.style.setProperty('--contact-text-height',Math.min(110,Math.max(44,field.scrollHeight+2))+'px');}
+  for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','36px');field.style.setProperty('--contact-text-height',Math.min(160,Math.max(36,field.scrollHeight+2))+'px');}
  }
  if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
  window.addEventListener('tpf:contact-updated',fitContactText);
  window.addEventListener('tpf:contact-text-ready',fitContactText);
  const linkRow=document.createElement('div');linkRow.className='tpfContactLinkRow';
- function ensureLinkRow(){if(linkRow.parentElement!==left)left.append(linkRow);}
+ function ensureLinkRow(){if(linkRow.parentElement!==profile)tabs.before(linkRow);}
  let googleObserved=null;
  function compactGoogle(){
   const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
@@ -190,10 +184,10 @@
  function arrangeSecondary(){
   if(!mounted)return;
   const relations=$('tpfContactPartySummary');
-  if(relations){ensureLinkRow();const google=$('tpfGoogleInlineCard');moveSecondary(relations,linkRow,google?.parentElement===linkRow?google:null);}
-  const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
+  if(relations)moveSecondary(relations,left);
+  const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);if(relations&&relations.nextElementSibling!==labels)left.insertBefore(relations,labels);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
   if(info.parentElement!==left)left.append(info);
-  for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner'),left.querySelector('.contactCustomFieldsBox')])moveSecondary(node,info.lastElementChild);
+  for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner')])moveSecondary(node,info.lastElementChild);
  }
  function restoreSecondary(){for(const [node,anchor] of secondaryPositions){if(anchor.parentNode)anchor.after(node);anchor.remove();}secondaryPositions.clear();info.remove();}
  let secondaryTimer=0;
@@ -248,7 +242,7 @@
   const contactId=contact.id;
   tabBeforeCreate=selected;embeddedCreate=true;
   taskTrigger=e.target.closest('#cpNewTask,#cpSideNewTask');
-  contactWasInert=modal.inert;
+  contactWasInert=modal.inert;modal.inert=true;
   modal.classList.add('cpRefTaskInside');select('tareas');
   window.openAgendaComposer({customerName:$('contactName')?.value||'',phone:$('contactPhone')?.value||'',contactId,type:'Tarea'}, {
    onCancel:restoreComposer,
@@ -287,7 +281,7 @@
   if(!mounted)return;
   for(const card of modal.querySelectorAll('#cpOpportunities > .oppUnifiedCard,#cpTasks > .cpTaskWrap')){
    let detail=card.querySelector(':scope > .tpfWorkDetails');
-   if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent=card.classList.contains('cpTaskWrap')?'⋯':'Detalles';title.setAttribute('aria-label',card.classList.contains('cpTaskWrap')?'Más acciones de la tarea':'Detalles de la oportunidad');detail.append(title);card.append(detail);}
+   if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent='Detalles';detail.append(title);card.append(detail);}
    for(const node of card.querySelectorAll(':scope > .oppUnifiedClient,:scope > .oppUnifiedNotes,:scope > .cpAuthLine'))detail.append(node);
    const remove=card.querySelector('.oppUnifiedActions > .danger,.cpTaskActions > .dangerText');if(remove)detail.append(remove);
    const notes=card.querySelector('.oppUnifiedNotes');
@@ -325,7 +319,7 @@
  moreMenu.addEventListener('click',e=>{if(e.target.closest('button'))closeMore();});
  document.addEventListener('click',e=>{if(!moreMenu.contains(e.target))closeMore();});
  moreMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMore();moreMenu.querySelector('summary').focus();}});
- window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=true;info.open=false;});
+ window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=false;info.open=false;});
  new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});
  if(quick)new MutationObserver(refreshHeader).observe(quick,{childList:true,subtree:true});
  // Reuse the existing read-only avatar loader and its shared in-memory cache.
