@@ -103,6 +103,7 @@
   const root=panel.querySelector('#tpfSummaryAccordion')||document.createElement('div');
   root.id='tpfSummaryAccordion';root.className='tpfSummaryAccordion';
   if(!root.parentElement)panel.prepend(root);
+  const overview=$('cpProSummary');if(overview&&root.previousElementSibling!==overview)root.before(overview);
   const opp=sections.find(s=>s.dataset.cpRefPane==='oportunidades'),tasks=sections.find(s=>s.dataset.cpRefPane==='tareas'),programs=sections.find(s=>s.dataset.cpRefPane==='programados');
   const offers=sections.find(s=>s.dataset.cpRefPane==='ofertas'),automation=sections.find(s=>s.dataset.cpRefPane==='automatizaciones');
   makeSummaryGroup(root,'opportunities','Oportunidades',[opp]);
