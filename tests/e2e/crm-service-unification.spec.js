@@ -169,6 +169,19 @@ test('PC: demo, siete pantallas y conexión real de WhatsApp y Google, solo lect
         // A visible section alone is insufficient: the normal navigation must
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
+        if(view==='database'){
+          await page.locator('#tpfContactsFiltersToggle').click();
+          const filters=page.locator('#tpfContactsFilters');
+          await expect(filters).toHaveClass(/open/);
+          await filters.getByRole('button',{name:'Solo las seleccionadas',exact:true}).click();
+          await expect(filters.locator('[data-mode="exact"]')).toHaveAttribute('aria-pressed','true');
+          await expect(page.locator('#tpfFilterHint')).toContainText('ninguna más');
+          await page.locator('#tpfApplyFilters').click();
+          await expect(page.locator('#tpfFilterError')).toContainText('Selecciona al menos una etiqueta');
+          await expect(filters).toHaveClass(/open/);
+          await page.locator('#tpfContactsFiltersClose').click();
+          await expect(filters).not.toHaveClass(/open/);
+        }
         if(view==='whatsapplive'){
           await expect(page.locator('#waSideTabs')).toHaveCount(1);
           await expect(page.locator('[data-wa-tab="archived"]')).toBeVisible();

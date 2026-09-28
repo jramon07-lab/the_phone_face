@@ -17,3 +17,18 @@ check([],['both','only-a','only-b','neither','extra']);
 state.rows.push({id:'manager',fullName:'Manager',data:{TPF_RELACIONES:{managed_contacts:[{record_id:'both'}]}}});
 check(['a','b'],['both','extra']);
 console.log('Single and combined label filters require all selected labels.');
+
+state.filters.labelMode='exact';
+check(['a'],['only-a']);
+check(['b'],['only-b']);
+check(['a','b'],['both']);
+check(['b','a','a'],['both']);
+check(['a','b','c'],['extra']);
+check(['missing'],[]);
+state.filters.excludeLabels=['b'];check(['a','b'],[]);check(['a'],['only-a']);
+state.filters.excludeLabels=[];
+state.filters.labelMode='any';check(['a','b'],['both','only-a','only-b','extra']);
+state.filters.labelMode='none';check([],['neither','manager']);
+state.filters.labelMode='all';check(['a','b'],['both','extra']);
+assert.match(source,/data-mode="exact">Solo las seleccionadas/);
+console.log('Exact labels exclude extra labels, ignore order/duplicates, respect exclusions and preserve all/any/none.');
