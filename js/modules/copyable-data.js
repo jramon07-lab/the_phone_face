@@ -58,7 +58,8 @@ window.addEventListener('click',async event=>{
  setTimeout(()=>{if(button.isConnected){delete button.dataset.copied;button.title='Copiar '+entry.label;button.setAttribute('aria-label',button.title);}},1800);
 },true);
 new MutationObserver(records=>{if(records.some(record=>record.type==='childList'&&(targets.has(record.target)||[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&!node.matches?.('.tpfCopyButton,.tpfCopyStatus')))||record.type==='attributes'&&record.target.matches?.('.modalBack,.tpfContactsModalBack,#contactModal')))schedule();}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-document.addEventListener('input',schedule,true);
+// Typing changes only this field; never rescan the whole CRM per keystroke.
+document.addEventListener('input',event=>{const target=event.target,button=target&&targets.get(target);if(button){const hidden=empty(valueOf(target));if(button.hidden!==hidden)button.hidden=hidden;}},true);
 for(const event of ['tpf:contact-open','tpf:contact-updated','tpf:contacts-rendered','tpf:opportunity-party-preview'])window.addEventListener(event,schedule);
 window.TPFCopyData={valueOf,empty,copy,notify};scan();
 })();

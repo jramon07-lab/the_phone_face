@@ -17,6 +17,7 @@ function fixture(earlyClose=false){
  return {window,history,emit,node,get closed(){return closed;},get screen(){return screen;},get cursor(){return cursor;},get length(){return stack.length;},set confirm(v){confirm=v;},async navigate(s){screen=s;await emit('tpf:contact-open');await tick();}};
 }
 (async()=>{
+ const typing=fixture();const message=typing.node('waQuickMessage');let captures=0,layerReads=0;typing.window.tpfCaptureCurrentScreen=()=>{captures++;return {type:'main',mainView:'contacts'}};const closest=message.closest;message.closest=s=>{layerReads++;return closest(s)};await typing.emit('focusin',{target:message});const beforeReads=layerReads;for(let i=0;i<200;i++){await typing.emit('keydown',{target:message});await typing.emit('beforeinput',{target:message});message.value+='a';await typing.emit('input',{target:message});}await tick();assert.equal(layerReads,beforeReads,'typing must not recalculate modal visibility per keystroke');assert.equal(captures,0,'typing must not recapture screen navigation');let protectedDraft=false;await typing.emit('beforeunload',{preventDefault(){protectedDraft=true}});assert.equal(protectedDraft,true,'the message draft remains protected');
  const f=fixture();assert.equal(f.cursor,0);
  await f.navigate({type:'main',mainView:'contacts'});
  await f.navigate({type:'contact',id:'a',mainView:'contacts'});
