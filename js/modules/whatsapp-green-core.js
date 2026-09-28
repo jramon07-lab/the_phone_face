@@ -535,7 +535,28 @@ function waMarkActiveChatRow(chatId){
   });
 }
 
+function waContactLoading(active){
+  const card=$("waContactCard");
+  if(!card)return;
+  if(active){
+    const pane=card.closest('.waContactPane');
+    const height=Math.max(card.getBoundingClientRect().height,pane?.clientHeight||0,480);
+    card.style.setProperty('--wa-loading-height',height+'px');
+    card.inert=true;
+    card.setAttribute('aria-busy','true');
+    card.dataset.waLoading='true';
+  }else{
+    // Refresh field values synchronously before revealing the new contact.
+    window.dispatchEvent(new Event('tpf:wa-contact-ready'));
+    card.inert=false;
+    card.removeAttribute('aria-busy');
+    delete card.dataset.waLoading;
+    card.style.removeProperty('--wa-loading-height');
+  }
+}
+
 window.selectWhatsAppChat=async(chatId)=>{
+  waContactLoading(true);
   const chat=(waLiveState.chats||[]).find(c=>c.id===chatId)||{id:chatId};
   waLiveState.contact=null;
   waLiveState.drafts=waLiveState.drafts||{};
@@ -565,7 +586,11 @@ window.selectWhatsAppChat=async(chatId)=>{
   $("waContactEmpty").classList.add("hidden");
   $("waContactCard").classList.remove("hidden");
 
-  await Promise.all([loadWaHistory(true),matchWaContact()]);
+  const loadingSelection=waLiveState.selectionVersion;
+  const contactLoad=Promise.resolve().then(()=>matchWaContact()).finally(()=>{
+    if(waLiveState.selectionVersion===loadingSelection)waContactLoading(false);
+  });
+  await Promise.all([loadWaHistory(true),contactLoad]);
 };
 
 async function loadWaHistory(scrollBottom=true){

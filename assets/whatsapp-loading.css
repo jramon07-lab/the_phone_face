@@ -1,0 +1,25 @@
+/* Keep a stable, non-interactive placeholder while a different contact resolves. */
+@media (min-width:1051px){
+  #view-whatsapplive #waContactCard[data-wa-loading="true"]{
+    position:relative;
+    min-height:var(--wa-loading-height,480px)!important;
+    overflow:hidden!important;
+    pointer-events:none;
+  }
+  #view-whatsapplive #waContactCard[data-wa-loading="true"]>*:not(.waContactHeader){
+    visibility:hidden!important;
+  }
+  #view-whatsapplive #waContactCard[data-wa-loading="true"]::after{
+    content:"Cargando datos del cliente…";
+    position:absolute;
+    top:128px;
+    left:16px;
+    right:16px;
+    padding:18px 12px;
+    border:1px solid #e4eaf2;
+    border-radius:8px;
+    background:#f7f9fc;
+    color:#52647a;
+    font-size:13px;
+  }
+}

@@ -52,6 +52,7 @@ function install(){if($('waFieldDetails')||!view.classList.contains('waCleanWork
 }
 window.addEventListener('click',e=>{if(!session||!e.target.closest?.('.waChatRow,.nav,#waSideName,#waCleanManageRelations,#waCleanManageOffers,[data-wa-edit],#waSideNewOffer,#waSideDirectSale,#waCleanReview'))return;if(e.target.closest('[data-wa-edit]'))return;if(session.busy||(dirty()&&!confirm('Hay cambios sin guardar. ¿Quieres descartarlos?'))){e.preventDefault();e.stopImmediatePropagation();return;}close();},true);
 window.addEventListener('beforeunload',e=>{if(dirty()||session?.busy){e.preventDefault();e.returnValue='';}});
+window.addEventListener('tpf:wa-contact-ready',refresh);
 window.addEventListener('tpf:contact-updated',()=>{signature='';schedule();});
 new MutationObserver(install).observe(view,{attributes:true,attributeFilter:['class']});install();
 })();
