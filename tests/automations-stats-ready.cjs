@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('js/modules/automations-ui-polish.js','utf8');
+const nodes=Object.fromEntries(['tpfAutoTotal','tpfAutoActive','tpfAutoPaused','tpfAutoErrors'].map(id=>[id,{textContent:'0'}]));
+let loaded;
+const context=vm.createContext({window:{crmAutomations:[],addEventListener:(name,fn)=>{if(name==='tpf:automations-loaded')loaded=fn;}},document:{querySelectorAll:()=>[]},byId:id=>nodes[id]});
+vm.runInContext(source.slice(source.indexOf('  let loadedRows='),source.indexOf('  function ensureHero()')),context);
+vm.runInContext(source.slice(source.indexOf("  window.addEventListener('tpf:automations-loaded'"),source.indexOf('  function init()')),context);
+context.refreshStats();assert.equal(nodes.tpfAutoTotal.textContent,'0');
+loaded({detail:{rows:[{enabled:true},{enabled:true},{enabled:false}]}});
+assert.equal(String(nodes.tpfAutoTotal.textContent),'3');assert.equal(String(nodes.tpfAutoActive.textContent),'2');assert.equal(String(nodes.tpfAutoPaused.textContent),'1');
+loaded({detail:{rows:[{enabled:false}]}});assert.equal(String(nodes.tpfAutoActive.textContent),'0');assert.equal(String(nodes.tpfAutoPaused.textContent),'1');
+loaded({detail:{rows:[]}});assert.equal(String(nodes.tpfAutoTotal.textContent),'0');
+const core=fs.readFileSync('js/modules/automations-core.js','utf8');assert.match(core,/auto2RenderList\(\);\s*window.dispatchEvent\(new CustomEvent\('tpf:automations-loaded'/);
+console.log('PASS delayed automation data refreshes totals, status changes and empty results');

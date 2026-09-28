@@ -41,7 +41,7 @@ function applyFinalFix(html){
 
   const authGuard='<script src="/js/modules/automations-auth-guard.js"></script>';
   if(!html.includes('/js/modules/automations-auth-guard.js')) html=html.includes('</body>')?html.replace('</body>',authGuard+'\n</body>'):html+authGuard;
-  const autoUi='<script src="/js/modules/automations-ui-polish.js"></script>';
+  const autoUi='<script src="/js/modules/automations-ui-polish.js?v=20260928-stats-ready-1"></script>';
   if(!html.includes('/js/modules/automations-ui-polish.js')) html=html.includes('</body>')?html.replace('</body>',autoUi+'\n</body>'):html+autoUi;
   const autoFlow='<script src="/js/modules/automations-flow-builder.js"></script>';
   if(!html.includes('/js/modules/automations-flow-builder.js')&&!html.includes('/js/modules/runtime.js')) html=html.includes('</body>')?html.replace('</body>',autoFlow+'\n</body>'):html+autoFlow;

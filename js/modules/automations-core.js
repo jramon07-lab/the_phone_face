@@ -83,6 +83,7 @@ async function loadAutomations(){
    const {data,error}=await sb.rpc("crm_list_automations");if(error)throw error;
    crmAutomations=Array.isArray(data)?data:[];
    auto2RenderList();
+   window.dispatchEvent(new CustomEvent('tpf:automations-loaded',{detail:{rows:crmAutomations}}));
  }catch(e){if($("auto2Msg"))$("auto2Msg").textContent=e.message||"No se pudieron cargar las automatizaciones."}
 }
 function auto2RenderList(){

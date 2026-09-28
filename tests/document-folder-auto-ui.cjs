@@ -14,7 +14,7 @@ const document={body,head,createElement:tag=>new Element(tag),querySelector:()=>
 const link={version:1,provider:'google_drive',folder_id:'test_folder',folder_name:'Contacto de prueba'},folder={id:link.folder_id,name:link.folder_name,canUpload:true};
 let mode='normal',fetchHook=null,scanner=null;const calls=[];
 const context=vm.createContext({console,document,File,URLSearchParams,Response,Date,setTimeout,clearTimeout,
- MutationObserver:class{observe(){}},addEventListener(){},
+ MutationObserver:class{observe(){}},addEventListener(){},matchMedia:()=>({matches:false}),
  fetch:async(url,options={})=>{calls.push({url,options});if(fetchHook)await fetchHook(url,options);
   if(url.includes('ensureFolder')){const b=JSON.parse(options.body);if(mode==='choice'&&!b.folderId)return Response.json({ok:true,needsChoice:true,contactName:'Prueba',candidates:[{id:'candidate_one',name:'Prueba'},{id:'candidate_two',name:'Prueba'}]});return Response.json({ok:true,created:!b.folderId,link,data:{...b.expectedData,TPF_DOCUMENTS:link},folder});}
   if(url.includes('action=status'))return Response.json({ok:true,connected:true,canUpload:true,canManage:true});

@@ -22,8 +22,9 @@
       @media(max-width:900px){#tpfAutoStats{grid-template-columns:repeat(2,1fr)}.tpfAutoPresetButtons{grid-template-columns:1fr!important}#tpfAutoHero{flex-direction:column}.tpfAutoHeroActions{width:100%}}
     `;document.head.appendChild(s);
   }
+  let loadedRows=null;
   function counts(){
-    const rows=Array.isArray(window.crmAutomations)?window.crmAutomations:[];
+    const rows=loadedRows||(Array.isArray(window.crmAutomations)?window.crmAutomations:[]);
     const active=rows.filter(x=>x.enabled).length,paused=rows.length-active;
     let errors=0;document.querySelectorAll('#tpfAutoHistoryBody .tpfAutoRunError').forEach(()=>errors++);
     return {total:rows.length,active,paused,errors};
@@ -41,6 +42,7 @@
     const bar=byId('tpfAutomationAdvancedBar');if(bar){const h=bar.querySelector('h3');if(h&&h.textContent!=='Plantillas rápidas')h.textContent='Plantillas rápidas';const sm=bar.querySelector('.small');if(sm&&sm.textContent!=='Empieza con una automatización habitual y personalízala después.')sm.textContent='Empieza con una automatización habitual y personalízala después.';}
     refreshStats();
   }
+  window.addEventListener('tpf:automations-loaded',event=>{if(Array.isArray(event.detail?.rows)){loadedRows=event.detail.rows;refreshStats();}});
   function init(){ensureHero();setTimeout(ensureHero,250);setTimeout(refreshStats,700);}
   document.addEventListener('click',e=>{if(e.target?.closest?.('.nav[data-view="automations"]'))setTimeout(init,100);if(e.target?.closest?.('#auto2Save,#auto2Reload,[onclick*="auto2Toggle"],[onclick*="auto2Delete"]'))setTimeout(refreshStats,700);});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){const v=byId('view-automations');if(v&&!v.classList.contains('hidden')){ensureHero();refreshStats();}}});
