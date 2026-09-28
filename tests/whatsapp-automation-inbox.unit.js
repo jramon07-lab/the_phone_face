@@ -105,3 +105,17 @@ for(const status of ['following','accepted','processed']){
 }
 inbox.ingestBusiness([],[]);chatMeta={archived:true,archivedAt:now+300};
 assert.deepEqual(kinds(),['archived'],'attended chat without active offer is archived');
+
+// Only actual customer declines enter this inbox; attending and archiving are distinct.
+chatMeta={};sample._lastMessage={timestamp:now+400,direction:'in'};
+inbox.ingestBusiness([offer('lost')],[saleOpp]);assert.deepEqual(kinds(),['unanswered']);
+const declinedOffer={...offer('lost'),customer_declined_at:new Date((now+400)*1000).toISOString()};
+inbox.ingestBusiness([declinedOffer],[saleOpp]);assert.deepEqual(kinds(),['unanswered','declined']);
+chatMeta={archived:true,archivedAt:now+410};assert.deepEqual(kinds(),['declined'],'attending retains declined inbox');
+inbox.ingestDeclineArchives([{chat_id:chatId,declined_archived_at:new Date((now+420)*1000).toISOString()}]);
+assert.deepEqual(kinds(),['archived'],'explicit archive dismisses declined inbox');
+sample._lastMessage={timestamp:now+430,direction:'in'};assert.deepEqual(kinds(),['unanswered','declined'],'new customer message reopens');
+inbox.ingestBusiness([declinedOffer,{...offer('following'),id:'other'}],[saleOpp]);assert.deepEqual(kinds(),['unanswered','automatic','declined']);
+sample._lastMessage={timestamp:now+400,direction:'in'};chatMeta={archived:true,archivedAt:now+420};
+assert.deepEqual(kinds(),['automatic'],'archiving refusal preserves other active offers');
+console.log('Customer decline inbox and explicit archival OK');
