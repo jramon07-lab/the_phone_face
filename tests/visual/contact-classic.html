@@ -1,0 +1,210 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificación visual del CRM · Datos ficticios</title><link href="/assets/app.css?v=20260908-activity-2" rel="stylesheet"/><link href="/assets/opportunity-detail.css?v=20260920-workspace-1" rel="stylesheet"/><link href="/assets/alerts-pro-v2.css?v=20260902-02" rel="stylesheet"/><link href="/assets/agenda-pro.css?v=20260903-05" rel="stylesheet"/><link href="/assets/agenda-detail-pro.css?v=20260903-01" rel="stylesheet"/><link href="/assets/contact-desktop.css?v=20260912-summary-accordions-1" rel="stylesheet"/><link href="/assets/crm-unified.css?v=20260920-suite-2" rel="stylesheet"/><link href="/assets/crm-reference.css?v=20260928-declined-inbox-1" rel="stylesheet"/><link href="/assets/whatsapp-chat-row.css?v=20260926-time-1" rel="stylesheet"/><link href="/tests/visual/contact-classic.css" rel="stylesheet"/></head><body class="tpfUnified"><aside class="referenceSidebar"><div class="referenceBrand"><strong>THE PHONE FACE</strong><small>CRM · TIENDAS TELECOM</small></div><nav class="referenceNav"><div class="nav "><b>⌂</b> Inicio</div><div class="nav active"><b>♙</b> Contactos</div><div class="nav "><b>▥</b> Ventas</div><div class="nav "><b>▦</b> Agenda</div><div class="nav "><b>◉</b> WhatsApp</div><div class="nav "><b>▤</b> Documentos</div><div class="nav "><b>⚙</b> Configuración</div></nav><small style="position:absolute;bottom:20px">PROPUESTA · Datos de ejemplo</small></aside><div class="contactProfileBack tpfContactDesktop tpfContactCleanV2 tpf-contact-readonly" id="contactModal">
+<div class="contactProfile">
+<div class="cpTop">
+<button class="cpExit" id="contactClose">← Volver</button>
+<div class="cpNav">Ficha completa del contacto</div>
+<button class="primary" id="contactSave">Guardar cambios</button>
+</div>
+<div class="cpColumns">
+<aside class="cpLeft">
+<div class="cpIdentity cpSeparateIdentity">
+<div class="cpAvatar" id="cpAvatar">C</div>
+<div id="cpProfileIdentityText"><strong id="cpProfileDisplayName">Elena Demo</strong><small id="cpProfileNickname">Gestora de Ismael</small></div><input class="cpName" id="contactName" placeholder="Nombre completo" readonly=""/>
+<div class="cpNameSplit">
+<input id="contactFirstName" placeholder="Nombre" readonly=""/>
+<input id="contactLastName" placeholder="Apellidos" readonly=""/>
+</div>
+<span class="cpBadge">Contacto</span>
+<div class="cpQuick">
+<button id="contactWhatsapp" title="WhatsApp">◉ WhatsApp</button>
+<button id="cpNewOpp" title="Nueva oportunidad">＋ Oportunidad</button>
+<button id="cpNewTask" title="Nuevo recordatorio">＋ Agenda</button>
+<button class="cpOfferQuick" id="cpNewOffer" title="Preparar y enviar una oferta" type="button">✦ Enviar oferta</button>
+<button id="cpDirectSale">Venta directa</button><button id="cpNewReview">Revisión</button></div>
+</div>
+<div class="cpOwner">THE PHONE FACE <span>· Administrador</span></div>
+<div class="cpData">
+<div class="tpfContactEditBar"><h3>Datos del cliente</h3><button id="tpfContactEditToggle">Editar datos</button></div>
+<label class="tpfInlineEditableLabel" for="contactPhone">Teléfono<button aria-label="Editar Teléfono" class="tpfInlineContactPencil" data-inline-field="contactPhone" type="button">✎</button></label><input id="contactPhone" readonly=""/>
+<label class="tpfInlineEditableLabel" for="contactDni">DNI / NIF<button aria-label="Editar DNI / NIF" class="tpfInlineContactPencil" data-inline-field="contactDni" type="button">✎</button></label><input id="contactDni" readonly=""/>
+<label class="tpfInlineEditableLabel" for="contactEmail">Correo electrónico<button aria-label="Editar Correo electrónico" class="tpfInlineContactPencil" data-inline-field="contactEmail" type="button">✎</button></label><input id="contactEmail" readonly=""/>
+<label class="tpfInlineEditableLabel" for="contactNotes">Notas<button aria-label="Editar Notas" class="tpfInlineContactPencil" data-inline-field="contactNotes" type="button">✎</button></label><textarea id="contactNotes" readonly=""></textarea>
+<div class="contactCustomFieldsBox">
+<div class="contactCustomFieldsHead"><label style="margin:0">Campos personalizados</label><button class="secondary" id="contactCustomFieldsManage" type="button">Gestionar</button></div>
+<div class="customFieldsForm" id="contactCustomFields"></div>
+</div>
+<div class="contactLabelsBox">
+<div class="contactLabelsHead"><label style="margin:0">Etiquetas</label><button class="secondary" id="contactManageLabels" type="button">Gestionar</button></div>
+<div class="contactLabelsList" id="contactLabelsList"></div>
+</div>
+<div class="small" id="contactMeta"></div>
+<div class="small cpDuplicateHint">Solo en Contactos: si este DNI aparece en varias filas, los cambios se aplicarán a todas.</div>
+<div class="small" id="contactMsg"></div>
+<label class="tpfInlineEditableLabel" for="contactObservations">Observaciones<button aria-label="Editar Observaciones" class="tpfInlineContactPencil" data-inline-field="contactObservations" type="button">✎</button></label><textarea id="contactObservations" readonly=""></textarea><label class="tpfInlineEditableLabel" for="contactBank">Banco / IBAN<button aria-label="Editar Banco / IBAN" class="tpfInlineContactPencil" data-inline-field="contactBank" type="button">✎</button></label><input id="contactBank" readonly=""/></div>
+<button class="danger cpDelete" id="contactDelete">Eliminar contacto</button>
+</aside>
+<main class="cpCenter">
+<div class="cpTabs"><b>Todos</b><span>Oportunidades</span><span>Tareas</span></div>
+<div class="cpActivityHead">
+<h2>Actividad</h2>
+<button class="secondary" id="cpAddNote">Ir a Notas</button>
+</div>
+<div class="cpNoteComposer hidden" id="cpNoteComposer">
+<textarea id="cpNoteText" placeholder="Escribe una nota sobre este contacto..." readonly="" rows="4"></textarea>
+<div class="cpNoteActions">
+<button class="secondary" id="cpNoteCancel">Cancelar</button>
+<button class="primary" id="cpNoteSave">Guardar nota</button>
+</div>
+<div class="small" id="cpNoteMsg"></div>
+</div>
+<div class="cpFullHistoryHead"><h3>Actividad del cliente</h3><span>Más reciente primero</span></div>
+<div class="cpTimeline" id="cpTimeline"></div>
+</main>
+<aside class="cpRight">
+<div class="cpSideSection">
+<div class="cpSideTitle"><b>Oportunidades</b><button id="cpSideNewOpp">＋</button></div>
+<div class="cpOppSummary" id="cpOppSummary">
+<div class="cpOppStat"><span>Total</span><b id="cpOppTotal">0</b></div>
+<div class="cpOppStat"><span>Abiertas</span><b id="cpOppOpen">0</b></div>
+<div class="cpOppStat cpOppExpired"><span>Vencidas</span><b id="cpOppExpired">0</b></div>
+</div>
+<div id="cpOpportunities"></div>
+</div>
+<div class="cpSideSection">
+<div class="cpSideTitle"><b>WhatsApp programados</b><button id="cpSideNewWhatsapp">＋</button></div>
+<div id="cpWhatsappPrograms"><div class="cpEmpty">No hay WhatsApp programados.</div></div>
+</div>
+<div class="cpSideSection">
+<div class="cpSideTitle"><b>Tareas</b><button id="cpSideNewTask">＋</button></div>
+<div id="cpTasks"></div>
+</div>
+<div class="cpSideSection">
+<div class="cpSideTitle"><b>Información</b></div>
+<div class="small" id="cpInfo"></div>
+</div>
+<section aria-labelledby="cpDocumentsTitle" class="cpSideSection cpDocumentsPending" id="cpDocumentsPending">
+<div class="cpSideTitle"><b id="cpDocumentsTitle">Documentos</b><span class="cpPendingBadge">Pendiente</span></div>
+<h3>Google Drive</h3>
+<p>Pendiente de conectar. Aquí podrás reunir los documentos del cliente en una sola carpeta.</p>
+<div class="cpDocumentsPlan">Vincular carpeta existente · PDF y fotografías · Escaneo de DNI</div>
+</section>
+<section class="cpSideSection" id="cpOffersSection"><div class="cpOfferTitle"><b>Ofertas y seguimiento</b><button>+</button></div><div class="cpOfferList" id="cpOfferInstances"><div class="cpOfferCard"><div class="cpOfferTop"><b>Vodafone · Fibra 1 Gb + 2 líneas ilimitadas</b><strong>41,00 €</strong></div><div class="cpOfferMeta">Oferta enviada · 28 sept 2026</div><span class="cpOfferStatus following">Seguimiento activo</span><div class="ofItem"><small>Próximo WhatsApp: 30 sept · 10:00</small><button>Gestionar oferta</button></div></div></div></section><section id="tpfGoogleInlineCard"><h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus ok">Contacto verificado</span><p>Datos ficticios de verificación</p></section><section id="tpfContactPartySummary"><details data-rel-holders=""><summary>Titulares y gestores</summary><p>Ismael Demo · Titular</p></details></section></aside>
+</div>
+<div class="cpTaskPage hidden" id="cpTaskPage">
+<div class="cpTaskPageTop">
+<button class="cpExit" id="cpTaskBack">← Volver</button>
+<div>
+<b>Nueva tarea / recordatorio</b>
+<small>Se guardará en Agenda y quedará vinculada a este contacto</small>
+</div>
+<button class="primary" id="cpTaskSave">Guardar tarea</button>
+</div>
+<div class="cpTaskPageBody">
+<div class="cpTaskFormCard">
+<h2>Nueva tarea</h2>
+<div class="small" id="cpTaskContactLabel"></div>
+<label>Asunto / tarea</label>
+<input id="cpTaskTitle" placeholder="Ej. Llamar al cliente" readonly=""/>
+<div class="tpfTaskDateStack">
+<div class="tpfTaskDateBlock">
+<div class="tpfTaskDateHeading">Fecha y hora</div>
+<label class="tpfTaskDateLabel">
+<input id="cpTaskStarts" readonly="" type="datetime-local"/>
+</label>
+</div>
+<div class="tpfTaskDateBlock">
+<div class="tpfTaskDateHeading">Recordatorio adicional</div>
+<label class="tpfTaskDateLabel">
+<input id="cpTaskReminder" readonly="" type="datetime-local"/>
+</label>
+</div>
+</div>
+<label>Notas</label>
+<textarea id="cpTaskNotes" placeholder="Notas de la tarea" readonly="" rows="6"></textarea>
+<div class="cpTaskOptions">
+<label><input checked="" id="cpTaskNotifyApp" type="checkbox"/> Aviso en The Phone Face</label>
+<label><input id="cpTaskNotifyEmail" type="checkbox"/> Email</label>
+<label><input id="cpTaskGoogle" type="checkbox"/> Añadir a Google Calendar</label>
+</div>
+<div class="small" id="cpTaskMsg"></div>
+</div>
+<div class="cpTaskContactCard">
+<h3>Contacto</h3>
+<div id="cpTaskContactName"></div>
+<div class="small" id="cpTaskContactPhone"></div>
+<div class="cpTaskTip">Al guardar, la tarea aparecerá en <b>Tareas pendientes</b> de esta ficha y también en <b>Agenda</b>.</div>
+</div>
+</div>
+<div class="cpTaskPage hidden" id="cpTaskDetailPage">
+<div class="cpTaskPageTop">
+<button class="cpExit" id="cpTaskDetailBack">← Volver</button>
+<div>
+<b>Ficha de tarea</b>
+<small>Consulta, edita o completa esta tarea</small>
+</div>
+<button class="primary" id="cpTaskDetailSave">Guardar cambios</button>
+</div>
+<div class="cpTaskPageBody">
+<div class="cpTaskFormCard">
+<input id="cpTaskDetailId" readonly="" type="hidden"/>
+<h2 id="cpTaskDetailHeading">Tarea</h2>
+<label>Asunto / tarea</label>
+<input id="cpTaskDetailTitle" readonly=""/>
+<div class="modalGrid">
+<label>Fecha y hora
+                <input id="cpTaskDetailStarts" readonly="" type="datetime-local"/>
+</label>
+<label>Recordatorio adicional
+                <input id="cpTaskDetailReminder" readonly="" type="datetime-local"/>
+</label>
+</div>
+<label>Notas</label>
+<textarea id="cpTaskDetailNotes" readonly="" rows="6"></textarea>
+<div class="cpTaskOptions">
+<label><input id="cpTaskDetailNotifyApp" type="checkbox"/> Aviso en The Phone Face</label>
+<label><input id="cpTaskDetailNotifyEmail" type="checkbox"/> Email</label>
+<label><input id="cpTaskDetailGoogle" type="checkbox"/> Añadir a Google Calendar</label>
+</div>
+<div class="cpTaskStatusBox">
+<span>Estado</span>
+<b id="cpTaskDetailStatus">Pendiente</b>
+</div>
+<div class="small" id="cpTaskDetailMsg"></div>
+<div class="cpTaskDetailActions">
+<button class="refGreen" id="cpTaskMarkDone">Marcar como completada</button>
+<button class="secondary hidden" id="cpTaskReopen">Marcar como pendiente</button>
+<button class="danger" id="cpTaskDelete">Eliminar tarea</button>
+</div>
+</div>
+<div class="cpTaskContactCard">
+<h3>Contacto</h3>
+<div id="cpTaskDetailContactName"></div>
+<div class="small" id="cpTaskDetailContactPhone"></div>
+<div class="cpTaskTip">Los cambios se reflejarán también en <b>Agenda</b>.</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><aside id="agendaCreateCard" aria-hidden="true"><div class="agendaComposerHead"><h3>Nueva tarea</h3><button id="agendaCloseCreate">×</button></div><div class="agendaCompactBody"><label>Asunto<input placeholder="¿Qué tienes que hacer?"></label><label>Tipo<select><option>Tarea</option><option>Llamada</option></select></label><label>Fecha<input type="date" value="2026-09-29"></label><label>Hora<input type="time" value="10:00"></label><label>Notas<textarea rows="4"></textarea></label><label><input type="checkbox" checked>Aviso en CRM</label></div><div class="agendaCompactFooter"><button id="demoCancel">Cancelar</button><button class="primary" disabled>Guardar (solo vista)</button></div></aside>
+<script>
+const $=id=>document.getElementById(id);
+const currentContact={id:'demo',data:{'NOMBRE Y APELLIDOS':'Elena Demo',TPF_RELACIONES:{managed_contacts:[{name:'Ismael Demo'}]}}};
+const salesCache={stages:[{id:'follow',name:'Seguimiento'},{id:'pending',name:'Pendiente de tramitar'},{id:'done',name:'Tramitado'},{id:'won',name:'Ganado'}],opportunities:[{id:'demo-opp',title:'CAMBIO VODAFONE',client_name:'Ismael Demo',contract_party:{holder_name:'Ismael Demo',manager_name:'Elena Demo'},amount:41,stage_id:'follow',expected_date:'2026-09-30',created_at:'2026-09-28',notes:'Fibra 1 Gb + 2 líneas móviles con datos ilimitados.'}]};
+$('contactBank').value='ES00 0000 0000 0000 0000 0000';$('contactName').value='Elena Demo';$('contactPhone').value='600000001';$('contactObservations').value='Interesada en fibra y dos móviles. Prefiere contacto por WhatsApp.';$('contactNotes').value='Consultar con el titular antes de tramitar.';$('contactLabelsList').innerHTML='<span class="contactLabelChip orange">OFERTA SEPTIEMBRE 2026 <button>×</button></span>';
+$('cpOpportunities').innerHTML='<div class="oppUnifiedCard" data-opp-id="demo-opp"><div class="oppUnifiedTop"><b class="oppUnifiedTitle">CAMBIO VODAFONE</b><span class="oppUnifiedStage">Seguimiento</span></div><div class="oppUnifiedAmount">41,00 €/mes</div><div class="oppUnifiedMeta">Cierre previsto · 30 sept 2026</div><div class="oppUnifiedStageControl"><select><option>Seguimiento</option></select></div><div class="oppUnifiedActions"><button>Ver / editar</button></div><div class="oppUnifiedNotes">Fibra 1 Gb + 2 líneas móviles con datos ilimitados.</div></div>';
+$('cpOppTotal').textContent=$('cpOppOpen').textContent='1';
+$('cpTasks').innerHTML=['Revisar factura','Confirmar instalación'].map((title,i)=>'<div class="cpTaskWrap" data-task-status="pending" data-task-starts="2026-09-29T10:00:00"><button class="cpTaskButton"><b>'+title+'</b><span>'+ (i?'Mañana, 17:30':'Mañana, 10:00')+'</span><small>Pendiente</small></button><div class="cpTaskActions"><button>Editar</button></div></div>').join('');
+$('cpTimeline').innerHTML=['Oferta enviada por WhatsApp','Oportunidad creada','Contacto actualizado'].map(t=>'<div class="cpEvent"><div class="cpDot"></div><div class="cpEventBody"><small>28 sept 2026 · 10:30</small><b>'+t+'</b><div>Por Ramón · Datos ficticios</div></div></div>').join('');
+let demoOrigin;
+window.openAgendaComposer=(p={},o={})=>{demoOrigin=o;const back=document.createElement('div');back.className='agendaCompactBackdrop';back.append($('agendaCreateCard'));document.body.append(back);$('agendaCreateCard').classList.add('open');$('agendaCreateCard').setAttribute('aria-hidden','false');};
+window.TPFAgendaComposer={close(){const card=$('agendaCreateCard'),back=card.parentElement;document.body.append(card);back.remove();card.classList.remove('open');card.setAttribute('aria-hidden','true');demoOrigin?.onCancel?.();}};
+$('agendaCloseCreate').onclick=$('demoCancel').onclick=()=>window.TPFAgendaComposer.close();
+window.TPFContactRelations={sidebarSnapshot:async()=>({holders:[{name:'Ismael Demo',record_id:'demo-holder',phone:'600000002'}],managers:[]}),identity:()=>({name:'Elena Demo',record_id:'demo',phone:'600000001'})};
+</script><script src="/tests/visual/contact-classic-layout.js"></script><script src="/tests/visual/contact-classic-documents.js"></script><script>
+$('cpNotesPanel').innerHTML='<div class="cpNotesHeading"><h2>Notas del cliente</h2><button class="primary">+ Añadir nota</button></div><article class="cpNoteCard"><h3>Preferencias de contacto</h3><p class="cpNoteContent">Prefiere que le llamemos por la tarde.</p><div class="cpNoteBy">Ramón · 28 sept 2026</div></article><article class="cpNoteCard"><h3>Seguimiento</h3><p class="cpNoteContent">Hemos comentado las opciones de fibra y dos móviles. Solicita una oferta por WhatsApp.</p><div class="cpNoteBy">Ramón · 27 sept 2026</div></article>';
+$('cpDocumentsPending').innerHTML='<div class="cpRefDrive"><strong>Documentos</strong><span class="cpPendingBadge">Google Drive conectado</span></div><div class="cpRefDocActions"><button data-doc-upload>+ Subir archivo</button><button>Escanear DNI</button></div><div class="cpProToolbar"><input placeholder="Buscar documentos…"><select><option>Todos</option><option>PDF</option><option>Fotos</option></select></div><div class="cpProDocGrid">'+['Factura.pdf','DNI.pdf','Instalación.jpg'].map((name,i)=>'<div class="tpfDocsFile" data-doc-row="demo-'+i+'"><span class="cpProFileIcon">PDF</span><span><b>'+name+'</b><small>28 sept 2026 · 240 KB</small></span><button data-doc-preview>Ver</button><button>⋯</button></div>').join('')+'</div>';
+$('cpDocumentsPending').addEventListener('click',e=>{if(!e.target.matches('[data-doc-preview]'))return;const d=TPFContactWorkspace.showFilePanel(e.target.closest('[data-doc-row]').querySelector('b').textContent);d.lastElementChild.innerHTML='<div class="cpProFileTools"><button>Crear tarea</button><button>Compartir</button><button>Descargar</button></div><p>Vista previa de documento · Ejemplo de verificación</p>';});
+$('cpTasks').addEventListener('click',()=>openAgendaComposer());
+window.dispatchEvent(new CustomEvent('tpf:contact-open'));
+$('tpfContactEditToggle').onclick=()=>{const editing=$('tpfContactEditToggle').textContent==='Editar datos';document.querySelectorAll('.cpData input,.cpData textarea').forEach(x=>x.readOnly=!editing);$('tpfContactEditToggle').textContent=editing?'Cancelar edición':'Editar datos';};</script></body></html>

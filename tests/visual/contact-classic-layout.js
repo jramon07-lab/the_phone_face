@@ -1,0 +1,378 @@
+(function(){
+ 'use strict';
+ // Presentation only: reparent existing nodes, preserving their handlers and values.
+ const modal=document.getElementById('contactModal');
+ if(!modal)return;
+ const $=id=>document.getElementById(id),mq=window.matchMedia('(min-width:1024px)');
+ const profile=modal.querySelector('.contactProfile'),columns=modal.querySelector('.cpColumns');
+ const identity=modal.querySelector('.cpIdentity'),center=modal.querySelector('.cpCenter');
+ const left=modal.querySelector('.cpLeft'),right=modal.querySelector('.cpRight');
+ if(!profile||!columns||!identity||!center||!left||!right)return;
+ const identityAnchor=document.createComment('desktop identity original position');
+ const centerAnchor=document.createComment('desktop history original position');
+ identity.before(identityAnchor);center.before(centerAnchor);
+ const heading=modal.querySelector('.cpNav'),oldHeading=heading?.textContent;
+ let mounted=false,selected='resumen';
+ const composer=$('agendaCreateCard'),typeModal=$('agendaTypeModal');
+ let embeddedCreate=false,tabBeforeCreate='resumen',composerPositions=[],composerChildren=[],taskDialog=null,taskTrigger=null,contactWasInert=false;
+ function restoreComposer(){
+  if(!embeddedCreate)return;
+  embeddedCreate=false;
+  composerChildren=[];composer.removeAttribute('data-contact-dialog');
+  taskDialog?.remove();taskDialog=null;modal.inert=contactWasInert;
+  composerPositions.splice(0).forEach(({node,parent,next})=>parent.insertBefore(node,next?.parentNode===parent?next:null));
+  typeModal?.removeAttribute('data-contact-composer');
+  modal.classList.remove('cpRefTaskInside');select(tabBeforeCreate);taskTrigger?.focus();taskTrigger=null;
+ }
+ const tabs=document.createElement('div');tabs.className='cpRefTabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Información del cliente');
+ const panels=[
+  ['resumen','Resumen'],['oportunidades','Oportunidades'],['tareas','Tareas'],['notas','Notas'],['documentos','Documentos'],['historial','Historial']
+ ];
+ panels.forEach(([key,label])=>{
+  const b=document.createElement('button');b.type='button';b.id='cpRefTab-'+key;b.dataset.cpRefTab=key;b.textContent=label;b.setAttribute('role','tab');b.setAttribute('aria-controls','cpRefPanel');tabs.appendChild(b);
+ });
+ const followHeading=document.createElement('h2');followHeading.className='tpfFollowHeading';followHeading.textContent='Seguimiento del contacto';
+ const panel=document.createElement('div');panel.id='cpRefPanel';panel.setAttribute('role','tabpanel');panel.tabIndex=0;
+ const notes=document.createElement('section');notes.id='cpNotesPanel';notes.className='cpSideSection';right.appendChild(notes);
+ const sections=[...right.children];sections.forEach(section=>{
+  section.dataset.cpRefPane=section.id==='cpOffersSection'?'ofertas':section.id==='cpAutomationStatus'?'automatizaciones':section.contains($('cpOpportunities'))?'oportunidades':section.contains($('cpTasks'))?'tareas':section.contains($('cpWhatsappPrograms'))?'programados':section.id==='cpDocumentsPending'?'documentos':'informacion';
+ });
+ // Modules can mount after this layout. Adopt their existing nodes, never clone them.
+ function summaryCount(selector,root){return root?root.querySelectorAll(selector).length:0;}
+ function summaryText(node){return String(node?.textContent||'').toLowerCase();}
+ function summaryMetrics(key){
+  const opp=$('cpOpportunities'),tasks=$('cpTasks'),programs=$('cpWhatsappPrograms'),offers=$('cpOffersSection');
+  if(key==='opportunities'){
+   return ($('cpOppTotal')?.textContent||'0')+' total · '+($('cpOppOpen')?.textContent||'0')+' abiertas · '+($('cpOppExpired')?.textContent||'0')+' vencidas';
+  }
+  if(key==='tasks'){
+   const cards=[...tasks?.querySelectorAll(':scope > .cpTaskWrap')||[]];
+   const completed=cards.filter(x=>x.dataset.taskStatus==='completed').length;
+   const overdue=cards.filter(x=>x.dataset.taskOverdue==='true').length;
+   return (cards.length-completed)+' pendientes · '+overdue+' vencidas · '+completed+' completadas';
+  }
+  if(key==='programs'){
+   const total=summaryCount(':scope > .cpWaWrap',programs);
+   return total+' WhatsApp programado'+(total===1?'':'s');
+  }
+  const cards=[...offers?.querySelectorAll('.cpOfferCard,.cpOfferItem')||[]];
+  const rows=cards;
+  const active=rows.filter(x=>/seguimiento activo/.test(summaryText(x))).length;
+  const paused=rows.filter(x=>/seguimiento pausado/.test(summaryText(x))).length;
+  const processed=rows.filter(x=>/tramitado/.test(summaryText(x))).length;
+  return rows.length+' oferta'+(rows.length===1?'':'s')+' · '+active+' activas · '+paused+' pausadas · '+processed+' tramitadas';
+ }
+ function setSummaryMetric(block,text){
+  const metric=block?.querySelector('.tpfSummaryMetric');if(!metric||metric.dataset.summary===text)return;
+  metric.dataset.summary=text;const numbers=(text.match(/\d+/g)||[]).map(Number),key=block.dataset.tpfSummaryGroup;
+  const chips=key==='opportunities'?[[numbers[1]||0,'abiertas','blue'],[numbers[2]||0,'vencidas','red']]:key==='tasks'?[[numbers[0]||0,'pendientes','blue'],[numbers[1]||0,'vencidas','red']]:key==='programs'?[[numbers[0]||0,'','neutral']]:[[numbers[0]||0,'ofertas','blue'],[numbers[1]||0,'activas','green']];
+  metric.replaceChildren(...chips.map(([count,label,tone])=>{const chip=document.createElement('span');chip.className='tpfSummaryChip';chip.dataset.tone=tone;const word=count===1?({pendientes:'pendiente',abiertas:'abierta',vencidas:'vencida',tareas:'tarea',ofertas:'oferta',activas:'activa'}[label]||label):label;chip.textContent=count+(word?' '+word:'');return chip;}));
+  block.querySelector('.tpfSummaryTrigger').setAttribute('aria-label',block.querySelector('.tpfSummaryTitle').textContent+'. '+text);
+
+ }
+ const summaryActions=new Map();
+ function restoreSummaryGroups(){
+  const root=panel.querySelector('#tpfSummaryAccordion');if(!root)return;
+  for(const [button,title] of summaryActions){title.append(button);}summaryActions.clear();
+  [...root.querySelectorAll('[data-cp-ref-pane]')].forEach(section=>panel.appendChild(section));
+  root.remove();
+ }
+ function mountSummaryAction(block,key,items){
+  const title=items[0]?.querySelector(key==='offers'?'.cpOfferTitle':'.cpSideTitle'),button=title?.querySelector('button');
+  if(button){summaryActions.set(button,title);button.classList.add('tpfSummaryCreate');button.setAttribute('aria-label',({tasks:'Nueva tarea',opportunities:'Nueva oportunidad',offers:'Nueva oferta',programs:'Nuevo WhatsApp'})[key]);block.querySelector('.tpfSummaryHeading').append(button);}
+ }
+ function makeSummaryGroup(root,key,title,items){
+  const existing=root.querySelector('[data-tpf-summary-group="'+key+'"]');
+  if(existing){const body=existing.querySelector('.tpfSummaryBody');items.filter(Boolean).forEach(item=>{if(item.parentElement!==body)body.append(item);});mountSummaryAction(existing,key,items);setSummaryMetric(existing,summaryMetrics(key));return existing;}
+  const block=document.createElement('section');block.className='tpfSummaryGroup';block.dataset.tpfSummaryGroup=key;block.dataset.tpfOpen='false';
+  const trigger=document.createElement('button');trigger.type='button';trigger.className='tpfSummaryTrigger';trigger.setAttribute('aria-expanded','false');
+  const label=document.createElement('span');label.className='tpfSummaryTitle';label.textContent=title;
+  const metric=document.createElement('small');metric.className='tpfSummaryMetric';
+  const arrow=document.createElement('span');arrow.className='tpfSummaryChevron';arrow.setAttribute('aria-hidden','true');arrow.textContent='⌄';
+  trigger.append(label,metric,arrow);
+  const body=document.createElement('div');body.className='tpfSummaryBody';
+  items.filter(Boolean).forEach(item=>body.appendChild(item));
+  trigger.addEventListener('click',()=>{const open=block.dataset.tpfOpen!=='true';block.dataset.tpfOpen=String(open);trigger.setAttribute('aria-expanded',String(open));});
+  const head=document.createElement('div');head.className='tpfSummaryHeading';head.append(trigger);
+  block.append(head,body);mountSummaryAction(block,key,items);root.appendChild(block);setSummaryMetric(block,summaryMetrics(key));return block;
+ }
+ function applySummaryGroups(){
+  if(!mounted||selected!=='resumen'){restoreSummaryGroups();return;}
+  const root=panel.querySelector('#tpfSummaryAccordion')||document.createElement('div');
+  root.id='tpfSummaryAccordion';root.className='tpfSummaryAccordion';
+  if(!root.parentElement)panel.prepend(root);
+  const opp=sections.find(s=>s.dataset.cpRefPane==='oportunidades'),tasks=sections.find(s=>s.dataset.cpRefPane==='tareas'),programs=sections.find(s=>s.dataset.cpRefPane==='programados');
+  const offers=sections.find(s=>s.dataset.cpRefPane==='ofertas'),automation=sections.find(s=>s.dataset.cpRefPane==='automatizaciones');
+  makeSummaryGroup(root,'opportunities','Oportunidades',[opp]);
+  makeSummaryGroup(root,'tasks','Tareas',[tasks]);
+  makeSummaryGroup(root,'programs','WhatsApp programados',[programs]);
+  const offersGroup=makeSummaryGroup(root,'offers','Ofertas y seguimiento',[offers]);
+  if(automation&&(automation.parentElement!==root||automation.previousElementSibling!==offersGroup))offersGroup.after(automation);
+ }
+ function refreshSummaryMetrics(){
+  panel.querySelectorAll('[data-tpf-summary-group]').forEach(block=>setSummaryMetric(block,summaryMetrics(block.dataset.tpfSummaryGroup)));
+ }
+ const observedOfferLists=new WeakSet();
+ function syncSummarySections(){
+  for(const [id,key] of [['cpOffersSection','ofertas'],['cpAutomationStatus','automatizaciones']]){
+   const section=$(id);if(!section||!modal.contains(section))continue;
+   const offerList=section.querySelector('.cpOfferList');if(offerList&&!observedOfferLists.has(offerList)){observedOfferLists.add(offerList);new MutationObserver(refreshSummaryMetrics).observe(offerList,{childList:true,subtree:true,characterData:true});}
+   if(section.dataset.cpRefPane!==key)section.dataset.cpRefPane=key;
+   if(!sections.includes(section))sections.push(section);
+   const target=mounted?panel:right;
+   const grouped=mounted&&selected==='resumen'&&section.closest('#tpfSummaryAccordion');
+   if(section.parentElement!==target&&!grouped)target.appendChild(section);
+  }
+ }
+ center.dataset.cpRefPane='historial';
+ notes.dataset.cpRefPane='notas';
+ const docs=$('cpDocumentsPending');
+ if(docs){
+  docs.innerHTML='<div class="cpRefDrive"><strong>Google Drive</strong><span class="cpPendingBadge">Pendiente de conectar</span></div><div class="cpRefDocActions"><button type="button" disabled>Subir archivos</button><button type="button" disabled>Escanear / Crear PDF</button><button type="button" disabled>Abrir en Drive</button></div><div class="cpRefDocumentEmpty"><span class="cpRefDocumentIcon" aria-hidden="true">▤</span><h3 id="cpDocumentsTitle">Documentos del cliente</h3><p>La conexión con Google Drive todavía está pendiente.</p><p>Podrás vincular una carpeta existente y reunir aquí los PDF y fotografías de este cliente.</p><span>Subida de archivos y escaneo de DNI: pendientes</span></div>';
+ }
+ // Read-only activity preview; actions remain in the original history pane.
+ const recent=document.createElement('details');recent.className='tpfRecentActivity';
+ const recentHead=document.createElement('summary'),recentTitle=document.createElement('h3'),recentMore=document.createElement('button'),recentBody=document.createElement('div');
+ recentHead.className='tpfRecentHeading';recentTitle.textContent='Actividad reciente';recentMore.type='button';recentMore.className='secondary';recentMore.textContent='Ver historial';recentMore.addEventListener('click',e=>{e.preventDefault();select('historial',true);});
+ recentHead.append(recentTitle,recentMore);recent.append(recentHead,recentBody);
+ function refreshRecent(){
+  const entries=[...$('cpTimeline')?.children||[]].slice(0,3).map(node=>{const copy=node.cloneNode(true);copy.querySelectorAll('button,input,select,textarea').forEach(control=>control.remove());return copy.textContent.trim();}).filter(Boolean);
+  const texts=entries.length?entries:['Sin actividad reciente.'];const key=JSON.stringify(texts);
+  if(recentBody.dataset.content===key)return;recentBody.dataset.content=key;
+  recentBody.replaceChildren(...texts.map(text=>{const line=document.createElement('p');line.textContent=text;return line;}));
+ }
+ if($('cpTimeline'))new MutationObserver(refreshRecent).observe($('cpTimeline'),{childList:true,subtree:true,characterData:true});
+ const data=left.querySelector('.cpData');
+ function orderFields(){
+  if(!mounted||!data)return;
+  const ids=['contactPhone','contactDni','contactObservations','contactNotes','contactBank','contactEmail'];
+  const fields=ids.map(id=>$(id)).filter(node=>node?.parentElement===data);
+  fields.forEach((node,index)=>{node.style.gridRow=String(index+3);const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label){label.style.gridRow=String(index+3);label.htmlFor=node.id;label.classList.toggle('tpfLongFieldLabel',node.matches('textarea'));}});
+  const current=[...data.children].filter(node=>fields.includes(node));
+  if(current.every((node,i)=>node===fields[i]))return;
+  const anchor=fields.reduce((last,node)=>[...data.children].indexOf(node)>[...data.children].indexOf(last)?node:last,fields[0])?.nextSibling;
+  fields.forEach(node=>{const label=data.querySelector('label[for="'+node.id+'"]')||(node.previousElementSibling?.matches('label')?node.previousElementSibling:null);if(label)data.insertBefore(label,anchor);data.insertBefore(node,anchor);});
+ }
+ if(data)new MutationObserver(orderFields).observe(data,{childList:true});
+ function fitContactText(){
+  if(!mounted||modal.classList.contains('hidden'))return;
+  for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','36px');field.style.setProperty('--contact-text-height',Math.min(160,Math.max(36,field.scrollHeight+2))+'px');}
+ }
+ if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
+ window.addEventListener('tpf:contact-updated',fitContactText);
+ window.addEventListener('tpf:contact-text-ready',fitContactText);
+ const linkRow=document.createElement('div');linkRow.className='tpfContactLinkRow';
+ function ensureLinkRow(){if(linkRow.parentElement!==profile)tabs.before(linkRow);}
+ let googleObserved=null;
+ function compactGoogle(){
+  const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
+  const i=sections.indexOf(card);if(i>=0)sections.splice(i,1);delete card.dataset.cpRefPane;
+  ensureLinkRow();if(card.parentElement!==linkRow)linkRow.append(card);
+  if(card!==googleObserved){googleObserved=card;new MutationObserver(compactGoogle).observe(card,{childList:true});}
+  if(card.querySelector(':scope > details'))return;
+  const heading=card.querySelector(':scope > h4');if(!heading)return;
+  const details=document.createElement('details'),summary=document.createElement('summary'),status=card.querySelector(':scope > .tpfGoogleInlineStatus');
+  const title=document.createElement('b');title.textContent=heading.textContent;summary.appendChild(title);if(status)summary.appendChild(status);heading.remove();
+  details.appendChild(summary);details.append(...card.childNodes);card.appendChild(details);
+ }
+ const secondaryPositions=new Map();
+ const info=document.createElement('details');info.className='tpfContactExtra';info.innerHTML='<summary>Información adicional</summary><div class="tpfContactExtraBody"></div>';
+ function moveSecondary(node,target,before=null){
+  if(!node)return;if(!secondaryPositions.has(node)){const anchor=document.createComment('original contact section');node.before(anchor);secondaryPositions.set(node,anchor);}
+  if(node.parentElement!==target||(before&&node.nextSibling!==before))target.insertBefore(node,before);
+ }
+ function arrangeSecondary(){
+  if(!mounted)return;
+  const relations=$('tpfContactPartySummary');
+  if(relations){ensureLinkRow();const google=$('tpfGoogleInlineCard');moveSecondary(relations,linkRow,google?.parentElement===linkRow?google:null);}
+  const labels=modal.querySelector('.contactLabelsBox');if(labels){moveSecondary(labels,left);labels.classList.add('tpfStandaloneLabels');const button=$('contactManageLabels');if(button&&button.textContent!=='+ Añadir etiqueta')button.textContent='+ Añadir etiqueta';}
+  if(info.parentElement!==left)left.append(info);
+  for(const node of [expiry,$('cpAuthorship'),$('contactMeta'),left.querySelector('.cpOwner')])moveSecondary(node,info.lastElementChild);
+ }
+ function restoreSecondary(){for(const [node,anchor] of secondaryPositions){if(anchor.parentNode)anchor.after(node);anchor.remove();}secondaryPositions.clear();info.remove();}
+ let secondaryTimer=0;
+ new MutationObserver(()=>{clearTimeout(secondaryTimer);secondaryTimer=setTimeout(arrangeSecondary,0);}).observe(left,{childList:true});
+ const expiry=document.createElement('section');expiry.className='cpRefExpiry';expiry.innerHTML='<h3>Caducidad del DNI</h3><span class="cpPendingBadge">Pendiente</span><p>Lectura y confirmación de la fecha todavía no disponibles.</p>';
+ const edit=document.createElement('button');edit.type='button';edit.className='cpRefEdit';edit.textContent='Editar datos';
+ edit.addEventListener('click',()=>{$('tpfContactEditToggle')?.click();});
+ function select(key,focus=false){
+  if(!panels.some(([k])=>k===key))return;
+  selected=key;right.dataset.cpRefSelected=key;
+  tabs.querySelectorAll('button').forEach(b=>{const on=b.dataset.cpRefTab===key;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;if(on&&focus)b.focus();});
+  panel.setAttribute('aria-labelledby','cpRefTab-'+key);
+  applySummaryGroups();refreshSummaryMetrics();filterTasks();
+ }
+ tabs.addEventListener('click',e=>{const b=e.target.closest('[data-cp-ref-tab]');if(b)select(b.dataset.cpRefTab);});
+ tabs.addEventListener('keydown',e=>{
+  const keys=panels.map(([k])=>k);let i=keys.indexOf(selected);
+  if(e.key==='ArrowRight')i=(i+1)%keys.length;else if(e.key==='ArrowLeft')i=(i+keys.length-1)%keys.length;else if(e.key==='Home')i=0;else if(e.key==='End')i=keys.length-1;else return;
+  e.preventDefault();select(keys[i],true);
+ });
+ function taskMode(){
+  if(embeddedCreate)return false;
+  return ['tpfTaskStandalone','tpfListTaskModal','tpf-wa-task-mode','tpf-wa-task-flow'].some(c=>modal.classList.contains(c)) ||
+   ['cpTaskPage','cpTaskDetailPage','tpfWaTasksPage'].some(id=>{const e=$(id);return e&&!e.classList.contains('hidden');});
+ }
+ function sync(){
+  if(embeddedCreate&&(!mq.matches||modal.classList.contains('hidden'))){
+   window.TPFAgendaComposer?.close({silent:true});restoreComposer();
+  }
+  edit.textContent=modal.classList.contains('tpf-contact-editing')?'Cancelar edición':'Editar datos';
+  const on=mq.matches&&!taskMode();
+  if(on&&!mounted){
+   mounted=true;if(heading)heading.textContent='Ficha del cliente';
+   columns.before(identity);
+   sections.forEach(s=>panel.appendChild(s));panel.appendChild(center);right.append(followHeading,panel,recent);columns.before(tabs);
+   left.appendChild(expiry);
+   modal.classList.add('tpfContactReference');select(selected);
+  }else if(!on&&mounted){
+   restoreSummaryGroups();restoreSecondary();mounted=false;photoEpoch++;closePhotoModal();clearPhotoReady();avatar?.querySelector('.cpRefPhoto')?.remove();if(heading)heading.textContent=oldHeading;modal.classList.remove('tpfContactReference');
+   identityAnchor.after(identity);centerAnchor.after(center);
+   sections.forEach(s=>right.appendChild(s));if($('tpfGoogleInlineCard')?.parentElement===linkRow)right.prepend($('tpfGoogleInlineCard'));linkRow.remove();
+   tabs.remove();followHeading.remove();panel.remove();recent.remove();expiry.remove();edit.remove();
+  }
+  syncSummarySections();applySummaryGroups();refreshSummaryMetrics();orderFields();compactGoogle();arrangeSecondary();refreshRecent();fitContactText();
+ }
+ document.addEventListener('click',e=>{
+  if(!mounted||modal.classList.contains('hidden')||!composer||typeof window.openAgendaComposer!=='function')return;
+  if(!e.target.closest?.('#cpNewTask,#cpSideNewTask'))return;
+  e.preventDefault();e.stopImmediatePropagation();closeMore();if(embeddedCreate)return;
+  let contact=null;try{contact=typeof currentContact!=='undefined'?currentContact:null;}catch(_){}
+  if(!contact?.id)return;
+  const contactId=contact.id;
+  tabBeforeCreate=selected;embeddedCreate=true;
+  taskTrigger=e.target.closest('#cpNewTask,#cpSideNewTask');
+  contactWasInert=modal.inert;modal.inert=true;
+  modal.classList.add('cpRefTaskInside');select('tareas');
+  window.openAgendaComposer({customerName:$('contactName')?.value||'',phone:$('contactPhone')?.value||'',contactId,type:'Tarea'}, {
+   onCancel:restoreComposer,
+   onSaved:async row=>{restoreComposer();if(row?.related_record_id&&typeof logContactActivity==='function')await logContactActivity(row.related_record_id,'task_created','Tarea creada',row.title||'');if(typeof currentContact!=='undefined'&&currentContact?.id===contactId&&typeof renderContactProfile==='function')await renderContactProfile();}
+  });
+ },true);
+ // The contact back button closes its child composer before leaving the client.
+ window.addEventListener('click',e=>{
+  if(!embeddedCreate||!e.target.closest?.('#contactClose'))return;
+  e.preventDefault();e.stopImmediatePropagation();window.TPFAgendaComposer?.close();
+ },true);
+ const observer=new MutationObserver(sync);observer.observe(modal,{attributes:true,attributeFilter:['class']});
+ ['cpTaskPage','cpTaskDetailPage'].forEach(id=>{if($(id))observer.observe($(id),{attributes:true,attributeFilter:['class']});});
+ mq.addEventListener('change',sync);
+ // Only direct section insertions matter; message/content mutations must not retrigger layout.
+ let summaryTimer=0;
+ const sectionObserver=new MutationObserver(()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>{syncSummarySections();applySummaryGroups();refreshSummaryMetrics();compactGoogle();arrangeSecondary();},0);});
+ sectionObserver.observe(right,{childList:true});sectionObserver.observe(panel,{childList:true});
+ // No se actualiza ningún "botón de llamada" aquí: el diseño de referencia no
+ // define updateCall. Invocarlo al abrir una ficha lanzaba un ReferenceError y
+ // podía dejar incompleta la inicialización de los controles de la ficha.
+ window.addEventListener('tpf:contact-open',()=>{if(embeddedCreate){window.TPFAgendaComposer?.close({silent:true});restoreComposer();}selected='resumen';delete right.dataset.cpRefProgramsAll;restoreSummaryGroups();sync();select(selected);refreshPhoto();});
+
+ // Summary limits only the number of cards, never the fields inside each card.
+ const summaryLists=[['cpOpportunities','oportunidades','.oppUnifiedCard'],['cpTasks','tareas','.cpTaskWrap'],['cpWhatsappPrograms','programados','.cpWaWrap']];
+ summaryLists.forEach(([id,key,selector])=>{
+  const list=$(id);if(!list)return;
+  const more=document.createElement('button');more.type='button';more.className='cpRefMore';more.dataset.cpRefMore=key;
+  list.after(more);
+  const update=()=>{const count=list.querySelectorAll(':scope > '+selector).length;more.hidden=count<=(key==='programados'?2:4);refreshSummaryMetrics();more.textContent=key==='programados'&&right.dataset.cpRefProgramsAll==='true'?'Mostrar solo 2':'Ver todos ('+count+')';};
+  more.addEventListener('click',()=>{if(key==='programados'){right.dataset.cpRefProgramsAll=right.dataset.cpRefProgramsAll==='true'?'false':'true';update();}else select(key,true);});
+  new MutationObserver(update).observe(list,{childList:true});update();
+ });
+ // Compact existing cards, preserving every native action and audit entry.
+ function compactWorkCards(){
+  if(!mounted)return;
+  for(const card of modal.querySelectorAll('#cpOpportunities > .oppUnifiedCard,#cpTasks > .cpTaskWrap')){
+   let detail=card.querySelector(':scope > .tpfWorkDetails');
+   if(!detail){detail=document.createElement('details');detail.className='tpfWorkDetails';const title=document.createElement('summary');title.textContent='Detalles';detail.append(title);card.append(detail);}
+   for(const node of card.querySelectorAll(':scope > .oppUnifiedClient,:scope > .oppUnifiedNotes,:scope > .cpAuthLine'))detail.append(node);
+   const remove=card.querySelector('.oppUnifiedActions > .danger,.cpTaskActions > .dangerText');if(remove)detail.append(remove);
+   const notes=card.querySelector('.oppUnifiedNotes');
+   if(notes){let preview=card.querySelector(':scope > .tpfOpportunityNotesPreview');if(!preview){preview=document.createElement('p');preview.className='tpfOpportunityNotesPreview';detail.before(preview);}if(preview.textContent!==notes.textContent)preview.textContent=notes.textContent;}
+   const select=card.querySelector('.oppUnifiedStageControl select');if(select)select.setAttribute('aria-label','Cambiar estado de la oportunidad');
+  }
+  refreshSummaryMetrics();
+ }
+ let workTimer=0;
+ for(const id of ['cpOpportunities','cpTasks'])if($(id))new MutationObserver(()=>{clearTimeout(workTimer);workTimer=setTimeout(()=>{compactWorkCards();filterTasks();},0);}).observe($(id),{childList:true,subtree:true});
+ const taskFilters=document.createElement('div');taskFilters.className='tpfTaskFilters';taskFilters.setAttribute('aria-label','Estado de las tareas');
+ let taskFilter='pending';
+ for(const [key,label] of [['pending','Pendientes'],['completed','Completadas']]){const button=document.createElement('button');button.type='button';button.dataset.taskFilter=key;button.textContent=label;button.addEventListener('click',()=>{taskFilter=key;filterTasks();});taskFilters.append(button);}
+ $('cpTasks')?.before(taskFilters);
+ const taskEmpty=document.createElement('p');taskEmpty.className='tpfTaskFilterEmpty';$('cpTasks')?.after(taskEmpty);
+ function filterTasks(){
+  const cards=[...$('cpTasks')?.querySelectorAll(':scope > .cpTaskWrap')||[]];let shown=0;
+  cards.forEach(card=>{const match=(card.dataset.taskStatus==='completed')===(taskFilter==='completed');const hide=mounted&&(!match||(selected==='resumen'&&shown>=4));if(match)shown++;card.classList.toggle('tpfTaskFiltered',hide);});
+  taskFilters.querySelectorAll('button').forEach(button=>{const done=button.dataset.taskFilter==='completed',count=cards.filter(card=>(card.dataset.taskStatus==='completed')===done).length;const text=(done?'Completadas':'Pendientes')+' ('+count+')';if(button.textContent!==text)button.textContent=text;button.setAttribute('aria-pressed',String(button.dataset.taskFilter===taskFilter));});
+  taskEmpty.hidden=!mounted||shown>0;const text=taskFilter==='completed'?'No hay tareas completadas.':'No hay tareas pendientes.';if(taskEmpty.textContent!==text)taskEmpty.textContent=text;
+ }
+ window.addEventListener('tpf:contact-open',()=>{taskFilter='pending';compactWorkCards();filterTasks();});
+ tabs.addEventListener('click',filterTasks);tabs.addEventListener('keydown',filterTasks);
+ mq.addEventListener('change',()=>{compactWorkCards();filterTasks();});
+ const quick=identity.querySelector('.cpQuick'),quickPositions=new Map();
+ const moreMenu=document.createElement('details');moreMenu.className='tpfContactMore';moreMenu.innerHTML='<summary aria-label="Más acciones">⋯</summary><div class="tpfContactMoreBody"></div>';
+ function closeMore(){moreMenu.open=false;}
+ function refreshHeader(){
+  if(!quick)return;
+  if(!mounted){for(const [node,anchor] of quickPositions){if(anchor.parentNode)anchor.after(node);anchor.remove();}quickPositions.clear();moreMenu.remove();return;}
+  if(moreMenu.parentElement!==quick)quick.append(moreMenu);
+  for(const id of ['cpNewOpp','cpNewTask']){const button=$(id);if(!button)continue;if(!quickPositions.has(button)){const anchor=document.createComment('original quick action');button.before(anchor);quickPositions.set(button,anchor);}if(button.parentElement!==moreMenu.lastElementChild)moreMenu.lastElementChild.append(button);const text=id==='cpNewOpp'?'Nueva oportunidad':'Nueva tarea';if(button.textContent!==text)button.textContent=text;}
+  for(const id of ['contactWhatsapp','cpNewOffer','cpDirectSale','cpNewReview']){const button=$(id);if(button&&button.parentElement!==quick)quick.insertBefore(button,moreMenu);}
+ }
+ moreMenu.addEventListener('click',e=>{if(e.target.closest('button'))closeMore();});
+ document.addEventListener('click',e=>{if(!moreMenu.contains(e.target))closeMore();});
+ moreMenu.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeMore();moreMenu.querySelector('summary').focus();}});
+ window.addEventListener('tpf:contact-open',()=>{closeMore();recent.open=false;info.open=false;});
+ new MutationObserver(refreshHeader).observe(modal,{attributes:true,attributeFilter:['class']});
+ if(quick)new MutationObserver(refreshHeader).observe(quick,{childList:true,subtree:true});
+ // Reuse the existing read-only avatar loader and its shared in-memory cache.
+ let photoKey='',photoEpoch=0;
+ const avatar=$('cpAvatar');
+ function clearPhotoReady(){
+  if(!avatar)return;
+  avatar.classList.remove('cpRefPhotoReady');avatar.removeAttribute('role');avatar.removeAttribute('tabindex');avatar.removeAttribute('title');avatar.removeAttribute('aria-label');
+ }
+ function closePhotoModal(){
+  document.querySelector('.tpfContactAvatarModal')?.remove();
+  document.removeEventListener('keydown',closePhotoOnKey);
+ }
+ function closePhotoOnKey(e){if(e.key==='Escape')closePhotoModal();}
+ function showPhotoModal(url,name){
+  if(!url)return;
+  closePhotoModal();
+  const viewer=document.createElement('div');viewer.className='tpfAvatarModal tpfContactAvatarModal';viewer.setAttribute('role','dialog');viewer.setAttribute('aria-modal','true');viewer.setAttribute('aria-label','Foto del contacto ampliada');
+  const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Cerrar foto');
+  const image=document.createElement('img');image.src=url;image.alt='Foto de '+String(name||'contacto').trim();image.referrerPolicy='no-referrer';
+  viewer.append(close,image);viewer.addEventListener('click',e=>{if(e.target===viewer||e.target===close)closePhotoModal();});
+  document.body.appendChild(viewer);document.addEventListener('keydown',closePhotoOnKey);close.focus();
+ }
+ function openPhotoModal(){
+  const source=avatar?.querySelector('.cpRefPhoto');
+  if(source?.src)showPhotoModal(source.src,$('contactName')?.value);
+ }
+ window.TPFContactPhotoViewer={open:showPhotoModal,close:closePhotoModal};
+ if(avatar){
+  avatar.addEventListener('click',openPhotoModal);
+  avatar.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&avatar.querySelector('.cpRefPhoto')){e.preventDefault();openPhotoModal();}});
+ }
+ function refreshPhoto(){
+  if(!avatar)return;
+  let contact=null;try{contact=typeof currentContact!=='undefined'?currentContact:null;}catch(_){}
+  let phone=String($('contactPhone')?.value||'').replace(/[^0-9]/g,'');
+  if(phone.startsWith('00'))phone=phone.slice(2);if(phone.length===9)phone='34'+phone;
+  const key=String(contact?.id||'')+':'+phone;
+  if(key!==photoKey){photoKey=key;photoEpoch++;closePhotoModal();clearPhotoReady();avatar.querySelector('.cpRefPhoto')?.remove();}
+  if(!mounted||modal.classList.contains('hidden')||!contact?.id||!/^[0-9]{10,15}$/.test(phone))return;
+  if(typeof waLoadAvatar!=='function'||typeof contactCanUseWhatsapp!=='function'||!contactCanUseWhatsapp())return;
+  if(avatar.querySelector('.cpRefPhoto'))return;
+  const epoch=++photoEpoch;
+  Promise.resolve(waLoadAvatar(phone+'@c.us')).then(url=>{
+   if(epoch!==photoEpoch||key!==photoKey||!mounted||modal.classList.contains('hidden')||!url)return;
+   if(!/^https:\/\//i.test(url)&&!/^data:image\/(jpeg|png|webp);base64,/i.test(url))return;
+   const img=new Image();img.className='cpRefPhoto';img.alt='';img.decoding='async';img.referrerPolicy='no-referrer';
+   let expired=false;const timer=setTimeout(()=>{expired=true;img.onload=null;img.onerror=null;},4000);
+   img.onload=()=>{clearTimeout(timer);if(!expired&&epoch===photoEpoch&&key===photoKey&&mounted&&!modal.classList.contains('hidden')){avatar.querySelector('.cpRefPhoto')?.remove();avatar.appendChild(img);avatar.classList.add('cpRefPhotoReady');avatar.setAttribute('role','button');avatar.tabIndex=0;avatar.title='Ampliar foto';avatar.setAttribute('aria-label','Ampliar foto del contacto');}};
+   img.onerror=()=>{clearTimeout(timer);};img.src=url;
+  }).catch(()=>{});
+ }
+ new MutationObserver(()=>{if(!modal.classList.contains('hidden'))refreshPhoto();}).observe(modal,{attributes:true,attributeFilter:['class']});
+ if(avatar)new MutationObserver(()=>{if(!avatar.querySelector('.cpRefPhoto'))refreshPhoto();}).observe(avatar,{childList:true});
+ sync();refreshHeader();refreshPhoto();
+})();
