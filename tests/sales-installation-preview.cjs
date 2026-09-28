@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const ctx={window:{},document:{readyState:'loading',addEventListener(){}},Date};vm.runInNewContext(fs.readFileSync('js/modules/sales-installation-preview.js','utf8'),ctx);const api=ctx.window.TPFInstallationPreview;
+const sale={DNI:'12345678Z',Operador:'O2',Transaccion:'TX',OrderLine:'1',Fecha_Activacion:'05/09/2026',Cancelada:'No'};
+const contact={id:'c',data:{DNI:'12345678Z',NOMBRE:'Cliente'}};
+let rows=api.analyse([sale], [contact], []);assert.equal(rows[0].action,'Crear en Ganado');assert.equal(rows[0].expected,'');assert.equal(rows[0].next,'2027-08-05');assert.equal(rows[0].review,'2027-09-05');
+rows=api.analyse([sale],[contact],[{id:'o',record_id:'c',title:'CAMBIO O2',expected_date:'2027-10-01'}]);assert.equal(rows[0].action,'Revisar oportunidad existente');assert.equal(rows[0].expected,'2027-10-01');
+assert.equal(api.analyse([sale],[],[])[0].action,'Cliente no encontrado');assert.equal(api.analyse([sale,sale],[contact],[])[1].action,'Duplicada en Excel');
+assert.equal(api.analyse([{Comentario:'Filtros aplicados'}],[contact],[]).length,0);
+assert.equal(api.months('2024-02-29',12),'2025-02-28');
+assert.equal(api.analyse([sale],[contact,{id:'manager',data:{TPF_TITULAR:{holder_dni:'12345678Z'}}}],[])[0].action,'Revisar titular / gestor');
+console.log('PASS: installed-sales preview preserves expected dates, DNI matching, duplicates and calendar boundaries');
