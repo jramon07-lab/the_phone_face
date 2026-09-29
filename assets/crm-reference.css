@@ -1470,9 +1470,13 @@ body.tpfUnified #view-whatsapplive.waInboxWorkspace #waArchiveChat{background:#1
 @media(min-width:1051px){body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLiveLayout{height:0!important;grid-template-rows:minmax(0,1fr)!important}body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs>button{flex:0 0 auto!important;width:auto!important}body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs{justify-content:flex-start!important}}
 
 
-/* Keep all eleven inbox filters visible on laptop screens. */
+/* All 13 inbox filters remain visible without horizontal scrolling.
+   Laptops use two rows; wide desktops have room for one. */
 @media(min-width:1051px){
- body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs{flex-wrap:nowrap!important;gap:2px!important;padding:8px!important;overflow-x:auto!important}
- body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs>button{flex:1 0 auto!important;font-size:13px!important;padding:8px 3px!important;min-width:0!important;letter-spacing:0!important}
+ body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs{display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:4px!important;padding:8px!important;overflow:visible!important}
+ body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs>button{width:100%!important;font-size:12px!important;line-height:16px!important;padding:7px 3px!important;min-height:34px!important;min-width:0!important;white-space:normal!important;letter-spacing:0!important;box-sizing:border-box!important}
  body.tpfUnified #view-whatsapplive.waInboxWorkspace .waTabs .waAutomaticCount{min-width:14px;height:16px;padding:0 3px;margin-left:3px;font-size:10px;box-sizing:border-box}
+}
+@media(min-width:1800px){
+ body.tpfUnified #view-whatsapplive.waInboxWorkspace .waLivePage>.waTabs{grid-template-columns:repeat(13,minmax(0,1fr))!important}
 }

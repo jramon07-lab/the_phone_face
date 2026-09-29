@@ -213,13 +213,15 @@ test('PC: demo, ocho pantallas y conexión real de WhatsApp y Google, solo lectu
           await expect(page.locator('[data-wa-tab="processing"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="declined"]')).toBeVisible();
           const originalViewport=page.viewportSize();
-          for(const width of [1280,1366,1920,2560]){
+          for(const width of [1280,1366,1440,1920,2560]){
             await page.setViewportSize({width,height:768});
             await expect.poll(async()=>{const tabs=await page.locator('#view-whatsapplive .waLivePage>.waTabs').evaluate(el=>{
               const buttons=[...el.querySelectorAll(':scope>button[data-wa-tab]')].filter(b=>b.getBoundingClientRect().width);
-              return {count:buttons.length,tops:buttons.map(b=>Math.round(b.getBoundingClientRect().top)),fits:el.scrollWidth<=el.clientWidth+1};
+              const rect=el.getBoundingClientRect();
+              const contained=buttons.every(b=>{const r=b.getBoundingClientRect();return r.left>=rect.left&&r.right<=rect.right+1&&b.scrollWidth<=b.clientWidth+1});
+              return {count:buttons.length,keys:buttons.map(b=>b.dataset.waTab).sort(),tops:buttons.map(b=>Math.round(b.getBoundingClientRect().top)),fits:el.scrollWidth<=el.clientWidth+1&&contained};
             });
-            return {count:tabs.count,lines:new Set(tabs.tops).size,fits:tabs.fits};},{message:'Las 12 pestañas deben caber después del ajuste de tamaño',timeout:5000}).toEqual({count:12,lines:1,fits:true});
+            return {count:tabs.count,keys:tabs.keys,lines:new Set(tabs.tops).size,fits:tabs.fits};},{message:'Las 13 pestañas deben quedar visibles, completas y sin desplazamiento horizontal',timeout:5000}).toEqual({count:13,keys:['unanswered','waiting','automatic','processing','aftercare','declined','all','contacts','groups','unread','favorites','archived','snoozed'].sort(),lines:width<1800?2:1,fits:true});
           }
           await page.setViewportSize(originalViewport);
           const row=page.locator('#waLiveChats .waChatRow').first();
