@@ -100,6 +100,7 @@ for(const status of ['following','accepted','processed']){
  chatMeta={archived:true,archivedAt:now+200};sample._lastMessage={timestamp:now+100,direction:'in'};
  assert.deepEqual(kinds(),[status==='following'?'automatic':'processing'],'attending keeps the commercial phase');
  assert.equal(inbox.matchesFilter(sample,'archived'),false);
+ assert.equal(inbox.isAttended(sample),true,'attended button must not depend on commercial inbox');
  sample._lastMessage={timestamp:now+201,direction:'in'};
  assert.ok(kinds().includes('unanswered'),'new incoming needs attention again');
 }
@@ -133,7 +134,7 @@ sample._lastMessage={timestamp:now,direction:'out'};assert.deepEqual(kinds(),['s
 const due={...planned,plan_task:{...planned.plan_task,starts_at:iso(now-30)}};
 inbox.ingestBusiness([due],[saleOpp]);assert.deepEqual(kinds(),['unanswered','automatic'],'edited task date overrides old offer date');
 assert.match(inbox.describe(sample),/Próxima acción vencida/);
-chatMeta={archived:true,archivedAt:now-40};assert.deepEqual(kinds(),['unanswered','automatic'],'attending before the deadline does not swallow the reminder');
+chatMeta={archived:true,archivedAt:now-40};assert.deepEqual(kinds(),['unanswered','automatic'],'attending before the deadline does not swallow the reminder');assert.equal(inbox.isAttended(sample),false,'new due work must allow attending again');
 chatMeta={archived:true,archivedAt:now};assert.deepEqual(kinds(),['automatic'],'attending after the deadline dismisses its pending badge');
 inbox.ingestBusiness([planned],[saleOpp]);assert.deepEqual(kinds(),['snoozed','automatic'],'a rescheduled future task reappears');
 chatMeta={};

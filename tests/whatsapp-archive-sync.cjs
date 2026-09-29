@@ -31,7 +31,7 @@ assert.equal(meta.chat.archived,true);
 assert.ok(meta.chat.archivedAt>0);
 assert.equal(button.textContent,'✓ Marcar como atendido');
 context.window.waRefreshChatTopButtons();
-assert.equal(button.textContent,'↥ Reabrir');
+assert.equal(button.textContent,'✓ Atendido · Reabrir');
 context.window.waTrackDirection('chat',{direction:'in',timestamp:meta.chat.archivedAt-1});
 assert.equal(meta.chat.archived,true,'Un mensaje anterior al archivo no debe recuperar el chat');
 context.window.waTrackDirection('chat',{direction:'in',timestamp:meta.chat.archivedAt+1});

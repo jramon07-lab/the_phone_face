@@ -233,6 +233,10 @@
     // A scheduled after-sale message alone does not start an offer workflow.
     return kinds.length?kinds:['all'];
   }
+  function isAttended(chat){
+    const kinds=facets(chat),m=meta(chat);
+    return kinds.includes('archived')||!!(m.archived&&incoming(chat)<=Number(m.archivedAt||0)&&!kinds.includes('unanswered'));
+  }
   function category(chat){return facets(chat)[0];}
   function matchesFilter(chat,filter){
     if(filter==='aftercare')return followups(chat).length>0;
@@ -302,7 +306,7 @@
   }
   function decorateHeader(){
     const button=document.getElementById('waArchiveChat'),chatId=liveState()?.selected?.id;
-    if(button&&chatId){const chat=(liveState()?.chats||[]).find(c=>c.id===chatId),archived=chat?facets(chat).includes('archived'):!!window.waMeta?.(chatId)?.archived;button.textContent=archived?'Reabrir':'✓ Marcar como atendido';button.title=archived?'Volver a conversaciones':'Quitar de Pendientes. Conserva ofertas activas y No interesados; las demás pasan a Archivados.';button.setAttribute('aria-label',button.textContent);}
+    if(button&&chatId){const chat=(liveState()?.chats||[]).find(c=>c.id===chatId),archived=chat?isAttended(chat):!!window.waMeta?.(chatId)?.archived;button.textContent=archived?'✓ Atendido · Reabrir':'✓ Marcar como atendido';button.title=archived?'Volver a conversaciones':'Quitar de Pendientes. Conserva ofertas activas y No interesados; las demás pasan a Archivados.';button.setAttribute('aria-label',button.textContent);}
     if(button){
       let archive=document.getElementById('waArchiveDeclined');
       if(!archive){archive=document.createElement('button');archive.id='waArchiveDeclined';archive.type='button';archive.className='secondary';archive.textContent='Archivar';archive.title='Retirar de No interesados. Las demás ofertas activas continúan.';button.after(archive);archive.onclick=async()=>{const id=liveState()?.selected?.id;archive.disabled=true;try{await archiveDeclined(id)}catch(e){window.showToast?.(e.message,true)}finally{archive.disabled=false}};}
@@ -393,6 +397,6 @@
       if(!document.hidden&&(!view||!view.classList.contains('hidden')))reload();
     },REFRESH_MS);
   }
-  window.TPFAutomationInbox={ingestMessageSummary,isAutomaticWaiting,category,facets,matchesFilter,business,workPlan,describe,ingestBusiness,ingestDeclineArchives,archiveDeclined,ingestJobs,ingestFollowups,followups,reload};
+  window.TPFAutomationInbox={isAttended,ingestMessageSummary,isAutomaticWaiting,category,facets,matchesFilter,business,workPlan,describe,ingestBusiness,ingestDeclineArchives,archiveDeclined,ingestJobs,ingestFollowups,followups,reload};
   M.register('whatsapp-automation-inbox',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();
