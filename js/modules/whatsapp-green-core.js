@@ -1540,7 +1540,7 @@ $("waTagChat").onclick=waAddTag;$("waAddTagSide").onclick=waAddTag;
 
 function waRenderSideExtras(){
  const id=waLiveState.selected?.id;if(!id)return;const m=waMeta(id);
- $("waSideTags").innerHTML=(m.tags||[]).map(t=>`<span class="waTagChip">${esc(t)}<button onclick="waRemoveTag('${String(t).replaceAll("'","\\'")}')">×</button></span>`).join("")||'<span class="small">Sin etiquetas</span>';
+ waRefreshGlobalContactTags();
  $("waInternalNote").value=m.note||"";
  waRefreshChatTopButtons();
  const items=[];
@@ -2041,10 +2041,11 @@ window.openContact=async function(id){const r=await _openContactLabelsBase(id);s
 
 /* WhatsApp: las etiquetas pasan a ser las del contacto CRM, persistentes. */
 async function waRefreshGlobalContactTags(){
-  const cid=waLiveState?.contact?.id;
-  if(!cid){$("waSideTags").innerHTML='<span class="small">Sin contacto vinculado</span>';return}
+  const cid=waLiveState?.contact?.id,chatId=waLiveState?.selected?.id;
+  if(!cid){$("waSideTags").innerHTML=(waLiveState?.contactCandidates||[]).length>1?'<span class="small">Elige una ficha para ver sus etiquetas</span>':'<span class="small">Sin contacto vinculado</span>';return}
   try{
     const rows=await crmGetContactLabels(cid);
+    if(waLiveState?.selected?.id!==chatId||waLiveState?.contact?.id!==cid)return;
     $("waSideTags").innerHTML=rows.map(x=>`<span class="waGlobalTagChip ${crmLabelTone(x.id||x.name)}">${esc(x.name)}</span>`).join("")||'<span class="small">Sin etiquetas</span>';
   }catch(e){}
 }

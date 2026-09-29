@@ -2274,6 +2274,7 @@
       clearWhatsappNicknames();
       return "";
     }
+    window.waSyncContactActions?.();
     const c = contactData(row),
       preferred = c.name || safe(chat.name) || "Contacto",
       nickname = safe(c.nickname);
@@ -2374,6 +2375,7 @@
       if (token !== waRefreshToken || !waContextCurrent(expected)) return;
       row = matchedWa();
     }
+    window.waSyncContactActions?.();
     const c = contactData(row),
       preferred = applyUnifiedWhatsappName();
     const name = safe(chat.name);
@@ -2412,18 +2414,28 @@
         card.innerHTML = `<h4>Elige la ficha correcta</h4><span class="tpfGoogleInlineStatus warn">${candidates.length} contactos del CRM comparten este teléfono</span><p>No se modificará ni creará nada hasta que elijas la persona exacta.</p><div class="tpfGoogleInlineActions">${candidates
           .map((item, index) => {
             const x = contactData(item);
-            return `<button type="button" class="secondary" data-tpf-wa-candidate="${index}">${esc(x.name)}${x.nickname ? ` · ${esc(x.nickname)}` : ""}</button>`;
+            return `<button type="button" class="secondary" data-tpf-wa-candidate="${index}">${esc(x.name)}${x.nickname ? ` · ${esc(x.nickname)}` : ""} · ${x.dni ? `DNI: ${esc(x.dni)}` : "Sin DNI"}</button>`;
           })
           .join("")}</div>`;
         card.querySelectorAll("[data-tpf-wa-candidate]").forEach(
           (button) =>
-            (button.onclick = () => {
+            (button.onclick = async () => {
               const chosen = candidates[Number(button.dataset.tpfWaCandidate)];
               if (!chosen || safe(selectedWa()?.id) !== safe(chat.id)) return;
               waLiveState.contact = chosen;
               waLiveState.contactCandidates = [chosen];
               rememberBinding(chat, chosen);
+              const selectedData = contactData(chosen);
+              $("waContactState").innerHTML = '<span class="pill green">Contacto encontrado</span>';
+              $("waSideIdentity")?.classList.remove("hidden");
+              if ($("waSideDni")) $("waSideDni").textContent = selectedData.dni || "—";
+              if ($("waSidePhoneDetail")) $("waSidePhoneDetail").textContent = selectedData.phone || phone(chat.id);
+              if ($("waSideNotes")) $("waSideNotes").textContent = field(chosen.data, "NOTAS", "NOTES", "OBSERVACIONES") || "—";
               waSignature = "";
+              window.waSyncContactActions?.();
+              await loadWaContactSideData(chosen, phone(chat.id));
+              if (safe(selectedWa()?.id) !== safe(chat.id) || safe(matchedWa()?.id) !== safe(chosen.id)) return;
+              await waRefreshGlobalContactTags();
               refreshWhatsapp();
             }),
         );

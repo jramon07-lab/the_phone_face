@@ -25,3 +25,22 @@ assert.equal((core.match(/savedIdentity\?\.nickname\?`<small class="tpfWaListNic
 assert.match(html,/whatsapp-green-core\.js\?v=[^"\s]+/,'the browser must load the safe WhatsApp core');
 assert.match(html,/contact-google-inline\.js\?v=/,'the browser must load the on-demand Google contact helper');
 console.log('WhatsApp/Google identity remains isolated to the exact chat and phone');
+
+// Exercise the final sidebar decorator, which previously undid the core guard.
+const vm=require('node:vm');
+const fixes=fs.readFileSync('js/modules/whatsapp-five-fixes.js','utf8');
+const elements=new Map();
+for(const id of ['waSideCreateContact','waSideOpenContact','waSideTags','waAddTagSide'])elements.set(id,{classList:{toggle(k,v){this[k]=v}},style:{setProperty(k,v){this[k]=v}}});
+const state={selected:{id:'34600000000@c.us'},contact:null,contactCandidates:[{id:'a'},{id:'b'}]};
+const ctx={document:{getElementById:id=>elements.get(id)},window:{},waLiveState:state,openModernWaContact(){}};
+vm.runInNewContext(fixes.slice(fixes.indexOf('function syncContactActions()'),fixes.indexOf('const originalMatch=')),ctx);
+ctx.window.waSyncContactActions();
+assert.equal(elements.get('waSideCreateContact').style.display,'none');
+assert.match(elements.get('waSideTags').innerHTML,/Elige una ficha/);
+assert.equal(elements.get('waAddTagSide').disabled,true);
+state.contact={id:'a'};ctx.window.waSyncContactActions();
+assert.equal(elements.get('waSideOpenContact').style.display,'block');
+assert.equal(elements.get('waAddTagSide').disabled,false);
+state.contact=null;state.contactCandidates=[];ctx.window.waSyncContactActions();
+assert.equal(elements.get('waSideCreateContact').style.display,'block');
+console.log('Ambiguous, selected and new contact sidebar actions passed');
