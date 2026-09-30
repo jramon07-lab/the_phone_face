@@ -17,5 +17,5 @@
  background:#fff; color:#526176; font-size:12px; z-index:20; pointer-events:none;
 }
 .referenceWorkspace main > section[data-tpf-initial-loading]:not(.hidden){position:relative;min-height:260px}
-.referenceWorkspace main > section[data-tpf-initial-loading] > *{opacity:0!important;pointer-events:none!important}
+.referenceWorkspace main > section[data-tpf-initial-loading] > *{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 .referenceWorkspace main > section[data-tpf-initial-loading]:not(.hidden)::before{content:'Cargando…';display:block;position:absolute;top:38px;left:28px;color:#475569;font-size:16px}
