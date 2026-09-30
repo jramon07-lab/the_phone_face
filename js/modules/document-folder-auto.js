@@ -22,11 +22,11 @@ function choose(candidates,name){
   dialog.addEventListener('cancel',event=>{event.preventDefault();cancel.click();});document.body.append(dialog);dialog.showModal();
  });
 }
-async function ensure({contactId,data,check=()=>{},notice=()=>{}}){
+async function ensure({contactId,data,client,check=()=>{},notice=()=>{}}){
  if(!contactId)throw Error('Vincula primero este chat a una ficha de cliente.');
  const snapshot=JSON.parse(JSON.stringify(data||{}));
  const call=async folderId=>{
-  check();const session=await sb.auth.getSession(),token=session.data?.session?.access_token;check();
+  check();const session=await (client||sb).auth.getSession(),token=session.data?.session?.access_token;check();
   if(!token)throw Error('Inicia sesión de nuevo.');
   const r=await fetch('/api/crm-documents?action=ensureFolder',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({contactId,expectedData:snapshot,confirmed:true,...(folderId?{folderId}:{})})});
   const result=await r.json();check();if(!r.ok||!result.ok)throw Error(result.error||'No se pudo preparar la carpeta del cliente.');return result;
