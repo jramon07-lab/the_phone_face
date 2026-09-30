@@ -15,6 +15,7 @@ function showDialog(title){
  closeDialog();const trigger=document.activeElement,d=document.createElement('dialog');d.className='cpProDialog';
  d.setAttribute('aria-label',title);d.innerHTML='<header><h2>'+esc(title)+'</h2><button type="button" aria-label="Cerrar">×</button></header><div class="cpProDialogBody"></div>';
  d.querySelector('header button').onclick=()=>d.close();d.onclick=e=>{if(e.target===d)d.close()};
+ d.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();d.close();}});
  d.addEventListener('close',()=>{d.remove();if(dialog===d)dialog=null;if(trigger?.isConnected)trigger.focus()},{once:true});
  document.body.append(d);d.showModal();dialog=d;return d;
 }

@@ -67,4 +67,5 @@ body.tpfUnified #contactModal.tpfContactDesktop.tpfContactReference .cpData{grid
 dialog.cpProDialog.cpDocumentViewer{width:min(1050px,94vw)!important;max-height:94dvh!important}
 dialog.cpDocumentViewer header h2{min-width:0;overflow-wrap:anywhere;font-size:16px}
 dialog.cpDocumentViewer header button{flex:none}
+body.tpfUnified dialog.cpProDialog > header{display:flex!important}
 dialog.cpDocumentViewer iframe{height:65dvh!important;width:100%!important}
