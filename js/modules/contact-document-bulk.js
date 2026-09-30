@@ -3,7 +3,7 @@
 const M=window.TPFDocumentFolderMatching,host=document.getElementById('cpDocumentsPending');if(!M||!host)return;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let dialog=null,rows=[],root=null,working=false,stop=false,epoch=0;
-function mount(){if(host.querySelector('[data-doc-choose]')&&!host.querySelector('[data-doc-bulk]')){const b=document.createElement('button');b.type='button';b.dataset.docBulk='';b.textContent='Vincular carpetas en bloque';b.onclick=open;host.querySelector('.cpRefDocActions')?.appendChild(b);}}
+function mount(){if(host.querySelector('[data-doc-choose]')&&!host.querySelector('[data-doc-bulk]')){const b=document.createElement('button');b.type='button';b.dataset.docBulk='';b.textContent='Vincular carpetas en bloque';b.onclick=open;(host.querySelector('.cpDocMore>div')||host.querySelector('.cpRefDocActions'))?.appendChild(b);}}
 new MutationObserver(mount).observe(host,{childList:true,subtree:true});mount();
 const find=s=>dialog?.querySelector(s);
 function notice(text){const el=find('[data-bulk-message]');if(el)el.textContent=text;}
