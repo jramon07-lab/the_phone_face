@@ -34,7 +34,7 @@ function organizeSide(){
  }
  const move=(node,key)=>{const host=$('waSidePanel-'+key);if(node&&node.parentElement!==host)host.append(node);};
  for(const node of [...card.children]){
-  if(node.id==='waSideTabs'||node.dataset.waSidePanel||node.classList.contains('waContactHeader')||['waSideContactActions','waCleanReview','waPinnedOffer'].includes(node.id))continue;
+  if(node.id==='waSideTabs'||node.dataset.waSidePanel||node.classList.contains('waContactHeader')||['waSideContactActions','waCleanReview'].includes(node.id))continue;
   const work=['waCleanOffers','waAutomationStatus'].includes(node.id)||node.querySelector('#waSideOpps,#waSideTasks');
   const history=['waSlaState','waPersistState'].includes(node.id)||node.querySelector('#waActivityTimeline');
   move(node,work?'work':history?'history':'client');
@@ -46,8 +46,7 @@ function organizeSide(){
  const offers=$('waCleanOffers'),work=$('waSidePanel-work');if(offers&&work.firstElementChild!==offers)work.prepend(offers);if(offers&&!offers.dataset.tabsOpened){offers.dataset.tabsOpened='1';offers.open=false;}
  const obs=$('waField-contactObservations');if(obs&&!obs.dataset.tabsOpened){obs.dataset.tabsOpened='1';obs.open=true;}
 }
-function pinnedOffer(){const card=$('waContactCard'),tabs=$('waSideTabs');if(!card||!tabs)return;let box=$('waPinnedOffer');const x=String(contact()?.id||'')===shownId?offerRows[0]:null;if(!x){box?.remove();return}if(!box){box=document.createElement('section');box.id='waPinnedOffer';box.className='waPinnedOffer';tabs.before(box)}const key=[shownId,x.id,x.title,x.amount,x.status].join('|');if(box.dataset.offerKey===key)return;box.dataset.offerKey=key;box.replaceChildren();const label=document.createElement('small');label.textContent='Última oferta';const title=document.createElement('b');title.textContent=x.title;const meta=document.createElement('small');meta.textContent=x.amount+' · '+x.status;const b=button('','Ver oferta enviada',()=>window.TPFOfferFollowup?.viewSavedOffer(x.id));b.className='ofView';box.append(label,title,meta,b);}
-function workSummary(){pinnedOffer();
+function workSummary(){
  const tab=$('waSideTab-work');if(!tab)return;
  const tasks=Number($('waSideTaskCount')?.textContent)||0;
  const pending=offerRows.filter(x=>['following','paused','accepted','queued','error'].includes(x.rawStatus));
