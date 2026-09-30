@@ -62,8 +62,8 @@ async function shareFile(m,f){
 }
 function previewFile(m,f){
  if(!active(m)||!fileUrl(f))return;const dialog=docDialog(m,f.name),body=dialog.querySelector('.m-doc-dialog-body');
- const validId=/^[\w-]{10,200}$/.test(f.id),preview=validId?'https://drive.google.com/file/d/'+f.id+'/preview':'';
- body.innerHTML=`${preview?`<iframe title="Vista previa de ${esc(f.name)}" src="${preview}" referrerpolicy="no-referrer" allow="fullscreen"></iframe>`:''}<p class="m-doc-help">Si Google solicita acceso, abre el archivo en Drive. Compartir el enlace mantiene sus permisos actuales.</p><div class="m-doc-actions"><a class="m-secondary" target="_blank" rel="noopener noreferrer" href="${esc(fileUrl(f))}">Abrir en Drive ↗</a>${m.options.createTask?'<button type="button" class="m-primary" data-task>Crear tarea</button>':''}<button type="button" class="m-secondary" data-share>Compartir</button></div>`;
+ body.innerHTML=`<div data-file-preview></div><p class="m-doc-help">También puedes abrir el original en Drive.</p><div class="m-doc-actions"><a class="m-secondary" target="_blank" rel="noopener noreferrer" href="${esc(fileUrl(f))}">Abrir en Drive ↗</a>${m.options.createTask?'<button type="button" class="m-primary" data-task>Crear tarea</button>':''}<button type="button" class="m-secondary" data-share>Compartir</button></div>`;
+ window.TPFDocumentPreview.mount({host:body.querySelector('[data-file-preview]'),dialog,client:m.options.client,contactId:m.id,file:f,isCurrent:()=>active(m)});
  body.querySelector('[data-task]')?.addEventListener('click',()=>{if(active(m)){dialog.close();m.options.createTask([{...f,webViewLink:fileUrl(f)}]);}});body.querySelector('[data-share]').onclick=()=>shareFile(m,f);
 }
 function confirmDuplicate(m,files,name){

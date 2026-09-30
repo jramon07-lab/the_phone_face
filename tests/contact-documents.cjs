@@ -14,7 +14,8 @@ global.fetch=async(url,options={})=>{calls.push({url,options});
  if(url.includes('/upload/drive'))return response({},200,{location:'https://www.googleapis.com/upload/drive/v3/files?upload_id=test'});
  if(url.includes('/drive/v3/files/root_test_123456'))return response({id:'root_test_123456',name:'Clientes',mimeType:'application/vnd.google-apps.folder'});
  if(String(url).startsWith('https://lh3.googleusercontent.com/'))return new Response(new Uint8Array([255,216,255,217]),{headers:{'Content-Type':'image/jpeg'}});
- if(url.includes('/drive/v3/files/file_test_123456'))return response({thumbnailLink:thumbnailUrl,id:'file_test_123456',name:'DNI.pdf',mimeType:'application/pdf',parents:thumbnailParents||[fid],capabilities:{canTrash:true},trashed:false});
+ if(url.includes('/drive/v3/files/file_test_123456?alt=media'))return new Response('preview-pdf');
+ if(url.includes('/drive/v3/files/file_test_123456'))return response({thumbnailLink:thumbnailUrl,id:'file_test_123456',name:'DNI.pdf',mimeType:'application/pdf',parents:thumbnailParents||[fid],capabilities:{canTrash:true,canDownload:true},trashed:false});
  if(url.includes('/drive/v3/files/'+fid))return response({id:fid,name:'Carpeta verificada',mimeType:'application/vnd.google-apps.folder',parents:['root_test_123456'],capabilities:{canAddChildren:true}});
  if(url.includes('/drive/v3/files?'))return response({files:[{id:'file_test',name:'Factura.pdf'}]});
  throw Error('Unexpected network call: '+url);
@@ -36,6 +37,7 @@ async function invoke(action,body={},method,extraHeaders={},extraQuery={}){let r
  thumbnailParents=['other_folder'];assert.equal((await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:savedLink})).status,403);thumbnailParents=null;
  thumbnailUrl='https://evil.test/steal';calls=[];thumb=await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:savedLink});assert.equal(thumb.body.images[0].data,null);assert(!calls.some(c=>String(c.url).includes('evil.test')));thumbnailUrl=null;
  assert.equal((await invoke('thumbnails',{ids:['file_test_123456'],expectedLink:null})).status,409);
+ calls=[];const docPreview=await invoke('preview',{},'GET',{}, {fileId:'file_test_123456'});assert.equal(docPreview.status,200);assert.equal(docPreview.body.base64,Buffer.from('preview-pdf').toString('base64'));assert(!JSON.stringify(docPreview).includes('test-google-access'));assert(calls.some(c=>c.url.includes('/rest/v1/records')&&c.options.headers.Authorization==='Bearer test.token.value'));assert(!calls.some(c=>c.options.method==='PATCH'));
  const s=await invoke('status');assert.equal(s.body.connected,true);assert.ok(!JSON.stringify(s).includes('test-refresh'));
  oauthError='invalid_grant';const expired=await invoke('status');assert.equal(expired.body.connected,false);assert.equal(expired.body.reconnectRequired,true);assert.equal((await invoke('list')).body.code,'GOOGLE_RECONNECT_REQUIRED');
  const mobileExpired=await invoke('mobileList');assert.equal(mobileExpired.body.status.reconnectRequired,true);assert.equal(mobileExpired.body.files.length,0);
@@ -88,6 +90,6 @@ async function invoke(action,body={},method,extraHeaders={},extraQuery={}){let r
  assert.equal((await invoke('expiry',{confirmed:true,person:'contact',date:'2030-12-31',expectedData:row().data})).status,403);
 
  for(const action of ['upload','link','bulkLink','bulkFolders','search','authorize'])assert.equal((await invoke(action,{expectedLink:savedLink,confirmed:true,folderId:fid})).status,403);
- permission=null;calls=[];assert.equal((await invoke('list')).status,403);assert.equal(calls.length,1);
+ permission=null;assert.equal((await invoke('preview',{},'GET',{}, {fileId:'file_test_123456'})).status,403);calls=[];assert.equal((await invoke('list')).status,403);assert.equal(calls.length,1);
  console.log('PASS: permissions, folder validation, provider guard, preservation, stale saves, upload restrictions, OAuth state, no token disclosure. All network mocked.');
 })().catch(e=>{console.error(e);process.exit(1);});

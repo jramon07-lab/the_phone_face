@@ -3,6 +3,8 @@
 const $=id=>document.getElementById(id);
 const views=new Set(['dashboard','alerts','search','database','sales','import','agenda','whatsapplive','whatsapp','labels','settings','automations','users','system','trash']);
 function call(fn,view){
+  if(typeof fn!=='function')return;
+  if(typeof window.tpfLoadView==='function')return window.tpfLoadView(view,fn);
   try{const result=fn?.();result?.catch?.(error=>console.error('[TPF nav]',view,error));}
   catch(error){console.error('[TPF nav]',view,error);}
 }

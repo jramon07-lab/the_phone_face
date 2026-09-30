@@ -92,13 +92,15 @@ function tpfLoadView(view,loader){
  const section=$("view-"+view),ticket=window.tpfNavigationRevision;
  section?.setAttribute('aria-busy','true');
  section?.setAttribute('data-tpf-refreshing','Actualizando…');
+ if(section&&!section.dataset.tpfLoaded){section.setAttribute('data-tpf-initial-loading','');section.inert=true;}
  let timer;
  const finish=()=>{clearTimeout(timer);if(section?.dataset.tpfLoadTicket===String(ticket)){
   section.removeAttribute('aria-busy');section.removeAttribute('data-tpf-refreshing');
+  section.removeAttribute('data-tpf-initial-loading');section.inert=false;
  }};
  if(section)section.dataset.tpfLoadTicket=String(ticket);
- timer=setTimeout(finish,15000);
- try{return Promise.resolve(loader()).catch(e=>{console.error('Carga de '+view,e)}).finally(finish)}
+ timer=setTimeout(()=>{if(section?.dataset.tpfLoadTicket===String(ticket))section.setAttribute('data-tpf-refreshing','La carga está tardando más de lo habitual…');},15000);
+ try{return Promise.resolve(loader()).then(value=>{if(section&&section.dataset.tpfLoadTicket===String(ticket))section.dataset.tpfLoaded='1';return value;}).catch(e=>{console.error('Carga de '+view,e)}).finally(finish)}
  catch(e){finish();console.error('Carga de '+view,e)}
 }
 

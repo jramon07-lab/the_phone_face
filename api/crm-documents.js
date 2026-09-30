@@ -117,6 +117,7 @@ module.exports=async function(req,res){res.setHeader('Cache-Control','no-store')
   const q=new URLSearchParams({id:'eq.'+row.id,data:'eq.'+JSON.stringify(row.data)}),r=await request(SB+'/rest/v1/records?'+q,{method:'PATCH',headers:{...who.headers,Prefer:'return=representation'},body:JSON.stringify({data})});if(!r.ok)throw fail(403,'No se pudo guardar la vinculación.');const updated=await r.json();if(updated.length!==1)throw fail(409,'La ficha ha cambiado. Actualízala antes de vincular.');return json(res,200,{ok:true,link:newLink});
  }
  const provider=adapter(link);
+ if(action==='preview')return json(res,200,await require('../lib/crm-document-preview')({fileId:folderId(req.query?.fileId),link,t,drive,request,fail}));
  if(action==='list'){const f=await provider.folder(t,link.folder_id);return json(res,200,{ok:true,folder:{id:f.id,name:f.name,canUpload:!!f.capabilities?.canAddChildren},...await provider.list(t,link.folder_id,req.query?.page)});}
  if(action==='thumbnails'){
   if(stableLink(body.expectedLink)!==stableLink(link))throw fail(409,'La carpeta ha cambiado.');
