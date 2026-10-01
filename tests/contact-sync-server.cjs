@@ -15,5 +15,7 @@ let person={resourceName:'people/c1',etag:'e',names:[{givenName:'Ana',familyName
  await assert.rejects(()=>syncOne(row,{...deps,green:async()=>({contactName:'',addContact:true})}),/todavía no confirma/);
  await assert.rejects(()=>syncOne(row,{...deps,checkpoint:async()=>{throw Error('changed');}}),/changed/);
  await assert.rejects(()=>syncOne({...row,data:{...row.data,'TELÉFONO':''}},deps),/Falta/);
+ await assert.rejects(()=>syncOne(row,{...deps,people:[{...person,names:[{givenName:'Otra',familyName:'Persona'}],userDefined:[]}]}),/otra identidad/);
+ await assert.rejects(()=>syncOne(row,{...deps,people:[{...person,userDefined:[{key:'DNI / NIF',value:'OTHER'}]}]}),/otra identidad/);
  console.log('PASS durable contact synchronization: create, idempotency, readback, conflicts and stale edits');
 })().catch(e=>{console.error(e);process.exitCode=1;});
