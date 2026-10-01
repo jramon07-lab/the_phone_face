@@ -92,7 +92,8 @@ function tpfLoadView(view,loader){
  const section=$("view-"+view),ticket=window.tpfNavigationRevision;
  section?.setAttribute('aria-busy','true');
  section?.setAttribute('data-tpf-refreshing','Actualizando…');
- if(section&&!section.dataset.tpfLoaded){section.setAttribute('data-tpf-initial-loading','');section.inert=true;}
+ // WhatsApp owns per-pane loading placeholders; hiding its whole shell causes a blank flash.
+ if(section&&view!=='whatsapplive'&&!section.dataset.tpfLoaded){section.setAttribute('data-tpf-initial-loading','');section.inert=true;}
  let timer;
  const finish=()=>{clearTimeout(timer);if(section?.dataset.tpfLoadTicket===String(ticket)){
   section.removeAttribute('aria-busy');section.removeAttribute('data-tpf-refreshing');

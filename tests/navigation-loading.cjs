@@ -19,6 +19,11 @@ async function tickets(){
  let resolve1,resolve2;const p1=ctx.tpfLoadView('sales',()=>new Promise(r=>resolve1=r));ctx.window.tpfNavigationRevision=2;
  const p2=ctx.tpfLoadView('sales',()=>new Promise(r=>resolve2=r));assert.equal(section.inert,true);assert.equal(section.attributes['data-tpf-initial-loading'],'');resolve1();await p1;assert.equal(section.attributes['aria-busy'],'true','previous response cannot clear current loading state');resolve2();await p2;assert.equal(section.attributes['aria-busy'],undefined);assert.equal(section.inert,false);assert.equal(section.dataset.tpfLoaded,'1');
  const p3=ctx.tpfLoadView('sales',()=>new Promise(r=>resolve2=r));assert.equal(section.attributes['data-tpf-initial-loading'],undefined,'refresh retains already loaded content');assert.equal(section.inert,false);resolve2();await p3;
+ delete section.dataset.tpfLoaded;
+ const wa=ctx.tpfLoadView('whatsapplive',()=>new Promise(r=>resolve2=r));
+ assert.equal(section.attributes['data-tpf-initial-loading'],undefined,'WhatsApp shell stays visible while its panes load');
+ assert.equal(section.inert,false,'WhatsApp keeps its own per-pane loading protection');
+ assert.equal(section.attributes['aria-busy'],'true');resolve2();await wa;
 }
 function mail(){
  const src=fs.readFileSync('js/modules/email-m365-lazy.js','utf8');const nav=element();let scripts=[],views=[],shown=0;
