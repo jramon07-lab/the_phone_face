@@ -30,7 +30,7 @@ console.log('WhatsApp/Google identity remains isolated to the exact chat and pho
 const vm=require('node:vm');
 const fixes=fs.readFileSync('js/modules/whatsapp-five-fixes.js','utf8');
 const elements=new Map();
-for(const id of ['waSideCreateContact','waSideOpenContact','waSideTags','waAddTagSide'])elements.set(id,{classList:{toggle(k,v){this[k]=v}},style:{setProperty(k,v){this[k]=v}}});
+for(const id of ['waSideCreateContact','waSideOpenContact','waSideTags','waAddTagSide'])elements.set(id,{classList:{toggle(k,v){this[k]=v}},style:{setProperty(k,v){this[k]=v},removeProperty(k){delete this[k]}}});
 const state={selected:{id:'34600000000@c.us'},contact:null,contactCandidates:[{id:'a'},{id:'b'}]};
 const ctx={document:{getElementById:id=>elements.get(id)},window:{},waLiveState:state,openModernWaContact(){}};
 vm.runInNewContext(fixes.slice(fixes.indexOf('function syncContactActions()'),fixes.indexOf('const originalMatch=')),ctx);
@@ -39,7 +39,8 @@ assert.equal(elements.get('waSideCreateContact').style.display,'none');
 assert.match(elements.get('waSideTags').innerHTML,/Elige una ficha/);
 assert.equal(elements.get('waAddTagSide').disabled,true);
 state.contact={id:'a'};ctx.window.waSyncContactActions();
-assert.equal(elements.get('waSideOpenContact').style.display,'block');
+assert.equal(elements.get('waSideOpenContact').classList.hidden,false,'matched profile route remains enabled');
+assert.equal(elements.get('waSideOpenContact').style.display,undefined,'CSS owns profile action visibility without inline overrides');
 assert.equal(elements.get('waAddTagSide').disabled,false);
 state.contact=null;state.contactCandidates=[];ctx.window.waSyncContactActions();
 assert.equal(elements.get('waSideCreateContact').style.display,'block');
