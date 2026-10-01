@@ -1347,31 +1347,21 @@ window.selectWhatsAppChat=async(chatId)=>{
 
 /* ---- script inline extraído ---- */
 
-(function(){
- function textOf(el){return (el&&el.textContent||"").trim().toLowerCase()}
- function isWhatsAppVisible(){
-   var candidates=[...document.querySelectorAll('section,main,div')];
-   return candidates.some(function(el){
-     var t=textOf(el);
-     var s=getComputedStyle(el);
-     return s.display!=="none" && t==="whatsapp";
-   });
+// Keep the layout tied to the visible view, before the next browser paint.
+// Text matching and delayed callbacks could resize other menus or re-enter
+// WhatsApp's layout after the user had already navigated away.
+(function syncWhatsAppLayout(){
+ const view=document.getElementById('view-whatsapplive');
+ const app=document.getElementById('app');
+ if(!view||!app)return;
+ function sync(){
+  const visible=!view.classList.contains('hidden')&&!app.classList.contains('hidden');
+  document.body.classList.toggle('wa-fullscreen-mode',visible);
  }
- document.addEventListener("click",function(e){
-   var el=e.target.closest("a,button,[role=button],li");
-   if(!el)return;
-   var t=textOf(el);
-   if(t==="whatsapp" || (t.includes("whatsapp")&&!t.includes("programad"))){
-     setTimeout(function(){document.body.classList.add("wa-fullscreen-mode")},50);
-   } else if(t && !t.includes("whatsapp") && el.closest(".sidebar,nav")){
-     document.body.classList.remove("wa-fullscreen-mode");
-   }
- },true);
- // Si se recarga estando en WhatsApp, detectar por contenido.
- setTimeout(function(){
-   var h=[...document.querySelectorAll("h1,h2,h3")].find(x=>textOf(x)==="whatsapp");
-   if(h)document.body.classList.add("wa-fullscreen-mode");
- },400);
+ const observer=new MutationObserver(sync);
+ observer.observe(view,{attributes:true,attributeFilter:['class']});
+ observer.observe(app,{attributes:true,attributeFilter:['class']});
+ sync();
 })();
 
 /* ===== WhatsApp CRM Total ===== */
