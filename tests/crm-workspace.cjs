@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const ctx={window:{},document:{readyState:'loading',addEventListener(){}},Intl,Date,Map,Set};vm.createContext(ctx);
+vm.runInContext(fs.readFileSync('js/modules/crm-workspace.js','utf8'),ctx);
+vm.runInContext(fs.readFileSync('js/modules/message-preview.js','utf8'),ctx);
+const w=ctx.window.TPFWorkspace;
+const rows=[{id:'1',stage_id:'t',amount:30},{id:'1',stage_id:'t',amount:30},{id:'2',status:'won',amount:20},{id:'3',status:'won'},{id:'4',stage_id:'lost'}];
+let report=w.monthlySummary(rows,[{id:'t',name:'Tramitado'}],[{opportunity_id:'1',processed_at:'2026-10-01T10:00:00Z',snapshot:{sale_month:'2026-10'}},{opportunity_id:'2',processed_at:'2026-10-01T10:00:00Z',snapshot:{sale_month:'2026-09'}}],[{opportunity_id:'1',sale_month:'2026-09-01'}],'2026-09');
+assert.equal(report.rows.length,2,'Both imported and won sales; no duplicate via holder/manager');assert.equal(report.unknown.length,1);
+assert.equal(w.madridISO('2026-10-02T10:00'),'2026-10-02T08:00:00.000Z');assert.equal(w.madridISO('2026-12-02T10:00'),'2026-12-02T09:00:00.000Z');assert.throws(()=>w.madridISO('2027-03-28T02:30'));
+const j={action_type:'__send_whatsapp',status:'pending',action_config:{}};assert.equal(w.editable(j),true);
+for(const bad of [{status:'running'},{status:'done'},{action_config:{__delivery_receipt:{idMessage:'x'}}},{action_config:{__send_started:true}},{error_message:'Resultado desconocido'}])assert.equal(w.editable({...j,...bad}),false);
+const party={holder_name:'Ana Ejemplo',holder_record_id:'h',recipient_contact_id:'m',recipient_first_name:'Luis'};
+const preview=ctx.window.TPFMessagePreview.outgoingVars('Hola {nombre}\nTu oferta de {operador}',{name:'Ana',operator:'Vodafone',contract_party:party});
+assert.equal(preview,'Hola Luis\nSobre el contrato de Ana Ejemplo.\nTu oferta de Vodafone');
+assert.equal(ctx.window.TPFMessagePreview.outgoingVars(preview,{contract_party:party}),preview,'Do not duplicate contract reference');
+console.log('Workspace: unique monthly sales, historical month, timezone, send guards and recipient verified');
