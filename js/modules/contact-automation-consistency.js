@@ -40,7 +40,7 @@ async function refreshVisibleContact(){
   await refreshSales();
   const current=activeContact();
   if(!current||String(current.id)!==id||typeof renderContactProfile!=='function')return;
-  try{await renderContactProfile()}catch(error){console.warn('Actualizar ficha del contacto',error)}
+  try{await renderContactProfile();if(typeof crmRefreshCurrentContactLabels==='function')await crmRefreshCurrentContactLabels()}catch(error){console.warn('Actualizar ficha del contacto',error)}
 }
 function wrapOpenContact(){
   const original=window.openContact;
@@ -137,14 +137,15 @@ function queueVisibleRefresh(reload=true){
   if(reload){await refreshVisibleContact();return;}
   const contact=activeContact(),modal=$('contactModal');
   if(!contact||!modal||modal.classList.contains('hidden')||typeof renderContactProfile!=='function')return;
-  try{await renderContactProfile()}catch(error){console.warn('Actualizar contadores',error)}
+  try{await renderContactProfile();if(typeof crmRefreshCurrentContactLabels==='function')await crmRefreshCurrentContactLabels()}catch(error){console.warn('Actualizar contadores',error)}
  },150);
 }
 function bindFocusRefresh(){
  window.addEventListener('tpf:sales-updated',event=>{
   // loadSales emits the populated event itself: never start another load.
-  if(salesRefresh)return;
-  queueVisibleRefresh(!Array.isArray(event.detail?.opportunities));
+  for(const id of new Set(event.detail?.contactIds||[])){labelsFor(id).then(labels=>window.dispatchEvent(new CustomEvent('tpf:contact-labels-updated',{detail:{contactId:id,labels}})));}
+  if(Array.isArray(event.detail?.opportunities)){if(!salesRefresh)queueVisibleRefresh(false);return;}
+  refreshSales().then(()=>queueVisibleRefresh(false));
  });
   window.addEventListener('focus',()=>refreshVisibleContact());
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshVisibleContact()});
