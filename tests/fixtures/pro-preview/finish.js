@@ -7,3 +7,9 @@ const badges={oportunidades:'2',tareas:'1',notas:'2',documentos:'2'};
 for(const [key,n] of Object.entries(badges)){const b=$('cpRefTab-'+key);if(b)b.textContent+=' · '+n;}
 const summary=document.querySelector('[data-tpf-summary-group="opportunities"]');if(summary){summary.dataset.tpfOpen='true';summary.querySelector('button').setAttribute('aria-expanded','true');}
 navigate(location.hash.slice(1)||'contact');
+document.querySelector('.tpfContactProtectedHint')?.remove();
+const quick=document.querySelector('#contactModal .cpQuick');
+for(const [label,fn] of [['ϟ Venta directa',offer],['+ Revisión',offer]]){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;quick.append(b);}
+document.querySelector('.cpOfferList .pvRow')?.classList.add('cpOfferCard');
+window.TPFOfferFollowup={load:async()=>({jobs:[]}),filterRows:x=>x,controls:()=>'',html:()=>'<span>Seguimiento de ejemplo</span>'};
+const importDetails=document.createElement('section');importDetails.className='pvBlock';importDetails.innerHTML='<h3>Datos de instalación de la fila seleccionada</h3><div class="pvTools"><label>Importe mensual<input type="number" value="32"></label><label>Activación real<input type="date" value="2026-09-20"></label><label>Mes de venta<input type="month" value="2026-09"></label></div><small>Se conserva la fecha prevista existente y se revisan los seguimientos de 3 y 11 meses.</small>';$('view-import').querySelector('.pvFoot').before(importDetails);
