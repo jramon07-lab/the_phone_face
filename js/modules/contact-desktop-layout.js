@@ -166,6 +166,8 @@
  let googleObserved=null;
  function compactGoogle(){
   const card=$('tpfGoogleInlineCard');if(!mounted||!card)return;
+  // The verification dialog temporarily owns the live card and its event handlers.
+  if(card.closest('dialog.cpProDialog')){const details=card.querySelector(':scope > details');if(details)details.open=true;return;}
   const i=sections.indexOf(card);if(i>=0)sections.splice(i,1);delete card.dataset.cpRefPane;
   ensureLinkRow();if(card.parentElement!==linkRow)linkRow.append(card);
   if(card!==googleObserved){googleObserved=card;new MutationObserver(compactGoogle).observe(card,{childList:true});}
