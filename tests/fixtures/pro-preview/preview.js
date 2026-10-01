@@ -1,3 +1,4 @@
+window.TPFOfferFollowup={load:async()=>({jobs:[]}),filterRows:x=>x,controls:()=>'',html:()=>'<span>Seguimiento de ejemplo</span>'};
 /* Synthetic front-end data only. This sandbox does not authenticate, fetch, or send. */
 const $=id=>document.getElementById(id);
 window.currentContact={id:'example-elena',data:{Nombre:'Elena',Apellidos:'Torres','Teléfono':'—','DNI / NIF':'Ejemplo sin DNI real'}};
