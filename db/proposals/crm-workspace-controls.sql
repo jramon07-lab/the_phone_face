@@ -26,7 +26,7 @@ BEGIN
   keys:=ARRAY['title','amount','expected_date','installation_date','annual_review_date','stage_id','status','notes','record_id','contract_party','import_reference'];
   a:=to_jsonb(NEW);b:=CASE WHEN TG_OP='UPDATE' THEN to_jsonb(OLD) ELSE NULL END;
   ids:=array_remove(ARRAY[NEW.record_id],NULL);
-  FOR x IN SELECT v FROM (SELECT value v FROM jsonb_each_text(coalesce(a->'contract_party','{}')) WHERE key IN ('holder_record_id','manager_record_id','recipient_contact_id') UNION SELECT value FROM jsonb_each_text(coalesce(b->'contract_party','{}')) WHERE key IN ('holder_record_id','manager_record_id','recipient_contact_id')) s LOOP
+  FOR x IN SELECT v FROM (SELECT value v FROM jsonb_each_text(CASE WHEN jsonb_typeof(a->'contract_party')='object' THEN a->'contract_party' ELSE '{}'::jsonb END) WHERE key IN ('holder_record_id','manager_record_id','recipient_contact_id') UNION SELECT value FROM jsonb_each_text(CASE WHEN jsonb_typeof(b->'contract_party')='object' THEN b->'contract_party' ELSE '{}'::jsonb END) WHERE key IN ('holder_record_id','manager_record_id','recipient_contact_id')) s LOOP
    IF x ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN ids:=array_append(ids,x::uuid);END IF;
   END LOOP;
  ELSE
