@@ -5,7 +5,7 @@ let writes=0,bulk=0,markup='';
 const view={scrollTop:420,scrollLeft:90};
 const target={set innerHTML(value){writes++;markup=value;view.scrollTop=0;view.scrollLeft=0;},get innerHTML(){return markup;}};
 let rows=[{id:'sale-1',client_name:'Cliente',title:'Cambio',phone:'600000001',stage_id:'won',import_reference:'excel',amount:null}];
-const ctx={window:{TPFContactParty:{opportunityIdentity:()=>({dni:'TEST'})},TPFOfferFollowup:{html:()=>'<div class="ofItem">Seguimiento</div>'}},$:id=>id==='salesListRows'?target:view,salesCache:{stages:[{id:'won',name:'Ganado'}]},salesFilteredOpps:()=>rows,esc:String,fmtMoney:String,fmtDateOnly:String,updateSalesBulkUi(){bulk++}};
+const ctx={window:{TPFContactParty:{opportunityIdentity:()=>({dni:'TEST'})},TPFOfferFollowup:{listHtml:()=>'<div class="ofItem">Seguimiento</div>'}},$:id=>id==='salesListRows'?target:view,salesCache:{stages:[{id:'won',name:'Ganado'}]},salesFilteredOpps:()=>rows,esc:String,fmtMoney:String,fmtDateOnly:String,updateSalesBulkUi(){bulk++}};
 vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('function renderSalesList(){'),source.indexOf('\nfunction setSalesView')),ctx);
 ctx.renderSalesList();assert.equal(writes,1);assert.deepEqual(view,{scrollTop:420,scrollLeft:90});
 assert.match(markup,/data-compact="1"/);assert.match(markup,/<div class="salesIdentity">/);assert.match(markup,/<div class="salesContact">/);assert.match(markup,/<div class="salesFollowup"><div class="ofItem">Seguimiento<\/div><\/div>/);assert.match(markup,/Sin precio · Revisar/);

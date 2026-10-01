@@ -166,9 +166,9 @@
   function processingDay(value){if(!value)return '';const date=new Date(value);return Number.isNaN(date.getTime())?'':new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
   function processedDate(item){const rows=window.TPFOfferFollowup?.state?.byOpportunity?.get(String(item.id))||[];return rows.map(x=>x.processed_at).filter(Boolean).sort().at(-1)||item.processed_at||'';}
   function saleMonth(item){const rows=window.TPFOfferFollowup?.state?.byOpportunity?.get(String(item.id))||[];return rows.find(x=>x.snapshot?.sale_month)?.snapshot.sale_month||processingDay(processedDate(item)).slice(0,7);}
-  function setupMonthlyFilters(root,data){
+  function setupMonthlyFilters(root,data,period){
     const toolbar=document.createElement('div');toolbar.className='tpfMonthlyFilters';
-    const current=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'}).format(new Date());
+    const current=(typeof period==='string'&&/^\d{4}-\d{2}$/.test(period))?period:new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'}).format(new Date());
     toolbar.innerHTML='<label>Mes de la venta<input type="month" id="monthlyPeriod" value="'+current+'"></label><label>Buscar cliente<input type="search" id="monthlySearch" placeholder="Nombre o teléfono"></label><label>Operador<select id="monthlyOperator"><option value="">Todos</option></select></label><label><input type="checkbox" id="monthlyUnknown"> Incluir sin fecha registrada</label>';
     root.querySelector('.tpfMonthlyTabs').before(toolbar);
     const offers=window.TPFOfferFollowup?.state?.byOpportunity;
@@ -186,7 +186,7 @@
     toolbar.addEventListener('input',filter);toolbar.addEventListener('change',filter);filter();
   }
 
-  async function open(){
+  async function open(period){
     addStyle();
     close();
     const root=document.createElement('div');
@@ -216,7 +216,7 @@
       return '<tr><td>'+identityCell(item,contacts)+'</td><td>'+escape(stage?.name||'Sin columna')+'</td><td class="tpfMonthlyAmount">'+money(item.amount)+'</td><td class="tpfMonthlyDate">'+escape(formatDay(item.expected_date))+'</td></tr>';
     }).join('')||'<tr><td colspan="4" class="tpfMonthlyEmpty">No hay ofertas pendientes.</td></tr>';
     root.innerHTML='<section class="tpfMonthlyCard" role="dialog" aria-modal="true"><header class="tpfMonthlyHead"><div><div class="tpfMonthlyTitleRow"><span class="tpfMonthlyBadge">Control mensual</span><h2>Cierre de mes</h2></div><small>Pasa solo las ventas tramitadas a Ganado. Las ofertas pendientes, revisiones y fechas quedan intactas.</small></div><button class="tpfMonthlyCloseX" type="button" aria-label="Cerrar" data-close>×</button></header><div class="tpfMonthlyBody"><div class="tpfMonthlyStats"><div class="tpfMonthlyStat"><b>'+data.tramitado.length+'</b><small>ventas en Tramitado</small></div><div class="tpfMonthlyStat"><b id="tpfMonthlyAmount">'+money(total)+'</b><small>importe seleccionado</small></div><div class="tpfMonthlyStat"><b>'+data.pending.length+'</b><small>ofertas pendientes</small></div></div><div class="tpfMonthlyTabs" role="tablist"><button class="tpfMonthlyTab active" type="button" data-monthly-view="sales">Ventas para cerrar <span class="tpfMonthlyTabCount">'+data.tramitado.length+'</span></button><button class="tpfMonthlyTab" type="button" data-monthly-view="pending">Ofertas pendientes <span class="tpfMonthlyTabCount">'+data.pending.length+'</span></button></div><div class="tpfMonthlyMain"><section class="tpfMonthlySection tpfMonthlyView active" data-monthly-panel="sales"><div class="tpfMonthlySectionHead"><div><b>Ventas para cerrar</b><p>Selecciona únicamente las ventas que quieres pasar a Ganado.</p></div><label class="tpfMonthlySelectAll"><input id="tpfMonthlyAll" type="checkbox"> Seleccionar todas</label></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th></th><th>Cliente / oportunidad</th><th>Importe</th><th>Tramitación / revisión</th></tr></thead><tbody>'+rows+'</tbody></table></div></section><section class="tpfMonthlySection tpfMonthlyView" data-monthly-panel="pending"><div class="tpfMonthlySectionHead"><div><b>Ofertas pendientes</b><p>Vista de control. Se ven aquí, pero no se moverán al cerrar el mes.</p></div><div class="tpfMonthlyInfo">Fechas previstas y revisiones de 3 y 11 meses no se modifican.</div></div><div class="tpfMonthlyTableWrap"><table class="tpfMonthlyTable"><thead><tr><th>Cliente / oportunidad</th><th>Columna</th><th>Importe</th><th>Fecha prevista / revisión</th></tr></thead><tbody>'+pendingRows+'</tbody></table></div></section></div></div><footer class="tpfMonthlyFoot"><div class="tpfMonthlyFootText" id="tpfMonthlySelectedText">'+data.tramitado.length+' seleccionada(s) para pasar a Ganado</div><div class="tpfMonthlyFootActions"><button type="button" data-close>Cancelar</button><button id="tpfMonthlySave" class="primary" type="button">Revisar cierre</button></div></footer></section>';
-    setupMonthlyFilters(root,data);
+    setupMonthlyFilters(root,data,period);
     refreshSelectedSummary(root);
     root.querySelectorAll('[data-close]').forEach(button=>button.onclick=close);
     root.querySelectorAll('[data-monthly-view]').forEach(button=>button.onclick=()=>{
@@ -259,5 +259,6 @@
     anchor.after(button);
   }
 
+  window.TPFMonthlyClose={open};
   M.register('monthly-close',{install(){mount();window.addEventListener('tpf:sales-updated',mount);setInterval(mount,1000)}});
 })();
