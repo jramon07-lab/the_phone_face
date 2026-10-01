@@ -14,7 +14,7 @@ assert.match(archive,/Deshacer/);
 assert.doesNotMatch(waFixes,/b\.textContent=done\?'✓ Atendida':'✓ Marcar atendida'/);
 
 assert.match(offers,/id="directSaleNetflix"/);
-assert.match(offers,/crm_create_direct_sale_v6/);
+assert.match(offers,/crm_create_direct_sale_v7/);
 assert.match(offers,/p_netflix_followup/);
 assert.match(offers,/Se programará el WhatsApp del día siguiente/);
 

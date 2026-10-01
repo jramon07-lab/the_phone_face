@@ -165,20 +165,21 @@
   function formatDay(value){const v=String(value||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(v)?v.split('-').reverse().join('/'):'Sin fecha';}
   function processingDay(value){if(!value)return '';const date=new Date(value);return Number.isNaN(date.getTime())?'':new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
   function processedDate(item){const rows=window.TPFOfferFollowup?.state?.byOpportunity?.get(String(item.id))||[];return rows.map(x=>x.processed_at).filter(Boolean).sort().at(-1)||item.processed_at||'';}
+  function saleMonth(item){const rows=window.TPFOfferFollowup?.state?.byOpportunity?.get(String(item.id))||[];return rows.find(x=>x.snapshot?.sale_month)?.snapshot.sale_month||processingDay(processedDate(item)).slice(0,7);}
   function setupMonthlyFilters(root,data){
     const toolbar=document.createElement('div');toolbar.className='tpfMonthlyFilters';
     const current=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit'}).format(new Date());
-    toolbar.innerHTML='<label>Mes de tramitación<input type="month" id="monthlyPeriod" value="'+current+'"></label><label>Buscar cliente<input type="search" id="monthlySearch" placeholder="Nombre o teléfono"></label><label>Operador<select id="monthlyOperator"><option value="">Todos</option></select></label><label><input type="checkbox" id="monthlyUnknown"> Incluir sin fecha registrada</label>';
+    toolbar.innerHTML='<label>Mes de la venta<input type="month" id="monthlyPeriod" value="'+current+'"></label><label>Buscar cliente<input type="search" id="monthlySearch" placeholder="Nombre o teléfono"></label><label>Operador<select id="monthlyOperator"><option value="">Todos</option></select></label><label><input type="checkbox" id="monthlyUnknown"> Incluir sin fecha registrada</label>';
     root.querySelector('.tpfMonthlyTabs').before(toolbar);
     const offers=window.TPFOfferFollowup?.state?.byOpportunity;
     const operator=item=>(offers?.get(String(item.id))||[]).map(x=>x.operator).find(Boolean)||String(item.title||'').replace(/^(CAMBIO|REVISI[ÓO]N)\s+/i,'');
     const ops=[...new Set(data.tramitado.map(operator).filter(Boolean))].sort();
     ops.forEach(name=>{const o=document.createElement('option');o.value=name;o.textContent=name;$('monthlyOperator').appendChild(o)});
     const allRows=[...root.querySelectorAll('[data-monthly-id]')];
-    allRows.forEach(box=>{const item=data.tramitado.find(x=>String(x.id)===box.dataset.monthlyId);const cell=box.closest('tr').lastElementChild;const when=processedDate(item);cell.innerHTML=escape(when?'Tramitada: '+formatDay(processingDay(when)):'Tramitación sin fecha')+'<small class="monthlyReview">Prevista / revisión: '+escape(formatDay(item.expected_date))+'</small>';});
+    allRows.forEach(box=>{const item=data.tramitado.find(x=>String(x.id)===box.dataset.monthlyId);const cell=box.closest('tr').lastElementChild;const when=processedDate(item);cell.innerHTML=escape(saleMonth(item)?'Mes venta: '+saleMonth(item).split('-').reverse().join('/'):'Sin mes de venta')+'<br>'+escape(when?'Tramitada: '+formatDay(processingDay(when)):'Tramitación sin fecha')+'<small class="monthlyReview">Prevista / revisión: '+escape(formatDay(item.expected_date))+'</small>';});
     const empty=document.createElement('tr');empty.innerHTML='<td colspan="4" class="tpfMonthlyEmpty">No hay ventas para estos filtros. Puedes cambiar el mes o incluir las ventas sin fecha registrada.</td>';root.querySelector('[data-monthly-panel="sales"] tbody').appendChild(empty);
     const filter=()=>{const period=$('monthlyPeriod').value,q=normal($('monthlySearch').value),op=$('monthlyOperator').value;
-      allRows.forEach(box=>{const item=data.tramitado.find(x=>String(x.id)===box.dataset.monthlyId),when=processedDate(item);const show=(!period||(when?processingDay(when).slice(0,7)===period:$('monthlyUnknown').checked))&&(!q||normal(item.client_name+' '+item.phone+' '+item.title).includes(q))&&(!op||operator(item)===op);box.closest('tr').hidden=!show;if(!show)box.checked=false;});
+      allRows.forEach(box=>{const item=data.tramitado.find(x=>String(x.id)===box.dataset.monthlyId),when=processedDate(item);const show=(!period||(saleMonth(item)?saleMonth(item)===period:$('monthlyUnknown').checked))&&(!q||normal(item.client_name+' '+item.phone+' '+item.title).includes(q))&&(!op||operator(item)===op);box.closest('tr').hidden=!show;if(!show)box.checked=false;});
       empty.hidden=!allRows.length||allRows.some(box=>!box.closest('tr').hidden);
       $('tpfMonthlyAll').checked=false;refreshSelectedSummary(root);
     };
