@@ -1,20 +1,3 @@
--- Durable contact synchronization. External calls run outside transactions.
-create or replace function public.crm_contact_sync_fields(d jsonb) returns jsonb
-language sql immutable set search_path=public as $$
-select jsonb_build_array(coalesce(d->>'NOMBRE',''),coalesce(d->>'APELLIDOS',d->>'APELLIDO',''),coalesce(d->>'APODO',d->>'Apodo',d->>'ALIAS',''),coalesce(d->>'TELÉFONO',d->>'TELEFONO',d->>'MOVIL',d->>'PHONE',''),coalesce(d->>'EMAIL',d->>'Email',d->>'email',''),coalesce(d->>'DNI / NIF',d->>'DNI',d->>'NIF',''));
-$$;
-create table if not exists public.crm_contact_sync_queue (
- record_id uuid primary key references public.records(id) on delete cascade,
- revision bigint not null default 1, status text not null default 'pending',
- priority integer not null default 0, attempts integer not null default 0,
- next_attempt_at timestamptz not null default now(), lease_until timestamptz,
- google_resource text, google_account text, last_error text,
- updated_at timestamptz not null default now()
-);
-alter table public.crm_contact_sync_queue enable row level security;
-revoke all on public.crm_contact_sync_queue from public,anon,authenticated;
-grant all on public.crm_contact_sync_queue to service_role;
--- AFTER trigger can safely reference a newly inserted record; metadata invalidation is separate.
 create or replace function crm_private.queue_contact_sync_after() returns trigger
 language plpgsql security definer set search_path=public,pg_temp as $$
 begin
@@ -31,9 +14,6 @@ begin
  new.data=(new.data-'TPF_CONTACT_VERIFIED'-'TPF_CRM_GOOGLE_SYNC') || jsonb_build_object('TPF_CONTACT_SYNC',jsonb_build_object('status','pending','updated_at',now()));
  end if; return new;
 end $$;
-create trigger z_contact_sync_invalidate before insert or update of data on public.records for each row execute function crm_private.invalidate_contact_sync();
-create trigger z_contact_sync_queue after insert or update of data on public.records for each row execute function crm_private.queue_contact_sync_after();
-revoke all on function crm_private.queue_contact_sync_after() from public,anon,authenticated;
 create or replace function public.crm_claim_contact_sync() returns jsonb
 language plpgsql security definer set search_path=public,pg_temp as $$
 declare q public.crm_contact_sync_queue; r public.records; matches integer;
@@ -58,10 +38,5 @@ begin
  update public.records set data=(data-'TPF_CONTACT_VERIFIED'-'TPF_CRM_GOOGLE_SYNC') || coalesce(p_metadata,'{}'::jsonb) || jsonb_build_object('TPF_CONTACT_SYNC',jsonb_build_object('status',p_status,'error',left(p_error,500),'updated_at',now())) where id=p_id;
  return true;
 end $$;
-revoke all on function public.crm_claim_contact_sync() from public,anon,authenticated;
-revoke all on function public.crm_finish_contact_sync(uuid,bigint,text,text,jsonb,text,text) from public,anon,authenticated;
-grant execute on function public.crm_claim_contact_sync() to service_role;
-grant execute on function public.crm_finish_contact_sync(uuid,bigint,text,text,jsonb,text,text) to service_role;
--- Historical audit, newest/unverified records first; no customer fields changed.
-insert into public.crm_contact_sync_queue(record_id,priority,updated_at)
-select id,case when data ? 'TPF_CONTACT_VERIFIED' then 0 else 1 end,created_at from public.records where source_sheet in ('BASE DE DATOS') on conflict do nothing;
+delete from public.crm_contact_sync_queue q using public.records r where q.record_id=r.id and r.source_sheet<>'BASE DE DATOS';
+update public.records set data=data-'TPF_CONTACT_SYNC' where source_sheet='DATA' and data ? 'TPF_CONTACT_SYNC';
