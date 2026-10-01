@@ -39,11 +39,11 @@ async function refreshSources(){[contacts,opps]=await Promise.all([all('records'
 function sourceMonth(p){const raw=String(p.month||'');const d=date(raw);if(d)return d.slice(0,7)+'-01';const names=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'],m=raw.toUpperCase().match(/^([A-Z]+)(20\d{2})$/);if(m&&names.includes(m[1]))return m[2]+'-'+String(names.indexOf(m[1])+1).padStart(2,'0')+'-01';return (p.activation_date||today()).slice(0,7)+'-01';}
 function eligible(r){return !r.imported&&!r.issue&&!!r.ledgerId&&!!r.choice&&(r.choice!=='new'||!!r.managerId&&!!r.recipientId)&&validPrice(r.amount);}
 function partyControls(r,i){
- if(r.issue)return "";
+ if(r.issue)return '';
  const o=opps.find(o=>o.id===r.choice),p=o?.contract_party;
  if(r.choice!=='new')return p?'<small>Titular: '+html(p.holder_name||r.client)+' · Gestor: '+html(p.contact_name||r.client)+' · Comunicaciones: '+html(p.recipient_name||r.client)+'</small>':'';
  const people=[{id:r.contactId,data:{NOMBRE:r.client}},...r.managers];
- return '<label>Gestor<select data-installed-manager="'+i+'"><option value="">Elegir gestor…</option>'+people.map(c=>'<option value="'+c.id+'" '+(r.managerId===c.id?'selected':'')+'>'+html(name(c))+'</option>').join('')+'</select></label><label>Comunicaciones<select data-installed-recipient="'+i+'"><option value="">Elegir destinatario…</option>'+people.filter(c=>c.id===r.contactId||c.id===r.managerId).map(c=>'<option value="'+c.id+'" '+(r.recipientId===c.id?'selected':'')+'>'+html(name(c))+'</option>').join('')+'</select></label>';
+ return '<label>Gestor<select data-installed-manager="'+i+'"><option value="">Elegir gestor…</option>'+people.map(c=>'<option value="'+c.id+'" '+(r.managerId===c.id?'selected':'')+'>'+html(name(c))+'</option>').join('')+'</select></label><label>Comunicaciones<select data-installed-recipient="'+i+'"><option value="">Elegir destinatario…</option>'+people.filter(c=>c.id===r.contactId||c.id===r.managerId).map(c=>'<option value="'+c.id+'" '+(r.recipientId===c.id?'selected':'')+'>'+html(name(c))+'</option>').join('')+'</select></label><button type="button" data-installed-person="'+i+'" data-person-role="manager">Buscar o crear otro gestor</button>';
 }
 function render(){
  const filter=$('installedFilter')?.value||'all';const shown=rows.map((r,i)=>({r,i})).filter(({r})=>filter==='all'||filter==='pending'&&(!r.imported||r.amount===''||r.amount==null)||filter==='price'&&(r.amount===''||r.amount==null));
@@ -52,14 +52,37 @@ function render(){
  const original=opps.find(o=>o.id===r.choice),price=original?.amount??r.amount;
  const choice=r.imported?'<b>Importada · Ganado</b>':r.issue?'<span class="installedWarn">'+html(r.issue)+'</span>':'<select aria-label="Oportunidad de '+html(r.client)+'" data-installed-choice="'+i+'"><option value="">Seleccionar…</option>'+r.candidates.map(o=>'<option value="'+html(o.id)+'" '+(r.choice===o.id?'selected':'')+'>'+html(o.title)+(o.installation_date?' · '+display(o.installation_date):'')+'</option>').join('')+'<option value="new" '+(r.choice==='new'?'selected':'')+'>Crear nueva en Ganado</option></select>';
  const amount='<input type="number" min="0" max="1000000" step="0.01" placeholder="Sin precio" aria-label="Importe de '+html(r.client)+'" value="'+html(price)+'" data-installed-amount="'+i+'" '+(original?.amount!=null?'readonly':'')+'><small data-price-note="'+i+'">'+(price===''||price==null?'Sin precio · Revisar':'')+'</small>'+(r.imported&&original?.amount==null?'<button type="button" data-installed-price-save="'+i+'">Guardar importe</button>':'');
- return '<tr>'+['<input type="checkbox" aria-label="Importar '+html(r.client)+'" data-installed-select="'+i+'" '+(r.selected?'checked':'')+' '+(!eligible(r)?'disabled':'')+'>','<b>'+html(r.client)+'</b><small>'+html(r.dni)+'</small>',html(r.operator),choice+partyControls(r,i),amount,display(r.choice==='new'?'':original?.expected_date||r.expected),display(r.installed),display(r.next),display(r.review)].map(v=>'<td>'+v+'</td>').join('')+'</tr>';
+ return '<tr>'+['<input type="checkbox" aria-label="Importar '+html(r.client)+'" data-installed-select="'+i+'" '+(r.selected?'checked':'')+' '+(!eligible(r)?'disabled':'')+'>','<b>'+html(r.client)+'</b><small>'+html(r.dni)+'</small>'+(!r.imported?'<button type="button" data-installed-person="'+i+'" data-person-role="holder">Buscar / crear titular</button>':''),html(r.operator),choice+partyControls(r,i),amount,display(r.choice==='new'?'':original?.expected_date||r.expected),display(r.installed),display(r.next),display(r.review)].map(v=>'<td>'+v+'</td>').join('')+'</tr>';
  }).join('');
  updateButton();
  const created=rows.filter(r=>r.imported).length,ready=rows.filter(eligible).length;
  $('importInfo').textContent=`${rows.length} ventas · ${created} ya importadas · ${ready} listas · ${rows.length-created-ready} pendientes. Se conserva el teléfono del CRM y la previsión existente. Sin importe: «Sin precio · Revisar». La confirmación programa solo seguimientos futuros; no envía mensajes ahora.`;
 }
+function rebuildRow(i){
+ const old=rows[i],p=old.payload;
+ const next=analyse([{DNI:p.dni,Operador:p.operator,Fecha_Activacion:p.activation_date,OrderLine:p.orderline,Transaccion:p.transaction,Cancelada:p.cancelled,Tienda:p.shop,Mes_Venta:p.month}],contacts,opps)[0];
+ rows[i]={...next,ledgerId:old.ledgerId,amount:old.amount,selected:false};
+ if(old.issue==='Duplicada en Excel'||old.issue==='La referencia guardada tiene otros datos: revisar')rows[i].issue=old.issue;
+ if(old.choice&&old.choice!=='new'&&next.candidates.some(o=>o.id===old.choice))rows[i].choice=old.choice;
+ return rows[i];
+}
+async function choosePerson(i,role){
+ const version=generation,r=rows[i];if(!r||r.imported||busy)return;
+ if(role==='manager'&&!r.contactId)throw Error('Identifica primero al titular');
+ busy=true;updateButton();
+ try{
+ const picked=await window.TPFWorkspace.pickContact({role,dni:role==='holder'?r.dni:'',holderId:r.contactId});
+ if(!picked||version!==generation||rows[i]!==r)return;
+ if(role==='holder'&&![picked.data?.DNI,picked.data?.['DNI / NIF']].some(x=>norm(x)===r.dni))throw Error('El DNI del contacto debe coincidir con el Excel. Edita su ficha si falta el DNI.');
+ if(role==='manager'&&picked.id!==r.contactId){const saved=await sb.rpc('crm_link_import_manager',{p_holder:r.contactId,p_manager:picked.id});if(saved.error)throw saved.error;window.dispatchEvent(new CustomEvent('tpf:contact-updated',{detail:{id:picked.id}}));}
+ await refreshSources();if(version!==generation)return;
+ const next=rebuildRow(i);if(role==='manager'){next.managerId=picked.id;next.recipientId='';}
+ render();
+ }finally{busy=false;updateButton();}
+}
 function updateButton(){const n=rows.filter(r=>r.selected&&eligible(r)).length;$('runImport').disabled=busy||!n;$('runImport').textContent='Confirmar '+n+' venta'+(n===1?'':'s');}
 async function preview(){
+ if(busy)return;
  const version=++generation,file=$('excelFile')?.files[0];$('runImport').disabled=true;rows=[];
  if(!file){$('importInfo').textContent='Selecciona el Excel del mes.';return;}
  $('importMapping')?.classList.add('hidden');$('importInfo').textContent='Comprobando ventas y guardando pendientes…';
@@ -93,7 +116,7 @@ async function savePrice(i){const r=rows[i];if(!r?.opportunityId||r.amount===''|
 function bind(){const select=$('destination');if(!select)return;const option=document.createElement('option');option.value=mode;option.textContent='COMPROBAR VENTAS DEL MES';select.append(option);
  const box=document.createElement('div');box.id='installedTools';box.hidden=true;box.innerHTML='<style>#installedTools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}#installedTools[hidden]{display:none}#view-import:has(#installedTools:not([hidden])) #previewRows td{vertical-align:top;min-width:95px}#previewRows [data-installed-amount]{width:105px}#previewRows [data-installed-choice]{max-width:210px}#previewRows small{display:block;margin-top:5px;color:#996300}.installedWarn{color:#b42318;font-weight:600}</style><label>Mes <input id="installedMonth" type="month" value="'+today().slice(0,7)+'"></label><button type="button" id="installedHistory">Ver comprobaciones guardadas</button><label>Mostrar <select id="installedFilter"><option value="all">Todas</option><option value="pending">Pendientes de revisar</option><option value="price">Sin precio</option></select></label><span>Vacía el mes para consultar todos.</span>';$('importInfo').before(box);
  $('installedHistory').onclick=history;$('installedFilter').onchange=render;
- document.addEventListener('click',e=>{if(select.value!==mode)return;const b=e.target.closest?.('#previewImport,#runImport,[data-installed-price-save]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(b.id==='previewImport')preview();else if(b.id==='runImport')importSelected().catch(err=>$('importInfo').textContent=err.message);else savePrice(Number(b.dataset.installedPriceSave));},true);
+ document.addEventListener('click',e=>{if(select.value!==mode)return;const b=e.target.closest?.('#previewImport,#runImport,[data-installed-price-save],[data-installed-person]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();if(b.id==='previewImport')preview();else if(b.id==='runImport')importSelected().catch(err=>$('importInfo').textContent=err.message);else if(b.dataset.installedPerson!=null)choosePerson(Number(b.dataset.installedPerson),b.dataset.personRole).catch(err=>$('importInfo').textContent=err.message);else savePrice(Number(b.dataset.installedPriceSave));},true);
  $('previewRows').addEventListener('change',e=>{if(select.value!==mode)return;const el=e.target;if(el.dataset.installedManager!=null){const r=rows[el.dataset.installedManager];r.managerId=el.value;r.recipientId='';r.selected=false;render();return;}if(el.dataset.installedRecipient!=null){const r=rows[el.dataset.installedRecipient];r.recipientId=el.value;r.selected=eligible(r);render();return;}if(el.dataset.installedSelect!=null){rows[el.dataset.installedSelect].selected=el.checked;updateButton();}if(el.dataset.installedChoice!=null){const r=rows[el.dataset.installedChoice];r.choice=el.value;r.selected=eligible(r);render();}});
  $('previewRows').addEventListener('input',e=>{const el=e.target;if(el.dataset.installedAmount!=null){const r=rows[el.dataset.installedAmount];r.amount=el.value;$('previewRows').querySelector('[data-price-note="'+el.dataset.installedAmount+'"]').textContent=el.value===''?'Sin precio · Revisar':validPrice(el.value)?'':'Importe no válido';updateButton();}});
  select.addEventListener('change',()=>{generation++;box.hidden=select.value!==mode;if(select.value===mode){$('runImport').disabled=true;$('importMapping')?.classList.add('hidden');$('importInfo').textContent='Carga el Excel del mes o revisa pendientes guardados. La fecha de activación es obligatoria.';$('runImport').textContent='Confirmar ventas';}else $('runImport').textContent='Confirmar importación';});
