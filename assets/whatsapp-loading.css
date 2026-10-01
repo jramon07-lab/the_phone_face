@@ -23,3 +23,9 @@
     font-size:13px;
   }
 }
+
+/* Apply WhatsApp's compact navigation at its final width before drawing chats.
+   Animating the shell dimensions reflows the chat repeatedly during entry. */
+body:is(.wa-fullscreen-mode,.tpfWaCompactNav) :is(.referenceSidebar,.referenceWorkspace,.sidebarToggle,.referenceNav .nav){
+ transition:none!important;
+}
