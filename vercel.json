@@ -16,6 +16,10 @@
     {
       "path": "/api/whatsapp-auto-replies?action=cron",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/google-contacts?action=sync-queue",
+      "schedule": "* * * * *"
     }
   ],
   "routes": [
@@ -46,5 +50,10 @@
     {
       "handle": "filesystem"
     }
-  ]
+  ],
+  "functions": {
+    "api/google-contacts.js": {
+      "maxDuration": 300
+    }
+  }
 }

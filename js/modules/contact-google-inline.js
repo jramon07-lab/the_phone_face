@@ -368,6 +368,7 @@
     return JSON.stringify([c.id, phone(c.phone), c.first, c.last, c.nickname]);
   }
   function savedVerification(row, chat) {
+    if(row?.data?.TPF_CONTACT_SYNC && row.data.TPF_CONTACT_SYNC.status!=="verified")return null;
     const v = row?.data?.TPF_CONTACT_VERIFIED || savedCrmGoogleSync(row),
       account = fold(googleAccountEmail()),
       storedChat = safe(v?.chat_id),
@@ -402,6 +403,7 @@
   // Un contacto sin teléfono no puede tener conversación de WhatsApp. Aun así
   // CRM y Google sí pueden quedar comprobados y sincronizados de forma segura.
   function savedCrmGoogleSync(row) {
+    if(row?.data?.TPF_CONTACT_SYNC && row.data.TPF_CONTACT_SYNC.status!=="verified")return null;
     const current = row?.data?.TPF_CRM_GOOGLE_SYNC,
       legacy = row?.data?.TPF_CONTACT_VERIFIED,
       c = contactData(row),
@@ -446,6 +448,7 @@
   }
   const verificationWrites = new Map();
   async function persistMatchingVerification(row, chat, found) {
+    if(row?.data?.TPF_CONTACT_SYNC)return false;
     const linked = contactChat(row, chat),
       c = contactData(row),
       account = fold(googleAccountEmail()),
@@ -903,6 +906,8 @@
     return `<p>Google: <b>${esc(g.name || "Sin nombre")}</b>${g.nickname ? ` · Apodo: ${esc(g.nickname)}` : ""}${googlePhones(found[0]).length ? ` · Tel: ${esc(googlePhones(found[0]).join(", "))}` : ""}</p>`;
   }
   function syncState(row, chat, found, connected, error, wa) {
+    const pending=row?.data?.TPF_CONTACT_SYNC;
+    if(pending && pending.status!=="verified")return {visible:unifiedVisible(contactData(row).first,contactData(row).last,contactData(row).nickname),confirmed:false,waDisplay:safe(wa),status:pending.status==="review"?pending.error||"Requiere revisión":pending.error?"Sincronización pendiente: "+pending.error:"Sincronizando y comprobando Google y WhatsApp…",ok:false,phoneMatched:false,waDifferent:false};
     const c = contactData(row),
       visible = unifiedVisible(c.first, c.last, c.nickname),
       account = googleAccountEmail(),
@@ -2593,42 +2598,9 @@
     }
   }
   async function syncEditedContact(detail = {}) {
-    if (
-      detail.googleSync ||
-      !detail.id ||
-      !detail.data ||
-      typeof googleContactsConnected !== "function" ||
-      !googleContactsConnected() ||
-      !(await settingEnabled("google_contacts_update", true))
-    )
-      return;
-    const row = { id: detail.id, data: detail.data },
-      c = contactData(row),
-      old = contactData({
-        id: detail.id,
-        data: detail.previous || detail.data,
-      });
-    try {
-      let found = await searchGoogle(old);
-      if (
-        found.length === 0 &&
-        (phone(old.phone) !== phone(c.phone) ||
-          fold(old.email) !== fold(c.email))
-      )
-        found = await searchGoogle(c);
-      if (found.length !== 1) return;
-      const saved = await writeGoogle(found[0], c, c.first, c.last, c.nickname);
-      await verifyGoogleSaved(saved, c.phone, c.first, c.last, c.nickname);
-      clearGoogleCache();
-      await autoConfirmCreatedWhatsapp(row);
-      window.dispatchEvent(
-        new CustomEvent("tpf:google-contacts-changed", {
-          detail: { contactId: detail.id, automatic: true },
-        }),
-      );
-    } catch (error) {
-      console.warn("Sincronizar edición con Google Contacts", error);
-    }
+    // Database trigger queues all PC, mobile and imported changes durably.
+    // No competing browser write: the server checks Google and WhatsApp readback.
+    return {queued:!!detail.id};
   }
   // Al crear una ficha no hace falta abrir manualmente su conversación: se
   // confirma solo si GREEN devuelve un único chat personal con el mismo
@@ -2636,6 +2608,8 @@
   // el nombre público de WhatsApp.
   async function autoConfirmCreatedWhatsapp(detail = {}) {
     if (!detail?.id || !detail?.data || !googleContactsConnected?.()) return;
+    const fresh=await sb.from("records").select("data").eq("id",detail.id).single();
+    if(fresh.error || fresh.data?.data?.TPF_CONTACT_SYNC)return;
     const row = { id: detail.id, data: detail.data },
       c = contactData(row),
       wanted = phone(c.phone);

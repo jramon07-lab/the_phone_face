@@ -384,14 +384,8 @@ async function bindNewGoogleContact(id,person){
  }
  throw new Error('La ficha se creó, pero no se pudo guardar su vínculo de Google.');
 }
-async function syncNewContactToGoogle({fullName,first,last,nickname,phone,email}){
- const setting=await sb.from('app_settings').select('value').eq('key','google_contacts_sync').maybeSingle();
- if(setting.error||setting.data?.value!==true)return {message:'',pending:false};
- if(typeof googleContactsConnected!=='function'||!googleContactsConnected())return {message:'El contacto se creó en el CRM, pero Google Contacts no está conectado.',pending:false};
- if(typeof createGoogleContact!=='function')return {message:'El contacto se creó en el CRM, pero la sincronización con Google no está disponible.',pending:false};
- const result=await createGoogleContact(fullName,phone,email,nickname,{first,last,forceNew:true});
- if(!result?.person?.resourceName)throw new Error('Google no confirmó el contacto recién creado.');
- return {message:'Contacto creado también en Google Contacts.',pending:true,person:result.person};
+async function syncNewContactToGoogle(){
+ return {message:'Contacto creado. Google y WhatsApp se sincronizan y comprueban automáticamente.',pending:true};
 }
 async function createContact(){
  const btn=byId('tpfContactsCreateSave'),msg=byId('tpfContactsCreateMsg'),editing=state.editingId,row=editing?rowById(editing):null;

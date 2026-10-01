@@ -88,6 +88,15 @@ module.exports=async function(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Content-Type-Options','nosniff');
  const action=String(req.query?.action||'status');
  try{
+  if(action==='sync-queue'){
+   if(req.method!=='GET'||!process.env.CRON_SECRET||req.headers.authorization!=='Bearer '+process.env.CRON_SECRET)throw fail(401,'No autorizado');
+   const pending=await request(SB+'/rest/v1/crm_contact_sync_queue?status=in.(pending,retry,processing)&next_attempt_at=lte.'+encodeURIComponent(new Date().toISOString())+'&or=(lease_until.is.null,lease_until.lt.'+encodeURIComponent(new Date().toISOString())+')&select=record_id&limit=1',{headers:serviceHeaders()});if(!pending.ok)throw fail(503,'No se pudo consultar la cola de contactos.');if(!(await pending.json()).length)return json(res,200,{ok:true,processed:0});
+   const {token,stored}=await accessToken();if(!stored.email)throw fail(409,'Falta confirmar la cuenta de Google.');
+   const db=async(path,body)=>{const r=await request(SB+'/rest/v1/'+path,{method:'POST',headers:serviceHeaders(),body:JSON.stringify(body)});if(!r.ok)throw fail(503,'No se pudo procesar la cola de contactos.');return r.json();};
+   const google=async(path,options={})=>{const r=await request('https://people.googleapis.com/v1/'+path,{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})});const value=await r.json();if(!r.ok)throw fail(r.status,'Google: '+(value.error?.message||'Error de sincronización'));return value;};
+   const green=async(method,body)=>{const id=process.env.GREEN_API_INSTANCE_ID||process.env.GREEN_API_ID_INSTANCE||process.env.GREEN_API_IDINSTANCE,secret=process.env.GREEN_API_TOKEN||process.env.GREEN_API_API_TOKEN||process.env.GREEN_API_TOKEN_INSTANCE,base=String(process.env.GREEN_API_API_URL||'https://7107.api.greenapi.com').replace(/\/$/,'');if(!id||!secret)throw fail(503,'WhatsApp no está configurado.');const r=await request(base+'/waInstance'+encodeURIComponent(id)+'/'+method+'/'+encodeURIComponent(secret),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),value=await r.json();if(!r.ok)throw fail(r.status,'WhatsApp: '+(value.message||'Error de sincronización'));return value;};
+   return json(res,200,await require('../lib/contact-sync').run({db,google,green,account:stored.email}));
+  }
   if(action==='callback'){
    if(req.method!=='GET'||!configured())throw fail(503,'La conexión de Google Contacts no está preparada.');
    let state;try{state=unseal(req.query?.state);}catch(_){throw fail(400,'La autorización ha caducado. Vuelve a intentarlo.');}
