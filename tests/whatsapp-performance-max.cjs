@@ -188,6 +188,9 @@ async function run(){
   list.scrollTop=800;list.dispatch('scroll');flushFrames();
   assert.equal(rowCount(),49);assert.match(list.innerHTML,/49 de 49 conversaciones · Final de la lista/);
   assert.doesNotMatch(list.innerHTML,/class="waLiveEmpty waLiveLoadMore"/);
+  state.chats=[];state.loading=true;context.renderWhatsAppChats();
+  assert.match(list.innerHTML,/Cargando conversaciones/);assert.doesNotMatch(list.innerHTML,/No hay conversaciones/);
+  state.loading=false;context.renderWhatsAppChats();assert.match(list.innerHTML,/No hay conversaciones/);
   console.log('WhatsApp performance max OK; all 49 pending rows reachable with explicit end indicator');
 }
 

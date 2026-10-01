@@ -318,7 +318,8 @@ function install(){
         const visible=rows.slice(0,waPerformancePage.limit);
         const box=document.getElementById('waLiveChats');if(!box)return;
         waPerformanceBindList(box);
-        let html=visible.map(waPerformanceRenderRow).join('')||'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>';
+        const waiting=waLiveState.loading&&!waLiveState.chats?.length;
+        let html=visible.map(waPerformanceRenderRow).join('')||(waiting?'<div class="waLiveEmpty" role="status">Cargando conversaciones…</div>':'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>');
         if(rows.length>visible.length){
           const remaining=rows.length-visible.length;
           html+=`<button type="button" class="waLiveEmpty waLiveLoadMore" style="display:block;width:100%;border:0;background:#fff;cursor:pointer">Mostrar más (${remaining})</button>`;

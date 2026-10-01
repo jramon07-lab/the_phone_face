@@ -29,3 +29,7 @@
 body:is(.wa-fullscreen-mode,.tpfWaCompactNav) :is(.referenceSidebar,.referenceWorkspace,.sidebarToggle,.referenceNav .nav){
  transition:none!important;
 }
+
+/* Initial counters are unknown, not zero. Keep their space while data arrives. */
+#view-whatsapplive[aria-busy="true"]:not([data-tpf-loaded]) .waAutomaticCount,
+#view-whatsapplive[aria-busy="true"]:not([data-tpf-loaded]) #waMiniStats{visibility:hidden!important}

@@ -442,6 +442,7 @@ window.addEventListener('pagehide',()=>clearTimeout(waSharedSyncTimer));
 async function loadWhatsAppLive(){
   if(waLiveState.loading)return;
   waLiveState.loading=true;
+  if(!waLiveState.chats?.length)$("waLiveChats").innerHTML='<div class="waLiveEmpty" role="status">Cargando conversaciones…</div>';
   try{
     $("waLiveStatus").textContent="Conectando…";
     $("waLiveStatus").className="waLiveStatus";
