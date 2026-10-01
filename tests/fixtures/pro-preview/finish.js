@@ -1,0 +1,9 @@
+/* Complete synthetic content after the real desktop contact adapter mounts. */
+$('cpDocumentsPending').innerHTML='<div class="cpSideTitle"><b>Documentos · 2</b><span class="pvPill">Ejemplos locales</span></div><div class="cpRefDocActions"><button disabled>Subir archivo</button><button disabled>Escanear / crear PDF</button><button disabled>Abrir en Drive</button></div><div class="pvDoc"><span>▤ Oferta-Vodafone.pdf</span><button data-offer>Ver ejemplo</button></div><div class="pvDoc"><span>▤ Justificante-instalación.pdf</span><small>Documento ficticio</small></div><p class="pvHint">No hay archivos de clientes ni conexión a Drive en esta prueba.</p>';
+$('cpNotesPanel').innerHTML='<h3>Notas de la ficha</h3><p>Prefiere atención por la tarde.</p><h3>Observaciones</h3><p>Gestiona Pablo. Confirmar el contrato antes de comunicar.</p><h3>Notas internas</h3><textarea rows="5">Comprobar instalación antes del siguiente seguimiento.</textarea><button disabled>Guardar en producción (desactivado)</button>';
+$('tpfContactEditToggle').onclick=()=>demoDialog('Editar datos del contacto','<p>Los campos de la ficha actual se conservan.</p><label>Nombre<input value="Elena"></label><label>Apellidos<input value="Torres"></label><label>Observaciones<textarea>Gestiona Pablo el contrato de Vodafone.</textarea></label><button disabled>Guardar (prueba sin datos reales)</button>');
+for(const id of ['contactWhatsapp','cpNewOffer','cpNewOpp','cpNewTask'])$(id).onclick=()=>id==='contactWhatsapp'?navigate('whatsapplive'):offer();
+const badges={oportunidades:'2',tareas:'1',notas:'2',documentos:'2'};
+for(const [key,n] of Object.entries(badges)){const b=$('cpRefTab-'+key);if(b)b.textContent+=' · '+n;}
+const summary=document.querySelector('[data-tpf-summary-group="opportunities"]');if(summary){summary.dataset.tpfOpen='true';summary.querySelector('button').setAttribute('aria-expanded','true');}
+navigate(location.hash.slice(1)||'contact');

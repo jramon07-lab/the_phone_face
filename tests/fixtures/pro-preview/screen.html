@@ -1,0 +1,1690 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>🟠 Phone Face · Pruebas</title>
+<link rel="icon" type="image/svg+xml" sizes="any" href="/assets/phone-face-pruebas.svg?v=1">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/assets/navigation-ready.css?v=20260930-loading-preview-2">
+<link id="dashboardSafeProCss" rel="stylesheet" href="/assets/dashboard-home.css?v=20260925-workbench-1">
+<link rel="stylesheet" href="/assets/app.css?v=20260908-activity-2">
+<link rel="stylesheet" href="/assets/whatsapp-loading.css?v=20261001-initial-loading-1">
+<link rel="stylesheet" href="/assets/opportunity-detail.css?v=20260920-workspace-1">
+<link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
+<link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-05">
+<link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
+<link rel="stylesheet" href="/assets/contact-desktop.css?v=20260912-summary-accordions-1">
+<link rel="stylesheet" href="/assets/crm-unified.css?v=20260920-suite-2">
+<link rel="stylesheet" href="/assets/crm-reference.css?v=20261001-profile-no-flash-1">
+<link rel="stylesheet" href="/assets/whatsapp-chat-row.css?v=20260926-time-1">
+<link rel="stylesheet" href="/assets/contact-workspace-pro.css?v=20260930-viewer-close-2">
+<meta name="tpf-crm-mode" content="test">
+
+<style id="tpf-menu-clean-v3">
+.nav[data-view="search"][data-sheet="LIQUIDACION"],
+.nav[data-view="search"][data-sheet="DATA"],
+.nav[data-view="search"][data-sheet="CLAWBACK"],
+.nav[data-view="search"][data-sheet="AJUSTES"]{display:none!important}
+#tpfAutomationAdvancedBar{margin:0 0 14px;padding:14px 16px;border:1px solid #b9d3fb;border-radius:12px;background:#f7fbff}
+#tpfAutomationAdvancedBar h3{margin:0 0 5px;font-size:15px}
+.tpfAutoCaps{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.tpfAutoCaps span{display:inline-flex;padding:4px 7px;border-radius:999px;background:#eef4ff;color:#315fa7;font-size:9px;font-weight:700}
+#tpfBuildBadge{position:fixed;right:8px;bottom:8px;z-index:30000;padding:5px 8px;border-radius:7px;background:#101828e8;color:#fff;font:10px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;box-shadow:0 3px 10px #0002;opacity:.78;pointer-events:none;max-width:min(460px,calc(100vw - 16px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+<style id="tpf-final-fix-v5">
+.referenceTopbar{display:flex!important;min-height:64px!important;height:64px!important;align-items:center!important;justify-content:space-between!important;position:relative!important;z-index:80!important;background:#fff!important;overflow:visible!important}
+.referenceTopUser{display:flex!important;align-items:center!important;flex:0 0 auto!important;visibility:visible!important;opacity:1!important}
+#logout{display:inline-flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;justify-content:center!important;white-space:nowrap!important;position:static!important;z-index:auto!important}
+.referenceUser #logout{margin-left:auto!important;padding:6px 9px!important;min-width:auto!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:7px!important;background:rgba(255,255,255,.08)!important;color:#fff!important;font-size:11px!important;line-height:1!important;flex:0 0 auto!important}
+.referenceUser:has(#logout) .referenceOnline{display:none!important}
+@media(max-width:760px){.referenceTopbar{display:flex!important;padding-left:8px!important;padding-right:8px!important;gap:8px!important}.globalSearchWrap{width:100%!important;min-width:0!important}.referenceTopUser{display:none!important}}
+</style>
+<meta name="robots" content="noindex,nofollow"><link rel="stylesheet" href="/tests/fixtures/pro-preview/preview.css"></head>
+<body class="tpfUnified">
+
+<div id="login" class="login">
+ <div class="box">
+   <h2>The Phone Face</h2><p class="small">Acceso a la aplicación</p>
+   <input id="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Correo electrónico">
+   <input id="password" type="password" autocomplete="current-password" placeholder="Contraseña">
+   <div class="row"><button id="signin" class="primary">Entrar</button><button id="signup" class="secondary">Crear cuenta</button></div>
+   <div id="loginMsg" class="small"></div>
+ </div>
+</div>
+
+<div id="app" class="hidden">
+ <button id="sidebarToggle" class="sidebarToggle" type="button" title="Ocultar menú" aria-label="Ocultar menú">‹</button>
+ <div class="referenceShell">
+  <aside class="referenceSidebar">
+    <div class="referenceBrand">
+      <div class="referencePhoneIcon"><i></i></div>
+      <div><strong>THE PHONE FACE</strong><small>STORE</small></div>
+    </div>
+
+    <nav class="referenceNav">
+      <div class="nav active" data-view="dashboard"><b>⌂</b><span>Inicio</span></div>
+      <div class="nav" data-view="alerts"><b>🔔</b><span>Avisos <em id="navAlertCount" class="navCount">0</em></span></div>
+      <div class="nav" data-view="search" data-sheet=""><b>⌕</b><span>Buscador</span></div>
+      <div class="nav" data-view="search" data-sheet="LIQUIDACION"><b>▣</b><span>Liquidación</span></div>
+      <div class="nav" data-view="search" data-sheet="DATA"><b>▤</b><span>Data</span></div>
+      <div class="nav" data-view="search" data-sheet="CLAWBACK"><b>⟳</b><span>Clawback</span></div>
+      <div class="nav" data-view="search" data-sheet="AJUSTES"><b>⚙</b><span>Ajustes</span></div>
+      <div class="nav" data-view="sales"><b>⌁</b><span>Panel de ventas</span></div>
+      <div class="nav" data-view="database"><b>▦</b><span>Contactos</span></div>
+      <div class="nav secondaryNav" data-view="import"><b>⇧</b><span>Importar Excel</span></div>
+      <div class="nav secondaryNav" data-view="agenda"><b>▣</b><span>Agenda</span></div>
+      <div class="nav secondaryNav" data-view="whatsapplive"><b>◉</b><span>WhatsApp</span></div>
+      <div class="nav secondaryNav" data-view="whatsapp"><b>💬</b><span>WhatsApp programados</span></div>
+      <div class="nav secondaryNav" data-view="labels"><b>🏷</b><span>Etiquetas</span></div>
+      <div class="nav secondaryNav" data-view="settings"><b>⚙</b><span>Configuración</span></div>
+      <div class="nav secondaryNav" data-view="automations"><b>⚡</b><span>Automatizaciones</span></div>
+      <div class="nav secondaryNav" data-view="users"><b>♙</b><span>Usuarios</span></div>
+      <div class="nav secondaryNav" data-view="system" style="display:none"><b>●</b><span>Estado del sistema</span></div>
+      <div class="nav secondaryNav" data-view="trash"><b>🗑</b><span>Papelera</span></div>
+    </nav>
+
+    <div class="referenceUser">
+      <div class="referenceAvatar">R</div>
+      <div class="referenceUserText"><strong id="sideWho">Usuario</strong><small id="sideRole">Administrador</small></div>
+      <span class="referenceOnline"></span>
+    </div>
+  </aside>
+
+  <div class="referenceWorkspace">
+    <header class="referenceTopbar">
+      <div class="globalSearchWrap">
+        <input id="globalSearch" class="globalSearch" placeholder="🔎 Buscar cliente por nombre, DNI o teléfono...">
+        <div id="globalSearchResults" class="globalSearchResults hidden"></div>
+      </div>
+      <div class="referenceTopUser"><span id="who"></span><button id="logout" class="referenceExit">Salir</button></div>
+    </header>
+    <main>
+
+   <section id="view-dashboard">
+     <div class="dashHero">
+       <div><span class="eyebrow">THE PHONE FACE</span><h1>Resumen del negocio</h1><p>Todo lo importante de hoy en una sola pantalla.</p></div>
+       <div class="dashHeroActions"><button id="dashRefresh" class="secondary">↻ Actualizar</button><button id="dashNewOpp" class="primary">+ Nueva oportunidad</button></div>
+     </div>
+     <div class="metricGrid">
+       <div class="metricCard"><span>Ventas / oportunidades</span><strong id="mOppTotal">—</strong><small id="mOppAmount">—</small></div>
+       <div class="metricCard"><span>Abiertas</span><strong id="mOppOpen">—</strong><small>con fecha vigente</small></div>
+       <div class="metricCard dangerMetric"><span>Vencidas</span><strong id="mOppExpired">—</strong><small>necesitan seguimiento</small></div>
+       <div class="metricCard"><span>Tareas pendientes</span><strong id="mTasks">—</strong><small id="mTasksToday">—</small></div>
+       <div class="metricCard"><span>Contactos</span><strong id="mContacts">—</strong><small>Contactos</small></div>
+       <div class="metricCard"><span>Conversión</span><strong id="mConversion">—</strong><small>ganadas / total</small></div>
+     </div>
+     <div class="dashColumns">
+       <div class="dashPanel"><div class="dashPanelHead"><h3>🔔 Prioridad de hoy</h3><button class="linkBtn" onclick="openAppView('alerts')">Ver todos</button></div><div id="dashAlerts" class="dashList"></div></div>
+       <div class="dashPanel"><div class="dashPanelHead"><h3>📊 Embudo de ventas</h3><button class="linkBtn" onclick="openAppView('sales')">Abrir panel</button></div><div id="dashFunnel" class="funnelList"></div></div>
+     </div>
+     <div class="commercialDashboard">
+  <div class="dashPanel commercialHero">
+    <div class="dashPanelHead"><h3>🎯 Objetivo del mes</h3><button id="dashGoalEdit" class="linkBtn">Editar objetivo</button></div>
+    <div class="commercialStats">
+      <div><span>Objetivo €</span><b id="dashGoalAmount">0 €</b></div>
+      <div><span>Conseguido</span><b id="dashWonAmount">0 €</b></div>
+      <div><span>Previsión</span><b id="dashForecastAmount">0 €</b></div>
+      <div><span>Progreso</span><b id="dashGoalProgress">0%</b></div>
+    </div>
+    <div class="goalBar"><div id="dashGoalBarFill"></div></div>
+  </div>
+  <div class="dashPanel">
+    <div class="dashPanelHead"><h3>📞 Clientes a contactar hoy</h3><button class="linkBtn" onclick="openAppView('agenda')">Abrir agenda</button></div>
+    <div id="dashContactToday" class="dashList"></div>
+  </div>
+</div>
+<div class="commercialDashboard">
+  <div class="dashPanel">
+    <div class="dashPanelHead"><h3>📈 Previsión comercial</h3></div>
+    <div id="dashForecastBreakdown" class="forecastList"></div>
+  </div>
+  <div class="dashPanel">
+    <div class="dashPanelHead"><h3>⚠️ Seguimientos prioritarios</h3></div>
+    <div id="dashPriorityFollowups" class="dashList"></div>
+  </div>
+</div>
+<div class="dashColumns">
+       <div class="dashPanel"><div class="dashPanelHead"><h3>🕘 Actividad reciente</h3></div><div id="dashActivity" class="dashList"></div></div>
+       <div class="dashPanel"><div class="dashPanelHead"><h3>💾 Seguridad de datos</h3></div>
+         <p class="small">Descarga una copia independiente de contactos, oportunidades y agenda.</p>
+         <button id="backupJson" class="secondary">Descargar copia JSON</button>
+         <button id="backupCsv" class="secondary">Exportar oportunidades CSV</button>
+         <div id="backupMsg" class="small"></div>
+       </div>
+     </div>
+   </section>
+
+   <section id="view-alerts" class="hidden">
+     <div class="pageTitle"><div><h2>Centro de avisos</h2><p>Vencimientos, tareas y oportunidades sin seguimiento.</p></div><button id="alertsRefresh" class="secondary">↻ Actualizar</button></div>
+     <div class="alertFilters"><button class="chip active" data-alert-filter="all">Todos</button><button class="chip" data-alert-filter="expired">Vencidas</button><button class="chip" data-alert-filter="today">Hoy</button><button class="chip" data-alert-filter="stale">Sin seguimiento</button></div>
+     <div id="alertsList" class="alertsList"></div>
+   </section>
+
+   <section id="view-trash" class="hidden">
+     <div class="pageTitle"><div><h2>Papelera</h2><p>Elementos eliminados. Se conservan durante 30 días.</p></div><button id="trashRefresh" class="secondary">↻ Actualizar</button></div>
+     <div class="card"><div id="trashList"></div></div>
+   </section>
+
+   <section id="view-search" class="hidden">
+    <div class="card"><h2>Buscador</h2>
+      <div class="row"><input id="searchText" placeholder="Nombre, DNI, teléfono, concepto...">
+      <select id="searchSheet"><option value="">Todas</option><option>LIQUIDACION</option><option>DATA</option><option>CLAWBACK</option><option>AJUSTES</option><option value="BASE DE DATOS">CONTACTOS</option></select>
+      <button id="searchBtn" class="primary">Buscar</button>
+      <button id="multiSearchBtn" class="secondary">Búsqueda múltiple</button>
+      <button id="crossSearchBtn" class="secondary">Cruzar DNI / transacciones</button>
+      <button id="exportSearchExcel" class="secondary hidden">Exportar resultados (.xlsx)</button>
+      <button id="exportFullSheetExcel" class="secondary">Exportar hoja completa</button></div>
+    </div>
+    <div id="searchSingleResults" class="card scroll"><table><thead id="searchHead"></thead><tbody id="searchRows"></tbody></table></div>
+    <div id="searchUnifiedResults" class="card scroll hidden">
+      <div id="searchUnifiedSummary" class="searchUnifiedSummary"></div>
+      <table><thead id="searchUnifiedHead"></thead><tbody id="searchUnifiedRows"></tbody></table>
+    </div>
+    <div id="searchGroupedResults" class="hidden"></div>
+
+    <div id="multiSearchResults" class="card hidden">
+      <div class="multiSearchSummary">
+        <div>
+          <h3 style="margin:0">Resultados de búsqueda múltiple</h3>
+          <div id="multiSearchSummaryText" class="small"></div>
+        </div>
+        <button id="multiSearchExport" class="secondary">Exportar resultados (.xlsx)</button>
+      </div>
+      <div id="multiSearchMissing" class="multiSearchMissing"></div>
+      <div class="scroll"><table><thead id="multiSearchHead"></thead><tbody id="multiSearchRows"></tbody></table></div>
+    </div>
+
+    <div id="crossSearchResults" class="card hidden">
+      <div class="multiSearchSummary">
+        <div>
+          <h3 style="margin:0">Cruce por DNI / transacción</h3>
+          <div id="crossSearchSummaryText" class="small"></div>
+        </div>
+        <button id="crossSearchExport" class="secondary">Exportar cruce (.xlsx)</button>
+      </div>
+      <div class="scroll"><table class="crossSearchTable"><thead id="crossSearchHead"></thead><tbody id="crossSearchRows"></tbody></table></div>
+    </div>
+   </section>
+
+   <div id="contactModal" class="contactProfileBack tpfContactDesktop hidden">
+    <div class="contactProfile">
+      <div class="cpTop">
+        <button id="contactClose" class="cpExit">← Volver</button>
+        <div class="cpNav">Ficha completa del contacto</div>
+        <button id="contactSave" class="primary">Guardar cambios</button>
+      </div>
+      <div class="cpColumns">
+        <aside class="cpLeft">
+          <div class="cpIdentity">
+            <div id="cpAvatar" class="cpAvatar">C</div>
+            <input id="contactName" class="cpName" placeholder="Nombre completo" readonly>
+            <div class="cpNameSplit">
+              <input id="contactFirstName" placeholder="Nombre">
+              <input id="contactLastName" placeholder="Apellidos">
+            </div>
+            <span class="cpBadge">Contacto</span>
+            <div class="cpQuick">
+              <button id="contactWhatsapp" title="WhatsApp">◉ WhatsApp</button>
+              <button id="cpNewOpp" title="Nueva oportunidad">＋ Oportunidad</button>
+              <button id="cpNewTask" title="Nuevo recordatorio">＋ Agenda</button>
+              <button id="cpNewOffer" class="cpOfferQuick" type="button" title="Preparar y enviar una oferta">✦ Enviar oferta</button>
+            </div>
+          </div>
+          <div class="cpOwner">THE PHONE FACE <span>· Administrador</span></div>
+          <div class="cpData">
+            <h3>Datos</h3>
+            <label>Teléfono</label><input id="contactPhone">
+            <label>DNI / NIF</label><input id="contactDni">
+            <label>Correo electrónico</label><input id="contactEmail">
+            <label>Notas</label><textarea id="contactNotes"></textarea>
+            <div class="contactCustomFieldsBox">
+              <div class="contactCustomFieldsHead"><label style="margin:0">Campos personalizados</label><button id="contactCustomFieldsManage" type="button" class="secondary">Gestionar</button></div>
+              <div id="contactCustomFields" class="customFieldsForm"></div>
+            </div>
+            <div class="contactLabelsBox">
+              <div class="contactLabelsHead"><label style="margin:0">Etiquetas</label><button id="contactManageLabels" type="button" class="secondary">Gestionar</button></div>
+              <div id="contactLabelsList" class="contactLabelsList"></div>
+            </div>
+            <div id="contactMeta" class="small"></div>
+            <div class="small cpDuplicateHint">Solo en Contactos: si este DNI aparece en varias filas, los cambios se aplicarán a todas.</div>
+            <div id="contactMsg" class="small"></div>
+          </div>
+          <button id="contactDelete" class="danger cpDelete">Eliminar contacto</button>
+        </aside>
+        <main class="cpCenter">
+          <div class="cpTabs"><b>Todos</b><span>Oportunidades</span><span>Tareas</span></div>
+          <div class="cpActivityHead">
+            <h2>Actividad</h2>
+            <button id="cpAddNote" class="secondary">Ir a Notas</button>
+          </div>
+
+          <div id="cpNoteComposer" class="cpNoteComposer hidden">
+            <textarea id="cpNoteText" rows="4" placeholder="Escribe una nota sobre este contacto..."></textarea>
+            <div class="cpNoteActions">
+              <button id="cpNoteCancel" class="secondary">Cancelar</button>
+              <button id="cpNoteSave" class="primary">Guardar nota</button>
+            </div>
+            <div id="cpNoteMsg" class="small"></div>
+          </div>
+
+          <div class="cpFullHistoryHead"><h3>Actividad del cliente</h3><span>Más reciente primero</span></div>
+<div id="cpTimeline" class="cpTimeline"></div>
+        </main>
+        <aside class="cpRight">
+          <div class="cpSideSection">
+            <div class="cpSideTitle"><b>Oportunidades</b><button id="cpSideNewOpp">＋</button></div>
+            
+<div id="cpOppSummary" class="cpOppSummary">
+  <div class="cpOppStat"><span>Total</span><b id="cpOppTotal">0</b></div>
+  <div class="cpOppStat"><span>Abiertas</span><b id="cpOppOpen">0</b></div>
+  <div class="cpOppStat cpOppExpired"><span>Vencidas</span><b id="cpOppExpired">0</b></div>
+</div>
+<div id="cpOpportunities"></div>
+          </div>
+          <div class="cpSideSection">
+            <div class="cpSideTitle"><b>WhatsApp programados</b><button id="cpSideNewWhatsapp">＋</button></div>
+            <div id="cpWhatsappPrograms"><div class="cpEmpty">No hay WhatsApp programados.</div></div>
+          </div>
+          <div class="cpSideSection">
+            <div class="cpSideTitle"><b>Tareas</b><button id="cpSideNewTask">＋</button></div>
+            <div id="cpTasks"></div>
+          </div>
+          <div class="cpSideSection">
+            <div class="cpSideTitle"><b>Información</b></div>
+            <div id="cpInfo" class="small"></div>
+          </div>
+          <section id="cpDocumentsPending" class="cpSideSection cpDocumentsPending" aria-labelledby="cpDocumentsTitle">
+            <div class="cpSideTitle"><b id="cpDocumentsTitle">Documentos</b><span class="cpPendingBadge">Pendiente</span></div>
+            <h3>Google Drive</h3>
+            <p>Pendiente de conectar. Aquí podrás reunir los documentos del cliente en una sola carpeta.</p>
+            <div class="cpDocumentsPlan">Vincular carpeta existente · PDF y fotografías · Escaneo de DNI</div>
+          </section>
+        </aside>
+      </div>
+
+      <div id="cpTaskPage" class="cpTaskPage hidden">
+        <div class="cpTaskPageTop">
+          <button id="cpTaskBack" class="cpExit">← Volver</button>
+          <div>
+            <b>Nueva tarea / recordatorio</b>
+            <small>Se guardará en Agenda y quedará vinculada a este contacto</small>
+          </div>
+          <button id="cpTaskSave" class="primary">Guardar tarea</button>
+        </div>
+
+        <div class="cpTaskPageBody">
+          <div class="cpTaskFormCard">
+            <h2>Nueva tarea</h2>
+            <div class="small" id="cpTaskContactLabel"></div>
+
+            <label>Asunto / tarea</label>
+            <input id="cpTaskTitle" placeholder="Ej. Llamar al cliente">
+
+            <div class="tpfTaskDateStack">
+              <div class="tpfTaskDateBlock">
+                <div class="tpfTaskDateHeading">Fecha y hora</div>
+                <label class="tpfTaskDateLabel">
+                  <input id="cpTaskStarts" type="datetime-local">
+                </label>
+              </div>
+              <div class="tpfTaskDateBlock">
+                <div class="tpfTaskDateHeading">Recordatorio adicional</div>
+                <label class="tpfTaskDateLabel">
+                  <input id="cpTaskReminder" type="datetime-local">
+                </label>
+              </div>
+            </div>
+
+            <label>Notas</label>
+            <textarea id="cpTaskNotes" rows="6" placeholder="Notas de la tarea"></textarea>
+
+            <div class="cpTaskOptions">
+              <label><input id="cpTaskNotifyApp" type="checkbox" checked> Aviso en The Phone Face</label>
+              <label><input id="cpTaskNotifyEmail" type="checkbox"> Email</label>
+              <label><input id="cpTaskGoogle" type="checkbox"> Añadir a Google Calendar</label>
+            </div>
+
+            <div id="cpTaskMsg" class="small"></div>
+          </div>
+
+          <div class="cpTaskContactCard">
+            <h3>Contacto</h3>
+            <div id="cpTaskContactName"></div>
+            <div id="cpTaskContactPhone" class="small"></div>
+            <div class="cpTaskTip">Al guardar, la tarea aparecerá en <b>Tareas pendientes</b> de esta ficha y también en <b>Agenda</b>.</div>
+          </div>
+        </div>
+
+      <div id="cpTaskDetailPage" class="cpTaskPage hidden">
+        <div class="cpTaskPageTop">
+          <button id="cpTaskDetailBack" class="cpExit">← Volver</button>
+          <div>
+            <b>Ficha de tarea</b>
+            <small>Consulta, edita o completa esta tarea</small>
+          </div>
+          <button id="cpTaskDetailSave" class="primary">Guardar cambios</button>
+        </div>
+
+        <div class="cpTaskPageBody">
+          <div class="cpTaskFormCard">
+            <input type="hidden" id="cpTaskDetailId">
+            <h2 id="cpTaskDetailHeading">Tarea</h2>
+
+            <label>Asunto / tarea</label>
+            <input id="cpTaskDetailTitle">
+
+            <div class="modalGrid">
+              <label>Fecha y hora
+                <input id="cpTaskDetailStarts" type="datetime-local">
+              </label>
+              <label>Recordatorio adicional
+                <input id="cpTaskDetailReminder" type="datetime-local">
+              </label>
+            </div>
+
+            <label>Notas</label>
+            <textarea id="cpTaskDetailNotes" rows="6"></textarea>
+
+            <div class="cpTaskOptions">
+              <label><input id="cpTaskDetailNotifyApp" type="checkbox"> Aviso en The Phone Face</label>
+              <label><input id="cpTaskDetailNotifyEmail" type="checkbox"> Email</label>
+              <label><input id="cpTaskDetailGoogle" type="checkbox"> Añadir a Google Calendar</label>
+            </div>
+
+            <div class="cpTaskStatusBox">
+              <span>Estado</span>
+              <b id="cpTaskDetailStatus">Pendiente</b>
+            </div>
+
+            <div id="cpTaskDetailMsg" class="small"></div>
+
+            <div class="cpTaskDetailActions">
+              <button id="cpTaskMarkDone" class="refGreen">Marcar como completada</button>
+              <button id="cpTaskReopen" class="secondary hidden">Marcar como pendiente</button>
+              <button id="cpTaskDelete" class="danger">Eliminar tarea</button>
+            </div>
+          </div>
+
+          <div class="cpTaskContactCard">
+            <h3>Contacto</h3>
+            <div id="cpTaskDetailContactName"></div>
+            <div id="cpTaskDetailContactPhone" class="small"></div>
+            <div class="cpTaskTip">Los cambios se reflejarán también en <b>Agenda</b>.</div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+   </div>
+
+   
+
+
+
+<div id="opportunityFullPage" class="hidden">
+  <div class="oppFullShell">
+    <div class="oppFullTop">
+      <button id="oppFullBack" class="secondary">← Volver</button>
+      <div class="row">
+        <button id="oppFullEdit" class="secondary">Editar</button>
+        <button id="oppFullDelete" class="danger">Eliminar</button>
+      </div>
+    </div>
+    <div class="oppFullCard">
+      <h2 id="oppFullTitle">Oportunidad</h2>
+      <div id="oppFullContent"></div>
+    </div>
+  </div>
+</div>
+<div id="waQuickModal" class="waQuickBack hidden">
+  <div class="waQuickModal">
+    <input type="hidden" id="waQuickProgramId">
+
+    <div class="waQuickHeader">
+      <h3>Enviar WhatsApp</h3>
+      <button id="waQuickClose" type="button" class="secondary">← Volver</button>
+    </div>
+
+    <label>Teléfono</label>
+    <input id="waQuickPhone" placeholder="+34...">
+
+    <label>Canal</label>
+    <select id="waQuickChannel">
+      <option value="normal">WhatsApp normal</option>
+      <option value="api" disabled>WhatsApp API (próximamente)</option>
+    </select>
+
+    <label>Mensaje</label>
+    <textarea id="waQuickMessage" rows="5" placeholder="Escribe el mensaje"></textarea>
+
+    <div id="waQuickMsg" class="small"></div>
+
+    <div class="waQuickFooter">
+      <button id="waQuickCancel" type="button" class="secondary">← Volver</button>
+      <div class="waSplit">
+        <button id="waQuickSend" type="button" class="primary">Enviar ahora</button>
+        <button id="waQuickDrop" type="button" class="primary waDropBtn" title="Programar">⌄</button>
+      </div>
+    </div>
+
+    <div id="waQuickScheduleBox" class="waQuickScheduleBox hidden">
+      <div class="waQuickScheduleTitle">Programar envío de mensaje</div>
+
+      <button type="button" class="waQuickOption" data-wa-quick="tomorrow">
+        <b>Hasta mañana</b><span id="waQuickTomorrowLabel"></span>
+      </button>
+      <button type="button" class="waQuickOption" data-wa-quick="monday">
+        <b>Hasta el próximo lunes</b><span id="waQuickMondayLabel"></span>
+      </button>
+      <button type="button" class="waQuickOption" data-wa-quick="week">
+        <b>En una semana</b><span id="waQuickWeekLabel"></span>
+      </button>
+      <button type="button" class="waQuickOption" data-wa-quick="month">
+        <b>En un mes</b><span id="waQuickMonthLabel"></span>
+      </button>
+      <button type="button" class="waQuickOption waCustomOption" data-wa-quick="custom">
+        <b>Personalizar</b>
+      </button>
+
+      <div id="waQuickCustomBox" class="waQuickCustom hidden">
+        <div class="waCustomTitle">Programar envío de mensaje</div>
+        <div class="small waCustomSubtitle">Define fecha y hora</div>
+
+        <div class="waCustomFields">
+          <label>FECHA
+            <button type="button" id="waQuickDateBtn" class="waPickerBtn">
+              <span id="waQuickDateText">Seleccionar fecha</span><span>📅</span>
+            </button>
+          </label>
+
+          <label>HORA
+            <select id="waQuickTime" class="waTimeSelect"></select>
+          </label>
+        </div>
+
+        <input id="waQuickWhen" type="hidden">
+
+        <div id="waQuickCalendar" class="waCalendar hidden">
+          <div class="waCalHead">
+            <button type="button" id="waCalPrev">‹</button>
+            <b id="waCalMonth"></b>
+            <button type="button" id="waCalNext">›</button>
+          </div>
+          <div class="waCalWeek">
+            <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div id="waCalDays" class="waCalDays"></div>
+        </div>
+
+        <div class="row waCustomActions">
+          <button type="button" id="waQuickCustomCancel" class="secondary">Cancelar</button>
+          <button type="button" id="waQuickCustomSave" class="primary">Aceptar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section id="view-database" class="hidden">
+    <div class="card">
+      <div class="row" style="align-items:center;justify-content:space-between">
+        <div><h2 style="margin:0">Contactos</h2><div class="small">Campos estándar y personalizados</div></div>
+        <button id="customFieldsManageBtn" class="secondary">⚙ Gestionar campos</button>
+      </div>
+      <div class="row"><input id="dbFirstName" placeholder="Nombre"><input id="dbLastName" placeholder="Apellidos"><input id="dbPhone" placeholder="Teléfono"><input id="dbDni" placeholder="DNI / NIF"><input id="dbEmail" placeholder="Email"></div>
+      <textarea id="dbNotes" placeholder="Notas"></textarea>
+      <div id="dbCustomFields" class="customFieldsForm"></div>
+      <button id="dbCheck" class="secondary">Comprobar duplicado</button> <button id="dbSave" class="primary">Crear nuevo</button><span id="dbMsg" class="small"></span><div id="duplicateInfo"></div>
+    </div>
+   </section>
+
+   
+   
+<section id="view-sales" class="hidden">
+  <div class="salesBoardPage">
+    <div class="salesBoardTopbar">
+      <div class="salesBoardTitleGroup">
+        <button id="salesFullBackBtn" class="secondary salesBackBtn">← Volver</button>
+        <div>
+          <h2>Panel de ventas</h2>
+          <div class="small">Oportunidades</div>
+        </div>
+      </div>
+
+      <div class="salesBoardTopActions">
+        <button id="newOpp" class="refBtn refBlue">＋ Nueva oportunidad</button>
+        <button id="salesViewBoard" class="secondary activeViewBtn">▦ Tablero</button>
+        <button id="salesViewList" class="secondary">☷ Lista</button>
+        <button id="salesOptionsToggle" class="secondary salesOptionsToggle">Opciones del panel ▾</button>
+      </div>
+    </div>
+
+    <div class="salesSummaryAccordion">
+      <button id="salesSummaryToggle" class="salesSummaryToggle" type="button" aria-expanded="true">
+        <span>
+          <b>Resumen de ventas</b>
+          <small>Objetivo, previsión y situación del panel</small>
+        </span>
+        <span id="salesSummaryChevron" class="salesSummaryChevron">⌃</span>
+      </button>
+      <div id="salesSummaryPanel" class="salesSummaryPanel">
+        <div id="salesSummary" class="salesSummary salesSummaryCards"></div>
+        <div class="salesSummaryExtra">
+          <div class="salesSummaryMetric">
+            <span>Objetivo mensual</span>
+            <b id="salesSummaryGoal">—</b>
+            <div class="salesSummaryProgress"><div id="salesSummaryProgressBar"></div></div>
+          </div>
+          <div class="salesSummaryMetric">
+            <span>Previsión abierta</span>
+            <b id="salesSummaryForecast">—</b>
+            <small id="salesSummaryForecastCount">0 oportunidades abiertas</small>
+          </div>
+          <div class="salesSummaryStagesWrap">
+            <span>Por columnas</span>
+            <div id="salesSummaryStages" class="salesSummaryStages"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="salesOptionsPanel" class="salesOptionsPanel hidden">
+      <div class="salesOptionsGrid">
+        <div class="salesOptionSection">
+          <h3>Panel</h3>
+          <div class="row">
+            <button id="newStage" class="refBtn refGreen">＋ Nueva columna</button>
+            <button id="newField" class="refBtn refPurple">＋ Nuevo campo</button>
+            <button class="refOutline" id="salesConfigVisual">⚙ Configuración</button>
+            <button id="salesReload" class="refOutline">↻ Recargar</button>
+            <button class="refOutline" id="salesHelpVisual">ⓘ Ayuda</button>
+          </div>
+        </div>
+
+        <div class="salesOptionSection">
+          <h3>Campos personalizados</h3>
+          <div class="refDefaultFields">
+            <div class="refFieldChip">♙ <span>Cliente</span></div>
+            <div class="refFieldChip">◇ <span>Valor</span></div>
+            <div class="refFieldChip">▣ <span>Fecha prevista</span></div>
+            <div class="refFieldChip">◇ <span>Producto</span></div>
+            <button class="refFieldPlus" id="quickNewField" title="Nuevo campo">＋</button>
+          </div>
+          <div id="customFieldsStrip" class="customFieldsStrip"></div>
+        </div>
+
+        <div class="salesOptionSection">
+          <h3>Filtros y orden</h3>
+          <div class="row">
+            <input id="salesSearch" placeholder="Buscar cliente, teléfono o título">
+            <select id="salesStageFilter"><option value="">Todas las columnas</option></select>
+            <select id="salesSort">
+              <option value="position">Orden del panel</option>
+              <option value="amount_desc">Mayor importe</option>
+              <option value="amount_asc">Menor importe</option>
+              <option value="date_asc">Fecha más próxima</option>
+              <option value="date_desc">Fecha más lejana</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="salesMsg" class="small"></div>
+      <div id="salesSummaryLegacy" class="salesSummary hidden"></div>
+
+      <div class="refHelpBox hidden" id="salesHelpBox">
+        <strong>Cómo usar el Panel de ventas</strong>
+        <div>● Arrastra las oportunidades entre columnas para cambiar su estado.</div>
+        <div>● Pulsa una oportunidad para abrir su ficha.</div>
+        <div>● Crea nuevas columnas para adaptar el flujo de ventas.</div>
+        <div>● Añade campos personalizados cuando los necesites.</div>
+      </div>
+    </div>
+
+    <div id="salesBulkBar" class="salesBulkBar">
+      <label class="salesSelectAll"><input id="salesSelectAll" type="checkbox"> Seleccionar todas</label>
+      <span id="salesSelectedCount" class="small">0 seleccionadas</span>
+      <label class="salesStateFilterLabel">Filtrar por estado
+        <select id="salesVisibleStateFilter">
+          <option value="">Todos los estados</option>
+        </select>
+      </label>
+      <select id="salesBulkStage">
+        <option value="">Mover a...</option>
+      </select>
+      <button id="salesBulkMove" class="secondary" disabled>Mover seleccionadas</button>
+      <button id="salesBulkDelete" class="danger" disabled>Eliminar seleccionadas</button>
+    </div>
+
+    <div id="salesListView" class="salesListView hidden">
+      <div class="salesListHeader" data-compact="1">
+        <div></div><div>Cliente / oportunidad</div><div>Contacto</div><div>Importe</div><div>Estado</div><div>Seguimiento</div><div>Fecha prevista de venta</div><div id="salesListActionsHead" aria-label="Acciones"></div>
+      </div>
+      <div id="salesListRows"></div>
+    </div>
+
+    <div class="salesBoardViewport">
+      <div class="salesNavWrap">
+  <button id="salesScrollLeft" class="salesScrollArrow" type="button" title="Mover a la izquierda">‹</button>
+  <div class="salesScroll refBoardScroll" id="salesScroll"><div id="salesBoard" class="board"></div></div>
+  <button id="salesScrollRight" class="salesScrollArrow" type="button" title="Mover a la derecha">›</button>
+</div>
+<div class="salesMiniRail" id="salesMiniRail"><div id="salesMiniThumb" class="salesMiniThumb"></div></div>
+    </div>
+
+    <div class="refSalesFooter salesCompactFooter">
+      <span>Panel de ventas funcional con Supabase</span>
+      <b>● CONECTADO</b>
+      <span class="refSaveText">Los cambios se guardan automáticamente ☁</span>
+    </div>
+  </div>
+</section>
+
+
+
+   <section id="view-import" class="hidden">
+    <div class="card">
+      <h2>Importación masiva desde Excel</h2>
+      <p class="small">Solo para administrador. Elige archivo y destino. Antes de importar se muestra una vista previa.</p><p class="small"><b>AJUSTES y CLAWBACK:</b> se añadirá automáticamente el nombre del archivo en la columna ARCHIVO para todas las filas importadas.</p>
+      <div class="row"><input id="excelFile" type="file" accept=".xlsx,.xlsm,.xls">
+      <select id="destination"><option>LIQUIDACION</option><option selected>DATA</option><option>CLAWBACK</option><option>AJUSTES</option><option value="BASE DE DATOS">CONTACTOS</option><option value="OPORTUNIDADES">OPORTUNIDADES</option></select></div>
+      <button id="previewImport" class="secondary">Vista previa</button>
+      <button id="runImport" class="primary" disabled>Confirmar importación</button>
+      <div id="importInfo" class="small"></div><div class="progress"><div id="importBar" class="bar"></div></div>
+    </div>
+    <div class="card scroll"><table><thead id="previewHead"></thead><tbody id="previewRows"></tbody></table></div>
+   </section>
+
+
+   <section id="view-agenda" class="hidden agendaPro">
+    <header class="agendaHeader">
+      <div><span class="agendaEyebrow">ORGANIZACIÓN</span><h2>Agenda y recordatorios</h2><p>Todo lo que tienes que hacer, ordenado y disponible en todos tus dispositivos.</p></div>
+      <button id="agendaOpenCreate" class="primary" type="button">＋ Crear tarea</button>
+    </header>
+    <div class="agendaStats" id="agendaStats">
+      <button data-agenda-filter="today"><span>Hoy</span><b id="agendaStatToday">0</b><small>recordatorios</small></button>
+      <button data-agenda-filter="pending"><span>Pendientes</span><b id="agendaStatPending">0</b><small>por completar</small></button>
+      <button data-agenda-filter="overdue"><span>Vencidos</span><b id="agendaStatOverdue">0</b><small>requieren atención</small></button>
+      <button data-agenda-filter="completed"><span>Completados</span><b id="agendaStatCompleted">0</b><small>finalizados</small></button>
+    </div>
+    <div class="agendaToolbar card">
+      <div class="agendaToolbarMain">
+        <div class="agendaViewSwitch"><button id="agendaListView" class="active" type="button">☷ Lista</button><button id="agendaCalendarView" type="button">▦ Calendario</button></div>
+        <label class="agendaSearch" for="agendaSearch"><span class="agendaSearchIcon" aria-hidden="true">⌕</span><input id="agendaSearch" type="search" placeholder="Buscar por asunto, cliente, teléfono o DNI…" autocomplete="off" aria-label="Buscar tareas por asunto, cliente, teléfono o DNI"></label>
+        <label class="agendaStatusFilter"><span>Estado</span><select id="agendaFilter" aria-label="Filtrar por estado"><option value="pending">Pendientes</option><option value="overdue">Vencidos</option><option value="completed">Completados</option><option value="cancelled">Cancelados</option><option value="all">Todos los estados</option></select></label>
+        <button id="agendaRefresh" class="secondary" type="button">↻ Actualizar</button>
+        <button id="agendaOpenCreateToolbar" class="primary agendaCreateCta" type="button">＋ Crear tarea</button>
+      </div>
+      <div class="agendaQuickRow">
+        <span class="agendaQuickLabel">Fecha</span>
+        <div id="agendaQuickFilters" class="agendaQuickFilters" aria-label="Filtrar por fecha">
+          <button type="button" data-agenda-period="all" class="active" aria-pressed="true">Todo</button>
+          <button type="button" data-agenda-period="today" aria-pressed="false">Hoy</button>
+          <button type="button" data-agenda-period="tomorrow" aria-pressed="false">Mañana</button>
+          <button type="button" data-agenda-period="week" aria-pressed="false">Esta semana</button>
+          <button type="button" data-agenda-period="month" aria-pressed="false">Este mes</button>
+        </div>
+        <span id="agendaFilterSummary" class="agendaFilterSummary">Pendientes · Cualquier fecha</span>
+      </div>
+    </div>
+    <div class="agendaWorkspace">
+      <div class="agendaMain card">
+        <div id="agendaList"></div>
+        <div id="agendaCalendar" class="hidden"></div>
+        <table class="hidden"><tbody id="agendaRows"></tbody></table>
+        <div id="agendaEmpty" class="agendaEmpty">No hay recordatorios con estos filtros.</div>
+      </div>
+      <aside id="agendaCreateCard" class="agendaComposer card" aria-hidden="true">
+        <div class="agendaComposerHead"><div><span class="agendaEyebrow">NUEVO</span><h3>Crear recordatorio</h3></div><button id="agendaCloseCreate" aria-label="Cerrar">×</button></div>
+        <label>Tipo</label><div id="agendaTypeChoices" class="agendaTypes"></div><button id="agendaManageTypes" class="agendaManage">＋ Gestionar tipos</button>
+        <label for="agendaTitle">Asunto</label><input id="agendaTitle" placeholder="¿Qué tienes que hacer?">
+        <label for="agendaCustomer">Cliente</label><div class="agendaCustomerLookup"><input id="agendaCustomer" placeholder="Buscar por nombre, teléfono o DNI"><div id="agendaCustomerResults"></div></div>
+        <label for="agendaPhone">Teléfono</label><input id="agendaPhone" placeholder="Teléfono">
+        <div id="agendaDateShortcuts" class="agendaDateShortcuts" role="group" aria-label="Elegir fecha a las 10:00"><button type="button" data-agenda-quick-date="today">Hoy</button><button type="button" data-agenda-quick-date="tomorrow">Mañana</button><button type="button" data-agenda-quick-date="monday">Próximo lunes</button><small>A las 10:00 · Puedes cambiar la hora</small></div>
+        <div class="agendaTwo"><div><label for="agendaStarts">Fecha y hora</label><input id="agendaStarts" type="datetime-local"></div><div><label for="agendaReminder">Avisarme desde</label><input id="agendaReminder" type="datetime-local"></div></div>
+        <label for="agendaDescription">Notas</label><textarea id="agendaDescription" placeholder="Añade detalles útiles"></textarea>
+        <details class="agendaOptions"><summary>Opciones de aviso</summary><div class="agendaPresets"><label><input type="checkbox" class="agendaReminderPreset" value="10"> 10 min</label><label><input type="checkbox" class="agendaReminderPreset" value="30"> 30 min</label><label><input type="checkbox" class="agendaReminderPreset" value="60"> 1 hora</label><label><input type="checkbox" class="agendaReminderPreset" value="1440"> 1 día</label></div><label><input id="agendaNotifyApp" type="checkbox" checked> Aviso en The Phone Face</label><label><input id="agendaNotifyEmail" type="checkbox"> Email</label><label><input id="agendaSyncGoogle" type="checkbox"> Google Calendar</label></details>
+        <button id="agendaSave" class="primary agendaSave">Guardar recordatorio</button><span id="agendaMsg" class="small"></span>
+      </aside>
+    </div>
+    <div id="agendaTypeModal" class="agendaModal hidden"><div class="card"><div class="agendaComposerHead"><div><span class="agendaEyebrow">PERSONALIZAR</span><h3>Tipos de recordatorio</h3></div><button id="agendaCloseTypes">×</button></div><p class="small">Crea tus propias categorías. Se sincronizan en todos tus dispositivos.</p><div id="agendaTypeList"></div><div class="agendaTypeNew"><input id="agendaNewTypeName" placeholder="Ej. Renovación"><select id="agendaNewTypeIcon"><option>✓</option><option>☎</option><option>◷</option><option>💬</option><option>📄</option><option>€</option><option>🔧</option></select><input id="agendaNewTypeColor" type="color" value="#155eef"><button id="agendaAddType" class="primary">Añadir</button></div></div></div>
+   </section>
+
+
+   
+
+<section id="view-whatsapplive" class="hidden">
+  <div class="waLivePage">
+    <div class="waLiveHeader">
+      <div>
+        <div class="waLiveTitle"><span class="waLiveLogo">◉</span><div><h2>WhatsApp</h2><small>Conversaciones conectadas con GREEN-API <span style="font-size:9px;font-weight:900;color:#c62828">· V32 TAREA ESTRUCTURA NUEVA</span> <span style="font-size:9px;font-weight:900;color:#c62828">· V22 VOLVER OPORTUNIDADES REBIND</span> <span style="font-size:9px;font-weight:900;color:#c62828">· V17 CONSOLIDADA AUDITADA</span> <span style="font-size:9px;color:#6b7780;font-weight:800">HÍBRIDA v8 FULLSCREEN · OPORTUNIDADES v6 SIMPLE</span></small></div></div>
+      </div>
+      <div class="waLiveHeaderActions">
+        <div id="waMiniStats" class="waMiniStats">
+  <span><b id="waStatUnread">0</b> no leídos</span>
+  <span><b id="waStatWaiting">0</b> sin responder</span>
+  <span><b id="waStatAvgResponse">—</b> resp. media</span>
+  <span><b id="waStatHandled">0</b> atendidas</span>
+</div>
+        <span id="waLiveStatus" class="waLiveStatus">Comprobando…</span>
+        <button id="waAnalyticsBtn" class="secondary">Estadísticas</button>
+<button id="waLiveRefresh" class="secondary">↻ Actualizar</button>
+      </div>
+    </div>
+
+    <div class="waLiveLayout">
+      <aside class="waChatsPane">
+        <div class="waChatsSearchWrap">
+          <input id="waLiveSearch" placeholder="Buscar conversación...">
+        </div>
+        <div class="waTabs">
+          <button class="active" data-wa-tab="all">Conversaciones</button>
+          <button type="button" data-wa-tab="automatic">Automáticos <b id="waAutomaticCount" class="waAutomaticCount" hidden>0</b></button>
+          <button data-wa-tab="contacts">Clientes</button>
+          <button data-wa-tab="groups">Grupos</button>
+          <button data-wa-tab="unread">No leídos</button>
+          <button data-wa-tab="favorites">★ Favoritos</button>
+          <button data-wa-tab="unanswered">Sin responder</button>
+          <button data-wa-tab="archived">Archivados</button>
+        </div>
+        <div id="waLiveChats" class="waLiveChats">
+          <div class="waLiveEmpty">Cargando conversaciones…</div>
+        </div>
+      </aside>
+
+      <section class="waChatPane">
+        <div id="waChatEmpty" class="waChatEmpty">
+          <div class="waChatEmptyIcon">◉</div>
+          <h3>Selecciona una conversación</h3>
+          <p>Los mensajes enviados y recibidos aparecerán aquí.</p>
+        </div>
+
+        <div id="waChatActive" class="hidden waChatActive">
+          <div class="waChatTop">
+            <div class="waChatPerson">
+              <button id="waMobileBackChats" class="waMobileBackChats" type="button" title="Volver a conversaciones">←</button>
+              <div id="waChatAvatar" class="waAvatar">W</div>
+              <div><strong id="waChatName">WhatsApp</strong><small id="waChatNickname" class="waContactNickname hidden"></small><small id="waChatPhone"></small></div>
+            </div>
+            <div class="waChatTopActions">
+              <button id="waPinChat" class="secondary" title="Fijar conversación">☆</button>
+              <button id="waTagChat" class="secondary" title="Etiquetas">🏷</button>
+              <button id="waMediaChat" class="secondary" title="Fotos, documentos y enlaces">▦</button>
+              <button id="waArchiveChat" class="secondary" title="Archivar">⌄</button>
+              <button id="waOpenContactTop" class="secondary hidden">Ver ficha</button>
+              <button id="waCreateContactTop" class="primary hidden">+ Crear contacto</button>
+            </div>
+          </div>
+          <div id="waMessages" class="waMessages"></div>
+          <div class="waComposer">
+            <button id="waAttachBtn" class="waComposerTool" type="button" title="Adjuntar archivo">📎</button>
+            <input id="waAttachInput" type="file" multiple class="hidden">
+            <button id="waTemplateBtn" class="waComposerTool" type="button" title="Plantillas">▤</button>
+            <button id="waScheduleBtn" class="waComposerTool" type="button" title="Programar WhatsApp">⏱</button>
+            <div class="waComposerTextWrap">
+              <div id="waSlashMenu" class="waSlashMenu hidden"></div>
+              <textarea id="waComposerText" rows="1" placeholder="Escribe un mensaje... · usa / para respuestas rápidas"></textarea>
+            </div>
+            <button id="waComposerSend" class="waSendBtn">➤</button>
+          </div>
+          <div id="waComposerMsg" class="waComposerMsg"></div>
+        </div>
+      </section>
+
+      <aside class="waContactPane">
+        <div id="waContactEmpty" class="waSideEmpty">
+          <h3>Ficha del contacto</h3>
+          <p>Al abrir un chat buscaremos automáticamente el teléfono en Contactos.</p>
+        </div>
+        <div id="waContactCard" class="hidden">
+          <div class="waContactHeader">
+            <div id="waSideAvatar" class="waAvatar large">C</div>
+            <div><h3 id="waSideName">Contacto</h3><div id="waSideNickname" class="waContactNickname hidden"></div><div id="waSidePhone" class="small"></div></div>
+          </div>
+          <div id="waContactState" class="waContactState"></div>
+<div id="waSlaState" class="waSlaState"></div>
+<div id="waPersistState" class="waPersistState">Historial: comprobando…</div>
+          <div id="waSideIdentity" class="waSideIdentity hidden">
+            <div><span>DNI / NIF</span><b id="waSideDni">—</b></div>
+            <div><span>Teléfono</span><b id="waSidePhoneDetail">—</b></div>
+          </div>
+          <button id="waSideOpenContact" class="primary full hidden">Ver ficha completa</button>
+          <button id="waSideCreateContact" class="primary full hidden">+ Crear contacto</button>
+
+          <div class="waSideSection">
+            <div class="waSideSectionHead">
+              <h4>Oportunidades</h4>
+              <div class="waSideHeadActions"><span id="waSideOppCount">0</span><button id="waSideNewOpp" type="button" title="Crear oportunidad">＋</button></div>
+            </div>
+            <div id="waSideOpps" class="waSideList"></div>
+            <button id="waSideViewOpps" class="waSideViewAll hidden" type="button">Ver oportunidades</button>
+          </div>
+
+          <div class="waSideSection">
+            <div class="waSideSectionHead">
+              <h4>Tareas pendientes</h4>
+              <div class="waSideHeadActions"><span id="waSideTaskCount">0</span><button id="waSideNewTask" type="button" title="Crear tarea">＋</button></div>
+            </div>
+            <div id="waSideTasks" class="waSideList"></div>
+            <button id="waSideViewTasks" class="waSideViewAll hidden" type="button">Ver tareas</button>
+          </div>
+
+          <div class="waSideSection">
+            <div class="waSideSectionHead"><h4>Etiquetas</h4><button id="waAddTagSide" class="waSideTinyBtn">＋</button></div>
+            <div id="waSideTags" class="waTagList"></div>
+          </div>
+
+          <div class="waSideSection">
+            <div class="waSideSectionHead"><h4>Nota interna</h4><span class="waPrivateLabel">Solo CRM</span></div>
+            <textarea id="waInternalNote" class="waInternalNote" rows="4" placeholder="Escribe una nota que NO se enviará por WhatsApp"></textarea>
+            <button id="waSaveInternalNote" class="waSideViewAll" type="button">Guardar nota interna</button>
+          </div>
+
+          <div class="waSideSection">
+            <div class="waSideSectionHead"><h4>Actividad reciente</h4></div>
+            <div id="waActivityTimeline" class="waActivityTimeline"></div>
+          </div>
+
+          <div class="waSideSection">
+            <div class="waSideSectionHead"><h4>Notas de ficha</h4></div>
+            <div id="waSideNotes" class="waSideNotes">—</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<div id="waTemplateModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Plantillas de WhatsApp</h3><button id="waTemplateClose" class="secondary">← Volver</button></div>
+    <div id="waTemplateList" class="waTemplateBody"></div>
+    <div class="waTemplateNew">
+      <b>Nueva plantilla</b>
+      <input id="waTemplateName" placeholder="Nombre de la plantilla">
+      <textarea id="waTemplateText" rows="4" placeholder="Texto del mensaje"></textarea>
+      <div class="waTemplateActions"><button id="waTemplateSave" class="primary">Guardar plantilla</button></div>
+    </div>
+  </div>
+</div>
+
+
+<div id="waMediaModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Archivos de la conversación</h3><button id="waMediaClose" class="secondary">← Volver</button></div>
+    <div class="waMediaTabs"><button class="active" data-media-filter="all">Todo</button><button data-media-filter="image">Fotos</button><button data-media-filter="video">Vídeos</button><button data-media-filter="audio">Audio</button><button data-media-filter="document">Documentos</button><button data-media-filter="link">Enlaces</button></div>
+<input id="waMediaSearch" class="waMediaSearch" placeholder="Buscar por nombre, texto o enlace…">
+    <div id="waMediaGallery" class="waMediaGallery"></div>
+  </div>
+</div>
+
+<div id="waMsgActionModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waMsgActionCard">
+    <div class="waTemplateHead"><h3>Acciones del mensaje</h3><button id="waMsgActionClose" class="secondary">← Volver</button></div>
+    <div id="waMsgActionPreview" class="waMsgActionPreview"></div>
+    <div class="waMsgActionGrid">
+      <button id="waMsgTask">✓ Crear tarea</button>
+      <button id="waMsgReminder">⏰ Recordármelo</button>
+      <button id="waMsgOpp">＋ Crear oportunidad</button>
+      <button id="waMsgCopy">⧉ Copiar texto</button>
+    </div>
+  </div>
+</div>
+
+<div id="waFilePreviewModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Archivos para enviar</h3><button id="waFilePreviewClose" class="secondary">← Volver sin enviar</button></div>
+    <div id="waFilePreviewList" class="waFilePreviewList"></div>
+    <div class="waTemplateActions"><button id="waFilePreviewSend" class="primary">Enviar archivos</button></div>
+  </div>
+</div>
+
+<div id="waAnalyticsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Estadísticas de WhatsApp</h3><button id="waAnalyticsClose" class="secondary">← Volver</button></div>
+    <div class="waAnalyticsGrid">
+      <div><span>No leídos</span><b id="waAUnread">0</b></div>
+      <div><span>Sin responder</span><b id="waAWaiting">0</b></div>
+      <div><span>Conversaciones atendidas</span><b id="waAHandled">0</b></div>
+      <div><span>Tiempo medio respuesta</span><b id="waAAvg">—</b></div>
+      <div><span>Oportunidades desde WhatsApp</span><b id="waAOpps">0</b></div>
+      <div><span>Tareas desde WhatsApp</span><b id="waATasks">0</b></div>
+    </div>
+    <div class="waSideSection">
+      <div class="waSideSectionHead"><h4>Conversaciones que requieren atención</h4></div>
+      <div id="waAnalyticsWaitingList"></div>
+    </div>
+  </div>
+</div>
+<section id="view-whatsapp" class="view hidden">
+  <div class="pageHeader wapPageHeader">
+    <div>
+      <h2>WhatsApp programados</h2>
+      <div class="small">Prepara, revisa y controla todos los mensajes programados desde una sola pantalla.</div>
+    </div>
+    <div class="wapHeaderActions">
+      <button id="waProgramsBack" class="secondary" type="button">← Volver</button>
+      <button id="waNewProgram" class="primary" type="button">＋ Nuevo mensaje</button>
+      <button class="primary ccLaunch" type="button">📨 Control de envíos</button>
+      <button id="waReload" class="secondary" type="button">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <div class="wapKpis" aria-label="Resumen de WhatsApp programados">
+    <button type="button" data-wap-filter="due"><span>Listos para enviar</span><b id="wapKpiDue">0</b><small>Ahora</small></button>
+    <button type="button" data-wap-filter="future"><span>Próximos</span><b id="wapKpiFuture">0</b><small>Programados</small></button>
+    <button type="button" data-wap-filter="completed"><span>Enviados</span><b id="wapKpiSent">0</b><small>Completados</small></button>
+    <button type="button" data-wap-filter="error" class="warning"><span>Necesitan revisión</span><b id="wapKpiIssues">0</b><small>Fallidos o inciertos</small></button>
+  </div>
+
+  <div class="card waToolbar">
+    <div class="wapFilterTabs" id="wapFilterTabs">
+      <button type="button" data-wap-filter="pending" class="active">Pendientes</button>
+      <button type="button" data-wap-filter="due">Listos ahora</button>
+      <button type="button" data-wap-filter="future">Próximos</button>
+      <button type="button" data-wap-filter="completed">Enviados</button>
+      <button type="button" data-wap-filter="error">Incidencias</button>
+      <button type="button" data-wap-filter="paused">Pausados</button>
+      <button type="button" data-wap-filter="cancelled">Cancelados</button>
+      <button type="button" data-wap-filter="all">Todos</button>
+    </div>
+    <div class="row wapSearchRow">
+      <select id="waFilter">
+        <option value="all">Todos</option>
+        <option value="pending" selected>Pendientes</option>
+        <option value="due">Listos para enviar</option>
+        <option value="future">Programados</option>
+        <option value="completed">Completados</option>
+        <option value="error">Incidencias</option>
+        <option value="paused">Pausados</option>
+        <option value="cancelled">Cancelados</option>
+      </select>
+      <input id="waSearch" placeholder="Buscar contacto, teléfono o mensaje">
+      <span id="wapResultCount" class="small"></span>
+    </div>
+  </div>
+
+  <div class="card wapComposer hidden" id="wapComposer">
+    <div class="wapSectionHead">
+      <div><h3>Nuevo mensaje programado</h3><span class="small">Elige el contacto, el mensaje y cuándo debe enviarse.</span></div>
+      <button id="waCloseComposer" class="secondary" type="button">× Cerrar</button>
+    </div>
+    <input type="hidden" id="waEditId">
+    <div class="row">
+      <input id="waCustomer" placeholder="Contacto / cliente">
+      <input id="waPhone" placeholder="Teléfono">
+      <input id="waWhen" type="datetime-local">
+    </div>
+    <textarea id="waMessage" rows="5" placeholder="Mensaje de WhatsApp"></textarea>
+    <div class="row">
+      <button id="waSave" class="primary">Programar WhatsApp</button>
+      <span id="waMsg" class="small"></span>
+    </div>
+  </div>
+
+  <div class="card scroll wapListCard">
+    <table>
+      <thead>
+        <tr><th>Fecha / hora</th><th>Contacto</th><th>Teléfono</th><th>Mensaje</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody id="waRows"></tbody>
+    </table>
+    <div id="waEmpty" class="small">No hay WhatsApp programados.</div>
+    <div class="wapPagination" id="wapPagination">
+      <button id="wapPrev" class="secondary" type="button">← Anterior</button>
+      <span id="wapPageInfo" class="small">Página 1</span>
+      <button id="wapNext" class="secondary" type="button">Siguiente →</button>
+    </div>
+  </div>
+</section>
+
+
+<section id="view-labels" class="hidden">
+  <div class="pageHeader">
+    <div>
+      <h2>Etiquetas</h2>
+      <div class="small">Crea, renombra o elimina etiquetas globales del CRM. Se pueden asignar a cualquier contacto y aparecen también en WhatsApp.</div>
+    </div>
+    <button id="labelsReload" class="secondary">↻ Actualizar</button>
+  </div>
+
+  <div class="labelsManagerGrid">
+    <div class="card">
+      <h3>Nueva etiqueta</h3>
+      <div class="row">
+        <input id="labelNewName" placeholder="Ej.: Renovación, Vodafone, Pendiente, VIP">
+        <button id="labelCreate" class="primary">Crear etiqueta</button>
+      </div>
+      <div id="labelCreateMsg" class="small"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="align-items:center">
+        <h3 style="margin:0">Etiquetas disponibles</h3>
+        <input id="labelSearch" placeholder="Buscar etiqueta">
+      </div>
+      <div id="labelsGlobalList" class="labelsGlobalList"></div>
+      <div id="labelsEmpty" class="small">No hay etiquetas.</div>
+    </div>
+  </div>
+</section>
+
+<section id="view-settings" class="hidden">
+    <div class="card">
+      <h2>Configuración</h2>
+      <div class="small">Conexiones del CRM, avisos del equipo y preferencias de búsqueda.</div>
+    </div>
+    <div class="card searchConfigCard">
+      <h3>Columnas del buscador</h3>
+      <div class="small">Configura por separado qué columnas verá este usuario al buscar en cada archivo. La selección queda guardada en su cuenta para futuras búsquedas.</div>
+
+      <div id="settingsSearchUserWrap" class="searchConfigTop hidden">
+        <label>Usuario
+          <select id="settingsSearchUserSelect"></select>
+        </label>
+      </div>
+
+      <div class="searchConfigTop">
+        <label>Archivo / origen
+          <select id="settingsSearchSource">
+            <option value="LIQUIDACION">Liquidación</option>
+            <option value="DATA">Data</option>
+            <option value="CLAWBACK">Clawback</option>
+            <option value="AJUSTES">Ajustes</option>
+            <option value="CONTACTOS">Contactos</option>
+          </select>
+        </label>
+        <button id="settingsLoadColumns" class="secondary">Cargar campos</button>
+      </div>
+
+      <div id="settingsSearchUser" class="searchConfigUser"></div>
+      <div id="settingsSearchAdminHelp" class="small">Como administrador puedes elegir un usuario y definir exactamente qué columnas verá en cada archivo.</div>
+      <div id="settingsSearchColumnsInfo" class="searchConfigInfo"></div>
+      <div id="settingsSearchColumnsOptions" class="searchColumnsOptions"></div>
+
+      <div class="searchColumnsActions">
+        <button id="settingsSearchSelectAll" class="secondary">Seleccionar todas</button>
+        <button id="settingsSearchClear" class="secondary">Quitar todas</button>
+        <button id="settingsSearchDefault" class="secondary">Restablecer</button>
+          <button id="settingsSearchUseGlobal" class="secondary">Usar configuración general</button>
+        <button id="settingsSearchSave" class="primary">Guardar configuración</button>
+      </div>
+      <div id="settingsSearchColumnsMsg" class="small"></div>
+    </div>
+
+    <div class="card">
+      <h3>Notificaciones</h3>
+      <div class="small">Elige por separado qué avisos quieres recibir. Telegram será común para los dos usuarios; las notificaciones del navegador se activan en cada PC.</div>
+      <div class="teamTelegramBadge">Telegram: destino único para todo el equipo</div>
+
+      <div class="notifyTypeTable">
+        <div class="notifyTypeHead"><span>Tipo de aviso</span><span>Navegador / PC</span><span>Telegram</span></div>
+        <div class="notifyTypeRow">
+          <div><b>WhatsApp programados</b><small>Avisa cuando un WhatsApp llegue a su hora.</small></div>
+          <label><input id="notifyWhatsappBrowser" type="checkbox"> Navegador</label>
+          <label><input id="notifyWhatsappTelegram" type="checkbox"> Telegram</label>
+        </div>
+        <div class="notifyTypeRow">
+          <div><b>Agenda</b><small>Un Telegram justo el día y a la hora de la tarea, con botón para completarla. Solo habrá otro aviso si añades un segundo recordatorio.</small></div>
+          <label><input id="notifyAgendaBrowser" type="checkbox"> Navegador</label>
+          <label><input id="notifyAgendaTelegram" type="checkbox"> Telegram</label>
+        </div>
+      </div>
+
+      <div id="telegramNotifyFields" class="notifyTelegramFields">
+        <label>Chat ID común de Telegram
+          <input id="notifyTelegramChatId" placeholder="Pulsa Detectar mi Telegram">
+        </label>
+        <div id="notifyTelegramForumStatus" class="small">Este Chat ID es el mismo para los dos usuarios.</div>
+      </div>
+
+      <div class="row notifyActions">
+        <button id="notifyRequestPermission" class="secondary">Permitir notificaciones en este PC</button>
+        <button id="notifyDetectTelegram" class="secondary">Detectar mi Telegram</button>
+        <button id="notifyTelegramTopics" class="secondary">Preparar apartados</button>
+        <button id="notifyTelegramTest" class="secondary">Enviar prueba</button>
+        <button id="notifySave" class="primary">Guardar notificaciones</button>
+        <span id="notifyMsg" class="small"></span>
+      </div>
+    </div>
+
+    <div class="card" id="whatsappSettingsStatus" data-state="unknown">
+      <h3>WhatsApp</h3>
+      <div class="small">Estado de la conexión y del envío automático.</div>
+      <div class="small waApiReady" role="status" aria-live="polite">
+        <b id="whatsappSettingsTitle">Estado sin comprobar</b>
+        <div id="whatsappSettingsDetail">Consulta el estado para comprobar la conexión y los procesos de envío.</div>
+      </div>
+      <div class="waModeBox" aria-label="Estado de WhatsApp">
+        <div class="waModeOption"><div><b>Conexión con WhatsApp</b><span id="whatsappSettingsProvider">Sin comprobar</span></div></div>
+        <div class="waModeOption"><div><b>WhatsApp programados en servidor</b><span id="whatsappSettingsScheduled">Sin comprobar</span></div></div>
+        <div class="waModeOption"><div><b>Automatizaciones en servidor</b><span id="whatsappSettingsAutomations">Sin comprobar</span></div></div>
+      </div>
+      <div class="row" style="margin-top:14px;align-items:center">
+        <button id="whatsappSettingsRefresh" class="secondary" type="button">Consultar estado</button>
+        <span id="whatsappSettingsChecked" class="small">Pendiente de consulta</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Google Calendar</h3>
+      <label><input id="settingGoogleCalendar" type="checkbox" style="width:auto"> Sincronizar citas con Google Calendar</label>
+      <p class="small">Cada cita podrá usar sus propios avisos y, cuando esté activado, se guardará también el identificador del evento de Google.</p>
+    </div>
+    <div class="card">
+      <h3>Google Contacts</h3>
+      <div class="row" style="align-items:center;margin-bottom:10px">
+        <button id="connectGoogleContacts" class="secondary">Conectar Google Contacts</button>
+        <button id="renewGoogleContacts" class="secondary hidden">Renovar conexión</button>
+        <button id="disconnectGoogleContacts" class="secondary hidden">Desconectar</button>
+        <span id="googleContactsStatus" class="small">No conectado</span>
+      </div>
+      <label><input id="settingGoogleContacts" type="checkbox" style="width:auto"> Crear contactos también en Google Contacts</label><br>
+      <label><input id="settingGoogleDedup" type="checkbox" checked style="width:auto"> Evitar duplicados por teléfono/email</label><br>
+      <label><input id="settingGoogleUpdate" type="checkbox" checked style="width:auto"> Actualizar Google cuando cambie un contacto</label>
+      <p class="small">La conexión de Google Contacts es común al CRM: al conectarla una vez queda disponible en los dos PCs. Crear y actualizar contactos requiere que esa conexión esté activa.</p>
+      <button id="saveGoogleSettings" class="primary">Guardar ajustes</button>
+      <span id="googleSettingsMsg" class="small"></span>
+      <div class="gcaSettingsBox">
+        <div><b>Comprobar antes de sincronizar</b><p class="small">Compara el CRM y Google Contacts sin crear, editar ni borrar contactos.</p></div>
+        <button id="googleContactsAuditBtn" class="secondary" type="button">Comprobar CRM y Google</button>
+      </div>
+      <div class="gcaSettingsBox">
+        <div><b>Fotos de WhatsApp en Google</b><p class="small">Busca solo fotos de contactos ya vinculados de forma exacta. Primero muestra una vista previa; no crea contactos ni cambia nada hasta confirmar.</p></div>
+        <button id="whatsappGooglePhotosBtn" class="secondary" type="button">Actualizar fotos de WhatsApp a Google</button>
+      </div>
+      <div class="gcaSettingsBox">
+        <div><b>Exportar todos los contactos a Google</b><p class="small">Vista previa: con un solo contacto de Google del mismo teléfono se actualiza; si no existe se prepara para crear. Los teléfonos duplicados quedan fuera.</p></div>
+        <button id="googleContactsFullSyncBtn" class="secondary" type="button">Preparar exportación completa</button>
+      </div>
+    </div>
+   </section>
+
+
+   <section id="view-automations" class="hidden">
+    <div class="pageHeader">
+      <div>
+        <h2>Automatizaciones</h2>
+        <div class="small">Crea reglas del tipo <b>CUANDO ocurra esto → HACER esto</b>. Puedes activarlas, editarlas o borrarlas cuando quieras.</div>
+      </div>
+      <button id="auto2Reload" class="secondary">↻ Actualizar</button>
+    </div>
+
+    <div id="tpfAutomationAdvancedBar"><h3>⚡ Constructor avanzado</h3><div class="small">Motor completo activo: configura disparadores, condiciones y acciones.</div><div class="tpfAutoCaps"><span>WhatsApp recibido</span><span>Palabra clave</span><span>Cambio de columna</span><span>Etiqueta</span><span>Sin respuesta</span><span>Tarea</span><span>Oportunidad</span><span>WhatsApp programado</span><span>Plantilla</span><span>Secuencia</span></div></div>
+    <div class="automation2Grid">
+      <div class="card">
+        <div class="automation2Head">
+          <h3 id="auto2FormTitle">Nueva automatización</h3>
+          <span class="auto2NoLimit">Sin límite automático de envíos</span>
+        </div>
+        <input type="hidden" id="auto2Id">
+        <label>Nombre
+          <input id="auto2Name" placeholder="Ej.: Seguimiento de renovación">
+        </label>
+
+        <div class="auto2Builder">
+          <div class="auto2Step">
+            <span class="auto2Badge">CUANDO</span>
+            <select id="auto2Trigger">
+              <option value="message_received">Llega un WhatsApp</option>
+              <option value="message_contains">Llega un WhatsApp que contiene una palabra</option>
+              <option value="opportunity_stage">Una oportunidad cambia de columna</option>
+              <option value="label_assigned">Se asigna una etiqueta a un contacto</option>
+              <option value="unanswered">Un cliente lleva tiempo sin respuesta</option>
+            </select>
+          </div>
+          <div id="auto2TriggerConfig" class="auto2Config"></div>
+
+          <div class="auto2Arrow">↓</div>
+
+          <div class="auto2Step">
+            <span class="auto2Badge action">HACER</span>
+            <select id="auto2Action">
+              <option value="create_task">Crear una tarea</option>
+              <option value="create_opportunity">Crear una oportunidad</option>
+              <option value="assign_label">Asignar una etiqueta</option>
+              <option value="schedule_whatsapp">Programar un WhatsApp</option>
+              <option value="send_template">Enviar una plantilla de WhatsApp</option>
+              <option value="sequence_label_opportunity_whatsapp">Crear oportunidad + esperar + enviar WhatsApp</option>
+            </select>
+          </div>
+          <div id="auto2ActionConfig" class="auto2Config"></div>
+        </div>
+
+        <label class="auto2Enabled"><input id="auto2Enabled" type="checkbox" checked> Activada</label>
+
+        <div class="row">
+          <button id="auto2Save" class="primary">Guardar automatización</button>
+          <button id="auto2Cancel" class="secondary hidden">Cancelar edición</button>
+        </div>
+        <div id="auto2Msg" class="small"></div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:center">
+          <div>
+            <h3 style="margin:0">Mis automatizaciones</h3>
+            <div class="small">Las reglas se guardan en Supabase y estarán disponibles en todos tus dispositivos.</div>
+          </div>
+          <select id="auto2Filter" style="max-width:170px">
+            <option value="all">Todas</option>
+            <option value="enabled">Activas</option>
+            <option value="disabled">Desactivadas</option>
+          </select>
+        </div>
+        <div id="auto2List" class="automation2List"></div>
+        <div id="auto2Empty" class="small" style="padding:18px 0">Todavía no hay automatizaciones.</div>
+      </div>
+    </div>
+
+    <div class="card automation2Help">
+      <b>Ejemplos</b>
+      <div>• Si llega “renovación” → asignar etiqueta Renovación.</div>
+      <div>• Si una oportunidad entra en “Cerrada” → crear tarea de seguimiento.</div>
+      <div>• Si un cliente lleva 2 horas sin respuesta → crear una tarea.</div>
+      <div>• Si llega un WhatsApp → programar una respuesta para dentro de 30 minutos.</div>
+      <div>• Si asignas una etiqueta → enviar una plantilla concreta.</div>
+    </div>
+
+    <!-- Compatibilidad con el sistema anterior. No se muestran. -->
+    <div class="hidden">
+      <select id="autoStage"></select><select id="autoDelay"><option value="0"></option></select>
+      <input id="autoName"><input id="autoReminderTitle"><button id="autoCreate"></button>
+      <button id="autoReload"></button><div id="autoMsg"></div><div id="automationList"></div><div id="automationEmpty"></div>
+    </div>
+   </section>
+
+   <section id="view-system" class="hidden">
+    <div class="card systemStatusCard">
+      <div class="systemStatusHead">
+        <div>
+          <h2>Estado del sistema</h2>
+          <p class="small">Diagnóstico rápido del CRM. Visible solo para administradores.</p>
+        </div>
+        <button id="systemRefresh" class="primary">Actualizar estado</button>
+      </div>
+      <div class="systemStatusGrid">
+        <div class="systemStatusBox"><span id="systemAppDot" class="systemDot systemDotPending"></span><div><strong>Aplicación / Vercel</strong><small id="systemAppText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemGreenDot" class="systemDot systemDotPending"></span><div><strong>GREEN-API / WhatsApp</strong><small id="systemGreenText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemSupabaseDot" class="systemDot systemDotPending"></span><div><strong>Supabase</strong><small id="systemSupabaseText">Comprobando…</small></div></div>
+        <div class="systemStatusBox"><span id="systemFrontDot" class="systemDot systemDotPending"></span><div><strong>Frontend</strong><small id="systemFrontText">Sin comprobar</small></div></div>
+      </div>
+      <div id="systemBanner" class="systemBanner systemBannerPending">Comprobando estado general…</div>
+      <div class="systemStatusMeta">Última comprobación: <b id="systemCheckedAt">—</b></div>
+    </div>
+    <div class="card">
+      <div class="systemStatusHead">
+        <div><h3>Últimos fallos detectados</h3><p class="small">Errores JavaScript y respuestas HTTP 4xx/5xx detectadas en este navegador.</p></div>
+        <button id="systemClearErrors" class="secondary">Limpiar historial</button>
+      </div>
+      <div id="systemErrorList" class="systemErrorList"><div class="small">No hay fallos registrados.</div></div>
+    </div>
+   </section>
+
+   <section id="view-users" class="hidden">
+    <div class="card">
+      <h2>Usuarios y permisos</h2>
+      <p class="small">El Administrador tiene acceso total. Para cada usuario puedes decidir exactamente qué puede ver y qué puede hacer.</p>
+      <div class="row"><select id="userSelect"></select><button id="permEnableAll" class="secondary">Marcar todo</button><button id="permDisableAll" class="secondary">Quitar todo</button></div>
+      <div id="permGrid" class="permGridNew"></div>
+      <div id="userMsg" class="small"></div>
+    </div>
+    <div class="card">
+      <h3>Campos visibles en DATA</h3>
+      <p class="small">Además de los permisos generales, puedes limitar columnas concretas de DATA.</p>
+      <button id="loadDataFields" class="secondary">Cargar columnas de DATA</button>
+      <div id="fieldPerms" style="margin-top:12px"></div>
+    </div>
+   </section>
+  </main>
+  </div>
+ </div>
+</div>
+
+<div id="oppDetailModal" class="modalBack hidden">
+  <div class="modalCard opportunityModalCard" onclick="event.stopPropagation()">
+    <div class="opportunityModalHeader">
+      <div>
+        <div class="opportunityEyebrow">OPORTUNIDAD</div>
+        <h2 id="oppModalHeading">Ficha de oportunidad</h2>
+      </div>
+      <button id="oppModalCloseX" class="modalCloseX" type="button">← Volver</button>
+    </div>
+
+    <input type="hidden" id="oppModalId">
+
+    <div class="opportunitySection">
+      <div class="opportunitySectionTitle">Datos principales</div>
+      <div class="modalGrid opportunityGrid">
+        <label class="full">Título
+          <input id="oppModalTitle" placeholder="Título de la oportunidad">
+        </label>
+        <label>Cliente
+          <input id="oppModalClient" placeholder="Nombre del cliente">
+          <button type="button" id="oppModalOpenContact" class="oppContactOpenBtn">Ver ficha completa</button>
+        </label>
+        <label>Teléfono
+          <input id="oppModalPhone" placeholder="Teléfono">
+        </label>
+        <label class="full opportunityContactSearchLabel">Buscar contacto existente
+          <input id="oppModalDni" placeholder="Escribe nombre, teléfono o DNI" autocomplete="off">
+          <span class="small">Selecciona una coincidencia para vincular la oportunidad con su ficha.</span>
+          <div id="oppContactMatches" class="oppContactMatches hidden"></div>
+        </label>
+        <label class="full">Importe
+          <input id="oppModalAmount" type="number" step="0.01" placeholder="0,00">
+        </label>
+        <label>Fecha prevista de cierre
+          <input id="oppModalDate" type="date">
+        </label>
+        <label>Fecha de activación
+          <input id="oppModalActivation" type="text" readonly placeholder="Sin registrar" aria-describedby="oppActivationHelp">
+          <span id="oppActivationHelp" class="small">Fecha real de instalación</span>
+        </label>
+        <label class="full">Columna / Estado
+          <select id="oppModalStage"></select>
+        </label>
+        <label class="full">Notas
+          <textarea id="oppModalNotes" rows="4" placeholder="Notas de la oportunidad"></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="opportunitySection">
+      <div class="opportunitySectionTitle">Campos personalizados</div>
+      <div id="oppCustomFieldsView" class="oppCustomFieldsView"></div>
+    </div>
+
+    <div class="opportunityMeta" id="oppMetaInfo"></div>
+
+    <div class="modalActions opportunityActions">
+      <button id="oppModalSave" class="primary">Guardar cambios</button>
+      <button id="oppModalDelete" class="danger">Eliminar oportunidad</button>
+      <button id="oppModalClose" class="secondary">← Volver</button>
+    </div>
+  </div>
+</div>
+
+<div id="stageContextMenu" class="stageContextMenu hidden" onclick="event.stopPropagation()">
+  <button id="stageMenuNewOpp">＋ Nueva oportunidad</button>
+  <button id="stageMenuNewStage">＋ Nueva columna</button>
+  <button id="stageMenuRename">✎ Editar nombre</button>
+</div>
+
+
+
+
+<div id="contactLabelsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Etiquetas del contacto</h3><button id="contactLabelsClose" class="secondary">← Volver</button></div>
+    <div id="contactLabelsChoices" class="contactLabelsChoices"></div>
+    <div class="waTemplateActions"><button id="contactLabelsCancel" type="button" class="secondary">Cancelar</button><button id="contactLabelsSave" class="primary">Guardar etiquetas</button></div>
+  </div>
+</div>
+
+<div id="goalModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard">
+    <div class="waTemplateHead"><h3>Objetivo comercial del mes</h3><button id="goalModalClose" class="secondary">← Volver</button></div>
+    <label>Objetivo de facturación (€)<input id="goalAmountInput" type="number" min="0" step="0.01"></label>
+    <label>Objetivo de oportunidades ganadas<input id="goalOppInput" type="number" min="0" step="1"></label>
+    <div class="waTemplateActions"><button id="goalSave" class="primary">Guardar objetivo</button></div>
+    <div id="goalMsg" class="small"></div>
+  </div>
+</div>
+
+<div id="customFieldsModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Campos personalizados de Contactos</h3><button id="customFieldsClose" class="secondary">← Volver</button></div>
+    <div class="customFieldsManagerGrid">
+      <div class="card">
+        <h4>Nuevo campo</h4>
+        <label>Nombre<input id="customFieldName" placeholder="Ej.: Compañía, Fecha renovación, Nº contrato"></label>
+        <label>Tipo<select id="customFieldType">
+          <option value="text">Texto</option>
+          <option value="number">Número</option>
+          <option value="date">Fecha</option>
+          <option value="phone">Teléfono</option>
+          <option value="email">Email</option>
+          <option value="select">Desplegable</option>
+          <option value="boolean">Sí / No</option>
+          <option value="textarea">Texto largo</option>
+        </select></label>
+        <label id="customFieldOptionsWrap" class="hidden">Opciones (una por línea)<textarea id="customFieldOptions" rows="5"></textarea></label>
+        <button id="customFieldCreate" class="primary">Crear campo</button>
+        <div id="customFieldMsg" class="small"></div>
+      </div>
+      <div class="card">
+        <h4>Campos creados</h4>
+        <div id="customFieldsList" class="customFieldsList"></div>
+        <div id="customFieldsEmpty" class="small">No hay campos personalizados.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="multiSearchModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Búsqueda múltiple</h3><button id="multiSearchClose" class="secondary">← Volver</button></div>
+    <p class="small">Pega DNI, transacciones u otros identificadores. Puedes poner uno por línea, separados por comas, punto y coma o tabulaciones. También puedes pegar directamente una columna de Excel.</p>
+    <textarea id="multiSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
+    <div class="multiSearchSheets">
+      <label><input type="checkbox" value="LIQUIDACION" checked> Liquidación</label>
+      <label><input type="checkbox" value="DATA" checked> Data</label>
+      <label><input type="checkbox" value="CLAWBACK" checked> Clawback</label>
+      <label><input type="checkbox" value="AJUSTES" checked> Ajustes</label>
+      <label><input type="checkbox" value="VENTAS" checked> Ventas</label>
+      <label><input type="checkbox" value="BASE DE DATOS"> Contactos</label>
+    </div>
+    <div class="row">
+      <button id="multiSearchRun" class="primary">Buscar todos</button>
+      <button id="multiSearchClear" class="secondary">Limpiar</button>
+    </div>
+    <div id="multiSearchMsg" class="small"></div>
+  </div>
+</div>
+
+<div id="crossSearchModal" class="waTemplateBack hidden">
+  <div class="waTemplateCard waWideModal">
+    <div class="waTemplateHead"><h3>Cruzar DNI / transacciones</h3><button id="crossSearchClose" class="secondary">← Volver</button></div>
+    <p class="small">Pega una lista de DNI, NIF o números de transacción. El CRM comprobará cada valor en todas las secciones y te mostrará una matriz de coincidencias.</p>
+    <textarea id="crossSearchValues" rows="11" placeholder="12345678A&#10;TX-000123&#10;87654321B"></textarea>
+    <div class="row">
+      <button id="crossSearchRun" class="primary">Cruzar datos</button>
+      <button id="crossSearchClear" class="secondary">Limpiar</button>
+    </div>
+    <div id="crossSearchMsg" class="small"></div>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- TPF-PHYSICAL-SPLIT-v1 -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- TPF-MODULAR-RUNTIME-v1 -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style id="tpf-fix-3-points-v1">
+#view-whatsapplive .waLivePage{height:calc(100dvh - 64px)!important;min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+#view-whatsapplive .waLiveLayout{flex:1 1 auto!important;min-height:0!important;overflow:hidden!important}
+#view-whatsapplive .waChatPane,#view-whatsapplive .waChatActive{min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important}
+#view-whatsapplive .waMessages{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+#view-whatsapplive .waComposer{position:sticky!important;bottom:0!important;z-index:30!important;flex:0 0 auto!important;background:#f7f8fa!important}
+#view-whatsapplive .waComposerMsg{flex:0 0 18px!important}
+#view-automations .auto2Config{display:block!important;min-height:34px!important;margin-top:8px!important}
+#view-automations .auto2Config:empty{min-height:0!important;margin-top:0!important}
+#view-automations .auto2Builder{overflow:visible!important}
+#tpfWaTemplatesNav{user-select:none}
+@media(max-width:820px){#view-whatsapplive .waLivePage{height:100dvh!important}}
+</style>
+
+<div id="tpfBuildBadge" data-tpf-commit="local" data-tpf-branch="unknown">PRUEBAS · local</div>
+
+
+
+
+
+
+
+
+<script src="/tests/fixtures/pro-preview/preview.js"></script><script src="/js/modules/contact-desktop-layout.js"></script><script src="/js/modules/contact-workspace-pro.js"></script><script src="/js/modules/dashboard-performance-guard.js"></script><script src="/tests/fixtures/pro-preview/finish.js"></script></body></html>
+
