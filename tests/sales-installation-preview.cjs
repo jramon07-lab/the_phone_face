@@ -27,3 +27,14 @@ assert.equal(managed.contactId,'c');assert.equal(managed.managerId,'');assert.eq
 assert.equal(api.analyse([sale],[contact],[{id:'wrong',record_id:'c',title:'O2',contract_party:{holder_dni:'OTHER'}}])[0].candidates.length,0);
 assert.equal(api.analyse([sale],[contact,{...contact,id:'duplicate'}],[])[0].issue,'Revisar titular / gestor');
 console.log('Holder identity and explicit manager routing OK');
+
+const existing={id:'one',record_id:'c',title:'CAMBIO O2',amount:33};
+let found=api.analyse([sale],[contact],[existing])[0];
+assert.equal(found.choice,'one');assert.equal(found.selected,false);
+found=api.analyse([sale],[contact],[existing,{...existing,id:'two'}])[0];
+assert.equal(found.choice,'');assert.equal(found.related.length,2);
+found=api.analyse([sale],[contact],[existing,{...existing,id:'other',title:'Vodafone'}])[0];
+assert.equal(found.related.length,2);assert.equal(found.choice,'one');
+assert.equal(api.analyse([sale],[contact],[{...existing,import_reference:'8554:other'}])[0].choice,'');
+assert.equal(api.analyse([sale],[contact,{...contact,id:'duplicate'}],[existing])[0].choice,'');
+console.log('Existing opportunities displayed, unique match prefilled, ambiguous imports remain unselected');
