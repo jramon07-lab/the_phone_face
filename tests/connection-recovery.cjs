@@ -12,6 +12,12 @@ const response=(status,delay=null)=>({status,headers:{get:()=>delay}});
  let a=app([new TypeError('Failed to fetch'),ok]);assert.equal(await a.fetch(url),ok);assert.equal(a.calls(),2);
  for(const target of ['/api/green?action=send','/api/green?action=notifications','https://other.example/data','https://overfzbjtpjqxzbujezg.supabase.co/rest/v1/rpc/run_sales'])assert.equal(a.safe(target),false);
  assert.equal(a.safe('https://overfzbjtpjqxzbujezg.supabase.co/rest/v1/agenda_items?select=*'),true);
+ assert.equal(a.safe('/api/google-contacts?action=status'),true);
+ assert.equal(a.safe('/api/google-contacts?action=sync-queue'),false);
+ assert.equal(a.safe('/api/google-contacts?action=proxy',{method:'POST',body:JSON.stringify({method:'GET'})}),true);
+ for(const method of ['POST','PATCH','DELETE'])assert.equal(a.safe('/api/google-contacts?action=proxy',{method:'POST',body:JSON.stringify({method})}),false);
+ assert.equal(a.safe('/api/green?action=history',{method:'POST',body:{getReader(){}}}),false,'Never retry a stream body');
+ for(const rpc of ['current_user_permissions','sales_board','crm_whatsapp_internal_reads'])assert.equal(a.safe('https://overfzbjtpjqxzbujezg.supabase.co/rest/v1/rpc/'+rpc,{method:'POST',body:'{}'}),true);
  for(const status of [400,401,403,404,500]){a=app([response(status),ok]);assert.equal((await a.fetch(url)).status,status);assert.equal(a.calls(),1);}
  a=app([new TypeError('Failed'),ok]);await assert.rejects(a.fetch(url,{method:'POST'}));assert.equal(a.calls(),1);
  a=app([response(429,'60'),ok]);assert.equal((await a.fetch(url)).status,429);assert.equal(a.calls(),1);

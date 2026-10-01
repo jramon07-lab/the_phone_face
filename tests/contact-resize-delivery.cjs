@@ -1,0 +1,14 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modules/contact-desktop-layout.js','utf8');
+const code=source.slice(source.indexOf(' function fitContactText(){'),source.indexOf(' const linkRow=',source.indexOf(' function fitContactText(){')));
+const frames=[],writes=[],fields=new Map();let callback;
+for(const id of ['contactObservations','contactNotes'])fields.set(id,{scrollHeight:100,style:{setProperty:(...args)=>writes.push(args)}});
+const context={mounted:true,modal:{classList:{contains:()=>false}},data:{},$:id=>fields.get(id),requestAnimationFrame:fn=>{frames.push(fn);return frames.length;},ResizeObserver:class{constructor(fn){callback=fn;}observe(){}},window:{addEventListener(){}}};
+vm.createContext(context);vm.runInContext(code,context);
+callback([{contentRect:{width:300}}]);callback([{contentRect:{width:300.3}}]);callback([{contentRect:{width:310}}]);
+assert.equal(writes.length,0,'ResizeObserver delivery must not synchronously change its observed layout');
+assert.equal(frames.length,1,'Coalesce width changes into one animation frame');
+frames.shift()();assert.equal(writes.length,4);
+callback([{contentRect:{width:310.4}}]);assert.equal(frames.length,0,'Ignore fractional width jitter');
+callback([{contentRect:{width:330}}]);context.modal.classList.contains=()=>true;frames.shift()();assert.equal(writes.length,4,'No geometry writes to a closed contact');
+console.log('PASS contact resize: deferred writes, coalescing, fractional jitter and hidden profiles');

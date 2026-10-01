@@ -356,6 +356,27 @@ test('Apartados administrativos: tarjetas dinámicas, teclado y controles conser
   await expect.poll(()=>page.locator('#view-system .tpfAdminTabs').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
 });
 
+test('Ficha: redimensionar textos no produce bucles ResizeObserver (datos sintéticos)', async ({page,context}) => {
+  const fs=require('node:fs'),path=require('node:path'),errors=[];
+  await context.route('**/*',route=>route.abort());
+  page.on('pageerror',error=>errors.push(error.message));
+  await page.setViewportSize({width:1366,height:900});
+  await page.setContent(`<body class="tpfUnified"><div id="contactModal" class="tpfContactDesktop"><div class="contactProfile"><div class="cpIdentity"></div><div class="cpColumns"><div class="cpLeft"><div class="cpData"><label for="contactObservations">Observaciones</label><textarea id="contactObservations"></textarea><label for="contactNotes">Notas</label><textarea id="contactNotes" readonly></textarea></div></div><div class="cpCenter"></div><div class="cpRight"></div></div></div></div></body>`);
+  for(const file of ['contact-desktop.css','crm-reference.css'])await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'../../assets',file),'utf8')});
+  await page.evaluate(()=>{for(const id of ['contactObservations','contactNotes'])document.getElementById(id).value='Texto sintético para comprobar el ajuste de altura. '.repeat(12);});
+  await page.addScriptTag({content:fs.readFileSync(path.join(__dirname,'../../js/modules/contact-desktop-layout.js'),'utf8')});
+  const settle=()=>page.evaluate(()=>new Promise(resolve=>{let frames=12;function next(){if(--frames===0)resolve();else requestAnimationFrame(next);}requestAnimationFrame(next);}));
+  for(const width of [330,280,390,310,360]){
+    await page.evaluate(width=>{document.querySelector('.cpData').style.setProperty('width',width+'px','important');},width);
+    await settle();
+    const height=await page.locator('#contactObservations').evaluate(el=>el.getBoundingClientRect().height);
+    expect(height).toBeGreaterThan(36);expect(height).toBeLessThanOrEqual(160);
+    await settle();
+    expect(await page.locator('#contactObservations').evaluate(el=>el.getBoundingClientRect().height)).toBe(height);
+  }
+  expect(errors).toEqual([]);
+});
+
 test.describe('Móvil de solo lectura', () => {
   test.use({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
   test('Móvil: demo, Inicio, Contactos, Ventas y WhatsApp', async ({ context, page }) => {
