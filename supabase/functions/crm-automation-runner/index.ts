@@ -16,7 +16,7 @@ async function cronAuthorized(req:Request){const secret=String(req.headers.get("
 function phoneToChat(ctx:any){const existing=String(ctx?.chat_id||"").trim();if(/^[^@]+@(c\.us|g\.us|lid)$/.test(existing))return existing;let digits=String(ctx?.phone||"").replace(/\D/g,"");if(digits.length===9)digits="34"+digits;if(digits.length<8||digits.length>15)return "";return `${digits}@c.us`;}
 function contactVar(ctx:any,key:string){const data=ctx?.contact_data&&typeof ctx.contact_data==="object"?ctx.contact_data:{};const wanted=String(key||"").trim().toLowerCase();for(const [k,v] of Object.entries(data)){if(String(k).trim().toLowerCase()===wanted)return String(v??"");}return "";}
 function firstName(ctx:any){
-  const explicit=String(ctx?.recipient_first_name||"").trim();if(explicit)return explicit;
+  const explicit=String(ctx?.contract_party?.recipient_first_name||ctx?.recipient_first_name||"").trim();if(explicit)return explicit;
   const party=ctx?.contract_party;
   if(party?.recipient==="holder")return String(party.holder_first_name||"").trim()||String(party.recipient_name||ctx?.name||"").trim().split(/\s+/)[0]||"cliente";
   // A separate manager must never inherit the customer's first name.
@@ -36,13 +36,23 @@ function vars(text:string,ctx:any){return String(text||"")
   .replaceAll("{operador}",String(ctx?.operator||""))
   .replaceAll("{precio_total}",String(ctx?.precio_total||""))
   .replaceAll("{mensaje}",String(ctx?.message||""));}
+function contractMessage(text:string,party:any){
+ const body=String(text||'');if(!body.trim()||!party)return body;
+ const holder=String(party.holder_name||'').replace(/\s+/g,' ').trim();
+ const different=party.holder_record_id&&party.recipient_contact_id?party.holder_record_id!==party.recipient_contact_id:party.same===false&&party.recipient==='contact';
+ if(!different||!holder)return body;
+ const reference='Sobre el contrato de '+holder+'.';
+ if(body.includes(reference))return body;
+ const firstBreak=body.indexOf('\n');
+ return /^Hola\b/i.test(body)&&firstBreak>=0?body.slice(0,firstBreak)+'\n'+reference+body.slice(firstBreak):reference+'\n\n'+body;
+}
 function outgoingVars(text:string,ctx:any,phase=""){
   const name=firstName(ctx),welcome=ctx?.offer_welcome===true||(!Object.hasOwn(ctx||{},"offer_welcome")&&String(ctx?.oferta_mensaje||"").includes("Te envío una oferta que puede interesarte:"));
   let source=String(text||"");
   if(welcome&&["reminder_2","reminder_5"].includes(phase))source=source.replace(/\s+de\s+\{operador\}/gi,"").replaceAll("{operador}","");
   source=source.replace(/\{\{contacto\.nombre\}\}|\{\{contacto\.nombre_completo\}\}|\{nombre_completo\}|\{contacto\.nombre\}/gi,name);
   const offerMessage=String(ctx?.oferta_mensaje||"").replace(/^Hola [^,\n]+/,"Hola "+name);
-  return vars(source,{...ctx,name,recipient_first_name:name,contact_data:{...(ctx?.contact_data||{}),NOMBRE:name},oferta_mensaje:offerMessage});
+  return contractMessage(vars(source,{...ctx,name,recipient_first_name:name,contact_data:{...(ctx?.contact_data||{}),NOMBRE:name},oferta_mensaje:offerMessage}),ctx?.contract_party);
 }
 function durationMs(value:any,unit:any){const n=Math.max(0,Number(value||0));return n*({minutes:60000,hours:3600000,days:86400000,weeks:604800000}[String(unit)]||0);}
 function numberValue(value:any,ctx:any){const x=vars(String(value??""),ctx).replace(",",".").trim();if(!x)return null;const n=Number(x);return Number.isFinite(n)?n:null;}

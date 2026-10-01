@@ -16,7 +16,7 @@ assert.equal(api.scheduledSendIso('now',''),null,'send now never creates a sched
 assert.match(api.nextHalfHourLocal(Date.parse('2026-09-10T10:10:00Z')),/:30$/,'the default slot advances to a half-hour boundary');
 assert.match(api.nextHalfHourLocal(Date.parse('2026-09-10T10:31:00Z')),/:00$/,'the default slot never keeps arbitrary minutes');
 assert.equal(api.scheduledSendIso('scheduled','2026-09-12T10:30',Date.parse('2026-09-10T10:30:00Z')),new Date('2026-09-12T10:30').toISOString(),'scheduled local time is converted to an ISO instant');
-assert.throws(()=>api.scheduledSendIso('scheduled','2026-09-10T10:30',Date.parse('2026-09-10T10:30:00Z')),/minuto de margen/);
+assert.throws(()=>api.scheduledSendIso('scheduled','2026-09-10T10:30:00Z',Date.parse('2026-09-10T10:30:00Z')),/minuto de margen/);
 const offer={operator:'Vodafone',name:'VDF · NOMBRE INTERNO',base_price:52,base_features:['Fibra 600 Mb','2 líneas de 160 GB'],line_options:[
   {id:'gb',name:'Fibra 1 Gb',price_delta:10,option_type:'radio',message_text:'Fibra 1 Gb',replaces_text:'Fibra 600 Mb'},
   {id:'unlimited',name:'Datos ilimitados',price_delta:4,option_type:'radio',message_text:'2 líneas con datos ilimitados',replaces_text:'2 líneas de 160 GB'},
@@ -83,7 +83,7 @@ assert.match(sqlV2,/VDF · ESTÁNDAR 600 \+ 2×160/);
 assert.match(sqlV2,/VDF · CONTRAOFERTA 1 GB \+ 2 ILIMITADAS/);
 assert.match(sqlV2,/\(counter_id,'Netflix',null,7,30,'radio','contenido','Netflix incluido'\)/);
 for(const price of ["'Fibra 1 Gb',10","'Líneas principales ilimitadas',4","'Línea adicional 160 GB',6","'Línea adicional 30 GB',30,6","'Línea adicional 60 GB',60,8.5","'Línea adicional 160 GB',160,11","'Línea adicional ilimitada',null,16"])assert.ok(sqlV2.includes(price),`expected configurable Vodafone price: ${price}`);
-assert.match(source,/crm_create_offer_execution_v11/);
+assert.match(source,/crm_create_offer_execution_v12/);
 assert.match(source,/Enviar bienvenida para cliente nuevo/);
 assert.match(source,/Preparar una segunda oferta/);
 assert.match(source,/p_test_mode:CRM_TEST_MODE/);
@@ -199,7 +199,7 @@ const replyButtonsSql=fs.readFileSync(path.join(root,'supabase/migrations/202609
 assert.match(replyButtonsSql,/crm_create_offer_execution_v6/);
 for(const label of ['No me interesa','Acepto','Quiero mirar otra cosa'])assert.ok(replyButtonsSql.includes(label),`missing reply button: ${label}`);
 assert.match(replyButtonsSql,/\{steps,0,config,reply_buttons\}/);
-assert.match(source,/crm_create_offer_execution_v11/);
+assert.match(source,/crm_create_offer_execution_v12/);
 assert.match(source,/reply_buttons_configured/);
 const scheduledOfferSql=fs.readFileSync(path.join(root,'supabase/migrations/20260909180000_schedule_first_offer_whatsapp.sql'),'utf8');
 assert.match(scheduledOfferSql,/crm_create_offer_execution_v7/);

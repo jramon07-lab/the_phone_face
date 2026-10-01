@@ -18,3 +18,11 @@ for(const phase of ['reminder_2','reminder_5']){
 assert.match(sandbox.outgoingVars('{oferta_mensaje}',{...context,oferta_mensaje:'Hola María José García, te envío la oferta de Vodafone:\nNetflix incluido'}),/^Hola María José,.*Vodafone:\nNetflix incluido$/);
 assert.equal(sandbox.outgoingVars('Texto escrito manualmente para García',context),'Texto escrito manualmente para García');
 console.log('PASS: first names, compound names, recipient isolation, normal/welcome reminders and legacy welcome inference');
+
+const party={holder_record_id:'h',recipient_contact_id:'m',holder_name:'Ana García',recipient_first_name:'José Manuel'};
+const message=sandbox.outgoingVars('Hola {nombre}\nOferta',{...context,contract_party:party});
+assert.equal(message,'Hola José Manuel\nSobre el contrato de Ana García.\nOferta');
+assert.equal(sandbox.contractMessage(message,party),message);
+assert.equal(sandbox.contractMessage('Hola Ana\nOferta',{...party,recipient_contact_id:'h'}),'Hola Ana\nOferta');
+assert.equal(sandbox.contractMessage('',party),'');
+console.log('Contract holder reference, manager greeting and idempotent rendering OK');

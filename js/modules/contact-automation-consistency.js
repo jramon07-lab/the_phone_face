@@ -130,7 +130,22 @@ function bindOpportunityTab(){
     setTimeout(()=>refreshVisibleContact(),0);
   },true);
 }
+let visibleRefreshTimer;
+function queueVisibleRefresh(reload=true){
+ clearTimeout(visibleRefreshTimer);
+ visibleRefreshTimer=setTimeout(async()=>{
+  if(reload){await refreshVisibleContact();return;}
+  const contact=activeContact(),modal=$('contactModal');
+  if(!contact||!modal||modal.classList.contains('hidden')||typeof renderContactProfile!=='function')return;
+  try{await renderContactProfile()}catch(error){console.warn('Actualizar contadores',error)}
+ },150);
+}
 function bindFocusRefresh(){
+ window.addEventListener('tpf:sales-updated',event=>{
+  // loadSales emits the populated event itself: never start another load.
+  if(salesRefresh)return;
+  queueVisibleRefresh(!Array.isArray(event.detail?.opportunities));
+ });
   window.addEventListener('focus',()=>refreshVisibleContact());
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshVisibleContact()});
 }
@@ -138,7 +153,7 @@ function subscribeOpportunityChanges(){
   try{
     if(typeof sb==='undefined'||!sb?.channel||realtimeChannel)return;
     realtimeChannel=sb.channel('tpf-contact-opportunities-live')
-      .on('postgres_changes',{event:'*',schema:'public',table:'sales_opportunities'},()=>refreshVisibleContact())
+      .on('postgres_changes',{event:'*',schema:'public',table:'sales_opportunities'},()=>queueVisibleRefresh())
       .subscribe();
   }catch(error){console.warn('Actualización en vivo de oportunidades',error)}
 }
@@ -148,6 +163,8 @@ function install(){
   bindOpportunityTab();
   bindFocusRefresh();
   subscribeOpportunityChanges();
+  // Fallback when this table is not enabled in the Realtime publication.
+  setInterval(()=>{if(!document.hidden)queueVisibleRefresh()},30000);
   let tries=0;
   const timer=setInterval(()=>{
     wrapOpenContact();

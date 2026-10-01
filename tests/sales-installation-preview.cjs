@@ -7,7 +7,7 @@ rows=api.analyse([sale],[contact],[{id:'o',record_id:'c',title:'CAMBIO O2',expec
 assert.equal(api.analyse([sale],[],[])[0].action,'Cliente no encontrado');assert.equal(api.analyse([sale,sale],[contact],[])[1].action,'Duplicada en Excel');
 assert.equal(api.analyse([{Comentario:'Filtros aplicados'}],[contact],[]).length,0);
 assert.equal(api.months('2024-02-29',12),'2025-02-28');
-assert.equal(api.analyse([sale],[contact,{id:'manager',data:{TPF_TITULAR:{holder_dni:'12345678Z'}}}],[])[0].action,'Revisar titular / gestor');
+assert.equal(api.analyse([sale],[contact,{id:'manager',data:{TPF_TITULAR:{holder_dni:'12345678Z'}}}],[])[0].action,'Crear en Ganado');
 console.log('PASS: installed-sales preview preserves expected dates, DNI matching, duplicates and calendar boundaries');
 
 assert.equal(api.date(46270),'2026-09-05');
@@ -20,3 +20,10 @@ assert.equal(api.validPrice(-1),false);assert.equal(api.validPrice('abc'),false)
 assert.equal(api.sourceMonth({month:'September2026'}),'2026-09-01');
 assert.equal(api.analyse([sale],[contact],[{id:'imported',import_reference:'8554:1',amount:null}])[0].imported,true);
 console.log('Monthly dates, missing data, price validation and stable references OK');
+
+const manager={id:'m',data:{NOMBRE:'Gestor',DNI:'87654321X',TPF_RELACIONES:{managed_contacts:[{record_id:'c'}]}}};
+const managed=api.analyse([sale],[contact,manager],[])[0];
+assert.equal(managed.contactId,'c');assert.equal(managed.managerId,'');assert.equal(managed.recipientId,'');assert.equal(managed.selected,false);
+assert.equal(api.analyse([sale],[contact],[{id:'wrong',record_id:'c',title:'O2',contract_party:{holder_dni:'OTHER'}}])[0].candidates.length,0);
+assert.equal(api.analyse([sale],[contact,{...contact,id:'duplicate'}],[])[0].issue,'Revisar titular / gestor');
+console.log('Holder identity and explicit manager routing OK');
