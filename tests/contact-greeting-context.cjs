@@ -10,8 +10,8 @@ const context={window:{TPFModules:{},addEventListener(){}},document,sb,Intl,Opti
 const holder={id:'owner',data:{NOMBRE:'María José',APELLIDOS:'García López','NOMBRE Y APELLIDOS':'María José García López','TELÉFONO':'600000001'}};
 const manager={id:'manager',data:{NOMBRE:'Jose Ramon',APELLIDOS:'Sánchez','NOMBRE Y APELLIDOS':'Jose Ramon Sánchez','TELÉFONO':'600000002',TPF_RELACIONES:{managed_contacts:[{record_id:'owner'}]}}};
 (async()=>{
- records=[holder];let r=await context.window.testContext(holder);assert.equal(r.name,'María José');assert.equal(r.recipientId,'owner');
- records.push(manager);r=await context.window.testContext(holder);assert.equal(r.id,'owner');assert.equal(r.managerId,'manager');assert.equal(r.name,'Jose Ramon');assert.equal(r.phone,'600000002');
+ records=[holder];choose=()=>{throw Error('Unlinked contact must skip dialog')};let r=await context.window.testContext(holder);assert.equal(r.name,'María José');assert.equal(r.recipientId,'owner');
+ choose=()=>{};records.push(manager);r=await context.window.testContext(holder);assert.equal(r.id,'owner');assert.equal(r.managerId,'manager');assert.equal(r.name,'Jose Ramon');assert.equal(r.phone,'600000002');
  choose=e=>{e.recipient.value='owner';e.recipient.onchange()};r=await context.window.testContext(holder);assert.equal(r.managerId,'manager');assert.equal(r.recipientId,'owner');
  records.push({...manager,id:'other'});choose=e=>{assert.equal(e.manager.value,'');assert.equal(e.recipient.value,'');e.manager.value='other';e.manager.onchange()};r=await context.window.testContext(holder);assert.equal(r.recipientId,'other');
  choose=e=>{assert.equal(e.holder.value,'');e.holder.value='1';e.holder.onchange();e.manager.value='manager';e.manager.onchange()};r=await context.window.testContext(manager);assert.equal(r.id,'owner');assert.equal(r.recipientId,'manager');
