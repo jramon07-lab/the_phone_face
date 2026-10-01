@@ -8,6 +8,9 @@
     try{
       const url=new URL(typeof input==='string'?input:input?.url||String(input),location.href);
       const method=String(init.method||input?.method||'GET').toUpperCase();
+      // A Request body is a stream; only replay a POST with a reusable JSON
+      // string supplied by the caller, never an already consumed Request.
+      const replayableBody=typeof init.body==='string'&&!input?.bodyUsed;
       if(url.origin===location.origin){
         if(method==='GET'&&url.pathname==='/api/green-status')return true;
         if(method==='GET'&&url.pathname==='/api/green-health')return true;
@@ -15,11 +18,20 @@
           const action=String(url.searchParams.get('action')||'').toLowerCase();
           // Estas acciones solo consultan WhatsApp. Se pueden recuperar tras un
           // corte breve; enviar, responder, marcar leído o guardar nunca se repite.
-          const getReads=new Set(['state','summary','chats']);
+          const getReads=new Set(['state','summary','chats','settings','download']);
           const postReads=new Set(['history','previews','avatar','file']);
           if(method==='GET')return getReads.has(action);
-          if(method==='POST'&&!input?.bodyUsed&&init.body)return postReads.has(action);
+          if(method==='POST'&&replayableBody)return postReads.has(action);
         }
+        if(url.pathname==='/api/google-contacts'){
+          const action=url.searchParams.get('action')||'status';
+          if(method==='GET')return action==='status';
+          if(method==='POST'&&action==='proxy'&&replayableBody){try{return String(JSON.parse(init.body).method||'GET').toUpperCase()==='GET';}catch(_){return false;}}
+        }
+      }
+      if(url.origin==='https://overfzbjtpjqxzbujezg.supabase.co'&&url.pathname.startsWith('/rest/v1/rpc/')){
+        const name=url.pathname.split('/').pop();
+        return ['current_user_permissions','sales_board','crm_whatsapp_internal_reads'].includes(name)&&(method==='GET'||method==='POST'&&replayableBody);
       }
       return method==='GET'&&!init.body&&!input?.bodyUsed&&url.origin==='https://overfzbjtpjqxzbujezg.supabase.co'&&/^\/rest\/v1\/[a-zA-Z_][a-zA-Z0-9_]*$/.test(url.pathname);
     }catch(_){return false;}

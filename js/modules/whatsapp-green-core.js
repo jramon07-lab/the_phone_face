@@ -242,10 +242,10 @@ function waMediaHtml(info,idMessage){
   const dl=(url,name)=>url?`<button class="waDownloadBtn" type="button" onclick="waDownloadFile('${String(url).replaceAll("'","\'")}','${String(name||"archivo").replaceAll("'","\'")}','${String(idMessage||"").replaceAll("'","\'")}')">⇩ Descargar</button>`:"";
   if(info.kind==="image"){
     const src=u||(info.thumb?`data:image/jpeg;base64,${esc(info.thumb)}`:"");
-    if(src)return `<a href="${u||src}" target="_blank" rel="noopener"><img class="waMediaImage" src="${src}" loading="lazy" alt="Imagen de WhatsApp"></a>${cap}${dl(u||src,info.name||"imagen.jpg")}`;
+    if(src)return `<a href="${u||src}" target="_blank" rel="noopener"><img class="waMediaImage" data-wa-media-message="${id}" src="${src}" loading="lazy" alt="Imagen de WhatsApp"></a>${cap}${dl(u||src,info.name||"imagen.jpg")}`;
   }
-  if(info.kind==="video"&&u)return `<video class="waMediaVideo" controls preload="metadata" src="${u}"></video>${cap}${dl(u,info.name||"video.mp4")}`;
-  if(info.kind==="audio"&&u)return `<audio class="waMediaAudio" controls preload="metadata" src="${u}"></audio>${cap}${dl(u,info.name||"audio")}`;
+  if(info.kind==="video"&&u)return `<video class="waMediaVideo" data-wa-media-message="${id}" controls preload="metadata" src="${u}"></video>${cap}${dl(u,info.name||"video.mp4")}`;
+  if(info.kind==="audio"&&u)return `<audio class="waMediaAudio" data-wa-media-message="${id}" controls preload="metadata" src="${u}"></audio>${cap}${dl(u,info.name||"audio")}`;
   if((info.kind==="document"||info.kind==="file")&&u){
     const nm=info.name||"Documento";
     return `<a class="waDocCard" href="${u}" target="_blank" rel="noopener"><span class="waDocIcon">📄</span><span class="waDocText"><b>${esc(nm)}</b><small>${esc(info.mime||"Abrir archivo")}</small></span></a>${cap}${dl(u,nm)}`;
@@ -351,9 +351,11 @@ async function waApi(action,payload={}){
     opts.body=JSON.stringify(payload);
   }
   // Una foto opcional no puede retener indefinidamente la cola de avatares.
-  const readTimeout=action==='avatar'?8000:(['state','summary','chats','history','previews'].includes(action)?20000:0);
+  // The summary may combine several provider reads, including its bounded
+  // retry. Do not abort it after 20 s while the server is still recovering.
+  const readTimeout=action==='avatar'?8000:action==='summary'?65000:(['state','chats','history','previews','file'].includes(action)?35000:0);
   const controller=readTimeout?new AbortController():null;
-  const timeout=controller?setTimeout(()=>controller.abort(),readTimeout):null;
+  const timeout=controller?setTimeout(()=>controller.abort(new DOMException('WhatsApp está tardando demasiado. Pulsa Actualizar para volver a intentarlo.','TimeoutError')),readTimeout):null;
   if(controller)opts.signal=controller.signal;
   try{
     const r=await fetch(url,opts);

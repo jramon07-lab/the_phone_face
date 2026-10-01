@@ -158,7 +158,11 @@
   if(!mounted||modal.classList.contains('hidden'))return;
   for(const id of ['contactObservations','contactNotes']){const field=$(id);if(!field)continue;field.style.setProperty('--contact-text-height','36px');field.style.setProperty('--contact-text-height',Math.min(160,Math.max(36,field.scrollHeight+2))+'px');}
  }
- if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0].contentRect.width;if(next!==width){width=next;fitContactText();}}).observe(data);}
+ // ResizeObserver must only read geometry. Writing textarea heights inside its
+ // delivery changes the observed grid and causes Chrome's undelivered loop.
+ let textFitFrame=0;
+ function scheduleContactTextFit(){if(textFitFrame)return;textFitFrame=requestAnimationFrame(()=>{textFitFrame=0;fitContactText();});}
+ if(data){let width=0;new ResizeObserver(entries=>{const next=entries[0]?.contentRect.width||0;if(next>0&&Math.abs(next-width)>=1){width=next;scheduleContactTextFit();}}).observe(data);}
  window.addEventListener('tpf:contact-updated',fitContactText);
  window.addEventListener('tpf:contact-text-ready',fitContactText);
  const linkRow=document.createElement('div');linkRow.className='tpfContactLinkRow';

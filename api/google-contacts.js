@@ -16,7 +16,14 @@ const configured=()=>!!(SERVICE&&PUBLIC&&CLIENT_ID&&CLIENT_SECRET&&ENCRYPTION_KE
 const serviceHeaders=()=>({apikey:SERVICE,Authorization:'Bearer '+SERVICE,'Content-Type':'application/json'});
 const json=(res,status,value)=>res.status(status).json(value);
 
-async function request(url,options={}){return fetch(url,{...options,signal:AbortSignal.timeout(20000)});}
+async function request(url,options={}){
+ const read=String(options.method||'GET').toUpperCase()==='GET';
+ for(let attempt=0;attempt<2;attempt++)try{
+  const response=await fetch(url,{...options,signal:AbortSignal.timeout(20000)});
+  if(read&&attempt===0&&[502,503,504].includes(response.status))continue;
+  return response;
+ }catch(error){if(!read||attempt!==0)throw error;}
+}
 function seal(value){const iv=crypto.randomBytes(12),key=crypto.createHash('sha256').update(ENCRYPTION_KEY).digest(),cipher=crypto.createCipheriv('aes-256-gcm',key,iv),body=Buffer.concat([cipher.update(JSON.stringify(value)),cipher.final()]);return Buffer.concat([iv,cipher.getAuthTag(),body]).toString('base64url');}
 function unseal(value){const raw=Buffer.from(value,'base64url'),key=crypto.createHash('sha256').update(ENCRYPTION_KEY).digest(),decipher=crypto.createDecipheriv('aes-256-gcm',key,raw.subarray(0,12));decipher.setAuthTag(raw.subarray(12,28));return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)),decipher.final()]).toString());}
 function cookie(req,name){return String(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='))?.slice(name.length+1)||'';}
@@ -26,6 +33,7 @@ async function identity(req){
  let user=null,publicKey='';
  for(const key of [...new Set([PUBLIC,DEFAULT_PUBLIC].filter(Boolean))]){
   const auth=await request(SB+'/auth/v1/user',{headers:{apikey:key,Authorization:bearer}});
+  if(auth.status>=500)throw fail(503,'No se pudo comprobar la sesión. Inténtalo de nuevo.');
   if(auth.ok){user=await auth.json();publicKey=key;break;}
  }
  if(!user?.id)throw fail(401,'La sesión ha caducado. Vuelve a entrar en el CRM.');

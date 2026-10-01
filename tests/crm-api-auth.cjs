@@ -11,6 +11,13 @@ function response(){return {code:200,setHeader(){},status(code){this.code=code;r
    assert.equal(await auth.authorize({headers:{authorization:'Bearer synthetic-session'}},res),expected===200);assert.equal(res.code,expected);
   }
   global.fetch=async()=>{throw Error('Network failed')};res=response();assert.equal(await auth.authorize({headers:{authorization:'Bearer synthetic-session'}},res),false);assert.equal(res.code,503);
+  for(const failure of [503,new TypeError('brief network outage')]){
+   let attempts=0;global.fetch=async()=>{if(++attempts===1){if(failure instanceof Error)throw failure;return {status:failure,ok:false};}return {status:200,ok:true,json:async()=>({user_id:'test',can_use_whatsapp:true})};};
+   res=response();assert.equal(await auth.authorize({headers:{authorization:'Bearer synthetic-session'}},res),true);assert.equal(attempts,2);
+  }
+  for(const status of [401,403,429]){
+   let attempts=0;global.fetch=async()=>{attempts++;return {status,ok:false};};res=response();assert.equal(await auth.authorize({headers:{authorization:'Bearer synthetic-session'}},res),false);assert.equal(attempts,1,'Do not retry a rejected session or rate limit');
+  }
   for(const name of ['green','green-reply','green-file-safe','green-status','green-read-safe','green-enable-status','telegram']){
    let providerCalls=0;const source=fs.readFileSync('api/'+name+'.js','utf8').replace('export default async function handler','async function handler')+';this.handler=handler;';
    const ctx=vm.createContext({require:()=>auth,process:{env:{GREEN_API_INSTANCE_ID:'test',GREEN_API_TOKEN:'test',TELEGRAM_BOT_TOKEN:'test'}},fetch:async()=>{providerCalls++;throw Error('No provider access without session')},console:{error(){}},setTimeout,clearTimeout,AbortController,URLSearchParams,Buffer});

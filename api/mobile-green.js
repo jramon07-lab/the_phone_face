@@ -37,6 +37,7 @@ function bearerToken(req) {
 }
 
 async function readPermissions(token) {
+  for(let attempt=0;attempt<2;attempt++){
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
@@ -55,13 +56,17 @@ async function readPermissions(token) {
     if (response.status === 401 || response.status === 403) {
       return { authenticated: false, permissions: null };
     }
-    if (!response.ok) throw new Error(`Supabase HTTP ${response.status}`);
+    if (!response.ok) {if(attempt===0&&[500,502,503,504].includes(response.status))continue;throw new Error(`Supabase HTTP ${response.status}`);}
 
     const payload = await response.json().catch(() => null);
     const permissions = Array.isArray(payload) ? payload[0] : payload;
     return { authenticated: true, permissions: permissions || null };
+  } catch(error) {
+    if(attempt===0&&!error?.message?.startsWith('Supabase HTTP '))continue;
+    throw error;
   } finally {
     clearTimeout(timeout);
+  }
   }
 }
 

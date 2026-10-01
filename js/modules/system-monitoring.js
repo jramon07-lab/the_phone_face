@@ -64,7 +64,7 @@ function capture(){
   addEventListener('tpf:system-error',event=>{const item=event.detail||{};report({type:item.type,message:item.message,detail:item.detail}).then(ok=>{if(ok)markSynced(item)})});
   addEventListener('tpf:system-request-recovered',event=>resolveRecoveredRequest(event.detail||{}));
   addEventListener('tpf:module-error',event=>{const item=event.detail||{};if(item.module==='isolation-test'&&item.error==='fallo-controlado')return;report({source:'desktop',module:item.module||'Módulo',message:item.error||'Error interno del módulo',detail:item.context||'',severity:'error'})});
-  addEventListener('error',event=>{const target=event.target;if(target&&target!==window&&(target.src||target.href)){report({message:'No se pudo cargar un recurso del CRM',detail:target.src||target.href,module:'Recursos',severity:'error'})}},true);
+  addEventListener('error',event=>{const target=event.target;if(target&&target!==window&&(target.src||target.href)){if(window.TPFWhatsAppMediaRecovery?.isMedia(target))return;report({message:'No se pudo cargar un recurso del CRM',detail:target.src||target.href,module:'Recursos',severity:'error'})}},true);
   document.addEventListener('click',event=>{const target=event.target?.closest?.('button,[data-view],[data-action],a');if(target)lastAction=(target.getAttribute('aria-label')||target.textContent||target.dataset?.view||target.dataset?.action||'').trim().replace(/\s+/g,' ').slice(0,100)},true);
 }
 
