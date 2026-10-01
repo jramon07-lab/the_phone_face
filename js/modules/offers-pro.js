@@ -50,7 +50,7 @@ const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 let baseVisible={};
-let catalog=[],selected=null,quantities={},visibility={},activeOperator='',instances=[],busy=false,finalPriceManual=false,directOperator=OPERATORS[0],directNetflix=false,directCounteroffer=false,shopGift=false,permanenceRefund=false,permanenceAmount='',welcomeOffer=false,secondOfferAfterCurrent=false,offerMode='followup',offerSendTiming='now',offerScheduledLocal='',offerRequestKey='',previewCustomer='',offerContext=null;
+let catalog=[],selected=null,quantities={},visibility={},activeOperator='',instances=[],busy=false,finalPriceManual=false,directOperator=OPERATORS[0],directNetflix=false,directCounteroffer=false,directContext=null,shopGift=false,permanenceRefund=false,permanenceAmount='',welcomeOffer=false,secondOfferAfterCurrent=false,offerMode='followup',offerSendTiming='now',offerScheduledLocal='',offerRequestKey='',previewCustomer='',offerContext=null;
 const current=()=>{try{return currentContact||null}catch(_){return null}};
 const offerContact=()=>offerContext||current();
 const offerName=()=>{const c=offerContact()||{},d=c.data||{};return String(d.NOMBRE||offerContext?.name||firstName($('contactName')?.value||c.fullName||d['NOMBRE Y APELLIDOS'])||'Cliente').trim()};
@@ -59,18 +59,29 @@ const contactValue=(contact,...keys)=>{const data=contact?.data||{};for(const ke
 const contactDisplayName=contact=>String(contact?.fullName||contactValue(contact,'NOMBRE Y APELLIDOS','CLIENTE')||[contactValue(contact,'NOMBRE'),contactValue(contact,'APELLIDOS','APELLIDO')].filter(Boolean).join(' ')||'Cliente').trim();
 const contactPhone=contact=>contactValue(contact,'TELÉFONO','TELEFONO','PHONE','MOVIL');
 async function directOfferContext(contact){
-  const id=String(contact?.id||'').trim();
-  if(!id)return null;
-  const ownName=contactDisplayName(contact),ownPhone=contactPhone(contact);
-  const result=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_RELACIONES:{managed_contacts:[{record_id:id}]}}).limit(2);
-  if(result.error)throw result.error;
-  const managers=result.data||[];
-  if(!managers.length)return {id,recipientId:id,name:contactValue(contact,'NOMBRE')||firstName(ownName),phone:ownPhone,ownerName:ownName};
-  if(managers.length>1)throw new Error('Esta ficha tiene más de una persona gestora. Revisa la relación antes de enviar una oferta para no mandarla al teléfono equivocado.');
-  const manager=managers[0],managerName=contactDisplayName(manager),managerPhone=contactPhone(manager);
-  if(!managerPhone)return {id,recipientId:id,name:contactValue(contact,'NOMBRE')||firstName(ownName),phone:ownPhone,ownerName:ownName};
-  return {id,recipientId:manager.id,name:contactValue(manager,'NOMBRE')||firstName(managerName),phone:managerPhone,ownerName:ownName,managedRecipient:true};
+ const startId=String(contact?.id||'');if(!startId)return null;
+ const fetchRecord=async id=>{const r=await sb.from('records').select('id,data').eq('id',id).single();if(r.error)throw r.error;return r.data};
+ const own=await fetchRecord(startId),linked=own.data?.TPF_RELACIONES?.managed_contacts||[];
+ const holders=[own];for(const x of linked)if(x.record_id&&x.record_id!==startId)holders.push(await fetchRecord(x.record_id));
+ const options=[];for(const h of holders){const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_RELACIONES:{managed_contacts:[{record_id:h.id}]}}).limit(50);if(r.error)throw r.error;options.push({holder:h,managers:r.data||[]})}
+ const result=await new Promise(resolve=>{
+ const modal=document.createElement('dialog');modal.style.cssText='max-width:540px;width:calc(100% - 32px);border:1px solid #ddd;border-radius:16px;padding:22px';
+ modal.innerHTML='<h2>Titular y comunicaciones</h2><p>Se creará una sola oportunidad vinculada a estas personas.</p><label>Titular de la oportunidad<select data-holder style="display:block;width:100%;margin:8px 0 16px"></select></label><label>Gestor del contrato<select data-manager style="display:block;width:100%;margin:8px 0 16px"></select></label><label>Quién recibe los WhatsApp y seguimientos<select data-recipient style="display:block;width:100%;margin:8px 0 16px"></select></label><p data-summary></p><div style="display:flex;gap:12px;justify-content:flex-end"><button data-cancel>Cancelar</button><button data-continue class="primary">Continuar</button></div>';
+ document.body.appendChild(modal);const hs=modal.querySelector('[data-holder]'),ms=modal.querySelector('[data-manager]'),rs=modal.querySelector('[data-recipient]');
+ const label=r=>contactDisplayName(r)+' · DNI '+(contactValue(r,'DNI / NIF','DNI')||'sin indicar');
+ holders.forEach((r,i)=>hs.add(new Option(label(r),String(i))));
+ const summary=()=>{const o=options[Number(hs.value)],m=[o.holder,...o.managers].find(r=>r.id===ms.value),r=rs.value===o.holder.id?o.holder:m;
+ modal.querySelector('[data-summary]').textContent='Oportunidad: '+contactDisplayName(o.holder)+'. Comunicaciones: '+contactDisplayName(r)+' · '+(contactPhone(r)||'Sin teléfono: no se podrá enviar.');
+ };
+ const recipients=()=>{const o=options[Number(hs.value)],m=[o.holder,...o.managers].find(r=>r.id===ms.value);rs.replaceChildren(new Option(contactDisplayName(m)+' · '+(contactPhone(m)||'sin teléfono'),m.id));if(m.id!==o.holder.id)rs.add(new Option(contactDisplayName(o.holder)+' · '+(contactPhone(o.holder)||'sin teléfono'),o.holder.id));summary()};
+ const managers=()=>{if(hs.value===''){ms.replaceChildren();rs.replaceChildren();modal.querySelector('[data-summary]').textContent='Selecciona el titular de esta oportunidad.';return}const o=options[Number(hs.value)];ms.replaceChildren(new Option('El propio titular',o.holder.id));o.managers.forEach(r=>ms.add(new Option(label(r),r.id)));if(o.managers.length===1)ms.value=o.managers[0].id;else if(o.managers.length>1){ms.add(new Option('Selecciona un gestor','',true,true));rs.replaceChildren();modal.querySelector('[data-summary]').textContent='Elige quién gestiona este contrato.';return}recipients()};
+ hs.onchange=managers;ms.onchange=()=>{if(ms.value)recipients()};rs.onchange=summary;
+ const done=value=>{modal.close();modal.remove();resolve(value)};modal.querySelector('[data-cancel]').onclick=()=>done(null);modal.oncancel=e=>{e.preventDefault();done(null)};
+ modal.querySelector('[data-continue]').onclick=()=>{if(!ms.value||!rs.value)return;const o=options[Number(hs.value)],m=[o.holder,...o.managers].find(r=>r.id===ms.value),r=rs.value===o.holder.id?o.holder:m;done({id:o.holder.id,managerId:m.id,recipientId:r.id,name:contactValue(r,'NOMBRE')||firstName(contactDisplayName(r)),phone:contactPhone(r),ownerName:contactDisplayName(o.holder),ownerDni:contactValue(o.holder,'DNI / NIF','DNI'),managerName:contactDisplayName(m),recipientName:contactDisplayName(r),managedRecipient:r.id!==o.holder.id})};
+ if(holders.length>1)hs.add(new Option('Selecciona el titular','',true,true));managers();modal.showModal();
+ });return result;
 }
+const partyDescription=c=>'Titular: '+c.ownerName+' · DNI '+(c.ownerDni||'sin indicar')+' | Gestor: '+c.managerName+' | Comunicaciones: '+c.recipientName+' · '+(c.phone||'sin teléfono');
 const isAdmin=()=>{try{return !!perms?.is_admin}catch(_){return false}};
 
 function css(){if($('tpfOffersCss'))return;const style=document.createElement('style');style.id='tpfOffersCss';style.textContent=`
@@ -94,7 +105,7 @@ function ensureUi(){
   ensureWhatsappOfferAction();
   if(!$('opOfferModal')){const modal=document.createElement('div');modal.id='opOfferModal';modal.className='opModal hidden';modal.innerHTML='<div class="opShell"><div class="opHead"><div><h2>Nueva oferta</h2><p id="opCustomer"></p></div><button id="opOfferClose" class="opClose" data-op-close aria-label="Cerrar oferta">×</button></div><div class="opBody"><div id="opTabs" class="opTabs"></div><div id="opContent"></div></div></div>';document.body.appendChild(modal);modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-op-close]'))closeModal()})}
   if(!$('opCatalogModal')){const modal=document.createElement('div');modal.id='opCatalogModal';modal.className='opModal hidden';modal.innerHTML='<div class="opShell"><div class="opHead"><div><h2>Catálogo de ofertas</h2><p>Tarifas que utilizará el configurador. Nada se envía desde aquí.</p></div><button class="opClose" data-cat-close>×</button></div><div class="opBody"><div id="opCatalogBody"></div></div></div>';document.body.appendChild(modal);modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-cat-close]'))modal.classList.add('hidden')})}
-  if(!$('directSaleModal')){const modal=document.createElement('div');modal.id='directSaleModal';modal.className='opModal hidden';modal.innerHTML='<div class="opShell directSaleShell"><div class="opHead"><div><h2>Venta directa</h2><p>Para ventas aceptadas sin crear una oferta completa</p></div><button class="opClose" data-direct-close>×</button></div><div class="directSaleBody"><div id="directSaleContact" class="directSaleContact"></div><label class="directSaleField">Operador<div id="directSaleOperators" class="directSaleOperators"></div></label><label class="directSaleField">Precio total mensual<div class="directSalePrice"><input id="directSalePrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"><span>€/mes</span></div></label><label id="directSaleCounterofferWrap" class="directSaleSend"><input id="directSaleCounteroffer" type="checkbox"> <span>Vodafone · Contraoferta</span></label><div id="directSaleNetflixWrap" class="directSaleNetflix"><label><input id="directSaleNetflix" type="checkbox"> <span>Netflix incluido</span></label><small>Decide el texto del WhatsApp que se enviará al día siguiente.</small></div><label class="directSaleSend"><input id="directSaleSend" type="checkbox"> <span>Enviar oferta al cliente por WhatsApp</span></label><small class="directSaleHelp">Solo enviará ahora el operador y el precio final.</small><div id="directSaleInfo" class="directSaleInfo"></div><div id="directSaleMsg" class="directSaleMsg"></div><div class="opActions"><button type="button" data-direct-close>Cancelar</button><button id="directSaleSubmit" type="button" class="primary">Crear venta</button></div></div></div>';document.body.appendChild(modal);modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-direct-close]'))closeDirectSale()});$('directSaleCounteroffer').onchange=e=>{directCounteroffer=!!e.target.checked;updateDirectSaleInfo()};$('directSaleSubmit').onclick=submitDirectSale;$('directSaleNetflix').onchange=e=>{directNetflix=!!e.target.checked;updateDirectSaleInfo()}}
+  if(!$('directSaleModal')){const modal=document.createElement('div');modal.id='directSaleModal';modal.className='opModal hidden';modal.innerHTML='<div class="opShell directSaleShell"><div class="opHead"><div><h2>Venta directa</h2><p>Para ventas aceptadas sin crear una oferta completa</p></div><button class="opClose" data-direct-close>×</button></div><div class="directSaleBody"><div id="directSaleContact" class="directSaleContact"></div><label class="directSaleField">Operador<div id="directSaleOperators" class="directSaleOperators"></div></label><label class="directSaleField">Precio total mensual<div class="directSalePrice"><input id="directSalePrice" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00"><span>€/mes</span></div></label><label id="directSaleCounterofferWrap" class="directSaleSend"><input id="directSaleCounteroffer" type="checkbox"> <span>Vodafone · Contraoferta</span></label><div id="directSaleNetflixWrap" class="directSaleNetflix"><label><input id="directSaleNetflix" type="checkbox"> <span>Netflix incluido</span></label><small>Decide el texto del WhatsApp que se enviará al día siguiente.</small></div><label class="directSaleSend"><input id="directSaleSend" type="checkbox"> <span>Enviar oferta al cliente por WhatsApp</span></label><small class="directSaleHelp">Solo enviará ahora el operador y el precio final.</small><section class="directSaleNetflix"><label for="directSaleDayText">WhatsApp del día siguiente</label><p id="directSaleDayStatus"></p><textarea id="directSaleDayText" rows="8" maxlength="10000" style="width:100%;box-sizing:border-box;resize:vertical"></textarea></section><div id="directSaleInfo" class="directSaleInfo"></div><div id="directSaleMsg" class="directSaleMsg"></div><div class="opActions"><button type="button" data-direct-close>Cancelar</button><button id="directSaleSubmit" type="button" class="primary">Crear venta</button></div></div></div>';document.body.appendChild(modal);modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-direct-close]'))closeDirectSale()});$('directSaleCounteroffer').onchange=e=>{directCounteroffer=!!e.target.checked;updateDirectSaleInfo()};$('directSaleDayText').oninput=e=>dayOneDrafts.set(directOperator+'|'+directNetflix,e.target.value);$('directSaleSubmit').onclick=submitDirectSale;$('directSaleNetflix').onchange=e=>{directNetflix=!!e.target.checked;updateDirectSaleInfo();loadDirectDayOne()}}
 }
 function whatsappContact(){try{return waLiveState?.contact||null}catch(_){return null}}
 function openWhatsappOffer(){
@@ -134,27 +145,34 @@ function openWhatsappDirectSale(){
 function renderDirectSaleOperator(){
   const root=$('directSaleOperators');if(!root)return;
   root.innerHTML=OPERATORS.map(operator=>`<button type="button" data-direct-operator="${esc(operator)}" class="${operator===directOperator?'active':''}">${esc(operator)}</button>`).join('');
-  root.querySelectorAll('[data-direct-operator]').forEach(button=>button.onclick=()=>{directOperator=button.dataset.directOperator;if(directOperator!=='Vodafone'){directNetflix=false;directCounteroffer=false;}renderDirectSaleOperator();updateDirectSaleInfo()});
+  root.querySelectorAll('[data-direct-operator]').forEach(button=>button.onclick=()=>{directOperator=button.dataset.directOperator;if(directOperator!=='Vodafone'){directNetflix=false;directCounteroffer=false;}renderDirectSaleOperator();updateDirectSaleInfo();loadDirectDayOne()});
   $('directSaleCounterofferWrap').hidden=directOperator!=='Vodafone';$('directSaleCounteroffer').checked=directCounteroffer;
   const netflixWrap=$('directSaleNetflixWrap'),netflix=$('directSaleNetflix');if(netflixWrap)netflixWrap.hidden=directOperator!=='Vodafone';if(netflix)netflix.checked=directNetflix;
 }
 function updateDirectSaleInfo(){if($('directSaleInfo'))$('directSaleInfo').textContent=`Se creará CAMBIO ${directOperator.toUpperCase()} directamente en Tramitado y comenzarán sus automatizaciones.${directCounteroffer?' Se aplicará la etiqueta CONTRAOFERTA VODAFONE sin duplicarla.':''}${directOperator==='Vodafone'?` Al día siguiente se enviará el mensaje ${directNetflix?'con':'sin'} el párrafo de Netflix.`:''}`}
-function openDirectSale(){
+let dayOneVersion=0,dayOneReady=false,dayOneAvailable=false;const dayOneDrafts=new Map();
+async function loadDirectDayOne(){
+ const version=++dayOneVersion,key=directOperator+'|'+directNetflix;dayOneReady=false;$('directSaleDayText').disabled=true;$('directSaleDayStatus').textContent='Cargando el mensaje…';
+ try{const {data,error}=await sb.rpc('crm_direct_sale_day_one_preview',{p_contact_id:directContext.id,p_manager_contact_id:directContext.managerId,p_recipient_contact_id:directContext.recipientId,p_operator:directOperator,p_netflix_followup:directNetflix});if(version!==dayOneVersion)return;if(error)throw error;dayOneAvailable=!!data.available;dayOneReady=true;$('directSaleDayText').hidden=!dayOneAvailable;$('directSaleDayText').disabled=!dayOneAvailable;$('directSaleDayText').value=dayOneDrafts.get(key)??data.text??'';$('directSaleDayStatus').textContent=dayOneAvailable?'Para '+data.recipient+' · '+data.phone+'. Se enviará al día siguiente respetando el horario de atención. Puedes editarlo solo para esta venta.':'Este operador no tiene un mensaje del día siguiente configurado.';}catch(e){if(version===dayOneVersion)$('directSaleDayStatus').textContent='No se pudo cargar el mensaje: '+e.message;}
+}
+async function openDirectSale(){
   const c=current();if(!c)return alert('Abre primero la ficha de un cliente.');
-  ensureUi();directOperator=OPERATORS[0];directNetflix=false;directCounteroffer=false;$('directSalePrice').value='';$('directSaleSend').checked=false;$('directSaleMsg').textContent='';
-  const name=$('contactName')?.value||c.fullName||c.data?.['NOMBRE Y APELLIDOS']||'Contacto';$('directSaleContact').innerHTML=`<span class="directSaleAvatar">${esc(firstName(name).slice(0,2).toUpperCase())}</span><span>${esc(name)}</span>`;
-  renderDirectSaleOperator();updateDirectSaleInfo();$('directSaleModal').classList.remove('hidden');setTimeout(()=>$('directSalePrice')?.focus(),50);
+  try{directContext=await directOfferContext(c)}catch(e){return alert(e.message)}if(!directContext)return;
+  ensureUi();dayOneDrafts.clear();directOperator=OPERATORS[0];directNetflix=false;directCounteroffer=false;$('directSalePrice').value='';$('directSaleSend').checked=false;$('directSaleMsg').textContent='';
+  const name=partyDescription(directContext);$('directSaleContact').innerHTML=`<span class="directSaleAvatar">${esc(firstName(name).slice(0,2).toUpperCase())}</span><span>${esc(name)}</span>`;
+  renderDirectSaleOperator();updateDirectSaleInfo();loadDirectDayOne();$('directSaleModal').classList.remove('hidden');setTimeout(()=>$('directSalePrice')?.focus(),50);
 }
 window.TPFOpenMobileDirectSale=openDirectSale;
 function closeDirectSale(){if(!busy)$('directSaleModal')?.classList.add('hidden')}
 async function submitDirectSale(){
-  if(busy)return;const c=current(),price=Number(String($('directSalePrice')?.value||'').replace(',','.')),sendMessage=!!$('directSaleSend')?.checked;
+  if(busy)return;const c=directContext,price=Number(String($('directSalePrice')?.value||'').replace(',','.')),sendMessage=!!$('directSaleSend')?.checked;
+  if(!dayOneReady)return $('directSaleMsg').textContent='Espera a que se cargue el mensaje del día siguiente.';if(dayOneAvailable&&!$('directSaleDayText').value.trim())return $('directSaleMsg').textContent='El mensaje del día siguiente no puede estar vacío.';
   if(!c?.id)return $('directSaleMsg').textContent='No se ha encontrado el contacto.';
-  if(CRM_TEST_MODE&&sendMessage&&phoneDigits($('contactPhone')?.value)!==CRM_TEST_PHONE)return $('directSaleMsg').textContent='CRM DE PRUEBAS: solo se permiten envíos al 695 661 409.';
+  if(CRM_TEST_MODE&&sendMessage&&phoneDigits(directContext?.phone)!==CRM_TEST_PHONE)return $('directSaleMsg').textContent='CRM DE PRUEBAS: solo se permiten envíos al 695 661 409.';
   if(!Number.isFinite(price)||price<0)return $('directSaleMsg').textContent='Indica un precio mensual válido.';
   if(!confirm(`Se creará CAMBIO ${directOperator.toUpperCase()} en Tramitado por ${money(price)}/mes. ¿Continuar?`))return;
   busy=true;$('directSaleSubmit').disabled=true;$('directSaleMsg').textContent='Creando venta…';
-  try{const {data,error}=await sb.rpc('crm_create_direct_sale_v3',{p_contact_id:c.id,p_operator:directOperator,p_total_price:price,p_send_message:sendMessage,p_netflix_followup:directOperator==='Vodafone'&&directNetflix,p_counteroffer:directOperator==='Vodafone'&&directCounteroffer});if(error)throw error;$('directSaleModal').classList.add('hidden');await loadInstances(c.id);if(typeof renderContactProfile==='function')await renderContactProfile();if(typeof matchWaContact==='function'&&whatsappContact())await matchWaContact();alert(`Venta creada en Tramitado.${sendMessage?' El mensaje inmediato ha quedado preparado.':''}${directOperator==='Vodafone'?` Mañana se enviará el texto ${directNetflix?'con':'sin'} Netflix.`:''}`);return data}catch(e){$('directSaleMsg').textContent=e?.message||'No se pudo crear la venta directa.'}finally{busy=false;if($('directSaleSubmit'))$('directSaleSubmit').disabled=false}
+  try{const {data,error}=await sb.rpc('crm_create_direct_sale_v5',{p_contact_id:c.id,p_operator:directOperator,p_total_price:price,p_send_message:sendMessage,p_netflix_followup:directOperator==='Vodafone'&&directNetflix,p_counteroffer:directOperator==='Vodafone'&&directCounteroffer,p_manager_contact_id:c.managerId,p_recipient_contact_id:c.recipientId,p_day_one_text:dayOneAvailable?$('directSaleDayText').value:null});if(error)throw error;$('directSaleModal').classList.add('hidden');await loadInstances(c.id);if(typeof renderContactProfile==='function')await renderContactProfile();if(typeof matchWaContact==='function'&&whatsappContact())await matchWaContact();alert(`Venta creada en Tramitado.${sendMessage?' El mensaje inmediato ha quedado preparado.':''}${directOperator==='Vodafone'?` Mañana se enviará el texto ${directNetflix?'con':'sin'} Netflix.`:''}`);return data}catch(e){$('directSaleMsg').textContent=e?.message||'No se pudo crear la venta directa.'}finally{busy=false;if($('directSaleSubmit'))$('directSaleSubmit').disabled=false}
 }
 async function loadCatalog(){
   const [offers,lines]=await Promise.all([sb.from('crm_offer_catalog').select('*').order('position').order('name'),sb.from('crm_offer_line_options').select('*').order('position').order('name')]);
@@ -202,9 +220,9 @@ function operatorList(){const custom=catalog.map(o=>o.operator).filter(Boolean);
 async function openConfigurator(){
   if(!offerContext){
     const activeContact=current();
-    if(activeContact?.id)offerContext=await directOfferContext(activeContact);
+    if(activeContact?.id){try{offerContext=await directOfferContext(activeContact)}catch(e){return alert(e.message)}if(!offerContext)return;}
   }
-  const c=offerContact();if(!c?.id)return alert('No se ha encontrado el contacto de esta oportunidad.');ensureUi();previewCustomer=offerName();$('opOfferModal').classList.remove('hidden');$('opCustomer').textContent=offerContext?.managedRecipient?`Cliente: ${offerContext.ownerName} · WhatsApp: ${previewCustomer||'Contacto'}`:`Cliente: ${previewCustomer||'Contacto'}`;$('opContent').innerHTML='<div class="opEmpty">Cargando ofertas…</div>';
+  const c=offerContact();if(!c?.id)return alert('No se ha encontrado el contacto de esta oportunidad.');ensureUi();previewCustomer=offerName();$('opOfferModal').classList.remove('hidden');$('opCustomer').textContent=partyDescription(offerContext);$('opContent').innerHTML='<div class="opEmpty">Cargando ofertas…</div>';
   try{await loadCatalog();activeOperator=operatorList().find(op=>catalog.some(o=>o.active&&o.operator===op))||operatorList()[0];selected=null;quantities={};finalPriceManual=false;shopGift=false;permanenceRefund=false;permanenceAmount='';welcomeOffer=false;secondOfferAfterCurrent=false;offerMode='followup';offerSendTiming='now';offerScheduledLocal=nextHalfHourLocal();offerRequestKey=crypto.randomUUID();renderTabs();renderConfigurator()}catch(e){$('opContent').innerHTML=`<div class="opEmpty">No se pudo cargar el catálogo.<br>${esc(e?.message||e)}</div>`}
 }
 async function openOfferForOpportunity(context){
@@ -213,7 +231,7 @@ async function openOfferForOpportunity(context){
  const result=await sb.from('records').select('id,data').eq('id',id).single();
  if(result.error)throw result.error;
  offerContext=await directOfferContext(result.data);
- return openConfigurator();
+ if(!offerContext)return;return openConfigurator();
 }
 window.openOfferComposerForOpportunity=openOfferForOpportunity;
 // Open from a list without navigating through the contact profile.
@@ -222,7 +240,7 @@ window.openOfferComposerForContact=async function(contactId){
  if(result.error)throw result.error;
  if(!result.data)throw new Error('No se ha encontrado el contacto.');
  offerContext=await directOfferContext(result.data);
- return openConfigurator();
+ if(!offerContext)return;return openConfigurator();
 };
 function closeModal(){if(busy)return;$('opOfferModal')?.classList.add('hidden');offerContext=null;previewCustomer=''}
 function renderTabs(){const root=$('opTabs');root.innerHTML=operatorList().map(op=>`<button type="button" data-op="${esc(op)}" class="${op===activeOperator?'active':''}">${esc(op)}</button>`).join('')+(isAdmin()?'<button type="button" id="opManageCatalog">⚙ Catálogo</button>':'');root.querySelectorAll('[data-op]').forEach(b=>b.onclick=()=>{activeOperator=b.dataset.op;selected=null;quantities={};finalPriceManual=false;renderTabs();renderConfigurator()});$('opManageCatalog')?.addEventListener('click',openCatalog)}
@@ -297,7 +315,7 @@ async function submitOffer(allowDuplicate=false){
   try{
     const selections=Object.entries(quantities).filter(([,quantity])=>Number(quantity)>0).map(([option_id,quantity])=>({option_id,quantity,show_in_message:visibility[option_id]!==false}));
     if(Object.keys(baseVisible).length)selections.push({base_lines_visible:baseVisible});
-    const {data,error}=await sb.rpc('crm_create_offer_execution_v10',{p_contact_id:contactId,p_catalog_offer_id:selected.id,p_request_key:offerRequestKey||crypto.randomUUID(),p_selections:selections,p_extra_text:completeExtraText()||null,p_mode:mode,p_final_price:finalPrice,p_send_message:sendMessage,p_processing_date:processingDate,p_test_mode:CRM_TEST_MODE,p_allow_duplicate:allowDuplicate,p_send_at:sendAt,p_welcome:welcomeOffer,p_recipient_contact_id:offerContext?.recipientId||contactId});
+    const {data,error}=await sb.rpc('crm_create_offer_execution_v11',{p_contact_id:contactId,p_catalog_offer_id:selected.id,p_request_key:offerRequestKey||crypto.randomUUID(),p_selections:selections,p_extra_text:completeExtraText()||null,p_mode:mode,p_final_price:finalPrice,p_send_message:sendMessage,p_processing_date:processingDate,p_test_mode:CRM_TEST_MODE,p_allow_duplicate:allowDuplicate,p_send_at:sendAt,p_welcome:welcomeOffer,p_recipient_contact_id:offerContext?.recipientId||contactId,p_manager_contact_id:offerContext?.managerId||contactId});
     if(error){
       if(String(error.message||'').includes('DUPLICATE_OFFER:')){
         busy=false;$('opSubmit').disabled=false;$('opMsg').textContent='Ya existe una oferta igual reciente para este cliente.';

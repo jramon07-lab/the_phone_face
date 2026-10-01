@@ -644,7 +644,7 @@ function salesFilteredOpps(){
   const sort=$("salesSort")?.value||"position";
   let rows=[...(salesCache.opportunities||[])];
   if(term){
-    rows=rows.filter(o=>[o.title,o.client_name,o.phone,o.notes]
+    rows=rows.filter(o=>[o.title,o.client_name,o.phone,o.notes,window.TPFContactParty?.search(o)]
       .some(v=>String(v||"").toLowerCase().includes(term)));
   }
   if(stageFilter) rows=rows.filter(o=>o.stage_id===stageFilter);

@@ -30,7 +30,7 @@ function snapshot(p,c={}){
   const hn=x.same?v.name:x.holder_name,hp=x.same?v.phone:x.holder_phone,hd=x.same?v.dni:x.holder_dni;
   return {...x,holder_name:hn,holder_phone:hp,holder_dni:hd,contact_name:v.name,contact_phone:v.phone,contact_dni:v.dni,recipient_name:x.recipient==='holder'?hn:v.name,recipient_phone:x.recipient==='holder'?hp:v.phone};
 }
-function search(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;return p?.same===false?[p.holder_name,p.holder_dni,p.holder_phone].map(clean).join(' '):'';}
+function search(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;return p?.same===false?[p.holder_name,p.holder_dni,p.holder_phone,p.contact_name,p.contact_dni,p.contact_phone,p.recipient_name,p.recipient_phone].map(clean).join(' '):'';}
 function hint(c={}){const p=c.contract_party||c.data?.TPF_TITULAR||c.TPF_TITULAR;return p?.same===false?`<small class="tpf-party-hint">Titular: ${esc(p.holder_name)}</small>`:'';}
 function opportunityIdentity(o={},record){
  const p=o.contract_party||{},v=record&&String(record.id)===String(o.record_id)?contactValues(record):{};

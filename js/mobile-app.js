@@ -162,7 +162,7 @@
     const term=foldText(query);if(!term)return true;
     const contact=opportunityContact(opp,context.contacts||opportunityContactIndex());
     const stage=context.stages?.get(String(opp?.stage_id));
-    const hay=foldText([opp?.title,opp?.client_name,opp?.phone,opp?.notes,opp?.contract_party?.holder_name,opp?.contract_party?.holder_dni,opp?.contract_party?.contact_name,stage?.name,contact?.fullName,contact?.dni,...contactPhones(contact).map(p=>p.label),contact?.email].filter(Boolean).join(' '));
+    const hay=foldText([opp?.title,opp?.client_name,opp?.phone,opp?.notes,opp?.contract_party?.holder_name,opp?.contract_party?.holder_dni,opp?.contract_party?.contact_name,opp?.contract_party?.contact_dni,opp?.contract_party?.contact_phone,opp?.contract_party?.holder_phone,stage?.name,contact?.fullName,contact?.dni,...contactPhones(contact).map(p=>p.label),contact?.email].filter(Boolean).join(' '));
     const termDigits=digits(query),hayDigits=digits(hay);
     return hay.includes(term)||(termDigits.length>=3&&hayDigits.includes(termDigits));
   }

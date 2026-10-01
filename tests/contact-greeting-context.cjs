@@ -1,13 +1,20 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('js/modules/offers-pro.js','utf8').replace("M.register('offers-pro',{install});","window.testContext=directOfferContext;");
-let managers=[];const sb={from(){const q={select(){return q},eq(){return q},contains(){return q},async limit(){return{data:managers}}};return q;}};
-const context={window:{TPFModules:{},addEventListener(){}},document:{addEventListener(){},getElementById(){return null}},sb,Intl};vm.createContext(context);vm.runInContext(source,context);
+let records=[],choose=()=>{};
+class Select{constructor(){this.options=[];this.value=''}add(o){this.options.push(o);if(this.options.length===1||o.selected)this.value=o.value}replaceChildren(...opts){this.options=[];this.value='';opts.forEach(o=>this.add(o))}}
+class Option{constructor(text,value,def=false,selected=false){Object.assign(this,{text,value,selected})}}
+const sb={from(){let id;return{select(){return this},eq(k,v){if(k==='id')id=v;return this},contains(k,v){id=v.TPF_RELACIONES.managed_contacts[0].record_id;return this},async single(){return{data:records.find(r=>r.id===id)}},async limit(){return{data:records.filter(r=>(r.data.TPF_RELACIONES?.managed_contacts||[]).some(x=>x.record_id===id))}}}}};
+const document={addEventListener(){},getElementById(){return null},body:{appendChild(){}},createElement(){const els={holder:new Select(),manager:new Select(),recipient:new Select(),summary:{},cancel:{},continue:{}};return{style:{},querySelector(s){return els[s.match(/data-(\w+)/)[1]]},close(){},remove(){},showModal(){choose(els);els.continue.onclick()}}}};
+const context={window:{TPFModules:{},addEventListener(){}},document,sb,Intl,Option};vm.createContext(context);vm.runInContext(source,context);
+const holder={id:'owner',data:{NOMBRE:'María José',APELLIDOS:'García López','NOMBRE Y APELLIDOS':'María José García López','TELÉFONO':'600000001'}};
+const manager={id:'manager',data:{NOMBRE:'Jose Ramon',APELLIDOS:'Sánchez','NOMBRE Y APELLIDOS':'Jose Ramon Sánchez','TELÉFONO':'600000002',TPF_RELACIONES:{managed_contacts:[{record_id:'owner'}]}}};
 (async()=>{
- const contact={id:'owner',data:{NOMBRE:'María José',APELLIDOS:'García López','NOMBRE Y APELLIDOS':'María José García López','TELÉFONO':'600000001'}};
- const own=await context.window.testContext(contact);assert.equal(own.name,'María José');assert.equal(own.phone,'600000001');
- managers=[{id:'manager',data:{NOMBRE:'Jose Ramon',APELLIDOS:'Sánchez','NOMBRE Y APELLIDOS':'Jose Ramon Sánchez','TELÉFONO':'600000002'}}];
- const managed=await context.window.testContext(contact);assert.equal(managed.name,'Jose Ramon');assert.equal(managed.recipientId,'manager');assert.equal(managed.phone,'600000002');assert.equal(managed.id,'owner');
- managers.push({...managers[0],id:'other'});await assert.rejects(context.window.testContext(contact),/más de una persona/);
- console.log('PASS: compound Nombre retained for customer and manager; recipient safeguards preserved.');
-})().catch(e=>{console.error(e);process.exitCode=1;});
+ records=[holder];let r=await context.window.testContext(holder);assert.equal(r.name,'María José');assert.equal(r.recipientId,'owner');
+ records.push(manager);r=await context.window.testContext(holder);assert.equal(r.id,'owner');assert.equal(r.managerId,'manager');assert.equal(r.name,'Jose Ramon');assert.equal(r.phone,'600000002');
+ choose=e=>{e.recipient.value='owner';e.recipient.onchange()};r=await context.window.testContext(holder);assert.equal(r.managerId,'manager');assert.equal(r.recipientId,'owner');
+ records.push({...manager,id:'other'});choose=e=>{assert.equal(e.manager.value,'');assert.equal(e.recipient.value,'');e.manager.value='other';e.manager.onchange()};r=await context.window.testContext(holder);assert.equal(r.recipientId,'other');
+ choose=e=>{assert.equal(e.holder.value,'');e.holder.value='1';e.holder.onchange();e.manager.value='manager';e.manager.onchange()};r=await context.window.testContext(manager);assert.equal(r.id,'owner');assert.equal(r.recipientId,'manager');
+ choose=e=>e.cancel.onclick();assert.equal(await context.window.testContext(holder),null);
+ console.log('PASS: explicit holder/manager/recipient choices, compound names, multiple managers and cancellation.');
+})().catch(e=>{console.error(e);process.exitCode=1});

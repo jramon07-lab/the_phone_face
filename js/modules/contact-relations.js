@@ -280,6 +280,7 @@ async function prepareOpportunity(payload){
  if(opportunity!==state||state.ownerId!==opportunityContext()||state.opportunityId!==clean($('oppModalId')?.value)||state.selected!==selection||state.managerId!==managerSelection||$('oppDetailModal')?.classList.contains('hidden'))throw Error('Has cambiado de ficha o de titular. Vuelve a guardar desde la oportunidad correcta.');
  const h=identity(holder),m=identity(manager),parts=h.name.split(' ');
  const party=original.snapshot({same:false,holder_first_name:parts.shift(),holder_last_name:parts.join(' '),holder_dni:h.dni,holder_phone:h.phone,recipient:'contact'},{name:m.name,phone:m.phone,dni:m.dni});
+ party.holder_record_id=h.record_id;party.manager_record_id=m.record_id;party.recipient_contact_id=m.record_id;
  payload.record_id=h.record_id;payload.client_name=h.name;payload.phone=m.phone||null;
  return party;
 }
