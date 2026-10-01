@@ -183,7 +183,8 @@ function contextFor(prefill={}){
     programId,
     scheduledAt,
     contactId,
-    source:String(prefill.source||'direct')
+    source:String(prefill.source||'direct'),
+    chatId:prefill.chatId||null
   };
 }
 
@@ -217,8 +218,25 @@ function contextFromChat(){
     phone:digits(chat?.id||''),
     name:String(chat?.name||$('waChatName')?.textContent||'').trim(),
     message:$('waComposerText')?.value||'',
-    source:'chat'
+    source:'chat',
+    chatId:chat?.id||null
   });
+}
+
+// Consume only the draft used to open this scheduling form, after a confirmed save.
+function clearScheduledDraft(context,values){
+  if(context?.source!=='chat'||values.programId||!samePhone(context.phone,values.phone))return;
+  const original=String(context.message||'');
+  if(!original.trim())return;
+  const state=typeof waLiveState!=='undefined'?waLiveState:null;
+  const chatId=context.chatId;
+  if(!state||!chatId)return;
+  if(state.drafts?.[chatId]===original)delete state.drafts[chatId];
+  const composer=$('waComposerText');
+  if(state.selected?.id===chatId&&composer?.value===original){
+    composer.value='';
+    composer.dispatchEvent(new Event('input',{bubbles:true}));
+  }
 }
 
 function ensureStyles(){
@@ -344,6 +362,14 @@ async function persistWithClient(date,values){
   return true;
 }
 
+function confirmCoreSave(){
+  const result=$('waQuickMsg')?.textContent||'';
+  if(!/^WhatsApp (?:re)?programado$/.test(result.trim())){
+    throw new Error(result||'No se pudo confirmar la programación del WhatsApp.');
+  }
+  return true;
+}
+
 async function persistWithCore(date,values){
   if($('waQuickPhone'))$('waQuickPhone').value=values.phone;
   if($('waQuickMessage'))$('waQuickMessage').value=values.message;
@@ -352,12 +378,12 @@ async function persistWithCore(date,values){
 
   if(typeof window.saveQuickWhatsappSchedule==='function'){
     await window.saveQuickWhatsappSchedule(date);
-    return true;
+    return confirmCoreSave();
   }
   try{
     if(typeof saveQuickWhatsappSchedule==='function'){
       await saveQuickWhatsappSchedule(date);
-      return true;
+      return confirmCoreSave();
     }
   }catch(error){
     throw error;
@@ -480,6 +506,7 @@ function open(prefill={}){
   };
   $('tpfS3template').onclick=openTemplatePicker;
   $('tpfS3save').onclick=async()=>{
+    const savingContext=activeContext;
     const values={
       phone:$('tpfS3phone').value.trim(),
       message:$('tpfS3msg').value.trim(),
@@ -514,7 +541,8 @@ function open(prefill={}){
     errorBox.textContent='';
     try{
       await persistSchedule(date,values);
-      close();
+      clearScheduledDraft(savingContext,values);
+      if(activeContext===savingContext)close();
       try{
         if(typeof showToast==='function')showToast(values.programId?'WhatsApp reprogramado':'WhatsApp programado');
       }catch(_){}
