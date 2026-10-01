@@ -198,9 +198,17 @@ async function loadCatalog(){
   catalog=(offers.data||[]).map(o=>({...o,line_options:(lines.data||[]).filter(l=>String(l.offer_id)===String(o.id))}));return catalog;
 }
 function statusLabel(status){return({draft:'Borrador',queued:'Preparando envío',following:'Seguimiento activo',paused:'Seguimiento pausado',accepted:'Pendiente de tramitar',processed:'Tramitado',won:'Ganada',lost:'Perdida',archived:'Antigua',cancelled:'Finalizada',error:'Error de envío'})[status]||status}
-window.TPFWhatsappOfferSummary=async function(id){await window.TPFOfferFollowup?.load();const r=await sb.from('crm_offer_instances').select('id,operator,offer_name,total_price,status,sent_at,paused_at,status_changed_at,updated_at,pause_reason,next_action,next_action_at,followup_owner,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)').eq('contact_id',id).order('created_at',{ascending:false});if(r.error)throw r.error;return (r.data||[]).map(x=>({id:x.id,rawStatus:x.status,title:x.operator+' · '+x.offer_name,amount:money(x.total_price),status:statusLabel(x.status),followupHtml:window.TPFOfferFollowup?.htmlOffer(x,true)||''}));};
+async function contactOffers(contactId,columns){
+ const ids=[];
+ for(let from=0;;from+=500){const r=await sb.rpc('crm_contact_offer_ids',{p_contact_id:contactId}).order('id').range(from,from+499);if(r.error)return {data:null,error:r.error};const page=r.data||[];ids.push(...page.map(x=>x.id));if(page.length<500)break;}
+ const data=[];
+ for(let from=0;from<ids.length;from+=100){const r=await sb.from('crm_offer_instances').select(columns).in('id',ids.slice(from,from+100)).order('created_at',{ascending:false});if(r.error)return {data:null,error:r.error};data.push(...(r.data||[]));}
+ data.sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+ return {data,error:null};
+}
+window.TPFWhatsappOfferSummary=async function(id){await window.TPFOfferFollowup?.load();const r=await contactOffers(id,'id,created_at,operator,offer_name,total_price,status,sent_at,paused_at,status_changed_at,updated_at,pause_reason,next_action,next_action_at,followup_owner,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)');if(r.error)throw r.error;return (r.data||[]).map(x=>({id:x.id,rawStatus:x.status,title:x.operator+' · '+x.offer_name,amount:money(x.total_price),status:statusLabel(x.status),followupHtml:window.TPFOfferFollowup?.htmlOffer(x,true)||''}));};
 async function loadInstances(contactId){
-  if(!contactId)return;await window.TPFOfferFollowup?.load();const {data,error}=await sb.from('crm_offer_instances').select('id,opportunity_id,operator,offer_name,total_price,status,sent_at,created_at,paused_at,status_changed_at,updated_at,pause_reason,next_action,next_action_at,followup_owner,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)').eq('contact_id',contactId).order('created_at',{ascending:false});
+  if(!contactId)return;await window.TPFOfferFollowup?.load();const {data,error}=await contactOffers(contactId,'id,opportunity_id,operator,offer_name,total_price,status,sent_at,created_at,paused_at,status_changed_at,updated_at,pause_reason,next_action,next_action_at,followup_owner,plan_task_id,plan_task:agenda_items!plan_task_id(status,starts_at,title)');
   if(error){if(String(error.message||'').includes('crm_offer_instances'))return;throw error}
   instances=await Promise.all((data||[]).map(async row=>{const [check,audit]=await Promise.all([sb.rpc('crm_offer_delivery_status',{p_offer_id:row.id}),sb.rpc('crm_offer_followup_latest',{p_opportunity_id:row.opportunity_id})]);return{...row,delivery:check.error?null:check.data,followup:audit.error?null:audit.data}}));renderInstances();
 }
