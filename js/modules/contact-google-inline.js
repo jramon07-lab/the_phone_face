@@ -254,6 +254,7 @@
         .from("records")
         .update({ data: next })
         .eq("id", row.id)
+        .eq("data", JSON.stringify(data))
         .select("id,data")
         .single();
       if (result.error) throw result.error;
@@ -1596,6 +1597,12 @@
           ),
         ),
         retryData = { ...(latest.data.data || {}), ...changed };
+      for (const key of Object.keys(changed)) {
+        const before = JSON.stringify((row.data || {})[key]);
+        const currentValue = JSON.stringify((latest.data.data || {})[key]);
+        if (currentValue !== before && currentValue !== JSON.stringify(changed[key]))
+          throw Error("La ficha cambió en otro dispositivo. Vuelve a abrirla y revisa los datos antes de guardar.");
+      }
       r = await sb
         .from("records")
         .update({ data: retryData })

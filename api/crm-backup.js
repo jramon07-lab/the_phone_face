@@ -33,7 +33,7 @@ async function runBackup(){
  try{
   const token=await accessToken();
   const data={},counts={};for(const table of TABLES){data[table]=await rows(table);counts[table]=data[table].length;}
-  const document={format:'the-phone-face-backup-v3',created_at:started,coverage:B.COVERAGE,counts,data};
+  const document={format:'the-phone-face-backup-v4',created_at:started,coverage:B.COVERAGE,counts,data};
   const encrypted=B.encode(document,BACKUP_KEY),checksum=B.checksum(encrypted),name=`the-phone-face-${started.replace(/[:.]/g,'-')}.tpfbak`;
   const file=await driveUpload(token,name,encrypted);
   if(!file.id)throw Error('Drive no confirmó el identificador de la copia');
