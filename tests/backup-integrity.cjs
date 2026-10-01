@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),B=require('../lib/crm-backup-core');
-const key='test-only-key',doc={format:'the-phone-face-backup-v3',data:Object.fromEntries(B.TABLES.map(t=>[t,[]])),counts:Object.fromEntries(B.TABLES.map(t=>[t,0])),coverage:B.COVERAGE};
+const key='test-only-key',doc={format:'the-phone-face-backup-v4',data:Object.fromEntries(B.TABLES.map(t=>[t,[]])),counts:Object.fromEntries(B.TABLES.map(t=>[t,0])),coverage:B.COVERAGE};
 doc.data.records=[{id:'fixture',data:{NOMBRE:'Example'}}];doc.counts.records=1;
 const encrypted=B.encode(doc,key),hash=B.checksum(encrypted);
 assert.deepEqual(B.verify(encrypted,hash,key),doc);
@@ -15,3 +15,6 @@ console.log('PASS encrypted backup roundtrip, downloaded bytes, wrong key, corru
 
 const legacy={format:'the-phone-face-backup-v2',data:Object.fromEntries(B.LEGACY_V2_TABLES.map(t=>[t,[]])),counts:Object.fromEntries(B.LEGACY_V2_TABLES.map(t=>[t,0]))};assert.equal(B.validate(legacy),legacy,'Old verified backups must remain readable with their original coverage');
 const missingArchive=structuredClone(doc);delete missingArchive.data.crm_whatsapp_chat_state;delete missingArchive.counts.crm_whatsapp_chat_state;assert.throws(()=>B.validate(missingArchive),/Falta una tabla/);
+
+const legacy3={format:'the-phone-face-backup-v3',data:Object.fromEntries(B.LEGACY_V3_TABLES.map(t=>[t,[]])),counts:Object.fromEntries(B.LEGACY_V3_TABLES.map(t=>[t,0]))};assert.equal(B.validate(legacy3),legacy3);
+for(const t of B.TABLES){const missing=structuredClone(doc);delete missing.data[t];delete missing.counts[t];assert.throws(()=>B.validate(missing),/Falta una tabla/);}
