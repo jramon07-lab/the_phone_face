@@ -2620,6 +2620,7 @@
       const saved = await writeGoogle(found[0], c, c.first, c.last, c.nickname);
       await verifyGoogleSaved(saved, c.phone, c.first, c.last, c.nickname);
       clearGoogleCache();
+      await autoConfirmCreatedWhatsapp(row);
       window.dispatchEvent(
         new CustomEvent("tpf:google-contacts-changed", {
           detail: { contactId: detail.id, automatic: true },
@@ -2638,7 +2639,7 @@
     const row = { id: detail.id, data: detail.data },
       c = contactData(row),
       wanted = phone(c.phone);
-    if (!wanted || hasStoredWhatsappBinding(row)) return;
+    if (!wanted || savedVerification(row, contactChat(row))) return;
     let chats = Array.isArray(
       typeof waLiveState !== "undefined" ? waLiveState?.chats : [],
     )
@@ -2678,10 +2679,20 @@
       console.warn("Validar WhatsApp del contacto recién creado", error);
     }
   }
+  const automaticVerificationChecks = new Map();
+  function checkReadyContact(){
+    const row=matchedWa(),chat=selectedWa();
+    if(!row?.id||!rowMatchesChat(row,chat)||savedVerification(row,chat))return;
+    const key=fold(googleAccountEmail())+'|'+verificationSignature(row);
+    if(Date.now()-(automaticVerificationChecks.get(key)||0)<300000)return;
+    automaticVerificationChecks.set(key,Date.now());
+    autoConfirmCreatedWhatsapp(row);
+  }
   function install() {
     ensureStyles();
     ensureModal();
     watchWhatsappNames();
+    window.addEventListener("tpf:wa-contact-ready", checkReadyContact);
     window.addEventListener("tpf:contact-open", () => {
       setTimeout(refreshProfile, 0);
       const row = current();
