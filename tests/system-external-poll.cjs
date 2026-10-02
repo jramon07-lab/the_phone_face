@@ -4,9 +4,9 @@ const code=source.slice(source.indexOf('async function syncExternal(){'),source.
 const sha='a'.repeat(40);
 async function scenario(result){
  let out={},polls=0,calls=0;
- const context={currentCommit:()=>sha,external:()=>out,saveExternal:x=>out=x,render(){},location:{pathname:'/',host:'crm.test'},fetch:async(url)=>{calls++;return url==='/'?{headers:{get:()=>sha}}:{ok:result!==null,json:async()=>({workflow_runs:result})};},AbortSignal,console:{warn(){}},externalSync:null,pollExternal:()=>polls++};
+ const context={currentCommit:()=>sha,external:()=>out,saveExternal:x=>out=x,render(){},location:{pathname:'/',host:'crm.test'},fetch:async(url)=>{calls++;assert.match(url,/api.github.com/);return {ok:result!==null,json:async()=>({workflow_runs:result})};},AbortSignal,console:{warn(){}},externalSync:null,pollExternal:()=>polls++};
  vm.createContext(context);vm.runInContext(code,context);
- await Promise.all([context.syncExternal(),context.syncExternal()]);assert.equal(calls,2,'Concurrent checks must share one HEAD and one GitHub query');assert.equal(polls,1);return out;
+ await Promise.all([context.syncExternal(),context.syncExternal()]);assert.equal(calls,1,'Concurrent checks must share the GitHub query without requesting the page');assert.equal(polls,1);return out;
 }
 (async()=>{
  const run=(name,status,conclusion,head=sha)=>({name,status,conclusion,head_sha:head});

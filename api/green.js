@@ -491,17 +491,24 @@ export default async function handler(req, res) {
       if (!chatId || !idMessage) {
         return res.status(400).json({ ok: false, error: "Faltan chatId o idMessage." });
       }
-      const data = await greenFetch("downloadFile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, idMessage })
-      });
-      const downloadUrl = String(data?.downloadUrl || "").trim();
-      return res.status(200).json({
-        ok: true,
-        downloadUrl,
-        available: Boolean(downloadUrl)
-      });
+      let downloadUrl='',providerError;
+      try {
+        const data=await greenFetch("downloadFile", {
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({chatId,idMessage})
+        });
+        downloadUrl=String(data?.downloadUrl||'').trim();
+      } catch(error) { providerError=error; }
+      // An exact previously received media URL may still work when WhatsApp
+      // cannot reconstruct the encrypted file. Verify host, instance and content.
+      if(!downloadUrl){
+        const saved=await require('../lib/green-saved-media').savedMediaSource(chatId,idMessage,id);
+        if(saved){downloadUrl=saved.url;await saved.response.body?.cancel?.();}
+      }
+      if(downloadUrl)return res.status(200).json({ok:true,downloadUrl,available:true});
+      const missing=providerError?.status===400&&/encrypted url not found|file message/i.test(providerError.message||'');
+      if(providerError&&!missing)throw providerError;
+      return res.status(200).json({ok:true,downloadUrl:'',available:false,reason:'file_unavailable'});
     }
 
     if (req.method === "GET" && action === "download") {

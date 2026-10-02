@@ -20,6 +20,6 @@ async function check(action,stall,ms){
 }
 (async()=>{
  await check('avatar',true,8000);await check('avatar',false,8000);
- await check('history',false,35000);await check('summary',false,65000);await check('file',false,35000);await check('send',false,0);
+ await check('history',false,35000);await check('summary',false,65000);await check('file',false,65000);await check('send',false,0);
  console.log('PASS: optional avatar body bounded, normal photos/history preserved, sends not aborted');
 })().catch(e=>{console.error(e);process.exitCode=1});

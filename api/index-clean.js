@@ -51,7 +51,7 @@ module.exports=async function(req,res){
       html=html.replace(grid,bar+'\n    '+grid);
     }
 
-    const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-branch="${branch}">${stable?'ESTABLE':'PRUEBAS'} · ${shortCommit}</div>`;
+    const buildBadge=`<div id="tpfBuildBadge" data-tpf-commit="${shortCommit}" data-tpf-full-commit="${commit}" data-tpf-branch="${branch}">${stable?'ESTABLE':'PRUEBAS'} · ${shortCommit}</div>`;
     if(!html.includes('id="tpfBuildBadge"'))html=html.includes('</body>')?html.replace('</body>',buildBadge+'\n</body>'):html+buildBadge;
 
     html=html.includes('</head>')?html.replace('</head>',MENU_CLEAN+'\n</head>'):MENU_CLEAN+html;
