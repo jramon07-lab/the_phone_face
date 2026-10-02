@@ -12,4 +12,7 @@ assert.equal(api.madridIso('2030-07-02T10:00'),'2030-07-02T08:00:00.000Z');
 assert.equal(api.madridIso('2030-01-02T10:00'),'2030-01-02T09:00:00.000Z');
 assert.throws(()=>api.madridIso('2030-03-31T02:30'),/hora no existe/);
 assert.throws(()=>api.madridIso('2020-01-01T10:00'),/futuras/);
+assert.equal(api.nextDaySlot(Date.parse('2026-10-02T07:31:00Z')),'2026-10-03T10:00');
+assert.equal(api.nextDaySlot(Date.parse('2026-10-02T07:00:00Z')),'2026-10-03T09:00');
+assert.equal(api.nextDaySlot(Date.parse('2026-10-24T08:14:00Z')),'2026-10-25T10:30');
 console.log('Router return: grouped operators, Netflix preserved, no-router option and Madrid scheduling verified.');

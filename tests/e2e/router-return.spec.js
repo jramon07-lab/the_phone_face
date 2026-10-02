@@ -62,3 +62,35 @@ test('Offer and direct sale party preview survives unavailable linked contacts',
   expect(await page.evaluate(()=>window.partyResult.recipientId)).toBe('manager');
  }
 });
+
+test('Direct sale edits router inline and uses creation time with 00/30 minutes',async({page,context})=>{
+ const fs=require('node:fs');await context.route('**/*',route=>route.abort());
+ await page.setContent('<style>.hidden{display:none!important}</style><button id="open">Venta directa</button>');
+ await page.clock.setFixedTime(new Date('2026-10-02T07:31:00Z'));
+ await page.evaluate(()=>{
+  window.calls=[];window.TPFModules={register(){}};window.currentContact={id:'fixture',data:{NOMBRE:'Ana'}};
+  window.sb={from(){return{select(){return this},eq(){return this},contains(){return this},async maybeSingle(){return{data:currentContact}},async limit(){return{data:[]}}}},rpc:async(name,args)=>{calls.push({name,args});if(name!=='crm_router_return_preview')throw Error('Writes are forbidden');return{data:{available:true,operator:'Vodafone',rule_id:'11111111-1111-1111-1111-111111111111',recipient:'Ana',phone:'600000000',text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.\n\n📦 Las instrucciones antiguas del router.'}}}};
+  window.confirm=()=>false;
+ });
+ await page.addScriptTag({path:path.resolve('js/modules/router-return.js')});
+ await page.addScriptTag({content:fs.readFileSync('js/modules/offers-pro.js','utf8').replace("M.register('offers-pro',{install});","window.fixtureOpen=async()=>{css();await openDirectSale()};window.fixtureResult=()=>directRouter.get();")});
+ await page.evaluate(()=>document.getElementById('open').onclick=window.fixtureOpen);
+ await page.locator('#open').click();const root=page.locator('#directSaleRouterFields');
+ await expect(root.locator('[data-previous]')).toBeVisible();
+ await expect(root.locator('[data-text]')).not.toHaveValue(/instrucciones antiguas/);
+ await root.locator('[data-previous]').selectOption('MásMóvil');
+ await expect(root.locator('[data-text]')).toHaveValue(/código por SMS/);
+ const auto=await page.evaluate(()=>window.fixtureResult());expect(auto.send_at).toBe('2026-10-03T08:00:00.000Z');
+ // A different operator changes the router paragraph while preserving manual edits.
+ await root.locator('[data-text]').fill('Hola Ana. Mi texto editado.\n\n📦 Código por SMS.');
+ await root.locator('[data-previous]').selectOption('O2');
+ await expect(root.locator('[data-text]')).toHaveValue(/Mi texto editado[\s\S]*tienda Movistar/);
+ await root.locator('[data-timing]').selectOption('custom');
+ await expect(root.locator('[data-minute] option')).toHaveText(['00','30']);
+ await root.locator('[data-date]').fill('2026-10-05');await root.locator('[data-hour]').selectOption('11');await root.locator('[data-minute]').selectOption('30');
+ expect(await page.evaluate(()=>window.fixtureResult().send_at)).toBe('2026-10-05T09:30:00.000Z');
+ await page.locator('#directSalePrice').fill('32');await page.locator('#directSaleSubmit').click();
+ await expect(page.locator('#tpfRouterDialog')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.calls.every(x=>x.name==='crm_router_return_preview'))).toBe(true);
+ const positions=await root.locator('.tpfRouterCheck').evaluate(el=>{const a=el.querySelector('input').getBoundingClientRect(),b=el.querySelector('span').getBoundingClientRect();return{gap:b.left-a.right,delta:Math.abs(b.top-a.top)}});expect(positions.gap).toBeGreaterThanOrEqual(0);expect(positions.delta).toBeLessThan(25);
+});

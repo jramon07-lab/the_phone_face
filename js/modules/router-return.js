@@ -18,37 +18,41 @@ function madridIso(value){
  if(stamp<=Date.now()+60000)throw Error('Elige una fecha y hora futuras.');
  return new Date(stamp).toISOString();
 }
+function nextDaySlot(now=Date.now()){
+ const rounded=new Date(Math.ceil(Number(now)/1800000)*1800000);
+ const local=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Madrid',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(rounded).replace(' ','T');
+ const day=new Date(local.slice(0,10)+'T12:00:00Z');day.setUTCDate(day.getUTCDate()+1);
+ return day.toISOString().slice(0,10)+local.slice(10);
+}
+function fields(){return '<div class="tpfRouterFields"><label>Operador anterior<select data-previous><option value="">Selecciona el operador anterior</option>'+Object.keys(paragraphs).map(x=>'<option value="'+x+'">'+(x==='Ninguno'?'Sin router que devolver':x==='Otro'?'Otro operador (texto manual)':x)+'</option>').join('')+'</select></label><label class="tpfRouterCheck"><input type="checkbox" data-send><span>Enviar mensaje de instalación y devolución</span></label><p data-recipient></p><p data-status></p><label>Mensaje que recibirá el cliente<textarea data-text rows="7" maxlength="10000"></textarea></label><small>Mensaje editable. Al cambiar el operador anterior se actualiza el párrafo del router.</small><label>Cuándo enviarlo<select data-timing><option value="day_one">Día siguiente, a la hora de creación</option><option value="custom">Elegir fecha y hora</option></select></label><p data-default-time></p><div data-date-label hidden><label>Fecha (Madrid)<input type="date" data-date></label><label>Hora<select data-hour>'+Array.from({length:24},(_,i)=>'<option>'+String(i).padStart(2,'0')+'</option>').join('')+'</select></label><label>Minutos<select data-minute><option>00</option><option>30</option></select></label></div><small>Hora automática redondeada al siguiente tramo de 00 o 30 minutos. El envío se ajustará al horario de atención.</small><p data-error role="alert"></p></div>';}
+function style(){if($('tpfRouterStyle'))return;const s=document.createElement('style');s.id='tpfRouterStyle';s.textContent='#tpfRouterDialog{width:min(620px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;border:1px solid #dbe4ef;border-radius:14px;padding:20px;color:#24354b}#tpfRouterDialog::backdrop{background:#14233788}#tpfRouterDialog header,#tpfRouterDialog footer{display:flex;justify-content:space-between;gap:12px;align-items:center}#tpfRouterDialog h3{margin:0;font-size:19px} .tpfRouterFields label{display:block;margin:12px 0;font-size:13px;font-weight:700}.tpfRouterFields select,.tpfRouterFields textarea,.tpfRouterFields input[type=date]{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:9px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#24354b;font:inherit}.tpfRouterFields textarea{background:#f4faf2;line-height:1.5;resize:vertical}.tpfRouterFields small,.tpfRouterFields p{display:block;color:#64748b;font-size:12px;line-height:1.4}.tpfRouterFields .tpfRouterCheck{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:9px!important}.tpfRouterFields .tpfRouterCheck input{flex:none;width:16px!important;height:16px;margin:0!important}.tpfRouterFields [data-date-label]{display:grid;grid-template-columns:minmax(130px,2fr) minmax(65px,1fr) minmax(65px,1fr);gap:8px}.tpfRouterFields [data-error]{color:#b42318}.tpfRouterFields [hidden]{display:none!important}#tpfRouterDialog button{padding:9px 14px;border-radius:9px}#tpfRouterDialog footer{margin-top:16px}';document.head.appendChild(s);}
+function bind(root,data,options={}){
+ style();root.innerHTML=fields();const q=x=>root.querySelector('[data-'+x+']');
+ const previous=q('previous'),text=q('text'),send=q('send'),timing=q('timing'),date=q('date'),hour=q('hour'),minute=q('minute');
+ const saved=options.preferences||data.preferences||{},available=!!data.available;
+ previous.value=saved.previous_operator||'';text.value=saved.text||message(options.text||data.text,previous.value);
+ send.checked=available&&options.send!==false&&saved.send!==false;send.disabled=!available;
+ q('recipient').textContent='Para '+(data.recipient||'Sin contacto vinculado')+(data.phone?' · '+data.phone:'');
+ q('status').textContent=available?'':'Este operador nuevo no tiene mensaje de instalación configurado.';
+ const slot=saved.local_date||nextDaySlot();date.value=slot.slice(0,10);hour.value=slot.slice(11,13);minute.value=slot.slice(14,16);timing.value=saved.timing||'day_one';
+ q('default-time').textContent='Hora automática: '+hour.value+':'+minute.value+' (Madrid), el día siguiente. Se tomará la hora al crear la venta.';
+ const update=()=>{for(const el of [previous,text,timing,date,hour,minute])el.disabled=!send.checked;q('date-label').hidden=timing.value!=='custom';q('default-time').hidden=timing.value==='custom';options.onchange?.();};
+ previous.onchange=()=>{text.value=message(text.value,previous.value);update();};send.onchange=update;timing.onchange=update;update();
+ return {available,send,previous,text,get(){
+  if(send.checked&&!previous.value)throw Error('Selecciona el operador anterior o «Sin router que devolver».');
+  if(send.checked&&!text.value.trim())throw Error('El mensaje no puede estar vacío.');
+  if(send.checked&&previous.value==='Otro'&&text.value.includes(paragraphs.Otro))throw Error('Escribe las instrucciones del operador anterior.');
+  if(!['00','30'].includes(minute.value))throw Error('Los minutos deben ser 00 o 30.');
+  return {previous_operator:previous.value||'Ninguno',text:text.value.trim(),send:send.checked,send_at:send.checked?madridIso(timing.value==='custom'?date.value+'T'+hour.value+':'+minute.value:nextDaySlot()):null,operator:data.operator||options.operator||'',rule_id:data.rule_id||null};
+ },snapshot(){return {previous_operator:previous.value,text:text.value,send:send.checked,timing:timing.value,local_date:date.value+'T'+hour.value+':'+minute.value};}};
+}
+async function preview(options){const {data,error}=await sb.rpc('crm_router_return_preview',{p_opportunity_id:options.id||null,p_contact_id:options.contactId||null,p_manager_contact_id:options.managerId||null,p_recipient_contact_id:options.recipientId||null,p_operator:options.operator||null,p_netflix_followup:!!options.netflix});if(error)throw error;return data;}
 async function choose(options){
  if($('tpfRouterDialog'))throw Error('Termina primero la devolución de router abierta.');
- const {data,error}=await sb.rpc('crm_router_return_preview',{p_opportunity_id:options.id||null,p_contact_id:options.contactId||null,p_manager_contact_id:options.managerId||null,p_recipient_contact_id:options.recipientId||null,p_operator:options.operator||null,p_netflix_followup:!!options.netflix});
- if(error)throw error;
- const d=document.createElement('dialog');d.id='tpfRouterDialog';d.setAttribute('aria-label','Tramitado: instalación y devolución de router');
- d.innerHTML='<form method="dialog"><header><h3>Instalación y devolución del router</h3><button value="cancel" aria-label="Cerrar">×</button></header><p data-recipient></p><label>Operador anterior<select data-previous><option value="">Selecciona el operador anterior</option>'+Object.keys(paragraphs).map(x=>'<option value="'+x+'">'+(x==='Ninguno'?'Sin router que devolver':x==='Otro'?'Otro operador (texto manual)':x)+'</option>').join('')+'</select></label><label class="tpfRouterCheck"><input type="checkbox" data-send> Enviar el mensaje de instalación y devolución</label><p data-status></p><label>Mensaje que recibirá el cliente<textarea data-text rows="9" maxlength="10000"></textarea></label><small>Editable. Seleccionar otro operador anterior regenera el párrafo del router.</small><label>Cuándo enviarlo<select data-timing><option value="day_one">Día siguiente, en horario de atención</option><option value="custom">Elegir fecha y hora</option></select></label><label data-date-label hidden>Fecha y hora (Madrid)<input type="datetime-local" data-date></label><small>El envío se ajustará al horario de atención. Elige una fecha posterior a la instalación si todavía no tiene fibra.</small><p data-error role="alert"></p><footer><button value="cancel">Cancelar</button><button value="save" class="primary">Confirmar y continuar</button></footer></form>';
- if(!$('tpfRouterStyle')){const s=document.createElement('style');s.id='tpfRouterStyle';s.textContent='#tpfRouterDialog{width:min(620px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;border:1px solid #dbe4ef;border-radius:12px;padding:20px;color:#24354b}#tpfRouterDialog::backdrop{background:#14233788}#tpfRouterDialog header,#tpfRouterDialog footer{display:flex;justify-content:space-between;gap:12px;align-items:center}#tpfRouterDialog h3{margin:0}#tpfRouterDialog label{display:block;margin:12px 0}#tpfRouterDialog select,#tpfRouterDialog textarea,#tpfRouterDialog input[type=datetime-local]{display:block;width:100%;box-sizing:border-box;margin-top:5px;font:inherit}#tpfRouterDialog textarea{background:#eef8eb;padding:12px;resize:vertical}#tpfRouterDialog small{display:block;color:#64748b}#tpfRouterDialog [data-error]{color:#b42318}#tpfRouterDialog button{padding:8px 14px}#tpfRouterDialog footer{margin-top:18px}#tpfRouterDialog [hidden]{display:none!important}';document.head.appendChild(s);}
- document.body.appendChild(d);
- const previous=d.querySelector('[data-previous]'),text=d.querySelector('[data-text]'),send=d.querySelector('[data-send]'),timing=d.querySelector('[data-timing]'),date=d.querySelector('[data-date]');
- d.querySelector('[data-recipient]').textContent='Destinatario: '+(data.recipient||'Sin contacto vinculado')+(data.phone?' · '+data.phone:'');
- const saved=data.preferences||{},available=!!data.available;
- send.checked=options.send!==false&&available&&saved.send!==false;send.disabled=!available;
- d.querySelector('[data-status]').textContent=available?'Se conservarán los demás seguimientos de la venta.':'No hay mensaje del día siguiente configurado para el operador nuevo. Puedes continuar sin este envío.';
- previous.value=saved.previous_operator||'';text.value=saved.text||options.text||data.text||'';
- const update=()=>{text.disabled=!send.checked;timing.disabled=!send.checked;date.disabled=!send.checked;d.querySelector('[data-date-label]').hidden=timing.value!=='custom';};
- previous.onchange=()=>{text.value=message(options.text||data.text,previous.value);update();};
- send.onchange=update;timing.onchange=update;update();
- return new Promise(resolve=>{
-  d.addEventListener('close',()=>{const result=d._result||null;d.remove();resolve(result);},{once:true});
-  d.querySelector('form').addEventListener('submit',e=>{
-   if(e.submitter?.value!=='save')return;e.preventDefault();
-   try{
-    if(send.checked&&!previous.value)throw Error('Selecciona el operador anterior o «Sin router que devolver».');
-    if(send.checked&&!text.value.trim())throw Error('El mensaje no puede estar vacío.');
-    if(send.checked&&previous.value==='Otro'&&text.value.includes(paragraphs.Otro))throw Error('Escribe las instrucciones del operador anterior.');
-    d._result={previous_operator:previous.value||'Ninguno',text:text.value.trim(),send:send.checked,send_at:send.checked&&timing.value==='custom'?madridIso(date.value):null,operator:data.operator||options.operator||'',rule_id:data.rule_id||null};
-    d.close('save');
-   }catch(error){d.querySelector('[data-error]').textContent=error.message;}
-  });
-  d.showModal();
- });
+ const data=await preview(options),d=document.createElement('dialog');d.id='tpfRouterDialog';d.setAttribute('aria-label','Tramitado: instalación y devolución de router');
+ d.innerHTML='<form method="dialog"><header><h3>Instalación y devolución del router</h3><button value="cancel" aria-label="Cerrar">×</button></header><div data-fields></div><footer><button value="cancel">Cancelar</button><button value="save" class="primary">Confirmar y continuar</button></footer></form>';
+ document.body.appendChild(d);const controller=bind(d.querySelector('[data-fields]'),data,options);
+ return new Promise(resolve=>{d.addEventListener('close',()=>{const result=d._result||null;d.remove();resolve(result);},{once:true});d.querySelector('form').addEventListener('submit',e=>{if(e.submitter?.value!=='save')return;e.preventDefault();try{d._result=controller.get();d.close('save');}catch(error){d.querySelector('[data-error]').textContent=error.message;}});d.showModal();});
 }
 async function prepare(id,payload){
  if(!payload.stage_id||payload.after_sale_preferences)return payload;
@@ -62,5 +66,5 @@ async function prepare(id,payload){
  const prefs=await choose({id,contactId:payload.record_id,managerId:party.manager_contact_id,recipientId:party.recipient_contact_id,operator});
  return prefs?{...payload,after_sale_preferences:prefs}:null;
 }
-window.TPFRouterReturn={choose,prepare:async(id,payload)=>{try{return await prepare(id,payload);}catch(error){alert('No se pudo preparar Tramitado: '+error.message);return null;}},message,madridIso,paragraphs};
+window.TPFRouterReturn={choose,bind,preview,nextDaySlot,prepare:async(id,payload)=>{try{return await prepare(id,payload);}catch(error){alert('No se pudo preparar Tramitado: '+error.message);return null;}},message,madridIso,paragraphs};
 })();
