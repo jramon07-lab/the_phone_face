@@ -11,6 +11,8 @@ begin
   select * into j from public.crm_server_automation_jobs where id=p_job;
   if not found or j.status<>'running' then return jsonb_build_object('allow',false,'reason','Ejecución detenida');end if;
   if nullif(j.context->>'review_id','') is not null then
+    -- Receipt verification is read-only and continues after the review is completed.
+    if j.action_config ? '__delivery_receipt' then return jsonb_build_object('allow',true,'context',j.context);end if;
     if not exists(select 1 from public.crm_monthly_reviews r join public.sales_opportunities o on o.id=r.opportunity_id where r.id::text=j.context->>'review_id' and r.job_id=j.id and r.status='active' and r.send_enabled and not r.needs_confirmation and o.status='open') then reason:='Revisión cancelada o completada';
     elsif exists(select 1 from crm_private.commercial_optouts where phone=public.crm_server_normalize_phone(j.context->>'phone') or contact_id::text=j.context->>'contact_id' or contact_id::text=j.context->>'recipient_contact_id') then reason:='Baja comercial solicitada';
     elsif not exists(select 1 from public.records where id::text=coalesce(j.context->>'recipient_contact_id',j.context->>'contact_id')) then reason:='Destinatario no disponible';

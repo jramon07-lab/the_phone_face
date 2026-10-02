@@ -28,7 +28,11 @@ BEGIN
  IF (SELECT count(*) FROM public.crm_server_automation_jobs)<>jobs THEN RAISE EXCEPTION 'Unexpected job';END IF;
  IF NOT EXISTS(SELECT 1 FROM public.sales_opportunities WHERE id=r.opportunity_id AND stage_id='f1000000-0000-4000-8000-000000000004' AND title='REVISIÓN VODAFONE' AND amount=32 AND installation_date='2026-09-08') THEN RAISE EXCEPTION 'Existing opportunity not preserved';END IF;
  IF EXISTS(SELECT 1 FROM public.sales_opportunities o JOIN review_existing_before b ON b.id=o.id WHERE to_jsonb(o) IS DISTINCT FROM to_jsonb(b)) THEN RAISE EXCEPTION 'Legacy opportunity changed';END IF;
+ INSERT INTO public.crm_server_automation_jobs(id,automation_id,user_id,event_key,action_type,action_config,context,run_at,status) VALUES('f1000000-0000-4000-8000-000000000008','1e48df12-93d0-4b2a-aa4c-da48e923be53','fc4ec037-1174-4d17-aba5-44afea3c7691','fixture-monthly-receipt','__send_whatsapp','{"__delivery_receipt":{"idMessage":"fixture"}}',jsonb_build_object('review_id',rid),now(),'pending');
+ UPDATE public.crm_monthly_reviews SET job_id='f1000000-0000-4000-8000-000000000008' WHERE id=rid;
  PERFORM crm_private.edit_monthly_review(rid,NULL,NULL,'complete');
+ UPDATE public.crm_server_automation_jobs SET status='running' WHERE id='f1000000-0000-4000-8000-000000000008';
+ IF public.crm_lifecycle_job_guard('f1000000-0000-4000-8000-000000000008')->>'allow'<>'true' THEN RAISE EXCEPTION 'Receipt verification stopped after completion';END IF;
  IF NOT EXISTS(SELECT 1 FROM public.crm_monthly_reviews WHERE id=rid AND status='completed') THEN RAISE EXCEPTION 'Completion failed';END IF;
 END $$;
 SELECT 'isolated dates, idempotency, history, cancellation and legacy protection passed' result;

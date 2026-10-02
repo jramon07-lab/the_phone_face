@@ -194,7 +194,7 @@ BEGIN
    IF r.status='active' THEN PERFORM crm_private.review_labels(p_id);END IF;
  ELSIF p_action IN ('cancel_send','cancel_review','complete') THEN
    UPDATE public.crm_monthly_reviews SET send_enabled=false,status=CASE p_action WHEN 'cancel_review' THEN 'cancelled' WHEN 'complete' THEN 'completed' ELSE status END,updated_at=now() WHERE id=p_id;
-   UPDATE public.crm_server_automation_jobs SET status='cancelled',error_message='Cancelado desde Revisiones del mes',updated_at=now() WHERE id=r.job_id AND status IN ('pending','failed');
+   UPDATE public.crm_server_automation_jobs SET status='cancelled',error_message='Cancelado desde Revisiones del mes',updated_at=now() WHERE id=r.job_id AND status IN ('pending','failed') AND NOT(action_config ? '__delivery_receipt');
    IF p_action<>'cancel_send' THEN
  PERFORM crm_private.review_labels(p_id,true);
  UPDATE public.sales_opportunities SET stage_id=coalesce((SELECT s.id FROM public.sales_stages s WHERE s.pipeline_id=public.sales_opportunities.pipeline_id AND s.active AND lower(btrim(s.name))=CASE p_action WHEN 'complete' THEN 'ganado' ELSE 'viejo' END ORDER BY s.position LIMIT 1),stage_id),status=CASE p_action WHEN 'complete' THEN 'won' ELSE 'closed' END,updated_at=now() WHERE id=r.opportunity_id;
