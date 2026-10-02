@@ -1,0 +1,30 @@
+const {test,expect}=require('@playwright/test');
+const path=require('node:path');
+test('Tramitado previews and edits without writes; cancellation saves nothing',async({page})=>{
+ await page.setContent('<button id="start">Tramitado</button>');
+ await page.evaluate(()=>{
+  window.calls=[];window.sb={rpc:async(name,args)=>{calls.push({name,args});return {data:{available:true,text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.\n\n⚠️ Activa Netflix cuando tu línea esté en Vodafone.\n\n📦 Las instrucciones para devolver el router anterior pueden tardar hasta 15 días.',operator:'Vodafone',rule_id:'11111111-1111-1111-1111-111111111111',recipient:'Ana',phone:'600000000'}}}};
+ });
+ await page.addScriptTag({path:path.resolve('js/modules/router-return.js')});
+ await page.evaluate(()=>document.getElementById('start').onclick=()=>{window.result='pending';window.TPFRouterReturn.choose({contactId:'fixture',operator:'Vodafone'}).then(x=>window.result=x);});
+ await page.getByRole('button',{name:'Tramitado',exact:true}).click();
+ await page.getByRole('button',{name:'Confirmar y continuar'}).click();
+ await expect(page.locator('[data-error]')).toContainText('Selecciona');
+ await page.locator('[data-previous]').selectOption('Yoigo');
+ await expect(page.locator('[data-text]')).toHaveValue(/SMS/);
+ await expect(page.locator('[data-text]')).toHaveValue(/Netflix/);
+ await page.locator('[data-previous]').selectOption('O2');
+ await expect(page.locator('[data-text]')).toHaveValue(/tienda Movistar/);
+ await page.locator('[data-text]').fill('Hola Ana. Texto editado para tu devolución.');
+ await page.getByRole('button',{name:'Confirmar y continuar'}).click();
+ await expect.poll(()=>page.evaluate(()=>window.result?.text)).toBe('Hola Ana. Texto editado para tu devolución.');
+ expect(await page.evaluate(()=>window.result.previous_operator)).toBe('O2');
+ expect(await page.evaluate(()=>window.calls.every(x=>x.name==='crm_router_return_preview'))).toBe(true);
+ await page.getByRole('button',{name:'Tramitado',exact:true}).click();
+ await page.getByRole('button',{name:'Cancelar',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>window.result)).toBe(null);
+ await page.getByRole('button',{name:'Tramitado',exact:true}).click();
+ await page.locator('[data-send]').uncheck();
+ await page.getByRole('button',{name:'Confirmar y continuar'}).click();
+ await expect.poll(()=>page.evaluate(()=>window.result?.send)).toBe(false);
+});

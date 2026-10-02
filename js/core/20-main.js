@@ -125,11 +125,12 @@ document.addEventListener("click",e=>{
 });
 
 window.moveOpp=async(id,stage)=>{
-  const {error}=await sb.from("sales_opportunities").update({stage_id:stage,position:0}).eq("id",id);
-  if(error)alert(error.message);
+  const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stage,position:0});if(!payload){loadSales();return false;}
+  const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);
+  if(error){alert(error.message);return false;}
   else{
     await runOpportunityAutomations(id);
-    loadSales();
+    loadSales();return true;
   }
 };
 window.deleteOpp=async(id)=>{
@@ -573,7 +574,8 @@ $("oppDetailModal").onclick=async(e)=>{
 };
 
 async function tpfCreateOpportunityGuarded(payload,pipelineId,allowDuplicate=false){
-  const {data,error}=await sb.rpc('crm_create_opportunity_guarded',{p_pipeline_id:pipelineId,p_stage_id:payload.stage_id,p_record_id:payload.record_id||null,p_title:payload.title,p_client_name:payload.client_name||null,p_phone:payload.phone||null,p_amount:payload.amount??null,p_expected_date:payload.expected_date||null,p_notes:payload.notes||null,p_contract_party:payload.contract_party||null,p_allow_duplicate:allowDuplicate});
+  payload=await window.TPFRouterReturn.prepare(null,payload);if(!payload)return null;
+  const {data,error}=await sb.rpc('crm_create_opportunity_guarded_v2',{p_after_sale:payload.after_sale_preferences||null,p_pipeline_id:pipelineId,p_stage_id:payload.stage_id,p_record_id:payload.record_id||null,p_title:payload.title,p_client_name:payload.client_name||null,p_phone:payload.phone||null,p_amount:payload.amount??null,p_expected_date:payload.expected_date||null,p_notes:payload.notes||null,p_contract_party:payload.contract_party||null,p_allow_duplicate:allowDuplicate});
   if(error&&String(error.message||'').includes('DUPLICATE_OPPORTUNITY:')){
     if(confirm('Ya existe una oportunidad abierta con el mismo cliente y título. ¿Seguro que quieres crear otra?'))return tpfCreateOpportunityGuarded(payload,pipelineId,true);
     throw new Error('No se creó: abre la oportunidad existente.');
@@ -590,7 +592,7 @@ $("oppModalSave").onclick=async()=>{
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(newStage));
   if(!stage){alert("Selecciona una columna.");return}
 
-  const payload={
+  let payload={
     title,
     client_name:$("oppModalClient").value.trim()||null,
     phone:$("oppModalPhone").value.trim()||null,
@@ -606,6 +608,7 @@ $("oppModalSave").onclick=async()=>{
     payload.contract_party=window.TPFContactRelations
       ?await window.TPFContactRelations.prepareOpportunity(payload)
       :window.TPFContactParty.readOpportunity();
+    payload=await window.TPFRouterReturn.prepare(id||null,payload);if(!payload)return;
     if(!id){
       const created=await tpfCreateOpportunityGuarded(payload,stage.pipeline_id);
       pendingOpportunityRecordId=null;
@@ -727,8 +730,8 @@ window.createOppFromRecord=async(payload)=>{
  const stageName=prompt("Columna inicial",stages[0].name)||stages[0].name;
  const stage=stages.find(s=>s.name.toLowerCase()===stageName.toLowerCase())||stages[0];
  try{
-   await tpfCreateOpportunityGuarded({stage_id:stage.id,record_id:c.id||null,title,client_name:c.name||null,phone:c.phone||null,amount:amount?Number(String(amount).replace(",",".")):null,expected_date:date||null,notes:notes||null},stage.pipeline_id);
-   alert("Oportunidad creada");
+   const created=await tpfCreateOpportunityGuarded({stage_id:stage.id,record_id:c.id||null,title,client_name:c.name||null,phone:c.phone||null,amount:amount?Number(String(amount).replace(",",".")):null,expected_date:date||null,notes:notes||null},stage.pipeline_id);
+   if(created)alert("Oportunidad creada");
  }catch(e){alert(e?.message||'No se pudo crear la oportunidad');}
 };
 
@@ -1625,7 +1628,8 @@ async function moveSelectedSalesOpportunities(){
   $("salesBulkMove").disabled=true;
   try{
     for(const id of ids){
-      const {error}=await sb.from("sales_opportunities").update({stage_id:target,position:0}).eq("id",id);
+      const payload=await window.TPFRouterReturn.prepare(id,{stage_id:target,position:0});if(!payload)break;
+      const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);
       if(error)throw error;
     }
     selectedSalesOpportunityIds.clear();
@@ -2041,8 +2045,9 @@ window.moveContactOpportunityStage=async(id,stageId)=>{
   const select=document.querySelector(`.cpOppAdvancedCard[data-opp-id="${CSS.escape(String(id))}"] select`);
   if(select)select.disabled=true;
   try{
+    const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stageId,position:0});if(!payload){if(select){const current=(salesCache.opportunities||[]).find(o=>String(o.id)===String(id));if(current)select.value=current.stage_id;}loadSales();return;}
     const {error}=await sb.from("sales_opportunities")
-      .update({stage_id:stageId,position:0})
+      .update(payload)
       .eq("id",id);
     if(error)throw error;
 
@@ -2422,7 +2427,7 @@ $("backupCsv").onclick=async()=>{
 
 // Audit important actions without blocking normal workflow.
 const __origMoveOpp=window.moveOpp;
-window.moveOpp=async function(id,stage){await __origMoveOpp(id,stage);auditAction("opportunity",id,"move","Oportunidad movida",{stage_id:stage})};
+window.moveOpp=async function(id,stage){const moved=await __origMoveOpp(id,stage);if(moved===false)return false;auditAction("opportunity",id,"move","Oportunidad movida",{stage_id:stage})};
 
 setTimeout(()=>{ if(!$("app").classList.contains("hidden")) loadDashboard(); },1200);
 
