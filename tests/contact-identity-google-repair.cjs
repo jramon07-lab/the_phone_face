@@ -14,7 +14,7 @@ function setup(){
  assert.equal(x.counts().created,1);assert.equal(x.people[0].phoneNumbers.length,1);assert.equal(x.people[0].phoneNumbers[0].value,'+34958111111');
  for(const k of ['names','userDefined','emailAddresses'])assert.deepEqual(x.people[0][k],before[k]);
  assert.equal(x.manager.data.TPF_IDENTITY_GOOGLE_REPAIR.status,'completed');assert.equal(x.holder.data.TPF_CONTACT_SYNC.status,'review');
- await repair(x.manager,x.holder,x.deps);assert.equal(x.counts().created,1,'retry must reuse the manager');
+ await repair(x.manager,x.holder,x.deps);assert.equal(x.counts().created,1,'retry must reuse the manager');assert.equal(x.manager.data.TPF_IDENTITY_GOOGLE_REPAIR.manager_before,null,'retry must preserve original absence of manager');
  x=setup();x.people[0].userDefined[0].value='OTHER';await assert.rejects(()=>repair(x.manager,x.holder,x.deps),/DNI/);assert.deepEqual(x.counts(),{created:0,patched:0,saves:0});
  x=setup();delete x.manager.data.TPF_IDENTITY_RECOVERY.user_confirmed_at;await assert.rejects(()=>repair(x.manager,x.holder,x.deps),/autorización/);assert.equal(x.counts().patched,0);
  x=setup();x.holder.data.TPF_GOOGLE_CONTACT.resource_name='people/missing';const existing=x.deps.google;x.deps.google=async(path,opt)=>{if(path.startsWith('people/missing'))throw Object.assign(Error('not found'),{status:404});return existing(path,opt);};await repair(x.manager,x.holder,x.deps);assert.equal(x.holder.data.TPF_GOOGLE_CONTACT.resource_name,'people/c1');assert.equal(x.counts().created,1,'reuse exact holder DNI before creating');
