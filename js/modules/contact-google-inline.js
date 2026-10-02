@@ -1248,6 +1248,7 @@
     box.innerHTML = `<h4>Así quedarán tus datos</h4><p><b>CRM, Google y WhatsApp:</b> ${esc(visible)}</p><p>Apodo visible: <b>${esc(nickname || "—")}</b></p><p>Teléfono: <b>${esc(finalPhone || "—")}</b> · DNI/NIF: <b>${esc(finalDni || "—")}</b> · Correo: <b>${esc(finalEmail || "—")}</b></p>${managed ? `<p>Gestiona el titular: <b>${esc(correctionHolder?.name || "pendiente de elegir")}</b>. No se creará ninguna segunda ficha.</p>` : ""}<small>Estos son los datos elegidos por ti. Se comprueban antes de terminar el guardado.</small>`;
   }
   function openCorrection(options = {}) {
+    document.querySelector('dialog.cpProDialog[open]')?.close();
     const row = options.row || current(),
       c = contactData(row),
       wa = options.whatsapp ?? whatsappName(c),
