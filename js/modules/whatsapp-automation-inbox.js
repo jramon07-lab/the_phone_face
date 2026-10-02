@@ -285,7 +285,9 @@
       let button=view.querySelector('[data-wa-tab="'+key+'"]');
       if(!button){button=document.createElement('button');button.type='button';button.dataset.waTab=key;}
       if(!button.dataset.inboxLabel){button.innerHTML=label+(id?' <b id="'+id+'" class="waAutomaticCount">0</b>':'');button.dataset.inboxLabel='1';}
-      tabs.insertBefore(button,more||null);
+      const tools=view.querySelector('#waCleanTools>div');
+      if(key==='contacts'&&tools)tools.append(button);
+      else tabs.insertBefore(button,more||null);
       button.classList.toggle('active',(liveState()?.filter||'all')===key);
     }
     if(more)more.hidden=true;
@@ -336,6 +338,7 @@
   function openAutomaticTab(tab){
     const state=liveState();if(!state)return;
     state.filter=tab.dataset.waTab;
+    const menu=tab.closest('details');if(menu)menu.open=false;
     document.querySelectorAll('#view-whatsapplive [data-wa-tab]').forEach(b=>b.classList.toggle('active',b===tab));
     window.renderWhatsAppChats?.();ensureTab();
   }

@@ -213,6 +213,11 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
           await expect(page.locator('[data-wa-tab="automatic"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="processing"]')).toBeVisible();
           await expect(page.locator('[data-wa-tab="declined"]')).toBeVisible();
+          await expect(page.locator('#waCleanTools [data-wa-tab="contacts"]')).toHaveCount(1);
+          await page.locator('#waCleanTools>summary').click();
+          await page.locator('#waCleanTools [data-wa-tab="contacts"]').click();
+          await expect.poll(()=>page.evaluate(()=>waLiveState.filter)).toBe('contacts');
+          await expect(page.locator('#waCleanTools')).not.toHaveAttribute('open','');
           const originalViewport=page.viewportSize();
           for(const width of [1280,1366,1920,2560]){
             await page.setViewportSize({width,height:768});
@@ -220,8 +225,8 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
               const buttons=[...el.querySelectorAll(':scope>button[data-wa-tab]')].filter(b=>b.getBoundingClientRect().width);
               return {count:buttons.length,tops:buttons.map(b=>Math.round(b.getBoundingClientRect().top)),accessible:el.scrollWidth<=el.clientWidth+1||['auto','scroll'].includes(getComputedStyle(el).overflowX)};
             });
-            return {count:tabs.count,lines:new Set(tabs.tops).size,accessible:tabs.accessible};},{message:'Las 14 pestañas conservan una fila y acceso por desplazamiento cuando sea necesario',timeout:5000}).toEqual({count:14,lines:1,accessible:true});
-            const keys=['unanswered','waiting','reviews','automatic','processing','aftercare','declined','all','contacts','groups','unread','favorites','archived','snoozed'];
+            return {count:tabs.count,lines:new Set(tabs.tops).size,accessible:tabs.accessible};},{message:'Las 13 pestañas conservan una fila y acceso por desplazamiento cuando sea necesario',timeout:5000}).toEqual({count:13,lines:1,accessible:true});
+            const keys=['unanswered','waiting','reviews','automatic','processing','aftercare','declined','all','groups','unread','favorites','archived','snoozed'];
             for(const key of keys){
               const button=page.locator('#view-whatsapplive .waLivePage>.waTabs>button[data-wa-tab="'+key+'"]');
               await expect(button).toHaveCount(1);
@@ -519,7 +524,7 @@ test('WhatsApp: búsqueda entre bandejas y lista estable al escribir y refrescar
   const search=document.getElementById('waLiveSearch'),box=document.getElementById('waLiveChats');
   const outcomes=[];
   search.value='Objetivo';
-  for(const filter of ['unanswered','waiting','automatic','all','contacts','groups','archived','snoozed']){
+  for(const filter of ['unanswered','waiting','automatic','all','groups','archived','snoozed']){
    waLiveState.filter=filter;renderWhatsAppChats();await Promise.resolve();
    outcomes.push(box.querySelectorAll('.waChatRow').length===1&&box.textContent.includes('Objetivo grupo')&&waLiveState.filter===filter);
   }
