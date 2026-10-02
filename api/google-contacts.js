@@ -155,6 +155,24 @@ module.exports=async function(req,res){
    await savePhotoFingerprint(item,avatar.hash);
    return json(res,200,{ok:true,recordId:item.row.id,updated:true,hash:avatar.hash});
   }
+  if(action==='repair-holder-manager'){
+   if(req.method!=='POST'||!who.permissions.is_admin)throw fail(403,'Solo administración puede conciliar identidades autorizadas.');
+   const body=typeof req.body==='string'?JSON.parse(req.body):req.body||{},id=String(body.recordId||'');
+   if(!/^[a-f0-9-]{36}$/.test(id))throw fail(400,'Ficha no válida.');
+   const load=async(id)=>{const r=await request(SB+'/rest/v1/records?id=eq.'+encodeURIComponent(id)+'&select=id,data',{headers:serviceHeaders()});if(!r.ok)throw fail(503,'No se pudo leer la ficha.');const row=(await r.json())[0];if(!row)throw fail(404,'Ficha no disponible.');return row;};
+   const manager=await load(id),holderId=manager.data.TPF_IDENTITY_RECOVERY?.holder_record_id;
+   if(!holderId)throw fail(409,'Esta ficha no tiene una recuperación autorizada.');
+   const holder=await load(holderId),{token,stored}=await accessToken();
+   require('../lib/contact-identity-google-repair').validate(manager,holder,stored.email);
+   const lease=new Date(Date.now()+300000).toISOString();
+   const lock=await request(SB+'/rest/v1/crm_contact_sync_queue?record_id=eq.'+id+'&status=eq.review&or=(lease_until.is.null,lease_until.lt.'+encodeURIComponent(new Date().toISOString())+')',{method:'PATCH',headers:{...serviceHeaders(),Prefer:'return=representation'},body:JSON.stringify({lease_until:lease})});
+   if(!lock.ok||!(await lock.json()).length)throw fail(409,'La conciliación está en curso o la ficha ya cambió.');
+   const identityData=d=>JSON.stringify([require('../lib/contact-sync').fields(d),d.TPF_IDENTITY_RECOVERY,d.TPF_RELACIONES,d.TPF_GOOGLE_CONTACT]);
+   const save=async(row,metadata)=>{const fresh=await load(row.id);if(identityData(fresh.data)!==identityData(row.data))throw fail(409,'La ficha cambió durante la conciliación.');const data={...fresh.data,...metadata};const r=await request(SB+'/rest/v1/records?id=eq.'+row.id+'&data=eq.'+encodeURIComponent(JSON.stringify(fresh.data)),{method:'PATCH',headers:{...serviceHeaders(),Prefer:'return=representation'},body:JSON.stringify({data})});if(!r.ok||!(await r.json()).length)throw fail(409,'No se confirmó el guardado de la ficha.');row.data=data;};
+   const google=async(path,options={})=>{const r=await request('https://people.googleapis.com/v1/'+validatePeoplePath(path),{method:options.method||'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(options.body?{body:JSON.stringify(options.body)}:{})});const data=await r.json();if(!r.ok)throw fail(r.status,data.error?.message||'No se pudo conciliar Google.');return data;};
+   try{return json(res,200,await require('../lib/contact-identity-google-repair').repair(manager,holder,{google,save,account:stored.email}));}
+   finally{await request(SB+'/rest/v1/crm_contact_sync_queue?record_id=eq.'+id+'&lease_until=eq.'+encodeURIComponent(lease),{method:'PATCH',headers:serviceHeaders(),body:JSON.stringify({lease_until:null})});}
+  }
   if(action==='proxy'){
    if(req.method!=='POST')throw fail(405,'Método no permitido.');const body=typeof req.body==='string'?JSON.parse(req.body):req.body||{},method=String(body.method||'GET').toUpperCase();
    if(!['GET','POST','PATCH','DELETE'].includes(method))throw fail(400,'Método de Google no permitido.');
