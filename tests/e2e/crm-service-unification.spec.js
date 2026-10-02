@@ -15,7 +15,7 @@ const READ_RPCS = new Set([
   'crm_list_system_events', 'crm_offer_delivery_status', 'crm_offer_followup_latest',
   'crm_system_health_snapshot', 'crm_welcome_capability', 'crm_contact_authorship',
   'wa_get_messages', 'wa_list_templates', 'crm_whatsapp_internal_reads',
-  'crm_router_return_preview', 'crm_direct_sale_day_one_preview'
+  'crm_list_monthly_reviews', 'crm_router_return_preview', 'crm_direct_sale_day_one_preview'
 ]);
 const GREEN_READ = new Map([
   ['state', 'GET'], ['settings', 'GET'], ['summary', 'GET'], ['chats', 'GET'],
@@ -161,7 +161,7 @@ test('PC: demo, ocho pantallas y conexión real de WhatsApp y Google, solo lectu
     await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);
     await page.locator('#signin').click();
     await expect(page.locator('#app')).toBeVisible({ timeout: 35000 });
-    for (const view of ['dashboard', 'database', 'sales', 'agenda', 'whatsapplive', 'automations', 'labels', 'settings']) {
+    for (const view of ['dashboard', 'database', 'sales', 'reviews', 'agenda', 'whatsapplive', 'automations', 'labels', 'settings']) {
       await test.step(`Abrir ${view}`, async () => {
         const nav = page.locator(`.nav[data-view="${view}"]`).first();
         await expect(nav).toBeVisible();

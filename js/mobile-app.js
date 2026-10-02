@@ -99,7 +99,7 @@
   const CONTACT_FILTERS=['all','opportunities','tasks','untracked','incomplete'];
   const CONTACT_PAGE_SIZE=60;
   const OPPORTUNITY_FILTERS=['all','today','overdue','upcoming','month','closed'];
-  const MOBILE_WA_FILTERS=['unanswered','waiting','automatic','processing','declined','all','unread','contacts','groups','archived','snoozed'];
+  const MOBILE_WA_FILTERS=['reviews','unanswered','waiting','automatic','processing','declined','all','unread','contacts','groups','archived','snoozed'];
   const MOBILE_WA_PAGE_SIZE=60;
   const taskStatus=task=>String(task?.status||'pending').toLowerCase();
   const taskIsPending=task=>taskStatus(task)==='pending';
@@ -1607,7 +1607,7 @@ function crmInteractiveText(message){
   const mobileWaChatIsArchived=chat=>window.TPFAutomationInbox?.facets?window.TPFAutomationInbox.facets(chat).includes('archived'):!!mobileWaArchiveState(chat?.id).archived;
   const mobileWaIsArchived=chatId=>{const chat=state.whatsapp.chats?.find(c=>String(c.id)===String(chatId));return chat?mobileWaChatIsArchived(chat):!!mobileWaArchiveState(chatId).archived;};
   function mobileWaFilterCounts(chats=state.whatsapp.chats){
-    const rows=chats||[],active=rows.filter(chat=>!mobileWaChatIsArchived(chat)),archived=rows.filter(chat=>mobileWaChatIsArchived(chat));const kinds=Object.fromEntries(['unanswered','waiting','automatic','processing','declined','snoozed'].map(k=>[k,active.filter(c=>window.TPFAutomationInbox?.matchesFilter(c,k)).length]));return {...kinds,all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
+    const rows=chats||[],active=rows.filter(chat=>!mobileWaChatIsArchived(chat)),archived=rows.filter(chat=>mobileWaChatIsArchived(chat));const kinds=Object.fromEntries(['reviews','unanswered','waiting','automatic','processing','declined','snoozed'].map(k=>[k,active.filter(c=>window.TPFAutomationInbox?.matchesFilter(c,k)).length]));return {...kinds,reviews:rows.filter(c=>window.TPFAutomationInbox?.matchesFilter(c,'reviews')).length,all:active.length,unread:active.filter(chat=>mobileWaUnread(chat)>0).length,contacts:active.filter(chat=>!String(chat.id||'').includes('@g.us')).length,groups:active.filter(chat=>String(chat.id||'').includes('@g.us')).length,archived:archived.length};
   }
   function mobileWaFilteredChats(){
     const query=clean(state.whatsapp.query).toLowerCase(),queryDigits=digits(query),filter=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
@@ -1654,7 +1654,7 @@ function crmInteractiveText(message){
   }
   function renderMobileWaFilters(){
     const counts=mobileWaFilterCounts(),active=MOBILE_WA_FILTERS.includes(state.whatsapp.filter)?state.whatsapp.filter:'all';
-    const options=[['unanswered','Pendientes'],['waiting','En espera'],['automatic','Automáticos'],['processing','En tramitación'],['declined','No interesados'],['all','Todos'],['unread','No leídos'],['contacts','Clientes'],['groups','Grupos'],['archived','Archivados'],['snoozed','Aplazados']];
+    const options=[['reviews','Este mes'],['unanswered','Pendientes'],['waiting','En espera'],['automatic','Automáticos'],['processing','En tramitación'],['declined','No interesados'],['all','Todos'],['unread','No leídos'],['contacts','Clientes'],['groups','Grupos'],['archived','Archivados'],['snoozed','Aplazados']];
     return options.map(([key,label])=>`<button class="m-wa-filter ${active===key?'active':''}" data-action="wa-filter" data-filter="${key}" type="button" aria-pressed="${active===key}"><span>${label}</span><b>${counts[key]||0}</b></button>`).join('');
   }
   function renderMobileWaChatRow(chat){
@@ -2166,7 +2166,7 @@ function crmInteractiveText(message){
   window.TPFModules={register(name,module){try{module.install?.()}catch(e){console.error('MOBILE_SHARED_MODULE',name,e)}},report(name,error){console.warn(name,error)}};
   window.addEventListener?.('tpf:sales-updated',()=>{if(state.user)refreshData({silent:true});});
   window.addEventListener?.('tpf:wa-shared-state',()=>{if(state.user&&has('can_use_whatsapp')){loadMobileWaArchiveStates().then(()=>window.renderWhatsAppChats());window.TPFPrivateReads?.sync();}});
-  function mobileSharedBadge(chat){const kinds=window.TPFAutomationInbox?.facets(chat)||[],labels={unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:window.TPFAutomationInbox?.business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',declined:'No interesado',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};return kinds.map(kind=>`<span class="m-inbox-badge ${esc(kind)}">${esc(labels[kind]||kind)}</span>`).join('')+`<small class="m-inbox-reason">${esc(window.TPFAutomationInbox?.describe(chat)||window.TPFInboxManual?.describe(chat)||'')}</small>`;}
+  function mobileSharedBadge(chat){const kinds=window.TPFAutomationInbox?.facets(chat)||[],labels={reviews:'Revisión de este mes',unanswered:'Pendiente',waiting:'Esperando respuesta',automatic:window.TPFAutomationInbox?.business(chat)?.paused?'Seguimiento pausado':'Oferta en seguimiento',processing:'En tramitación',declined:'No interesado',snoozed:'Aplazada',archived:'Archivada',all:'Conversación'};return kinds.map(kind=>`<span class="m-inbox-badge ${esc(kind)}">${esc(labels[kind]||kind)}</span>`).join('')+`<small class="m-inbox-reason">${esc(window.TPFAutomationInbox?.describe(chat)||window.TPFInboxManual?.describe(chat)||'')}</small>`;}
   async function loadMobileAutomaticKinds(){if(Date.now()-automaticAt<90000)return;automaticAt=Date.now();await window.TPFAutomationInbox?.reload();}
   async function openMobileSharedOffer(id){
     if(!has('can_edit_sales')||!has('can_use_whatsapp'))return toast('No tienes permiso para enviar ofertas.','error');

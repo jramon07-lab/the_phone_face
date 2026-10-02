@@ -115,7 +115,7 @@ document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>{
  if($("waQuickModal"))$("waQuickModal").classList.add("hidden");
  if($("waQuickScheduleBox"))$("waQuickScheduleBox").classList.add("hidden");
  document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));n.classList.add("active");
- ["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","labels","settings","automations","users","system","trash"].forEach(v=>$("view-"+v).classList.toggle("hidden",v!==n.dataset.view));
+ ["dashboard","alerts","search","database","sales","reviews","import","agenda","whatsapplive","whatsapp","labels","settings","automations","users","system","trash"].forEach(v=>$("view-"+v).classList.toggle("hidden",v!==n.dataset.view));
  if(n.dataset.view==="search" && typeof n.dataset.sheet!=="undefined"){
    $("searchSheet").value=n.dataset.sheet||"";
    if(n.dataset.sheet){$("searchText").value="";$("searchBtn").click();}

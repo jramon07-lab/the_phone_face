@@ -221,15 +221,17 @@
     const dismissedAt=declineArchives.get(String(chat.id))||0;
     const declined=!!phase?.declinedAt&&!(dismissedAt>=phase.declinedAt&&inc<=dismissedAt&&Number(m.reopenedAt||0)<=dismissedAt);
     const businessOpen=!!(phase?.automatic||phase?.processing||declined||plan);
-    const remainingWork=businessOpen;
+    const reviewActive=(window.TPFReviews?.activeForPhone(chat.id)||[]).length>0;
+    const remainingWork=businessOpen||reviewActive;
     const wonArchived=!!phase?.wonAt&&!remainingWork&&!pending&&(inc<=phase.wonAt||(last.outgoing&&!automaticMessage&&last.timestamp>=inc))&&Number(m.reopenedAt||0)<=Math.max(phase.wonAt,last.outgoing&&!automaticMessage?last.timestamp:0);
-    if((m.archived&&!businessOpen&&inc<=Number(m.archivedAt||Infinity))||wonArchived)return ['archived'];
+    if((m.archived&&!businessOpen&&!reviewActive&&inc<=Number(m.archivedAt||Infinity))||wonArchived)return ['archived'];
     const kinds=[];
     if(pending)kinds.push('unanswered');
     else if(manual)kinds.push(manual);
     if(phase?.automatic)kinds.push('automatic');
     if(phase?.processing)kinds.push('processing');
     if(declined)kinds.push('declined');
+    if(reviewActive)kinds.push('reviews');
     // A scheduled after-sale message alone does not start an offer workflow.
     return kinds.length?kinds:['all'];
   }
@@ -239,6 +241,7 @@
   }
   function category(chat){return facets(chat)[0];}
   function matchesFilter(chat,filter){
+    if(filter==='reviews')return (window.TPFReviews?.activeForPhone(chat.id)||[]).length>0;
     if(filter==='aftercare')return followups(chat).length>0;
     const kinds=facets(chat),archived=kinds.includes('archived');
     if(filter==='archived')return archived;
@@ -265,6 +268,7 @@
       if(m.favorite||m.pinned)counts.favorites++;
       if(Math.max(Number(window.waUnreadCount?.(c.id)||0),Number(window.waChatServerUnread?.(c)||0))>0)counts.unread++;
     }
+    const reviewCount=(liveState()?.chats||[]).filter(c=>(window.TPFReviews?.activeForPhone(c.id)||[]).length>0).length;const reviewBadge=document.getElementById('waReviewsCount');if(reviewBadge){reviewBadge.textContent=String(reviewCount);reviewBadge.hidden=false;}
     for(const [key,n] of Object.entries(counts)){
       const badge=document.querySelector('[data-wa-tab="'+key+'"] .waAutomaticCount');
       if(badge){badge.textContent=String(n);badge.hidden=false;}
@@ -275,7 +279,7 @@
     const view=document.getElementById('view-whatsapplive'),tabs=view?.querySelector('.waTabs');if(!tabs)return;
     view.classList.toggle('waAftercareView',liveState()?.filter==='aftercare');
     if(!view.classList.contains('waInboxWorkspace'))view.classList.add('waInboxWorkspace');
-    const labels=[['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['processing','En tramitación','waProcessingCount'],['aftercare','Seguimiento 3 meses','waAftercareCount'],['declined','No interesados','waDeclinedCount'],['all','Todos','waCount_all'],['contacts','Clientes','waCount_contacts'],['groups','Grupos','waCount_groups'],['unread','No leídos','waCount_unread'],['favorites','Favoritos','waCount_favorites'],['archived','Archivados','waCount_archived'],['snoozed','Aplazados','waCount_snoozed']];
+    const labels=[['reviews','Este mes','waReviewsCount'],['unanswered','Pendientes','waPendingCount'],['waiting','En espera','waWaitingCount'],['automatic','Automáticos','waAutomaticCount'],['processing','En tramitación','waProcessingCount'],['aftercare','Seguimiento 3 meses','waAftercareCount'],['declined','No interesados','waDeclinedCount'],['all','Todos','waCount_all'],['contacts','Clientes','waCount_contacts'],['groups','Grupos','waCount_groups'],['unread','No leídos','waCount_unread'],['favorites','Favoritos','waCount_favorites'],['archived','Archivados','waCount_archived'],['snoozed','Aplazados','waCount_snoozed']];
     const more=tabs.querySelector('.waCleanFilters');
     for(const [key,label,id] of labels){
       let button=view.querySelector('[data-wa-tab="'+key+'"]');
@@ -290,7 +294,7 @@
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);
     let info=document.getElementById('waInboxHelp');
     if(!info){info=document.createElement('div');info.id='waInboxHelp';info.setAttribute('role','status');document.getElementById('waLiveSearch')?.parentElement.after(info);}
-    const messages={aftercare:'WhatsApp de los 3 meses programados o con error. Incluye conversaciones archivadas; no cambia su estado.',declined:'Clientes que pulsaron No me interesa. Atender conserva esta lista; Archivar los retira.',unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas y próximas acciones. Al llegar la fecha vuelven a Pendientes.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
+    const messages={reviews:'Revisiones activas. Si el cliente escribe, también aparece en Pendientes. Completar la revisión la retira de esta carpeta.',aftercare:'WhatsApp de los 3 meses programados o con error. Incluye conversaciones archivadas; no cambia su estado.',declined:'Clientes que pulsaron No me interesa. Atender conserva esta lista; Archivar los retira.',unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas y próximas acciones. Al llegar la fecha vuelven a Pendientes.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
     info.textContent=messages[liveState()?.filter||'all']||'Filtra tus conversaciones.';
     updateAutomaticCount();decorateHeader();
   }
@@ -377,7 +381,7 @@
         if(chat&&facets(chat).includes('archived')&&!meta(chat).archived){event.preventDefault();event.stopImmediatePropagation();window.waMetaSave?.(chat.id,{archived:false},{render:true});window.renderWhatsAppChats?.();return;}
       }
       const tab=event.target.closest?.('#view-whatsapplive [data-wa-tab]');
-      if(tab&&['aftercare','automatic','processing','declined','waiting','unanswered','snoozed','all','archived','contacts','groups','unread','favorites'].includes(tab.dataset.waTab)){
+      if(tab&&['reviews','aftercare','automatic','processing','declined','waiting','unanswered','snoozed','all','archived','contacts','groups','unread','favorites'].includes(tab.dataset.waTab)){
         event.preventDefault();event.stopImmediatePropagation();openAutomaticTab(tab);
       }
       if(tab)setTimeout(()=>{ensureTab();updateAutomaticCount();if(tab.dataset.waTab==='automatic')decorateAutomaticRows()},0);
