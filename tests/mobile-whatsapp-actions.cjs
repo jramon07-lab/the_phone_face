@@ -49,13 +49,13 @@ const rpcResults={
 };
 const client={
   auth:{async getSession(){return {data:{session:{access_token:'token'}},error:null};}},
-  async rpc(name,args){rpcCalls.push({name,args});if(name==='crm_create_opportunity_guarded'){inserts.push({table:'sales_opportunities',row:{pipeline_id:args.p_pipeline_id,stage_id:args.p_stage_id,record_id:args.p_record_id,title:args.p_title,client_name:args.p_client_name,phone:args.p_phone,amount:args.p_amount,expected_date:args.p_expected_date,notes:args.p_notes,contract_party:args.p_contract_party}});return {data:'sales_opportunities-1',error:null};}return rpcResults[name]||{data:null,error:null};},
+  async rpc(name,args){rpcCalls.push({name,args});if(name==='crm_create_opportunity_guarded_v2'){inserts.push({table:'sales_opportunities',row:{pipeline_id:args.p_pipeline_id,stage_id:args.p_stage_id,record_id:args.p_record_id,title:args.p_title,client_name:args.p_client_name,phone:args.p_phone,amount:args.p_amount,expected_date:args.p_expected_date,notes:args.p_notes,contract_party:args.p_contract_party}});return {data:'sales_opportunities-1',error:null};}return rpcResults[name]||{data:null,error:null};},
   from(table){return {insert(row){inserts.push({table,row});return this;},select(){return this;},eq(){return this;},maybeSingle(){return Promise.resolve(table==='app_settings'?{data:{value:{'label-1':'Seguimiento'}},error:null}:{data:null,error:null});},single(){return Promise.resolve({data:{id:`${table}-1`},error:null});}};}
 };
 let fetchCount=0;
 const location={hash:'#/whatsapp-chat/34695661409%40c.us',replace(value){this.hash=value;}};
 const context={
-  window:{supabase:{createClient(){return client;}}},console,Intl,URL,URLSearchParams,AbortController,Date,
+  window:{TPFRouterReturn:{prepare:async(_id,payload)=>payload},supabase:{createClient(){return client;}}},console,Intl,URL,URLSearchParams,AbortController,Date,
   location,history:{length:1,back(){}},confirm(){return true;},
   document:{hidden:false,activeElement:null,getElementById(id){return formNodes[id]||null;},querySelector(selector){return actionButtons[selector]||null;},querySelectorAll(){return [];},addEventListener(){}},
   fetch(){fetchCount+=1;throw new Error('No debe haber llamadas de red WhatsApp en esta prueba');},

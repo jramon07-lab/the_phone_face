@@ -14,7 +14,8 @@ const READ_RPCS = new Set([
   'crm_list_automations', 'crm_list_custom_fields', 'crm_list_labels', 'crm_list_offer_followup_events',
   'crm_list_system_events', 'crm_offer_delivery_status', 'crm_offer_followup_latest',
   'crm_system_health_snapshot', 'crm_welcome_capability', 'crm_contact_authorship',
-  'wa_get_messages', 'wa_list_templates', 'crm_whatsapp_internal_reads'
+  'wa_get_messages', 'wa_list_templates', 'crm_whatsapp_internal_reads',
+  'crm_router_return_preview', 'crm_direct_sale_day_one_preview'
 ]);
 const GREEN_READ = new Map([
   ['state', 'GET'], ['settings', 'GET'], ['summary', 'GET'], ['chats', 'GET'],
@@ -377,6 +378,21 @@ test('Ficha: redimensionar textos no produce bucles ResizeObserver (datos sinté
   expect(errors).toEqual([]);
 });
 
+async function continueReadOnlyPartyPreview(page,destination){
+  const party=page.locator('dialog:has([data-holder])');
+  await expect.poll(async()=>await destination.isVisible()||await party.isVisible(),{timeout:15000}).toBe(true);
+  if(await party.isVisible()){
+    for(const field of ['holder','manager','recipient']){
+      const select=party.locator('[data-'+field+']');
+      const value=await select.evaluate(el=>el.value||[...el.options].find(x=>x.value)?.value||'');
+      expect(value,'La vista previa debe ofrecer una persona válida para '+field).toBeTruthy();
+      await select.selectOption(value);
+    }
+    await party.locator('[data-continue]').click();
+  }
+  await expect(destination).toBeVisible({timeout:15000});
+}
+
 test.describe('Móvil de solo lectura', () => {
   test.use({ viewport: { width: 393, height: 852 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
   test('Móvil: demo, Inicio, Contactos, Ventas y WhatsApp', async ({ context, page }) => {
@@ -390,6 +406,7 @@ test.describe('Móvil de solo lectura', () => {
       await page.locator('#mobilePassword').fill(process.env.CRM_TEST_PASSWORD);
       await page.locator('#mobileSignIn').click();
       await expect(page.locator('#mobileApp')).toBeVisible({ timeout: 35000 });
+      await expect.poll(()=>page.evaluate(()=>typeof window.TPFRouterReturn?.choose)).toBe('function');
       for (const view of ['home', 'contacts', 'opportunities', 'whatsapp']) {
         await page.locator(`[data-mobile-route="${view}"]`).click();
         await expect(page.locator(`[data-mobile-route="${view}"]`)).toHaveClass(/active/);
@@ -412,10 +429,10 @@ test.describe('Móvil de solo lectura', () => {
       await page.locator('#tpfSched3 [data-close]').first().click();
       await expect(page.locator('[data-action="contact-offer"]')).toBeVisible();
       await page.locator('[data-action="contact-offer"]').click();
-      await expect(page.locator('#opOfferModal:not(.hidden) #opPreview')).toBeVisible({timeout:15000});
+      await continueReadOnlyPartyPreview(page,page.locator('#opOfferModal:not(.hidden) #opPreview'));
       await page.locator('#opOfferModal .opClose').click();
       await page.locator('[data-action="contact-direct"]').click();
-      await expect(page.locator('#directSalePrice')).toBeVisible();
+      await continueReadOnlyPartyPreview(page,page.locator('#directSalePrice'));
       await page.locator('#directSaleModal [data-direct-close]').first().click();
       await page.locator('[data-mobile-route="whatsapp"]').click();
       await expect(page.locator('[data-action="wa-auto-settings"]')).toBeVisible();

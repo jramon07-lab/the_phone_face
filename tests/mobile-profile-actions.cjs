@@ -17,7 +17,7 @@ const client={
       assigned.set(args.p_contact_id,args.p_label_ids);return {data:null};
     }
     if(name==='delete_sales_opportunity')return failDelete?{error:{message:'Delete failed'}}:{data:null};
-    if(name==='crm_create_opportunity_guarded'){inserted={pipeline_id:args.p_pipeline_id,stage_id:args.p_stage_id,record_id:args.p_record_id,title:args.p_title,client_name:args.p_client_name,phone:args.p_phone,amount:args.p_amount,expected_date:args.p_expected_date,notes:args.p_notes,contract_party:args.p_contract_party};return {data:'new-opportunity'};}
+    if(name==='crm_create_opportunity_guarded_v2'){inserted={pipeline_id:args.p_pipeline_id,stage_id:args.p_stage_id,record_id:args.p_record_id,title:args.p_title,client_name:args.p_client_name,phone:args.p_phone,amount:args.p_amount,expected_date:args.p_expected_date,notes:args.p_notes,contract_party:args.p_contract_party};return {data:'new-opportunity'};}
     throw Error('Unexpected RPC '+name);
   },
   from(table){if(table==='app_settings'){const q={select(){return q},eq(){return q},async maybeSingle(){return {data:{value:{a:'Operadores',b:'Tiendas',c:'Operadores'}}}}};return q;}assert.equal(table,'sales_opportunities');const q={
@@ -29,7 +29,7 @@ const client={
 const nodes=new Map();
 function node(id){if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,classList:{add(){},toggle(){}}});return nodes.get(id);}
 const location={hash:'#/contact/c1',replace(value){this.hash=value}};
-const context={window:{supabase:{createClient:()=>client}},console,Date,Intl,URLSearchParams,Set,
+const context={window:{TPFRouterReturn:{prepare:async(_id,payload)=>payload},supabase:{createClient:()=>client}},console,Date,Intl,URLSearchParams,Set,
   setTimeout(){return 1},clearTimeout(){},confirm:()=>confirmDelete,location,
   document:{getElementById:id=>id==='contactOppParty'?null:node(id),querySelector:()=>node('action'),querySelectorAll:()=>[],createElement:()=>({}),head:{appendChild(){}},addEventListener(){}},
   testRefresh(){refreshes++},

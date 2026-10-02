@@ -1061,10 +1061,10 @@
     if(!opp||!has('can_edit_sales')||savingMobileOpportunities.has(String(id))||deletingProfileOpportunities.has(String(id)))return;
     const title=clean(byId('editOppTitle')?.value),stageId=byId('editOppStage')?.value,stage=state.board.stages.find(row=>String(row.id)===String(stageId)),raw=clean(byId('editOppAmount')?.value).replace(',','.'),amount=raw===''?null:Number(raw),expected=byId('editOppDate')?.value||null;
     if(!title||!stageId||(!stage&&String(stageId)!==String(opp.stage_id))||(stage&&opp.pipeline_id&&String(stage.pipeline_id)!==String(opp.pipeline_id))||(amount!==null&&!Number.isFinite(amount))||(expected&&!validAgendaDateKey(expected))){if(msg)msg.textContent='Revisa el nombre, la columna, la fecha y el importe.';return;}
-    const patch={title,stage_id:stageId,amount,expected_date:expected,notes:clean(byId('editOppNotes')?.value)||null};
+    let patch={title,stage_id:stageId,amount,expected_date:expected,notes:clean(byId('editOppNotes')?.value)||null};
     if(String(stageId)!==String(opp.stage_id))patch.position=0;
     savingMobileOpportunities.add(String(id));if(button)button.disabled=true;if(msg)msg.textContent='Guardando…';
-    try{const result=await client.from('sales_opportunities').update(patch).eq('id',id).select('*').single();if(result.error)throw result.error;const index=state.board.opportunities.findIndex(row=>String(row.id)===String(id));if(index>=0)state.board.opportunities[index]={...opp,...result.data};updateAlertDot();if(route().parts[0]==='edit-opportunity'&&route().parts[1]===String(id)){go(`opportunity/${id}`,true);toast('Oportunidad guardada.','success');}}
+    try{patch=await window.TPFRouterReturn.prepare(id,patch);if(!patch){if(msg)msg.textContent='';byId('editOppStage').value=opp.stage_id;return;}const result=await client.from('sales_opportunities').update(patch).eq('id',id).select('*').single();if(result.error)throw result.error;const index=state.board.opportunities.findIndex(row=>String(row.id)===String(id));if(index>=0)state.board.opportunities[index]={...opp,...result.data};updateAlertDot();if(route().parts[0]==='edit-opportunity'&&route().parts[1]===String(id)){go(`opportunity/${id}`,true);toast('Oportunidad guardada.','success');}}
     catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar la oportunidad.';}
     finally{savingMobileOpportunities.delete(String(id));if(button)button.disabled=false;}
   }
@@ -1287,7 +1287,8 @@
   function mobileWaChatPath(chatId){return `whatsapp-chat/${encodeURIComponent(String(chatId||''))}`;}
   function mobileWaReturnPath(contactId,kind=''){const chatId=mobileWaQueryChatId();if(chatId)return mobileWaChatPath(chatId);if(route().query.get('origin')==='quick'&&['task','opportunity'].includes(kind))return `choose-contact/${kind}`;return `contact/${contactId}`;}
   async function createMobileOpportunityGuarded(row,allowDuplicate=false){
-    const result=await client.rpc('crm_create_opportunity_guarded',{p_pipeline_id:row.pipeline_id,p_stage_id:row.stage_id,p_record_id:row.record_id||null,p_title:row.title,p_client_name:row.client_name||null,p_phone:row.phone||null,p_amount:row.amount??null,p_expected_date:row.expected_date||null,p_notes:row.notes||null,p_contract_party:row.contract_party||null,p_allow_duplicate:allowDuplicate});
+    row=await window.TPFRouterReturn.prepare(null,row);if(!row)throw Error('No se ha guardado la oportunidad.');
+    const result=await client.rpc('crm_create_opportunity_guarded_v2',{p_after_sale:row.after_sale_preferences||null,p_pipeline_id:row.pipeline_id,p_stage_id:row.stage_id,p_record_id:row.record_id||null,p_title:row.title,p_client_name:row.client_name||null,p_phone:row.phone||null,p_amount:row.amount??null,p_expected_date:row.expected_date||null,p_notes:row.notes||null,p_contract_party:row.contract_party||null,p_allow_duplicate:allowDuplicate});
     if(result.error&&String(result.error.message||'').includes('DUPLICATE_OPPORTUNITY:')){
       if(confirm('Ya existe una oportunidad abierta con el mismo cliente y título. ¿Seguro que quieres crear otra?'))return createMobileOpportunityGuarded(row,true);
       throw new Error('No se creó: abre la oportunidad existente.');
