@@ -182,14 +182,14 @@ function renderDirectSaleOperator(){
 function updateDirectSaleInfo(){if($('directSaleInfo'))$('directSaleInfo').textContent=`Se creará CAMBIO ${directOperator.toUpperCase()} directamente en Tramitado y comenzarán sus automatizaciones.${directCounteroffer?' Se aplicará la etiqueta CONTRAOFERTA VODAFONE sin duplicarla.':''}${!directRouter?.send.checked?' No se enviará el WhatsApp del día siguiente.':dayOneAvailable?' Se programará el WhatsApp del día siguiente.':''}`}
 let dayOneVersion=0,dayOneReady=false,dayOneAvailable=false,directRouter=null;const dayOneDrafts=new Map();
 async function loadDirectDayOne(){
- const version=++dayOneVersion,key=directOperator+'|'+directNetflix,previous=directRouter?.snapshot();dayOneReady=false;
+ const version=++dayOneVersion,previous=directRouter?.snapshot(),key=directOperator+'|'+directNetflix+'|'+(previous?.message_mode||'full');dayOneReady=false;
  $('directSaleSubmit').disabled=true;
  try{
   const data=await window.TPFRouterReturn.preview({contactId:directContext.id,managerId:directContext.managerId,recipientId:directContext.recipientId,operator:directOperator,netflix:directNetflix});
   if(version!==dayOneVersion)return;
-  const prefs=previous?{...previous,text:dayOneDrafts.get(key)||window.TPFRouterReturn.message(data.text,previous.previous_operator)}:null;
+  const prefs=previous?{...previous,text:dayOneDrafts.get(key)||(previous.message_mode==='return'?window.TPFRouterReturn.returnOnly(data.text,previous.previous_operator):window.TPFRouterReturn.message(data.text,previous.previous_operator))}:null;
   directRouter=window.TPFRouterReturn.bind($('directSaleRouterFields'),data,{operator:directOperator,preferences:prefs,onchange:updateDirectSaleInfo});
-  directRouter.text.oninput=e=>dayOneDrafts.set(key,e.target.value);
+  directRouter.text.oninput=e=>dayOneDrafts.set(directOperator+'|'+directNetflix+'|'+directRouter.snapshot().message_mode,e.target.value);
   dayOneAvailable=directRouter.available;dayOneReady=true;$('directSaleMsg').textContent='';updateDirectSaleInfo();
  }catch(e){if(version===dayOneVersion)$('directSaleMsg').textContent='No se pudo cargar el mensaje: '+e.message;}
  finally{if(version===dayOneVersion)$('directSaleSubmit').disabled=!dayOneReady;}
