@@ -1498,3 +1498,17 @@ body.tpfUnified #view-sales #salesListRows .ofSalesActions .ofView{background:#0
 body.tpfUnified #view-sales #salesListRows .ofSalesActions .ofChat{background:#eff5ff!important;color:#095dcc!important;border-color:#b4cbf0!important}
 body.tpfUnified #view-sales #salesListRows .ofSalesActions button:disabled{opacity:.55!important;cursor:not-allowed!important}
 body.tpfUnified #view-sales #salesListRows .tpfListMenuBtn{align-self:flex-end!important;font-size:15px!important;min-height:24px!important;padding:2px 8px!important}
+
+/* Keep offer access beside the title and dossier rows in a fixed reading order. */
+body.tpfUnified #opportunityFullPage .oppFullHeading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+body.tpfUnified #opportunityFullPage .oppFullHeading #oppFullTitle{margin:0}
+body.tpfUnified #opportunityFullPage #oppFullOfferAccess .ofOpportunityAccess{margin:0}
+body.tpfUnified #opportunityFullPage .oppReadHeader{grid-row:1}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-row:2}
+body.tpfUnified #opportunityFullPage .oppReadNotes:not(#oppFullFollowupAudit){grid-row:3}
+body.tpfUnified #view-whatsapplive #ofBackToSales{flex:0 0 auto!important;width:auto!important;min-height:30px!important;height:30px!important;padding:5px 9px!important;font-size:12px!important;line-height:18px!important;white-space:nowrap!important}
+@media(max-width:850px){
+body.tpfUnified #opportunityFullPage .oppContactSummary{flex-direction:row;align-items:center;padding:16px;gap:12px}
+body.tpfUnified #opportunityFullPage .oppContactAvatar{flex:0 0 48px;width:48px;height:48px}
+body.tpfUnified #opportunityFullPage .oppContactLink{font-size:17px}
+}

@@ -17,5 +17,22 @@ test('Sales list keeps text and actions separate and opens the communication rec
  await page.locator('[data-of-chat="b"]').click();expect(await page.evaluate(()=>chats)).toEqual(['34600000002@c.us','34600000005@c.us']);
  await expect(page.locator('[data-of-chat="c"]')).toBeDisabled();expect(await page.evaluate(()=>navCalls)).toBe(2);expect(await page.evaluate(()=>controls)).toEqual([]);
  await page.locator('[data-of-manage="offer-a"]').click();await expect(page.getByRole('dialog')).toContainText('Gestionar seguimiento');await page.locator('#ofManageDialog [data-of-close]').last().click();
- expect(await page.evaluate(()=>salesCache.opportunities.every(x=>x.stage_id==='s'))).toBe(true);await page.evaluate(()=>document.getElementById('view-sales').classList.add('hidden'));await expect(page.getByRole('button',{name:'← Volver al panel de ventas'})).toBeVisible();await page.getByRole('button',{name:'← Volver al panel de ventas'}).click();expect(await page.evaluate(()=>restored)).toEqual({mainView:'sales',salesMode:'list'});await expect(page.locator('#ofBackToSales')).toHaveCount(0);expect(errors).toEqual([]);
+ expect(await page.evaluate(()=>salesCache.opportunities.every(x=>x.stage_id==='s'))).toBe(true);await page.evaluate(()=>document.getElementById('view-sales').classList.add('hidden'));await expect(page.getByRole('button',{name:'← Volver a ventas'})).toBeVisible();await page.getByRole('button',{name:'← Volver a ventas'}).click();expect(await page.evaluate(()=>restored)).toEqual({mainView:'sales',salesMode:'list'});await expect(page.locator('#ofBackToSales')).toHaveCount(0);expect(errors).toEqual([]);
+});
+
+test('Opportunity dossier stays compact with offer access and the linked contact at desktop and mobile widths',async({page,context})=>{
+ await context.route('**/*',r=>r.abort());const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const html=fs.readFileSync('index.html','utf8');await page.setContent('<body class="tpfUnified">'+html.slice(html.indexOf('<div id="opportunityFullPage"'),html.indexOf('<div id="waQuickModal"'))+'</body>');
+ for(const file of ['assets/app.css','assets/opportunity-detail.css','assets/crm-reference.css'])await page.addStyleTag({content:fs.readFileSync(file,'utf8')});
+ await page.evaluate(()=>{window.$=id=>document.getElementById(id);window.rememberOpportunityReturnContext=()=>{};window.tpfRememberScreen=()=>{};window.oppVal=v=>String(v??'');window.fmtMoney=v=>v+' €';window.fmtDateOnly=String;window.currentFullOpportunity=null;window.salesCache={opportunities:[{id:'synthetic',title:'CAMBIO VODAFONE',client_name:'Cliente de prueba',phone:'600000001',amount:25,expected_date:'2026-10-14',stage_id:'pending',notes:'Nota de prueba'}],stages:[{id:'pending',name:'Pendiente de tramitar'}]};window.sb={rpc:async()=>({data:null,error:null})};window.TPFOfferFollowup={opportunityButton:()=>'<button type="button" data-of-view-opp="synthetic">Ver oferta enviada</button>'};});
+ const core=fs.readFileSync('js/core/20-main.js','utf8');await page.addScriptTag({content:core.slice(core.indexOf('window.openOpportunityFull=async'),core.indexOf('window.returnToContactFromOpportunity=async'))});
+ const offers=fs.readFileSync('js/modules/offers-pro.js','utf8');await page.addScriptTag({content:offers.slice(offers.indexOf('function offerAccess('),offers.indexOf('function renderInstances('))});
+ await page.evaluate(async()=>{await openOpportunityFull('synthetic');refreshOpportunityFollowup();});
+ for(const width of [1280,1366,1920,2560,390]){
+  await page.setViewportSize({width,height:900});await page.waitForTimeout(250);await expect(page.locator('#oppFullOfferAccess button')).toBeVisible();
+  const boxes=await page.evaluate(()=>{const rect=selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{top:r.top,bottom:r.bottom,left:r.left,right:r.right}};return{title:rect('.oppFullHeading'),head:rect('.oppReadHeader'),contact:rect('.oppContactSummary'),metrics:rect('.oppSummaryMetrics'),notes:rect('.oppReadNotes'),scroll:document.getElementById('opportunityFullPage').scrollWidth,client:document.getElementById('opportunityFullPage').clientWidth}});
+  expect(boxes.head.top-boxes.title.bottom).toBeLessThan(45);expect(boxes.metrics.top-boxes.head.bottom).toBeLessThan(width>850?40:280);expect(boxes.scroll).toBeLessThanOrEqual(boxes.client+1);
+  if(width>850){expect(Math.abs(boxes.metrics.top-boxes.contact.top)).toBeLessThan(2);expect(boxes.notes.top).toBeGreaterThanOrEqual(boxes.metrics.bottom);}
+ }
+ expect(errors).toEqual([]);
 });
