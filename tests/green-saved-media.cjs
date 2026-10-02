@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {savedMedia}=require('../lib/green-saved-media');
+const {savedMedia,savedMediaSource}=require('../lib/green-saved-media');
 process.env.SUPABASE_SERVICE_ROLE_KEY='test';process.env.SUPABASE_URL='https://db.test';
 (async()=>{
  for(const [url,expected] of [['https://do-media-7107.fra1.digitaloceanspaces.com/123/file.pdf',true],['https://evil.test/123/file.pdf',false],['https://do-media-7107.fra1.digitaloceanspaces.com/999/file.pdf',false],['http://do-media-7107.fra1.digitaloceanspaces.com/123/file.pdf',false]]){
@@ -7,6 +7,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY='test';process.env.SUPABASE_URL='https://d
   const result=await savedMedia('chat','message','123',async(u,o)=>{calls++;if(calls===1){assert.match(u,/chat_id=eq.chat/);assert.match(u,/id_message=eq.message/);return {ok:true,json:async()=>[{raw:{messageData:{fileMessageData:{downloadUrl:url}}}}]};}assert.equal(o.redirect,'error');return file;});
   assert.equal(Boolean(result),expected);assert.equal(calls,expected?2:1);
  }
+ const verified=await savedMediaSource('chat','message','123',async url=>url.startsWith('https://db.test')?{ok:true,json:async()=>[{raw:{downloadUrl:'https://do-media-7107.fra1.digitaloceanspaces.com/123/file.pdf'}}]}:{ok:true,headers:{get:()=> 'application/pdf'}});
+ assert.equal(verified.url,'https://do-media-7107.fra1.digitaloceanspaces.com/123/file.pdf');assert(verified.response.ok);
  assert.equal(await savedMedia('chat','message','123',async()=>{throw Error('offline')}),null);
  console.log('PASS saved media retrieval, exact message lookup, blocked foreign hosts/instances, safe fallback');
 })().catch(e=>{console.error(e);process.exit(1)});

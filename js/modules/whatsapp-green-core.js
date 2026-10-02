@@ -353,7 +353,7 @@ async function waApi(action,payload={}){
   // Una foto opcional no puede retener indefinidamente la cola de avatares.
   // The summary may combine several provider reads, including its bounded
   // retry. Do not abort it after 20 s while the server is still recovering.
-  const readTimeout=action==='avatar'?8000:action==='summary'?65000:(['state','chats','history','previews','file'].includes(action)?35000:0);
+  const readTimeout=action==='avatar'?8000:(action==='summary'||action==='file')?65000:(['state','chats','history','previews','file'].includes(action)?35000:0);
   const controller=readTimeout?new AbortController():null;
   const timeout=controller?setTimeout(()=>controller.abort(new DOMException('WhatsApp está tardando demasiado. Pulsa Actualizar para volver a intentarlo.','TimeoutError')),readTimeout):null;
   if(controller)opts.signal=controller.signal;

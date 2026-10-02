@@ -15,7 +15,7 @@ function external(){try{return JSON.parse(localStorage.getItem('tpf_external_che
 function saveExternal(x){try{localStorage.setItem('tpf_external_checks_v1',JSON.stringify(x||{}))}catch(_){}}
 let externalSync=null,externalPoll=0;
 function pollExternal(){clearTimeout(externalPoll);if(document.hidden)return;const checking=['ci','e2e'].some(id=>externalState(id)==='pending');if(checking)externalPoll=setTimeout(()=>{if(!document.hidden)syncExternal();},15000);}
-function currentCommit(){try{return String(document.getElementById('tpfBuildBadge')?.dataset?.tpfCommit||'').trim().toLowerCase()}catch(_){return''}}
+function currentCommit(){try{return String(document.getElementById('tpfBuildBadge')?.dataset?.tpfFullCommit||document.getElementById('tpfBuildBadge')?.dataset?.tpfCommit||'').trim().toLowerCase()}catch(_){return''}}
 function sameCommit(current,saved){return !!(current&&saved&&(saved.startsWith(current)||current.startsWith(saved)))}
 function isCurrentExternal(item){if(!item)return false;const host=String(item.host||'');if(host!==location.host)return false;const current=currentCommit(),saved=String(item.sha||'').trim().toLowerCase();if(current&&saved&&!sameCommit(current,saved))return false;return true}
 function externalState(id){const item=external()[id];if(!isCurrentExternal(item))return'info';return item.state||'info'}
@@ -32,9 +32,9 @@ async function syncExternal(){
   let sha=currentCommit();
   const saveInfo=detail=>{const out=external();for(const id of ['ci','e2e'])out[id]={state:'info',detail,sha,host:location.host,at:new Date().toISOString()};saveExternal(out);render();};
   try{
-   const head=await fetch(location.pathname||'/',{method:'HEAD',cache:'no-store',signal:AbortSignal.timeout(8000)});
-   sha=String(head.headers.get('x-tpf-commit')||sha||'').trim();
-   if(!sha||sha==='local'){saveInfo('Sin prueba automática para este cambio; no es un error');return;}
+   // The page already identifies its exact deployment. Do not launch a second
+   // page request on focus just to discover its SHA.
+   if(!/^[a-f0-9]{40}$/.test(sha)){saveInfo('Recarga el CRM para consultar las pruebas de esta versión.');return;}
    const r=await fetch(`https://api.github.com/repos/jramon07-lab/the_phone_face/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=20`,{headers:{Accept:'application/vnd.github+json'},cache:'no-store',signal:AbortSignal.timeout(8000)});
    if(!r.ok){saveInfo('No se pudo consultar GitHub para esta versión. Pulsa Actualizar para reintentar.');return;}
    const d=await r.json(),runs=(d.workflow_runs||[]).filter(x=>String(x.head_sha||'').toLowerCase()===sha.toLowerCase());
