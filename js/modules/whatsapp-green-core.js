@@ -759,7 +759,7 @@ async function oppUnifiedRefresh(){
 }
 window.oppUnifiedChangeStage=async function(id,stageId){
   if(!id||!stageId)return;
-  const {error}=await sb.from("sales_opportunities").update({stage_id:stageId,position:0}).eq("id",id);
+  const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stageId,position:0});if(!payload){window.loadSales?.();return;}const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);
   if(error){alert(error.message);return}
   try{await runOpportunityAutomations(id)}catch(_){}
   await oppUnifiedRefresh();
