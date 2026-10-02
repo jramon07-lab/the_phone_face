@@ -262,6 +262,7 @@ async function control(id,action,{sidebar=false}={}){
   return true;
  }catch(e){alert(e?.message||'No se pudo actualizar la oferta');return false}finally{busy=false}
 }
+window.TPFSelectSaleParty=directOfferContext;
 window.TPFControlWhatsappOffer=(id,action)=>control(id,action,{sidebar:true});
 
 function operatorList(){const custom=catalog.map(o=>o.operator).filter(Boolean);return [...new Set([...OPERATORS,...custom])]}

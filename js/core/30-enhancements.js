@@ -454,6 +454,7 @@ function crmApplyExpandedPermissions(){
   crmShowNav('.nav[data-view="dashboard"]',crmCan("can_view_dashboard"));
   crmShowNav('.nav[data-view="alerts"]',crmCan("can_view_alerts"));
   crmShowNav('.nav[data-view="sales"]',crmCan("can_view_sales")||crmCan("can_edit_sales"));
+  crmShowNav('.nav[data-view="reviews"]',crmCan("can_view_sales")||crmCan("can_edit_sales"));
   crmShowNav('.nav[data-view="database"]',crmCan("can_view_database"));
   crmShowNav('.nav[data-view="import"]',crmCan("can_manage_imports"));
   crmShowNav('.nav[data-view="agenda"]',crmCan("can_view_agenda")||crmCan("can_manage_agenda"));
@@ -497,7 +498,7 @@ const _openAppViewPermissions=window.openAppView;
 window.openAppView=function(view){
   const rule={
     dashboard:"can_view_dashboard",alerts:"can_view_alerts",database:"can_view_database",
-    sales:"can_view_sales",import:"can_manage_imports",agenda:"can_view_agenda",
+    sales:"can_view_sales",reviews:"can_view_sales",import:"can_manage_imports",agenda:"can_view_agenda",
     whatsapplive:"can_use_whatsapp",whatsapp:"can_schedule_whatsapp",
     labels:"can_manage_labels",automations:"can_manage_automations",
     settings:"can_view_settings",users:"can_manage_users"
@@ -531,6 +532,7 @@ function applyCurrentPermissions(){
  });
  show('[data-view="database"]',perms?.can_view_database);
  show('[data-view="sales"]',perms?.can_view_sales);
+ show('[data-view="reviews"]',perms?.can_view_sales);
  show('[data-view="import"]',perms?.can_manage_imports);
  show('[data-view="agenda"]',perms?.can_view_agenda||perms?.can_manage_agenda);
  show('[data-view="whatsapplive"]',perms?.can_use_whatsapp);

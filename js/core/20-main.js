@@ -2479,7 +2479,7 @@ window.__tpfNavStack = window.__tpfNavStack || [];
 window.__tpfCurrentView = window.__tpfCurrentView || "dashboard";
 
 function tpfVisibleMainView(){
-  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
+  const views=["dashboard","alerts","search","database","sales","reviews","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
   return views.find(v=>!$("view-"+v)?.classList.contains("hidden")) || window.__tpfCurrentView || "dashboard";
 }
 
@@ -2654,7 +2654,7 @@ window.__tpfRestoringScreen=false;
 window.__tpfSkipNextScreenPush=false;
 
 function tpfMainViewNow(){
-  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
+  const views=["dashboard","alerts","search","database","sales","reviews","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
   return views.find(v=>!$("view-"+v)?.classList.contains("hidden")) || window.__tpfCurrentView || "dashboard";
 }
 
@@ -2788,7 +2788,7 @@ window.__TPF_HISTORY = [];
 window.__TPF_RESTORING = false;
 
 function tpfMainViewId(){
-  const views=["dashboard","alerts","search","database","sales","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
+  const views=["dashboard","alerts","search","database","sales","reviews","import","agenda","whatsapplive","whatsapp","settings","automations","users","trash"];
   return views.find(v=>{
     const el=$("view-"+v);
     return el && !el.classList.contains("hidden");

@@ -841,6 +841,7 @@ function oppUnifiedCard(o,{compact=false}={}){
       <span>🗓️ Cierre esperado: <strong class="${overdue?"dangerText":""}">${date}</strong></span>
     </div>
     ${notes?`<div class="oppUnifiedNotes">${notes}</div>`:""}
+    ${window.TPFReviews?.card(o.id)||""}
     <div class="oppUnifiedStageControl">
       <label>Columna / estado</label>
       <select onchange="event.stopPropagation();oppUnifiedChangeStage('${esc(o.id||"")}',this.value)">
