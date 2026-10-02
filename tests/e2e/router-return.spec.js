@@ -35,6 +35,7 @@ test('Offer and direct sale party preview survives unavailable linked contacts',
  await page.evaluate(()=>{
   window.reads=[];window.TPFModules={register(){}};
   const records=[{id:'manager',data:{NOMBRE:'Gestor',TPF_RELACIONES:{managed_contacts:[{record_id:'gone'},{record_id:'owner'},{record_id:'gone'}]}}},{id:'owner',data:{NOMBRE:'Titular'}}];
+  window.fixtureRecords=records;
   window.sb={from(table){if(table!=='records')throw Error('Unexpected table');let id;return{select(){return this},eq(key,value){if(key==='id')id=value;return this},contains(key,value){id=value.TPF_RELACIONES.managed_contacts[0].record_id;return this},async maybeSingle(){reads.push(id);return{data:records.find(x=>x.id===id)||null,error:null}},async limit(){return{data:records.filter(x=>x.data.TPF_RELACIONES?.managed_contacts.some(y=>y.record_id===id))}}}}};
  });
  const source=fs.readFileSync('js/modules/offers-pro.js','utf8').replace("M.register('offers-pro',{install});","window.previewParty=directOfferContext;");
@@ -52,4 +53,12 @@ test('Offer and direct sale party preview survives unavailable linked contacts',
   expect(await page.evaluate(()=>window.partyResult.recipientId)).toBe('manager');
  }
  expect(await page.evaluate(()=>window.reads.filter(x=>x==='gone').length)).toBe(2);
+ // With only the current contact available, both entry points skip the selector.
+ await page.evaluate(()=>window.fixtureRecords.splice(1));
+ for(const id of ['offer','direct']){
+  await page.locator('#'+id).click();
+  await expect.poll(()=>page.evaluate(()=>window.partyResult?.id)).toBe('manager');
+  await expect(page.locator('dialog:has([data-holder])')).toHaveCount(0);
+  expect(await page.evaluate(()=>window.partyResult.recipientId)).toBe('manager');
+ }
 });

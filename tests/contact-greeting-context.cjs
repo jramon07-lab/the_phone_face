@@ -21,9 +21,9 @@ const manager={id:'manager',data:{NOMBRE:'Jose Ramon',APELLIDOS:'Sánchez','NOMB
  records=[stale,holder];fetches=[];warningText='';
  choose=e=>{assert.match(warningText,/ya no están disponibles/);assert.equal(e.holder.options.length,3);e.holder.value='1';e.holder.onchange();assert.equal(e.manager.value,stale.id);};
  r=await context.window.testContext(stale);assert.equal(r.id,'owner');assert.equal(r.managerId,stale.id);assert.equal(r.recipientId,stale.id);assert.equal(fetches.filter(x=>x==='gone').length,1);
- records=[stale];warningText='';choose=e=>{assert.match(warningText,/contactos disponibles/);assert.equal(e.holder.value,'0');assert.equal(e.recipient.value,stale.id)};
- r=await context.window.testContext(stale);assert.equal(r.id,stale.id);
- choose=e=>e.cancel.onclick();assert.equal(await context.window.testContext(stale),null);
+ records=[stale];warningText='';choose=()=>{throw Error('One available titular must skip the selector even with stale links')};
+ r=await context.window.testContext(stale);assert.equal(r.id,stale.id);assert.equal(r.managerId,stale.id);assert.equal(r.recipientId,stale.id);assert.equal(warningText,'');
+ records=[stale,holder];choose=e=>e.cancel.onclick();assert.equal(await context.window.testContext(stale),null);
  await assert.rejects(()=>context.window.testContext({id:'missing'}),/contacto ya no está disponible/);
  fetchError={message:'network unavailable'};await assert.rejects(()=>context.window.testContext(stale),e=>e.message==='network unavailable');fetchError=null;
  console.log('PASS: explicit holder/manager/recipient choices, compound names, multiple managers and cancellation.');
