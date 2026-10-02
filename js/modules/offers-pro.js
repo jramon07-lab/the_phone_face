@@ -70,14 +70,17 @@ const contactDisplayName=contact=>String(contact?.fullName||contactValue(contact
 const contactPhone=contact=>contactValue(contact,'TELÉFONO','TELEFONO','PHONE','MOVIL');
 async function directOfferContext(contact){
  const startId=String(contact?.id||'');if(!startId)return null;
- const fetchRecord=async id=>{const r=await sb.from('records').select('id,data').eq('id',id).single();if(r.error)throw r.error;return r.data};
- const own=await fetchRecord(startId),linked=own.data?.TPF_RELACIONES?.managed_contacts||[];
- const holders=[own];for(const x of linked)if(x.record_id&&x.record_id!==startId)holders.push(await fetchRecord(x.record_id));
+ const fetchRecord=async id=>{const r=await sb.from('records').select('id,data').eq('id',id).maybeSingle();if(r.error)throw r.error;return r.data};
+ const own=await fetchRecord(startId);if(!own)throw new Error('Este contacto ya no está disponible. Actualiza la ficha e inténtalo de nuevo.');
+ const linked=Array.isArray(own.data?.TPF_RELACIONES?.managed_contacts)?own.data.TPF_RELACIONES.managed_contacts:[];
+ const holders=[own],seen=new Set([startId]);let unavailable=0;
+ for(const x of linked){const id=String(x?.record_id||'');if(!id||seen.has(id))continue;seen.add(id);const holder=await fetchRecord(id);if(holder)holders.push(holder);else unavailable++;}
  const options=[];for(const h of holders){const r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').contains('data',{TPF_RELACIONES:{managed_contacts:[{record_id:h.id}]}}).limit(50);if(r.error)throw r.error;options.push({holder:h,managers:r.data||[]})}
- if(holders.length===1&&!options[0].managers.length)return {id:own.id,managerId:own.id,recipientId:own.id,name:contactValue(own,'NOMBRE')||firstName(contactDisplayName(own)),phone:contactPhone(own),ownerName:contactDisplayName(own),ownerDni:contactValue(own,'DNI / NIF','DNI'),managerName:contactDisplayName(own),recipientName:contactDisplayName(own),managedRecipient:false};
+ if(holders.length===1&&!options[0].managers.length&&!unavailable)return {id:own.id,managerId:own.id,recipientId:own.id,name:contactValue(own,'NOMBRE')||firstName(contactDisplayName(own)),phone:contactPhone(own),ownerName:contactDisplayName(own),ownerDni:contactValue(own,'DNI / NIF','DNI'),managerName:contactDisplayName(own),recipientName:contactDisplayName(own),managedRecipient:false};
  const result=await new Promise(resolve=>{
  const modal=document.createElement('dialog');modal.style.cssText='max-width:540px;width:calc(100% - 32px);border:1px solid #ddd;border-radius:16px;padding:22px';
  modal.innerHTML='<h2>Titular y comunicaciones</h2><p>Se creará una sola oportunidad vinculada a estas personas.</p><label>Titular de la oportunidad<select data-holder style="display:block;width:100%;margin:8px 0 16px"></select></label><label>Gestor del contrato<select data-manager style="display:block;width:100%;margin:8px 0 16px"></select></label><label>Quién recibe los WhatsApp y seguimientos<select data-recipient style="display:block;width:100%;margin:8px 0 16px"></select></label><p data-summary></p><div style="display:flex;gap:12px;justify-content:flex-end"><button data-cancel>Cancelar</button><button data-continue class="primary">Continuar</button></div>';
+ if(unavailable){const warning=document.createElement('p');warning.dataset.unavailableContacts='';warning.textContent='Hay vínculos a contactos que ya no están disponibles. Elige el titular, gestor y destinatario entre los contactos disponibles antes de continuar.';modal.querySelector('h2').after(warning);}
  document.body.appendChild(modal);const hs=modal.querySelector('[data-holder]'),ms=modal.querySelector('[data-manager]'),rs=modal.querySelector('[data-recipient]');
  const label=r=>contactDisplayName(r)+' · DNI '+(contactValue(r,'DNI / NIF','DNI')||'sin indicar');
  holders.forEach((r,i)=>hs.add(new Option(label(r),String(i))));
@@ -265,15 +268,16 @@ async function openConfigurator(){
 async function openOfferForOpportunity(context){
  const id=String(context?.contactId||context?.id||'').trim();
  if(!id)return alert('Vincula primero esta oportunidad a un contacto.');
- const result=await sb.from('records').select('id,data').eq('id',id).single();
+ const result=await sb.from('records').select('id,data').eq('id',id).maybeSingle();
  if(result.error)throw result.error;
+ if(!result.data)throw new Error('Este contacto ya no está disponible. Actualiza la ficha e inténtalo de nuevo.');
  offerContext=await directOfferContext(result.data);
  if(!offerContext)return;return openConfigurator();
 }
 window.openOfferComposerForOpportunity=openOfferForOpportunity;
 // Open from a list without navigating through the contact profile.
 window.openOfferComposerForContact=async function(contactId){
- const result=await sb.from('records').select('id,data').eq('id',contactId).single();
+ const result=await sb.from('records').select('id,data').eq('id',contactId).maybeSingle();
  if(result.error)throw result.error;
  if(!result.data)throw new Error('No se ha encontrado el contacto.');
  offerContext=await directOfferContext(result.data);

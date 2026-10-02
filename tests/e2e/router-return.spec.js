@@ -28,3 +28,28 @@ test('Tramitado previews and edits without writes; cancellation saves nothing',a
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
  await expect.poll(()=>page.evaluate(()=>window.result?.send)).toBe(false);
 });
+
+test('Offer and direct sale party preview survives unavailable linked contacts',async({page,context})=>{
+ const fs=require('node:fs');await context.route('**/*',route=>route.abort());
+ await page.setContent('<button id="offer">Enviar oferta</button><button id="direct">Venta directa</button>');
+ await page.evaluate(()=>{
+  window.reads=[];window.TPFModules={register(){}};
+  const records=[{id:'manager',data:{NOMBRE:'Gestor',TPF_RELACIONES:{managed_contacts:[{record_id:'gone'},{record_id:'owner'},{record_id:'gone'}]}}},{id:'owner',data:{NOMBRE:'Titular'}}];
+  window.sb={from(table){if(table!=='records')throw Error('Unexpected table');let id;return{select(){return this},eq(key,value){if(key==='id')id=value;return this},contains(key,value){id=value.TPF_RELACIONES.managed_contacts[0].record_id;return this},async maybeSingle(){reads.push(id);return{data:records.find(x=>x.id===id)||null,error:null}},async limit(){return{data:records.filter(x=>x.data.TPF_RELACIONES?.managed_contacts.some(y=>y.record_id===id))}}}}};
+ });
+ const source=fs.readFileSync('js/modules/offers-pro.js','utf8').replace("M.register('offers-pro',{install});","window.previewParty=directOfferContext;");
+ await page.addScriptTag({content:source});
+ await page.evaluate(()=>{for(const id of ['offer','direct'])document.getElementById(id).onclick=()=>{window.partyResult=null;window.previewParty({id:'manager'}).then(x=>window.partyResult=x)}});
+ for(const id of ['offer','direct']){
+  await page.locator('#'+id).click();const dialog=page.locator('dialog:has([data-holder])');
+  await expect(dialog.locator('[data-unavailable-contacts]')).toContainText('ya no están disponibles');
+  await expect(dialog.locator('[data-holder] option')).toHaveCount(3);
+  await dialog.locator('[data-holder]').selectOption('1');
+  await expect(dialog.locator('[data-manager]')).toHaveValue('manager');
+  await dialog.locator('[data-continue]').click();
+  await expect.poll(()=>page.evaluate(()=>window.partyResult?.id)).toBe('owner');
+  expect(await page.evaluate(()=>window.partyResult.managerId)).toBe('manager');
+  expect(await page.evaluate(()=>window.partyResult.recipientId)).toBe('manager');
+ }
+ expect(await page.evaluate(()=>window.reads.filter(x=>x==='gone').length)).toBe(2);
+});
