@@ -118,7 +118,7 @@ declare previous text;previous_defer text;result jsonb;
 begin
  if auth.uid() is null or not (public.current_user_is_admin() or public.current_user_can('can_edit_sales')) then raise exception 'No tienes permiso para editar ventas';end if;
  previous:=current_setting('crm.router_return',true);previous_defer:=current_setting('crm.router_return_defer',true);
- perform set_config('crm.router_return_defer','true',true);
+ perform set_config('crm.router_return_defer',case when p_after_sale is null then '' else 'true' end,true);
  perform set_config('crm.router_return',coalesce(crm_private.router_return_preferences(p_after_sale)::text,''),true);
  result:=public.crm_create_direct_sale_v7(p_contact_id,p_operator,p_total_price,p_send_message,p_netflix_followup,p_counteroffer,p_manager_contact_id,p_recipient_contact_id,p_day_one_text,p_send_day_one,p_sale_month);
  perform set_config('crm.router_return',coalesce(previous,''),true);
@@ -138,7 +138,7 @@ declare previous text;previous_defer text;result jsonb;
 begin
  if auth.uid() is null or not (public.current_user_is_admin() or public.current_user_can('can_edit_sales')) then raise exception 'No tienes permiso para editar ventas';end if;
  previous:=current_setting('crm.router_return',true);previous_defer:=current_setting('crm.router_return_defer',true);
- perform set_config('crm.router_return_defer','true',true);
+ perform set_config('crm.router_return_defer',case when p_after_sale is null then '' else 'true' end,true);
  perform set_config('crm.router_return',coalesce(crm_private.router_return_preferences(p_after_sale)::text,''),true);
  result:=public.crm_create_offer_execution_v12(p_contact_id,p_catalog_offer_id,p_request_key,p_selections,p_extra_text,p_mode,p_final_price,p_send_message,p_processing_date,p_test_mode,p_allow_duplicate,p_send_at,p_welcome,p_recipient_contact_id,p_manager_contact_id,p_message_text);
  perform set_config('crm.router_return',coalesce(previous,''),true);
