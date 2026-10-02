@@ -15,6 +15,11 @@ test('Tramitado previews and edits without writes; cancellation saves nothing',a
  await expect(page.locator('[data-text]')).toHaveValue(/Netflix/);
  await page.locator('[data-previous]').selectOption('O2');
  await expect(page.locator('[data-text]')).toHaveValue(/tienda Movistar/);
+ await page.locator('[data-mode]').selectOption('return');
+ await expect(page.locator('[data-text]')).not.toHaveValue(/Cuando te instalen|Netflix/);
+ await expect(page.locator('[data-text]')).toHaveValue(/Hola Ana[\s\S]*tienda Movistar/);
+ await page.locator('[data-mode]').selectOption('full');
+ await expect(page.locator('[data-text]')).toHaveValue(/Cuando te instalen[\s\S]*Netflix/);
  await page.locator('[data-text]').fill('Hola Ana. Texto editado para tu devolución.');
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
  await expect.poll(()=>page.evaluate(()=>window.result?.text)).toBe('Hola Ana. Texto editado para tu devolución.');
@@ -80,6 +85,12 @@ test('Direct sale edits router inline and uses creation time with 00/30 minutes'
  await expect(root.locator('[data-text]')).not.toHaveValue(/instrucciones antiguas/);
  await root.locator('[data-previous]').selectOption('MásMóvil');
  await expect(root.locator('[data-text]')).toHaveValue(/código por SMS/);
+ const layout=await root.locator('[data-text]').evaluate(el=>({width:el.getBoundingClientRect().width,parent:el.parentElement.getBoundingClientRect().width,display:getComputedStyle(el.parentElement).display}));expect(layout.display).toBe('block');expect(layout.width).toBeGreaterThan(layout.parent*.9);
+ await root.locator('[data-mode]').selectOption('return');
+ await expect(root.locator('[data-text]')).not.toHaveValue(/Cuando te instalen/);
+ await expect(root.locator('[data-text]')).toHaveValue(/Hola Ana[\s\S]*SMS/);
+ await root.locator('[data-mode]').selectOption('full');
+ await expect(root.locator('[data-text]')).toHaveValue(/Cuando te instalen/);
  const auto=await page.evaluate(()=>window.fixtureResult());expect(auto.send_at).toBe('2026-10-03T08:00:00.000Z');
  // A different operator changes the router paragraph while preserving manual edits.
  await root.locator('[data-text]').fill('Hola Ana. Mi texto editado.\n\n📦 Código por SMS.');

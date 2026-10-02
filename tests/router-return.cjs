@@ -8,6 +8,8 @@ assert.equal(api.message(base,'Yoigo'),api.message(base,'MásMóvil'));
 const o2=api.message(base,'O2');assert.match(o2,/tienda Movistar/);assert.doesNotMatch(o2,/SMS|15 días|Correos/);
 const vodafone=api.message(base,'Vodafone');assert.match(vodafone,/instrucciones/);assert.match(vodafone,/unos 15 días/);assert.match(vodafone,/Correos/);assert.doesNotMatch(vodafone,/SMS/);
 assert.doesNotMatch(api.message(base,'Ninguno'),/📦|router/);assert.match(api.message(base,'Ninguno'),/Netflix/);
+const only=api.returnOnly(base,'Yoigo');assert.match(only,/Hola Ana/);assert.match(only,/SMS/);assert.doesNotMatch(only,/Cuando te instalen|Netflix/);
+assert.match(api.returnOnly('Hola Gestor 👋\nSobre el contrato de Titular.\n\nCuando te instalen la fibra, avísanos.','O2'),/Sobre el contrato de Titular/);
 assert.equal(api.madridIso('2030-07-02T10:00'),'2030-07-02T08:00:00.000Z');
 assert.equal(api.madridIso('2030-01-02T10:00'),'2030-01-02T09:00:00.000Z');
 assert.throws(()=>api.madridIso('2030-03-31T02:30'),/hora no existe/);
