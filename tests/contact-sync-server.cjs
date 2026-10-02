@@ -17,6 +17,19 @@ let person={resourceName:'people/c1',etag:'e',names:[{givenName:'Ana',familyName
  await assert.rejects(()=>syncOne({...row,data:{...row.data,'TELÉFONO':''}},deps),/Falta/);
  await assert.rejects(()=>syncOne(row,{...deps,people:[{...person,names:[{givenName:'Otra',familyName:'Persona'}],userDefined:[]}]}),/otra identidad/);
  await assert.rejects(()=>syncOne(row,{...deps,people:[{...person,userDefined:[{key:'DNI / NIF',value:'OTHER'}]}]}),/otra identidad/);
+ for(const bound of [{google_resource:person.resourceName},{data:{...row.data,TPF_GOOGLE_CONTACT:{resource_name:person.resourceName}}}]){
+  let calls=0;
+  const guarded={...deps,google:async()=>{calls++;throw Error('Unexpected Google write');},green:async()=>{calls++;},checkpoint:async()=>{calls++;}};
+  await assert.rejects(()=>syncOne({...row,...bound},{...guarded,people:[{...person,userDefined:[{key:'DNI / NIF',value:'OTHER'}]}]}),/otra identidad/);
+  await assert.rejects(()=>syncOne({...row,...bound},{...guarded,people:[{...person,names:[{givenName:'Otra',familyName:'Persona'}],userDefined:[]}]}),/otra identidad/);
+  assert.equal(calls,0,'bound conflicting identity must stop before checkpoint or external calls');
+ }
+ let patches=0;
+ await assert.rejects(()=>syncOne({...row,google_resource:person.resourceName},{...deps,people:[{...person,nicknames:[]}],google:async(path,opt)=>{if(opt?.method==='PATCH')patches++;return {...person,userDefined:[{key:'DNI / NIF',value:'CHANGED'}]};}}),/otra identidad/);
+ assert.equal(patches,0,'identity changed since listing must not be overwritten');
+ person={...person,names:[{givenName:'Ana antigua',familyName:'García'}]};
+ out=await syncOne({...row,google_resource:person.resourceName},{...deps,people:[person]});
+ assert.equal(out.TPF_CONTACT_VERIFIED.source,'server_readback','same DNI permits name correction');
  console.log('PASS durable contact synchronization: create, idempotency, readback, conflicts and stale edits');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 
