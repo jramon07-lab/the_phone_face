@@ -49,7 +49,7 @@ let salesConversationOrigin=null;
 function clearConversationReturn(){salesConversationOrigin=null;document.getElementById('ofBackToSales')?.remove();}
 function showConversationReturn(){
  let button=document.getElementById('ofBackToSales');
- if(!button){const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(!header)return;button=document.createElement('button');button.id='ofBackToSales';button.type='button';button.className='secondary';button.textContent='← Volver al panel de ventas';button.onclick=returnToSales;header.prepend(button);}
+ if(!button){const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(!header)return;button=document.createElement('button');button.id='ofBackToSales';button.type='button';button.className='secondary';button.textContent='← Volver a ventas';button.onclick=returnToSales;header.prepend(button);}
 }
 async function returnToSales(){
  const origin=salesConversationOrigin;if(!origin)return;
