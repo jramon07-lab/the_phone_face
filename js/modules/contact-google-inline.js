@@ -1518,6 +1518,51 @@
       "Google no confirmó correctamente el nombre, los apellidos y el apodo. No se eliminará ningún duplicado.",
     );
   }
+  const savedSyncChecks = new Map();
+  function watchSavedContactSync(row, chat) {
+    const expected = verificationSignature(row),
+      account = fold(googleAccountEmail()),
+      resource = safe(row.data?.TPF_GOOGLE_CONTACT?.resource_name),
+      key = safe(row.id), token = {};
+    savedSyncChecks.set(key, token);
+    let attempts = 0;
+    const check = async () => {
+      if (savedSyncChecks.get(key) !== token) return;
+      if (account !== fold(googleAccountEmail())) {
+        savedSyncChecks.delete(key);
+        return;
+      }
+      try {
+        const result = await sb.from("records").select("id,data")
+          .eq("id", key).single();
+        const fresh = result.data;
+        if (!result.error && fresh) {
+          if (verificationSignature(fresh) !== expected ||
+              safe(fresh.data?.TPF_GOOGLE_CONTACT?.resource_name) !== resource ||
+              fold(fresh.data?.TPF_GOOGLE_CONTACT?.google_account) !== account) {
+            savedSyncChecks.delete(key);
+            return;
+          }
+          const status = safe(fresh.data?.TPF_CONTACT_SYNC?.status);
+          if (status === "verified" || status === "review") {
+            row.data = fresh.data;
+            for (const active of [current(), matchedWa()]) {
+              if (safe(active?.id) === key && verificationSignature(active) === expected)
+                active.data = fresh.data;
+            }
+            savedSyncChecks.delete(key);
+            window.dispatchEvent(new CustomEvent("tpf:contact-updated", {
+              detail: { id: key },
+            }));
+            return;
+          }
+        }
+      } catch (_) { /* El guardado confirmado sigue en la cola del servidor. */ }
+      if (++attempts < 24) setTimeout(check, 5000);
+      else savedSyncChecks.delete(key);
+    };
+    setTimeout(check, 2500);
+  }
   async function writeCrm(
     row,
     first,
@@ -1669,18 +1714,31 @@
         .single();
     }
     if (r.error) throw r.error;
+    // El trigger retira las marcas de verificación al cambiar la identidad y
+    // encola su comprobación. Eso no significa que haya fallado el guardado.
+    const pendingSync = ["pending", "processing", "retry"].includes(
+      safe(r.data?.data?.TPF_CONTACT_SYNC?.status),
+    );
     if (
       !r.data ||
       safe(r.data.id) !== safe(row.id) ||
       verificationSignature(r.data) !==
         verificationSignature({ id: row.id, data: d }) ||
-      (verifiedGoogle && chatId && !savedVerification(r.data, chat)) ||
-      (verifiedGoogle && !chatId && !savedCrmGoogleSync(r.data))
+      safe(r.data.data?.["DNI / NIF"]) !== safe(d["DNI / NIF"]) ||
+      safe(r.data.data?.EMAIL) !== safe(d.EMAIL) ||
+      (chatId && safe(r.data.data?.TPF_WHATSAPP_CHAT_ID) !== chatId) ||
+      (verifiedGoogle && (
+        safe(r.data.data?.TPF_GOOGLE_CONTACT?.resource_name) !== safe(d.TPF_GOOGLE_CONTACT?.resource_name) ||
+        fold(r.data.data?.TPF_GOOGLE_CONTACT?.google_account) !== fold(d.TPF_GOOGLE_CONTACT?.google_account)
+      )) ||
+      (verifiedGoogle && !pendingSync && chatId && !savedVerification(r.data, chat)) ||
+      (verifiedGoogle && !pendingSync && !chatId && !savedCrmGoogleSync(r.data))
     )
       throw Error(
         "No se confirmó el guardado del CRM. No se ha eliminado ningún contacto.",
       );
     row.data = r.data.data;
+    if (pendingSync) watchSavedContactSync(row, chat);
     return row.data;
   }
   async function addAssociatedContactToHolder(holder, associated) {
@@ -2081,7 +2139,10 @@
         separate ? correctionHolder : null,
         { phone: finalPhone, dni: finalDni, email: finalEmail },
       );
-      if (mergeDuplicate) {
+      const syncPending = !!savedRow.data?.TPF_CONTACT_SYNC &&
+        savedRow.data.TPF_CONTACT_SYNC.status !== "verified",
+        deferredCleanup = syncPending && (mergeDuplicate || deleteOthers);
+      if (mergeDuplicate && !syncPending) {
         const merged = await sb.rpc("crm_merge_duplicate_contact", {
           p_keep_id: savedRow.id,
           p_duplicate_id: mergeRow.id,
@@ -2099,7 +2160,7 @@
       rememberUnifiedName(correctionChat, savedRow);
       let removed = 0,
         failed = 0;
-      if (deleteOthers) {
+      if (deleteOthers && !syncPending) {
         for (const duplicate of available) {
           if (
             safe(duplicate.resourceName) === safe(verifiedGoogle.resourceName)
@@ -2123,7 +2184,11 @@
         );
       }
       clearGoogleCache();
-      msg.textContent = failed
+      msg.textContent = syncPending
+        ? deferredCleanup
+          ? "Datos guardados. Google y WhatsApp se están comprobando. Los duplicados se conservan hasta completar la comprobación; vuelve a revisar después."
+          : "Datos guardados. Comprobando Google y WhatsApp automáticamente…"
+        : failed
         ? `La ficha se guardó, pero ${failed} duplicados no pudieron eliminarse.`
         : separate
           ? `Guardado “${visible}” y asociado como persona que gestiona a ${correctionHolder.name}.`
@@ -2140,7 +2205,7 @@
           },
         }),
       );
-      if (failed) return;
+      if (failed || deferredCleanup) return;
       setTimeout(() => {
         $("tpfInlineBack").classList.add("hidden");
         if (saveReturn === "whatsapp") {
@@ -2796,3 +2861,4 @@
   }
   M.register("contact-google-inline", { install });
 })();
+
