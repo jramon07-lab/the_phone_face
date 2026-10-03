@@ -7,6 +7,7 @@ async function main(){const db=new PGlite();await db.exec(`
  create schema auth;create schema crm_private;
  create table auth.users(id uuid primary key);insert into auth.users values('${U}');
  create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ create function auth.jwt() returns jsonb language sql stable as $$select '{"email":"tienda@example.test"}'::jsonb$$;
  create function public.current_user_is_admin() returns boolean language sql stable as $$select auth.uid() is not null$$;
  create function public.current_user_can(text) returns boolean language sql stable as $$select auth.uid() is not null$$;
  create table public.records(id uuid primary key,data jsonb);
@@ -73,6 +74,8 @@ async function main(){const db=new PGlite();await db.exec(`
  await db.exec('alter table crm_offer_instances add accepted_at timestamptz,add processed_at timestamptz;alter table sales_opportunities add position integer default 0;');
  const controls=fs.readFileSync('supabase/migrations/20260911195620_offer_response_actions.sql','utf8');await db.exec(controls.slice(controls.indexOf('create or replace function public.crm_control_offer('),controls.indexOf('grant execute on function public.crm_control_offer(uuid,text) to authenticated;')+'grant execute on function public.crm_control_offer(uuid,text) to authenticated;'.length));
  const composition=fs.readFileSync('db/proposals/offer-composition-followup.sql','utf8');await db.exec(composition.slice(composition.indexOf('create or replace function public.crm_control_offer_composition(')));
+ await db.exec('alter table crm_offer_instances add pause_reason text;');
+ await db.exec(fs.readFileSync('supabase/migrations/20261003202211_daily_followup_management.sql','utf8'));
  await db.exec(`create function crm_private.offer_record_sale(public.crm_offer_instances,timestamptz) returns void language plpgsql as $$begin return;end;$$;`);
  await db.exec(fs.readFileSync('supabase/migrations/20260921120633_fix_counteroffer_label_variable.sql','utf8'));
  const trigger=fs.readFileSync('db/proposals/offer-configurator-v4.sql','utf8');await db.exec(trigger.slice(trigger.indexOf('create or replace function public.crm_server_on_opportunity_stage()')));
@@ -197,5 +200,51 @@ async function main(){const db=new PGlite();await db.exec(`
  const list=(await db.query('select * from crm_installations_list()')).rows.map(r=>Object.values(r)[0]);
  assert.equal(list.length,2);assert(list.some(r=>r.opportunity_id===O));assert(list.some(r=>r.excel_date==='2026-09-01'&&r.status==='excel'));assert(!list.some(r=>r.client_name==='Legacy sin fecha'));
  await db.exec(`set request.jwt.claim.sub='';`);await assert.rejects(db.query('select crm_installations_list()'),/permiso/);await assert.rejects(db.query('select crm_installation_save_settings($1,$2,null)',['Yoigo',cfg]),/permiso/);
- console.log('PASS installation database integration: real SQL, actor routing, dates, idempotency, stage isolation, CAS and permissions');await db.close();}
+ await db.exec('reset role;');await db.exec(`set request.jwt.claim.sub='${U}';`);await db.exec('begin;');
+ // A timed pause keeps the original Madrid hour across DST and respects every opening boundary.
+ const slot=async(day,hour)=>(await db.query("select to_char(crm_private.followup_send_slot($1::date,$2::time) at time zone 'Europe/Madrid','YYYY-MM-DD HH24:MI') v",[day,hour])).rows[0].v;
+ assert.match(String(await slot('2026-10-04','12:45')),/2026-10-05.*12:45/);assert.match(String(await slot('2026-10-03','18:15')),/2026-10-05.*18:15/);
+ assert.match(String(await slot('2026-10-05','14:00')),/17:30/);assert.match(String(await slot('2026-10-05','20:30')),/2026-10-06.*10:00/);
+ assert.match(String(await slot('2026-10-26','12:45')),/12:45/);
+ const PD='50000000-0000-0000-0000-000000000091',PO='20000000-0000-0000-0000-000000000091',PF='40000000-0000-0000-0000-000000000091';
+ await db.exec(`insert into sales_stages(id,name,pipeline_id) values('${PD}','Seguimiento','${S}');insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone) values('${PO}','${C}','${U}','${PD}','${S}','600000001');insert into crm_offer_instances(id,opportunity_id,contact_id,operator,created_by,total_price,status,sent_at,snapshot) values('${PF}','${PO}','${C}','Vodafone','${U}',32,'following',(current_date+time '12:45') at time zone 'Europe/Madrid','{}');grant select on crm_automations to authenticated;`);
+ const offerVersion=async()=>(await db.query('select updated_at from crm_offer_instances where id=$1',[PF])).rows[0].updated_at;
+ await db.exec('set role authenticated;');const pv=await offerVersion();
+ const pause=(await db.query('select crm_pause_offer_days($1,7,$2,$3) v',[PF,'Necesita pensarlo',pv])).rows[0].v;assert(pause.resume_at);
+ let planned=(await db.query('select f.status,f.resume_job_id,j.status job_status,j.run_at,j.action_config from crm_offer_instances f join crm_server_automation_jobs j on j.id=f.resume_job_id where f.id=$1',[PF])).rows[0];
+ assert.equal(planned.status,'paused');assert.equal(planned.job_status,'paused');assert.equal(planned.action_config.steps[0].value,0);assert.equal(planned.action_config.steps[0].business_schedule,'phone_house');
+ await stageReject(()=>db.query('select crm_pause_offer_days($1,3,$2,$3)',[PF,'Otro motivo',pv]),/cambió/);
+ await db.exec('reset role;update crm_server_automation_jobs set status=\'cancelled\' where status=\'pending\';');
+ assert.equal((await db.query('select count(*)::int n from crm_server_claim_jobs(20)')).rows[0].n,0,'Dormant pause is not claimed early');
+ await db.query('update crm_server_automation_jobs set run_at=now() where id=$1',[planned.resume_job_id]);await db.query('update crm_offer_instances set resume_at=now() where id=$1',[PF]);
+ const claimed=(await db.query('select id from crm_server_claim_jobs(20)')).rows;assert.deepEqual(claimed.map(x=>x.id),[planned.resume_job_id]);assert.equal((await db.query('select status,resume_at from crm_offer_instances where id=$1',[PF])).rows[0].status,'following');
+ // A shared offer pauses/resumes the whole group once, even when staff select its child.
+ await db.exec('reset role;');
+ const G1='40000000-0000-0000-0000-000000000093',G2='40000000-0000-0000-0000-000000000094',GOP='20000000-0000-0000-0000-000000000094';
+ const group=JSON.stringify({composition:'group',group_leader_offer_id:G1,offer_group_ids:[G1,G2]});
+ await db.query('insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone) values($1,$2,$3,$4,$5,$6)',[GOP,C,U,PD,S,'600000001']);
+ for(const [id,opportunity] of [[G1,PO],[G2,GOP]])await db.query("insert into crm_offer_instances(id,opportunity_id,contact_id,operator,created_by,total_price,status,sent_at,snapshot) values($1,$2,$3,'Vodafone',$4,32,'following',(current_date+time '12:45') at time zone 'Europe/Madrid',$5)",[id,opportunity,C,U,group]);
+ await db.exec('set role authenticated;');const gv=(await db.query('select updated_at from crm_offer_instances where id=$1',[G2])).rows[0].updated_at;
+ assert.equal((await db.query('select crm_pause_offer_days($1,3,$2,$3) v',[G2,'Pausa de ambas direcciones',gv])).rows[0].v.shared_followup,true);
+ const grouped=(await db.query('select id,status,resume_job_id from crm_offer_instances where id=any($1::uuid[])',[[G1,G2]])).rows;
+ assert(grouped.every(f=>f.status==='paused'));assert.equal(grouped[0].resume_job_id,grouped[1].resume_job_id);
+ await db.exec('reset role;');const gj=grouped[0].resume_job_id;const flow=(await db.query('select context,action_config from crm_server_automation_jobs where id=$1',[gj])).rows[0];assert.deepEqual(flow.context.offer_group_ids.sort(),[G1,G2]);assert(flow.action_config.steps.filter(x=>x.kind==='action').every(x=>!x.config.reply_buttons));
+ await db.query('update crm_server_automation_jobs set run_at=now() where id=$1',[gj]);await db.query('update crm_offer_instances set resume_at=now() where resume_job_id=$1',[gj]);assert.deepEqual((await db.query('select id from crm_server_claim_jobs(20)')).rows.map(x=>x.id),[gj]);
+ assert.equal((await db.query("select count(*)::int n from crm_offer_instances where id=any($1::uuid[]) and status='following' and resume_at is null",[[G1,G2]])).rows[0].n,2);
+ await db.exec('rollback;');await db.exec(`set request.jwt.claim.sub='${U}';`);await db.exec('begin;');
+ // Undo is explicit, versioned, audited and retains messages that actually went out.
+ const CO='20000000-0000-0000-0000-000000000092',CI='60000000-0000-0000-0000-000000000092';
+ await db.exec(`insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone,contract_party) values('${CO}','${C}','${U}','${S}','${S}','600000001','{"recipient_name":"Gestora Ejemplo","recipient_phone":"34600000001"}');insert into crm_installations(id,opportunity_id,user_id,operator,previous_operator,recipient_context,installed_on,config_snapshot,return_text) values('${CI}','${CO}','${U}','Vodafone','Yoigo','{"phone":"34600000001","name":"Gestora"}',current_date,crm_private.installation_defaults(),'Instrucciones del router');select crm_private.installation_schedule_return('${CI}');update crm_server_automation_jobs set status='done',completed_at=now() where id=(select return_job_id from crm_installations where id='${CI}');`);
+ const before=(await db.query('select * from crm_installations where id=$1',[CI])).rows[0];await db.exec('set role authenticated;');
+ await stageReject(()=>db.query('select crm_installation_cancel_confirmation($1,now()-interval \'1 day\',$2)',[CO,'Prueba']),/cambió/);
+ const corrected=(await db.query('select crm_installation_cancel_confirmation($1,$2,$3) v',[CO,before.updated_at,'Confirmación de prueba'])).rows[0].v;assert.equal(corrected.installed_on,null);assert(corrected.confirmation_reset_at);assert.equal(corrected.return_job_id,null);
+ assert.equal((await db.query('select status from crm_server_automation_jobs where id=$1',[before.return_job_id])).rows[0].status,'done');
+ const history=(await db.query('select previous,reason from crm_installation_history where installation_id=$1',[CI])).rows[0];assert.equal(history.reason,'Confirmación de prueba');assert.equal(history.previous.installed_on,before.installed_on.toISOString().slice(0,10));
+ const cp=(await db.query('select crm_installation_preview($1) v',[CO])).rows[0].v;assert.equal(cp.installation.confirmation_history.length,1);assert(cp.installation.confirmation_history[0].return_message);
+ await db.exec('reset role;');await db.query(`insert into wa_messages(id_message,chat_id,direction,ts,raw,text_content) values('old-confirmation-after-reset','34600000001@c.us','in',extract(epoch from now()-interval '1 hour')::bigint,jsonb_build_object('interactiveButtonsResponse',jsonb_build_object('selectedButtonId','install_done:'||$1::text)),'✓ Instalado')`,[CI]);
+ assert.equal((await db.query('select installed_on from crm_installations where id=$1',[CI])).rows[0].installed_on,null,'Old provider history cannot restore an annulled confirmation');
+ await db.query('update sales_opportunities set installation_date=current_date where id=$1',[CO]);await db.query('update crm_installations set installed_on=current_date where id=$1',[CI]);const locked=(await db.query('select updated_at from crm_installations where id=$1',[CI])).rows[0].updated_at;await db.exec('set role authenticated;');await stageReject(()=>db.query('select crm_installation_cancel_confirmation($1,$2,$3)',[CO,locked,'Prueba']),/Excel/);
+ await db.exec('reset role;rollback;set request.jwt.claim.sub=\'\';');await assert.rejects(db.query('select crm_offer_pause_preview($1,7)',[PF]),/permiso/);
+ assert.equal((await db.query("select has_function_privilege('authenticated','crm_server_claim_jobs(integer)','EXECUTE') v")).rows[0].v,false);
+ console.log('PASS installation database integration: SQL, timed pause, business hours, DST, audit correction, sent history, CAS and permissions');await db.close();}
 main().catch(e=>{console.error(e.message, e.position||'',e.where||'');process.exit(1);});
