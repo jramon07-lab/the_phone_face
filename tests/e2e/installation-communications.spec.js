@@ -1,4 +1,21 @@
 const {test,expect}=require('@playwright/test'),path=require('node:path');
+test('Labels keep typing and an open draft when asynchronous data refresh finishes',async({page})=>{
+ await page.route('**/*',r=>r.abort());await page.setContent('<meta name="viewport" content="width=device-width,initial-scale=1"><div id="view-labels"></div>');
+ await page.evaluate(()=>{
+  window.TPFModules={register(_name,module){module.install()}};window.labelsReads=0;
+  window.sb={
+   rpc(){return new Promise(resolve=>window.finishLabels=()=>resolve({data:[{id:1,name:'Vodafone'}]}))},
+   from(){return{select(){return this},eq(){return this},async maybeSingle(){return{data:{value:{}}}},then(resolve){labelsReads++;return Promise.resolve({data:[{label_id:1}]}).then(resolve)}};}
+  };
+ });
+ const source=require('node:fs').readFileSync(path.resolve('js/modules/labels-modern-ui.js'),'utf8').replace("M.register('labels-modern-ui'","window.labelsFixture={load};M.register('labels-modern-ui'");await page.addScriptTag({content:source});const input=page.locator('#lmSearch');await input.pressSequentially('zzzz rendimiento');
+ await page.evaluate(()=>{window.searchBefore=document.getElementById('lmSearch');finishLabels();});
+ await expect(page.locator('#view-labels')).not.toHaveAttribute('aria-busy','true');await expect(input).toBeFocused();await page.keyboard.type(' teclado');await expect(input).toHaveValue('zzzz rendimiento teclado');
+ expect(await page.evaluate(()=>searchBefore===document.getElementById('lmSearch'))).toBe(true);await expect(page.locator('.lmFooter')).toContainText('0 etiquetas');await input.fill('Vodafone');await expect(page.locator('.lmFooter')).toContainText('1 etiqueta');
+ await page.locator('#lmNew').click();await page.locator('#lmName').fill('Borrador sin guardar');await page.locator('#lmCategory').fill('Categoría nueva');
+ await page.evaluate(()=>{void labelsFixture.load()});await expect(page.locator('#view-labels')).toHaveAttribute('aria-busy','true');await page.evaluate(()=>finishLabels());
+ await expect(page.locator('#view-labels')).not.toHaveAttribute('aria-busy','true');await expect(page.locator('#lmModalBack')).toBeVisible();await expect(page.locator('#lmName')).toHaveValue('Borrador sin guardar');await expect(page.locator('#lmCategory')).toHaveValue('Categoría nueva');expect(await page.evaluate(()=>labelsReads)).toBe(2);
+});
 async function fixture(page){
  await page.route('**/*',r=>r.abort());await page.setContent('<meta name="viewport" content="width=device-width,initial-scale=1"><style>.hidden{display:none!important}body{margin:0;font:14px Arial;color:#24354b}button{cursor:pointer}</style><div id="app"><div id="view-dashboard" class="tpfDashPro"><div class="tdCommercialDetails"></div></div></div><div id="settings"></div><div id="editor"></div>');
  await page.clock.setFixedTime(new Date('2026-10-03T16:30:00Z'));
