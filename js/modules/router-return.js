@@ -55,7 +55,7 @@ async function choose(options){
  if($('tpfRouterDialog'))throw Error('Termina primero la devolución de router abierta.');
  const data=await preview(options),d=document.createElement('dialog');d.id='tpfRouterDialog';d.setAttribute('aria-label','Tramitado: instalación y devolución de router');
  d.innerHTML='<form method="dialog"><header><h3>Instalación y devolución del router</h3><button value="cancel" aria-label="Cerrar">×</button></header><div data-fields></div><footer><button value="cancel">Cancelar</button><button value="save" class="primary">Confirmar y continuar</button></footer></form>';
- document.body.appendChild(d);const controller=bind(d.querySelector('[data-fields]'),data,options);
+ document.body.appendChild(d);const controller=bind(d.querySelector('[data-fields]'),data,{...options,send:true,preferences:{...(options.preferences||data.preferences||{}),send:true}});
  return new Promise(resolve=>{d.addEventListener('close',()=>{const result=d._result||null;d.remove();resolve(result);},{once:true});d.querySelector('form').addEventListener('submit',e=>{if(e.submitter?.value!=='save')return;e.preventDefault();try{d._result=controller.get();d.close('save');}catch(error){d.querySelector('[data-error]').textContent=error.message;}});d.showModal();});
 }
 async function prepare(id,payload){
