@@ -80,7 +80,7 @@ renderUpcoming(upcomingData, map, pending);
 assert.equal((node('dashPriorityFollowups').innerHTML.match(/class="tdUpcoming /g) || []).length, 5);
 assert.equal(node('tdUpcomingMore').textContent, 'Ver menos');
 
-for (const filter of ['priority', 'calls', 'followup', 'processing']) {
+for (const filter of ['priority', 'calls', 'followup', 'processing', 'processed']) {
   const tab = node(`tab-${filter}`); tab.dataset.homeFilter = filter; tabs.push(tab);
 }
 const data = { today, stages, tasks: [], opps: Array.from({ length: 73 }, (_, index) => ({ id: `opp-${index}`, client_name: `Synthetic ${index}`, title: 'Synthetic opportunity', phone: `600${String(index).padStart(6, '0')}`, expected_date: '2026-09-18', stage_id: 'open', status: 'open' })) };

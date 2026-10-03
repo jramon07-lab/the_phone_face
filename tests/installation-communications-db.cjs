@@ -38,6 +38,19 @@ async function main(){const db=new PGlite();await db.exec(`
  create function crm_private.router_return_preferences(jsonb) returns jsonb language sql as $$select $1$$;
  `);
  await db.exec(fs.readFileSync('supabase/migrations/20261003170000_installation_communications.sql','utf8'));
+ // Reproduce the real caller's failure, then verify the narrow permission repair.
+ await db.exec('grant usage on schema crm_private,auth to authenticated;set role authenticated;');
+ await assert.rejects(db.query('select crm_private.router_return_preferences(null::jsonb)'),/permission denied for function router_return_preferences_before_installations/);
+ await db.exec('reset role;');
+ await db.exec(fs.readFileSync('supabase/migrations/20261003193000_restore_offer_validation_permissions.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261003193500_exclude_legacy_undated_installations.sql','utf8'));
+ await db.exec('set role authenticated;');
+ assert.equal((await db.query('select crm_private.router_return_preferences(null::jsonb) v')).rows[0].v,null);
+ assert.equal((await db.query('select crm_private.router_return_preferences($1) v',[JSON.stringify({previous_operator:'Yoigo',send:false})])).rows[0].v.previous_operator,'Yoigo');
+ assert.equal((await db.query('select crm_private.router_return_preferences($1) v',[JSON.stringify({workflow:'installation_v1',previous_operator:'Yoigo',send:true,text:'Cita nueva'})])).rows[0].v.workflow,'installation_v1');
+ await assert.rejects(db.query('select crm_private.router_return_preferences($1)',[JSON.stringify({previous_operator:'',send:false})]),/Selecciona el operador anterior/);
+ await db.exec('reset role;');
+ assert.equal((await db.query("select has_function_privilege('anon','crm_private.router_return_preferences_before_installations(jsonb)','EXECUTE') allowed")).rows[0].allowed,false);
  await db.exec(`set request.jwt.claim.sub='${U}';insert into records values('${C}','{}');insert into sales_stages(id,name,pipeline_id) values('${S}','Tramitado','${S}'),('50000000-0000-0000-0000-000000000002','Ganado','${S}');
  insert into crm_automations(user_id,name,trigger_type,trigger_config,action_type,action_config) values('${U}','Etiqueta y aviso','opportunity_stage','{"stage_id":"${S}","automation_operator":"Vodafone","automation_code":"vodafone_day_one"}','flow_v1','{"steps":[{"kind":"action","action_type":"record_sale_month"},{"kind":"wait","value":1,"unit":"days"},{"kind":"action","action_type":"send_template","config":{"template_id":"1"}}]}'),('${U}','3 meses','opportunity_stage','{"stage_id":"${S}","automation_operator":"Vodafone","automation_code":"vodafone_security_3_months"}','flow_v1','{"steps":[{"kind":"wait","value":3,"unit":"months"},{"kind":"action","action_type":"send_template","config":{"template_id":"2"}}]}'),('${U}','11 meses','opportunity_stage','{"stage_id":"${S}","automation_operator":"Vodafone","automation_code":"vodafone_annual_review"}','flow_v1','{"steps":[{"kind":"wait","value":11,"unit":"months"},{"kind":"action","action_type":"prepare_operator_review"}]}'),('${U}','Manual','manual_offer','{}','__send_whatsapp','{}');
  insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone,client_name,title,contract_party,after_sale_preferences) values('${O}','${C}','${U}','${S}','${S}','600000000','Titular Ejemplo','Vodafone','{"recipient_name":"Gestora Ejemplo","recipient_first_name":"Gestora","recipient_phone":"34600000001"}','{"workflow":"installation_v1","send":true,"text":"Hola Gestora, aviso de cita","return_text":"Hola {nombre}. Router de {operador_anterior}","previous_operator":"Yoigo","operator":"Vodafone"}');
@@ -78,6 +91,10 @@ async function main(){const db=new PGlite();await db.exec(`
  assert.equal((await scalar("select count(*)::int n from app_settings where key='crm_installation_template:bad'")).n,0);
  // The calendar is evaluated in Madrid, including the autumn DST transition.
  assert.equal((await scalar("select crm_private.installation_due('2026-10-23','10:00') d")).d.toISOString(),'2026-10-27T09:00:00.000Z');
+ // Legacy undated Tramitado rows are excluded, while Excel dates remain consultable.
+ await db.exec(`insert into sales_opportunities(id,stage_id,client_name,installation_date) values('20000000-0000-0000-0000-000000000002','${S}','Legacy sin fecha',null),('20000000-0000-0000-0000-000000000003','${S}','Legacy Excel','2026-09-01');`);
+ const list=(await db.query('select * from crm_installations_list()')).rows.map(r=>Object.values(r)[0]);
+ assert.equal(list.length,2);assert(list.some(r=>r.opportunity_id===O));assert(list.some(r=>r.excel_date==='2026-09-01'&&r.status==='excel'));assert(!list.some(r=>r.client_name==='Legacy sin fecha'));
  await db.exec(`set request.jwt.claim.sub='';`);await assert.rejects(db.query('select crm_installations_list()'),/permiso/);await assert.rejects(db.query('select crm_installation_save_settings($1,$2,null)',['Yoigo',cfg]),/permiso/);
  console.log('PASS installation database integration: real SQL, actor routing, dates, idempotency, stage isolation, CAS and permissions');await db.close();}
 main().catch(e=>{console.error(e.message, e.position||'',e.where||'');process.exit(1);});

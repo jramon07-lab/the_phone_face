@@ -21,18 +21,23 @@ const pending=[
 {id:'overdue-call',agenda_type:'Llamada',starts_at:'2026-09-18T09:00:00Z'},
 {id:'today-task',agenda_type:'Tarea',starts_at:'2026-09-19T10:00:00+02:00'}];
 const result=groups(data,stages,pending);
-assert.deepEqual(Array.from(result,g=>[g.key,g.rows.length]),[['calls',3],['followup',1],['processing',2]]);
+assert.deepEqual(Array.from(result,g=>[g.key,g.rows.length]),[['calls',3],['followup',1],['processing',1],['processed',1]]);
 assert.equal(result[0].caption,'2 para hoy · 1 atrasada','Madrid date boundary and overdue calls must be accurate');
 assert.equal(result[1].rows[0].id,'follow','overdue followups stay visible');
-assert.equal(result[2].caption,'1 por tramitar · 1 tramitada');
+assert.equal(result[2].caption,'1 pendiente de tramitar');
+assert.deepEqual(Array.from(result[2].rows,r=>r.id),['pending']);
+assert.deepEqual(Array.from(result[3].rows,r=>r.id),['done']);
 assert.equal(groups({...data,opps:[]},stages,[]).every(g=>g.rows.length===0),true);
 sandbox.window.TPFOfferFollowup={acceptanceTime:id=>({pending:Date.parse('2026-09-18'),done:Date.parse('2026-09-10')})[id]??Infinity};
-assert.deepEqual(Array.from(groups(data,stages,pending)[2].rows,r=>r.id),['done','pending'],'acceptance order takes precedence over expected date');
+const withOlderPending={...data,opps:[...data.opps,{id:'older-pending',stage_id:'2',expected_date:'2026-12-01'}]};
+sandbox.window.TPFOfferFollowup.acceptanceTime=id=>({pending:Date.parse('2026-09-18'),'older-pending':Date.parse('2026-09-01'),done:Date.parse('2026-08-01')})[id]??Infinity;
+assert.deepEqual(Array.from(groups(withOlderPending,stages,pending)[2].rows,r=>r.id),['older-pending','pending'],'pending acceptance order wins over expected date; processed sales stay separate');
 sandbox.window.TPFOfferFollowup.acceptanceTime=()=>Infinity;
 assert.equal(groups(data,stages,pending)[2].rows[0].id,'pending','legacy records retain a deterministic fallback');
 const priorities=priorityRows(data,stages,pending);
 assert.equal(priorities.length,6,'all due calls, tasks and open opportunities appear once');
 assert.ok(priorities.every(r=>!['won','lost','closed-follow','cancelled','tomorrow-call'].includes(r.id)));
+assert.ok(priorityRows({...data,opps:[...data.opps,{id:'old-processed',stage_id:'3',expected_date:'2026-01-01'}]},stages,pending).every(r=>r.id!=='old-processed'),'processed rows never return to the pending worklist');
 assert.ok(source.includes('<h1>Tu trabajo de hoy</h1>')&&source.includes('Tu trabajo de hoy')&&source.includes('Próximos seguimientos'));
 assert.ok(!source.includes('Tu día, de un vistazo.')&&!source.includes('Clientes a contactar hoy'));
 assert.ok(source.includes('tdPriorityTable')&&source.includes('tdPrevPage')&&source.includes('tdNextPage'),'lists remain usable beyond the first five rows');
