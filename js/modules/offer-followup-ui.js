@@ -34,6 +34,16 @@ function manage(id){
  if(x.status==='error'){const p=d.querySelector('[data-of-error-detail]');p.hidden=false;p.textContent='Consultando el motivo…';Promise.resolve(sb.from('crm_server_automation_jobs').select('error_message,updated_at').eq('status','failed').contains('context',{offer_instance_id:x.id}).order('updated_at',{ascending:false}).limit(1)).then(r=>{p.textContent=r.error?'No se pudo consultar el motivo. Cierra y vuelve a intentarlo.':(r.data?.[0]?.error_message||'No hay detalle registrado del fallo.')+' No se ha reenviado ningún mensaje.'}).catch(()=>{p.textContent='No se pudo consultar el motivo. Cierra y vuelve a intentarlo.'})}
 }
 function html(id,actions=false){if(F.error)return '<small class="ofError">Seguimiento no disponible · Actualiza para reintentar</small>';const rows=F.byOpportunity.get(String(id))||[];return rows.map(x=>`${rows.length>1?`<small>${esc(x.operator)} · ${esc(x.offer_name)}</small>`:''}${htmlOffer(x,actions)} `).join('')}
+function homeOffer(id){return (F.byOpportunity.get(String(id))||[]).filter(x=>x.id).slice().sort((a,b)=>Number(['archived','cancelled','lost'].includes(a.status))-Number(['archived','cancelled','lost'].includes(b.status))||time(b.created_at)-time(a.created_at))[0];}
+function homeActions(id){
+ const rows=F.byOpportunity.get(String(id))||[],x=homeOffer(id);if(!x)return '';
+ return `<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">Gestionar</button><button type="button" class="ofHomeView" data-of-opportunity="${esc(id)}">${rows.some(r=>r.sent_at)?'Ver oferta enviada':'Ver oferta'}</button>`;
+}
+function homeSummary(id){
+ if(F.error)return '<small class="ofError">Seguimiento no disponible · Actualiza para reintentar</small>';
+ const x=homeOffer(id);if(!x)return '';const action={accepted:'Preparar tramitación',processed:'Consultar cita de instalación',won:'Activación registrada en Excel',lost:'Gestión cerrada'}[x.status];if(!action)return htmlOffer(x,false);
+ return `<div class="ofHomeSummary">${window.TPFOfferWorkPlan?.summary(x)||`<small><b>Próxima acción:</b> ${esc(action)}</small>`}<small>${esc(summary(x).age)}</small></div>`;
+}
 function listHtml(id,summaryOnly=false){if(F.error)return '<small class="ofError">Seguimiento no disponible · Actualiza para reintentar</small>';const rows=F.byOpportunity.get(String(id))||[];if(summaryOnly)return rows.map(x=>htmlOffer(x,false)).join('');return rows.map(x=>htmlOffer(x,false)+(x.id?`<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">Gestionar</button>`:'')).join('')+(rows.some(x=>x.sent_at)?opportunityButton(id):'');}
 function conversationPhone(o={}){
  const party=o.contract_party;
@@ -101,7 +111,7 @@ function install(){document.addEventListener('click',e=>{const nav=e.target.clos
  const refresh=()=>{if(document.hidden||document.getElementById('app')?.classList.contains('hidden'))return;const visible=['view-sales','view-dashboard','view-contact','view-whatsapplive'].some(id=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden')});if(visible)load().then(refreshViews)};
  window.addEventListener('focus',refresh);setInterval(refresh,60000);
 }
-window.TPFOfferFollowup={acceptanceTime,listHtml,listActions,conversationPhone,openConversation,returnToSales,viewSavedOffer,savedOfferModel,opportunityButton,manage,load,html,htmlOffer,summary,filterRows,controls,salesControls,matching,age,ago,state:F};
+window.TPFOfferFollowup={homeActions,homeSummary,acceptanceTime,listHtml,listActions,conversationPhone,openConversation,returnToSales,viewSavedOffer,savedOfferModel,opportunityButton,manage,load,html,htmlOffer,summary,filterRows,controls,salesControls,matching,age,ago,state:F};
 if(typeof sb!=='undefined')sb.auth?.onAuthStateChange?.(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){F.revision++;if(event==='SIGNED_OUT'){try{window.sessionStorage?.removeItem('tpf-followup-filters')}catch(_){}F.filter='all';F.homeFilter='all';F.order=''}F.offers=[];F.jobs=[];F.responses=[];F.byOpportunity=new Map();F.loaded=false;F.error='';F.at=0;}});
 if(window.TPFModules)window.TPFModules.register('offer-followup-ui',{install});
 })();

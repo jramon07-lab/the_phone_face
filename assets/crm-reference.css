@@ -1512,3 +1512,26 @@ body.tpfUnified #opportunityFullPage .oppContactSummary{flex-direction:row;align
 body.tpfUnified #opportunityFullPage .oppContactAvatar{flex:0 0 48px;width:48px;height:48px}
 body.tpfUnified #opportunityFullPage .oppContactLink{font-size:17px}
 }
+
+/* Daily work: a full-width tab row and one stable action group per client. */
+body.tpfUnified #view-dashboard .tdWorkspaceControls{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important;margin-bottom:12px!important}
+body.tpfUnified #view-dashboard .tdFilterBar{flex-wrap:nowrap!important;overflow-x:auto;min-width:0;width:100%;padding-bottom:2px!important}
+body.tpfUnified #view-dashboard .tdFilterBar .tdWorkTab{flex:none;white-space:nowrap}
+body.tpfUnified #view-dashboard .tdWorkToolbar{justify-content:flex-end!important;flex-wrap:nowrap!important;width:100%}
+body.tpfUnified #view-dashboard .tdWorkSearchField{flex:1;max-width:420px;min-width:140px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable{min-width:960px!important;table-layout:fixed!important}
+body.tpfUnified #view-dashboard .tdPriorityTable th:first-child{width:26%!important}
+body.tpfUnified #view-dashboard .tdPriorityTable th:nth-child(2){width:20%!important}
+body.tpfUnified #view-dashboard .tdPriorityTable th:nth-child(3){width:25%!important}
+body.tpfUnified #view-dashboard .tdPriorityTable th:last-child{width:29%!important;padding:10px 12px!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdReminder{min-width:0!important}
+body.tpfUnified #view-dashboard .tdReminder .ofItem{padding-right:0!important;min-height:0!important;margin:4px 0!important}
+body.tpfUnified #view-dashboard .tdPriorityTable .tdMenuCell{padding:8px 12px!important}
+body.tpfUnified #view-dashboard .tdRowActions{display:flex;align-items:center;justify-content:flex-end;gap:7px;white-space:nowrap}
+body.tpfUnified #view-dashboard .tdRowActions .ofManage,body.tpfUnified #view-dashboard .ofHomeView{position:static!important;transform:none!important;margin:0!important;min-height:36px;padding:7px 10px!important;font:inherit;font-size:12px!important;border:1px solid #cedbec;border-radius:8px;cursor:pointer}
+body.tpfUnified #view-dashboard .tdRowActions .ofManage{background:#edf4ff!important;border-color:#b6d0f5!important;color:#175cd3;font-weight:600}
+body.tpfUnified #view-dashboard .ofHomeView{background:white;color:#365b88}
+body.tpfUnified #view-dashboard .tdRowActions .tdDots{flex:0 0 36px;display:grid!important;place-items:center;width:36px!important;height:36px!important;border:1px solid #dbe4ef!important;background:white!important;color:#486380}
+body.tpfUnified #view-dashboard .tdRowActions button:focus-visible{outline:2px solid #1763d6;outline-offset:2px}
+
+body.tpfUnified #view-dashboard .ofHomeSummary{display:grid;gap:5px;font-size:12px;line-height:1.5;color:#38506e}body.tpfUnified #view-dashboard .ofHomeSummary small:last-child{font-size:11px;color:#64748b}
