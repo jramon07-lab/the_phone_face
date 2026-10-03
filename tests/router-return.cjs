@@ -21,4 +21,15 @@ assert.throws(()=>api.madridIso('2020-01-01T10:00'),/futuras/);
 assert.equal(api.nextDaySlot(Date.parse('2026-10-02T07:31:00Z')),'2026-10-03T10:00');
 assert.equal(api.nextDaySlot(Date.parse('2026-10-02T07:00:00Z')),'2026-10-03T09:00');
 assert.equal(api.nextDaySlot(Date.parse('2026-10-24T08:14:00Z')),'2026-10-25T10:30');
+// Compare the UI forecast with the actual server's sending rules across all
+// weekdays, closing boundaries and daylight-saving changes.
+const {stripTypeScriptTypes}=require('node:module');
+const server={Intl,Date};vm.createContext(server);
+vm.runInContext(stripTypeScriptTypes(fs.readFileSync('supabase/functions/crm-automation-runner/business-time.ts','utf8')).replace(/export /g,'')+'\nglobalThis.serverWindow=automaticSendWindow;',server);
+for(const start of ['2030-03-25','2030-10-21'])for(let d=0;d<7;d++)for(const time of ['00:00','09:30','10:00','13:30','14:00','14:30','17:00','17:30','20:00','20:30','21:00']){
+ const day=new Date(start+'T12:00:00Z');day.setUTCDate(day.getUTCDate()+d);
+ const requested=day.toISOString().slice(0,10)+'T'+time,stamp=new Date(api.madridIso(requested));
+ const serverStamp=server.serverWindow({action_type:'__send_whatsapp'},stamp)||stamp;
+ assert.equal(api.madridIso(api.businessSlot(requested)),serverStamp.toISOString(),requested);
+}
 console.log('Router return: grouped operators, Netflix preserved, no-router option and Madrid scheduling verified.');

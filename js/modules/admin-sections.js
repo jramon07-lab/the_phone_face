@@ -27,8 +27,9 @@ function install(){
  organize('view-settings',[
   ['connections','Conexiones','WhatsApp y servicios de Google. Sus ajustes se comparten en el CRM.'],
   ['notifications','Avisos y agenda','Elige qué avisos recibe el equipo y cuáles se activan en este ordenador.'],
+  ['router-texts','Textos de devolución','Edita las instrucciones de cada operador para las próximas ventas.'],
   ['search','Buscador','Personaliza las columnas de búsqueda para cada usuario y archivo.']
- ],card=>card.classList.contains('searchConfigCard')?'search':card.id==='agendaGlobalSettingsCard'||card.querySelector('#notifySave')?'notifications':'connections',card=>card===header);
+ ],card=>card.id==='tpfRouterSettingsCard'?'router-texts':card.classList.contains('searchConfigCard')?'search':card.id==='agendaGlobalSettingsCard'||card.querySelector('#notifySave')?'notifications':'connections',card=>card===header);
  organize('view-system',[
   ['overview','Resumen','Estado de los servicios y de los procesos automáticos.'],
   ['incidents','Incidencias','Avisos del equipo y registro de errores de este navegador.'],

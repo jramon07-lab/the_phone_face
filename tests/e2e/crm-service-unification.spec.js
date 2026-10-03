@@ -320,6 +320,9 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
     await expect(card).toBeHidden();
     await page.locator('#view-settings-search-tab').click();
     await expect(page.locator('#settingsSearchSave')).toBeVisible();
+    await page.locator('#view-settings-router-texts-tab').click();
+    await expect(page.locator('#tpfRouterSettingsCard [data-settings-text]')).toBeEnabled();
+    await expect(page.locator('#tpfRouterSettingsCard [data-settings-preview]')).toContainText('Devolución del router de Yoigo');
     await page.locator('#view-settings-connections-tab').click();
     await expect(card).toBeVisible();
     expect(await page.locator('#notifyTelegramChatId').inputValue()).toBe(telegramBefore);
@@ -439,6 +442,11 @@ test.describe('Móvil de solo lectura', () => {
       await page.locator('[data-action="contact-direct"]').click();
       await continueReadOnlyPartyPreview(page,page.locator('#directSalePrice'));
       await page.locator('#directSaleModal [data-direct-close]').first().click();
+      await page.locator('#mobileMenu').click();
+      await page.locator('[data-route="router-texts"]').click();
+      await expect(page.locator('#mobileRouterSettings [data-settings-text]')).toBeEnabled();
+      await expect(page.locator('#mobileRouterSettings [data-settings-preview]')).toContainText('Devolución del router de Yoigo');
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
       await page.locator('[data-mobile-route="whatsapp"]').click();
       await expect(page.locator('[data-action="wa-auto-settings"]')).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
