@@ -85,7 +85,8 @@ assert.match(sqlV2,/\(counter_id,'Netflix',null,7,30,'radio','contenido','Netfli
 for(const price of ["'Fibra 1 Gb',10","'Líneas principales ilimitadas',4","'Línea adicional 160 GB',6","'Línea adicional 30 GB',30,6","'Línea adicional 60 GB',60,8.5","'Línea adicional 160 GB',160,11","'Línea adicional ilimitada',null,16"])assert.ok(sqlV2.includes(price),`expected configurable Vodafone price: ${price}`);
 assert.match(source,/crm_create_offer_execution_v13/);
 assert.match(source,/Enviar bienvenida para cliente nuevo/);
-assert.match(source,/Preparar una segunda oferta/);
+assert.doesNotMatch(source,/Preparar una segunda oferta/);
+assert.match(source,/crm_create_offer_composition/);
 assert.match(source,/p_test_mode:CRM_TEST_MODE/);
 assert.match(source,/CRM_TEST_PHONE='695661409'/);
 assert.match(source,/p_request_key:offerRequestKey/);
@@ -132,7 +133,7 @@ assert.match(sqlV4,/business_schedule','phone_house'/);
 assert.match(sqlV4,/Línea con datos ilimitados/);
 assert.match(sqlV4,/900 759 004/);
 assert.match(source,/step="1"/);
-assert.match(source,/Enviar también este mensaje al cliente/);
+assert.match(source,/¿Enviar también la oferta por WhatsApp/);
 assert.match(source,/Fecha de tramitación/);
 assert.match(source,/crm_create_direct_sale/);
 assert.match(source,/waSideDirectSale/);
@@ -240,3 +241,8 @@ console.log('PASS: dynamic offer pricing, message composition, safe catalog, lif
 
 assert.match(api.buildMessage(offer,{},'María José'),/Hola María José, te envío la oferta de Vodafone/);
 assert.doesNotMatch(api.buildMessage(offer,{},'María José','',52,{},true),/Vodafone/);
+
+const grouped=api.groupOfferMessages([api.buildMessage(offer,{},'Ana','',52),api.buildMessage(offer,{},'Ana','',25)],'Ana','Vodafone');
+assert.equal((grouped.match(/Hola Ana/g)||[]).length,1);
+assert.match(grouped,/52,00 €\/mes/);assert.match(grouped,/25,00 €\/mes/);
+assert.doesNotMatch(grouped,/Oferta 1|Oferta 2|Dirección/);
