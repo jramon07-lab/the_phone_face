@@ -3,7 +3,7 @@ const path=require('node:path');
 test('Tramitado previews and edits without writes; cancellation saves nothing',async({page})=>{
  await page.setContent('<button id="start">Tramitado</button>');
  await page.evaluate(()=>{
-  window.calls=[];window.sb={rpc:async(name,args)=>{calls.push({name,args});return {data:{available:true,text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.\n\n⚠️ Activa Netflix cuando tu línea esté en Vodafone.\n\n📦 Las instrucciones para devolver el router anterior pueden tardar hasta 15 días.',operator:'Vodafone',rule_id:'11111111-1111-1111-1111-111111111111',recipient:'Ana',phone:'600000000'}}}};
+  window.calls=[];window.sb={from(){return{select(){return this},async like(){return{data:[],error:null}}}},rpc:async(name,args)=>{calls.push({name,args});return {data:{available:true,text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.\n\n⚠️ Activa Netflix cuando tu línea esté en Vodafone.\n\n📦 Las instrucciones para devolver el router anterior pueden tardar hasta 15 días.',operator:'Vodafone',rule_id:'11111111-1111-1111-1111-111111111111',recipient:'Ana',phone:'600000000'}}}};
  });
  await page.addScriptTag({path:path.resolve('js/modules/router-return.js')});
  await page.evaluate(()=>document.getElementById('start').onclick=()=>{window.result='pending';window.TPFRouterReturn.choose({contactId:'fixture',operator:'Vodafone'}).then(x=>window.result=x);});
@@ -74,7 +74,7 @@ test('Direct sale edits router inline and uses creation time with 00/30 minutes'
  await page.clock.setFixedTime(new Date('2026-10-02T07:31:00Z'));
  await page.evaluate(()=>{
   window.calls=[];window.TPFModules={register(){}};window.currentContact={id:'fixture',data:{NOMBRE:'Ana'}};
-  window.sb={from(){return{select(){return this},eq(){return this},contains(){return this},async maybeSingle(){return{data:currentContact}},async limit(){return{data:[]}}}},rpc:async(name,args)=>{calls.push({name,args});if(name!=='crm_router_return_preview')throw Error('Writes are forbidden');return{data:{available:true,operator:'Vodafone',rule_id:'11111111-1111-1111-1111-111111111111',recipient:'Ana',phone:'600000000',text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.\n\n📦 Las instrucciones antiguas del router.'}}}};
+  window.sb={from(){return{select(){return this},async like(){return{data:[],error:null}},eq(){return this},contains(){return this},async maybeSingle(){return{data:currentContact}},async limit(){return{data:[]}}}},rpc:async(name,args)=>{calls.push({name,args});if(name!=='crm_router_return_preview')throw Error('Writes are forbidden');return{data:{available:true,operator:'Vodafone',rule_id:'11111111-1111-1111-1111-111111111111',recipient:'Ana',phone:'600000000',text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos. Si tienes algún problema, llámanos.\n\n📦 Las instrucciones antiguas del router.'}}}};
   window.confirm=()=>false;
  });
  await page.addScriptTag({path:path.resolve('js/modules/router-return.js')});
@@ -104,4 +104,41 @@ test('Direct sale edits router inline and uses creation time with 00/30 minutes'
  await expect(page.locator('#tpfRouterDialog')).toHaveCount(0);
  expect(await page.evaluate(()=>window.calls.every(x=>x.name==='crm_router_return_preview'))).toBe(true);
  const positions=await root.locator('.tpfRouterCheck').evaluate(el=>{const a=el.querySelector('input').getBoundingClientRect(),b=el.querySelector('span').getBoundingClientRect();return{gap:b.left-a.right,delta:Math.abs(b.top-a.top)}});expect(positions.gap).toBeGreaterThanOrEqual(0);expect(positions.delta).toBeLessThan(25);
+});
+
+
+test('Shared operator text persists across customers and fresh sessions; failures keep the form open',async({page})=>{
+ await page.setContent('<button id="start">Tramitado</button>');
+ await page.evaluate(()=>{
+  window.rows={};window.saved=[];window.failSave=false;window.customer='Ana';
+  window.sb={from(table){if(table!=='app_settings')throw Error('Unexpected table');let pending;return{select(){return this},async like(){return{data:Object.values(rows),error:null}},upsert(row){pending=row;return this},async single(){if(failSave)return{error:{message:'Sin conexión'}};rows[pending.key]=pending;saved.push(pending);return{data:pending,error:null}}}},rpc:async()=>({data:{available:true,recipient:customer,text:'Hola '+customer+' 👋\n\nCuando te instalen la fibra, avísanos.',operator:'Vodafone'}})};
+ });
+ const source=path.resolve('js/modules/router-return.js');await page.addScriptTag({path:source});
+ await page.evaluate(()=>document.getElementById('start').onclick=()=>{window.result='pending';TPFRouterReturn.choose({operator:'Vodafone'}).then(x=>window.result=x)});
+ await page.locator('#start').click();
+ for(const operator of ['Digi','Pepephone','Jazztel'])await expect(page.locator('[data-previous] option[value="'+operator+'"]')).toHaveCount(1);
+ await page.locator('[data-previous]').selectOption('Digi');
+ await page.locator('[data-template-panel] summary').click();
+ await page.locator('[data-template]').fill('Contacta con el operador. Guarda el justificante.');
+ await expect(page.locator('[data-text]')).toHaveValue(/Hola Ana[\s\S]*Guarda el justificante/);
+ await page.getByRole('button',{name:'Confirmar y continuar'}).click();
+ await expect.poll(()=>page.evaluate(()=>saved.length)).toBe(1);
+ expect(await page.evaluate(()=>saved[0].value.text)).not.toContain('Ana');
+ // Reload the module to model another PC with an empty in-memory cache.
+ await page.evaluate(()=>window.customer='Luis');await page.addScriptTag({path:source});
+ await page.locator('#start').click();await page.locator('[data-previous]').selectOption('Digi');
+ await expect(page.locator('[data-text]')).toHaveValue(/Hola Luis[\s\S]*Guarda el justificante/);
+ await expect(page.locator('[data-send]')).toBeChecked();
+ await page.locator('[data-template-panel] summary').click();
+ await page.locator('[data-new-operator]').fill('Operador Nuevo');await page.locator('[data-add-operator]').click();
+ await page.locator('[data-template]').fill('Instrucciones reutilizables de este operador.');
+ await page.evaluate(()=>window.failSave=true);
+ await page.getByRole('button',{name:'Confirmar y continuar'}).click();
+ await expect(page.locator('[data-error]')).toContainText('Sin conexión');await expect(page.locator('#tpfRouterDialog')).toBeVisible();
+ await page.evaluate(()=>window.failSave=false);await page.getByRole('button',{name:'Confirmar y continuar'}).click();
+ await expect.poll(()=>page.evaluate(()=>saved.length)).toBe(2);
+ await page.addScriptTag({path:source});await page.locator('#start').click();await page.locator('[data-previous]').selectOption('Operador Nuevo');
+ await expect(page.locator('[data-text]')).toHaveValue(/Hola Luis[\s\S]*Instrucciones reutilizables/);
+ await page.locator('[data-template-panel] summary').click();await page.locator('[data-template]').fill('Borrador cancelado');
+ await page.getByRole('button',{name:'Cancelar',exact:true}).click();expect(await page.evaluate(()=>saved.length)).toBe(2);
 });
