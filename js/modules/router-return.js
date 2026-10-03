@@ -29,7 +29,13 @@ async function storeTemplate(operator,body){
  const {data,error}=await sb.from('app_settings').upsert({key:templatePrefix+encodeURIComponent(name.toLocaleLowerCase('es')),value,updated_at:new Date().toISOString()},{onConflict:'key'}).select('key,value').single();
  if(error)throw error;if(!data?.value?.text)throw Error('No se pudo verificar el texto guardado.');paragraphs[name]=data.value.text;return name;
 }
-function message(body,previous,paragraph=paragraphs[previous]){return String(body||'').replace(/(?:\n[ \t]*)*📦[^\n]*(?:\n[^\n]+)*/u,'').trim()+(paragraph?'\n\n'+paragraph:'')}
+function namedParagraph(previous,paragraph){
+ const content=String(paragraph||'').trim();if(!content||!previous||['Ninguno','Otro'].includes(previous))return content;
+ const instructions=content.replace(/^📦[ \t]*/u,'').replace(/^Devolución del router de [^\n]+\n/u,'');
+ return '📦 Devolución del router de '+previous+'\n'+instructions;
+}
+function nameExistingMessage(body,previous){return String(body||'').replace(/📦[\s\S]*$/u,paragraph=>namedParagraph(previous,paragraph));}
+function message(body,previous,paragraph=paragraphs[previous]){paragraph=namedParagraph(previous,paragraph);return String(body||'').replace(/(?:\n[ \t]*)*📦[^\n]*(?:\n[^\n]+)*/u,'').trim()+(paragraph?'\n\n'+paragraph:'')}
 function returnOnly(body,previous){const greeting=String(body||'').split(/\n[ \t]*\n/)[0].trim();return message(greeting,previous)}
 function madridIso(value){
  if(!/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(value))throw Error('Elige una fecha y hora.');
@@ -53,7 +59,7 @@ function bind(root,data,options={}){
  const mode=q('mode'),previous=q('previous'),text=q('text'),send=q('send'),timing=q('timing'),date=q('date'),hour=q('hour'),minute=q('minute');
  const saved=options.preferences||data.preferences||{},available=!!data.available;
  if(saved.previous_operator&&!Object.hasOwn(paragraphs,saved.previous_operator)){const option=document.createElement('option');option.value=saved.previous_operator;option.textContent=saved.previous_operator;previous.appendChild(option);}previous.value=saved.previous_operator||'';mode.value=saved.message_mode||(saved.text?.includes('📦')&&!saved.text.includes('Cuando te instalen')?'return':'full');
- text.value=saved.text||(mode.value==='return'?returnOnly(options.text||data.text,previous.value):message(options.text||data.text,previous.value));
+ text.value=saved.text?nameExistingMessage(saved.text,previous.value):(mode.value==='return'?returnOnly(options.text||data.text,previous.value):message(options.text||data.text,previous.value));
  const drafts={[mode.value]:text.value},templateDrafts=new Map();let activeMode=mode.value;
  const template=q('template'),templateStatus=q('template-status');
  const editable=()=>previous.value&& !['Ninguno','Otro'].includes(previous.value);
@@ -78,7 +84,7 @@ function bind(root,data,options={}){
   if(send.checked&&!text.value.trim())throw Error('El mensaje no puede estar vacío.');
   if(send.checked&&previous.value==='Otro'&&text.value.includes(paragraphs.Otro))throw Error('Escribe las instrucciones del operador anterior.');
   if(!['00','30'].includes(minute.value))throw Error('Los minutos deben ser 00 o 30.');
-  return {message_mode:mode.value,previous_operator:previous.value||'Ninguno',text:text.value.trim(),send:send.checked,send_at:send.checked?madridIso(timing.value==='custom'?date.value+'T'+hour.value+':'+minute.value:nextDaySlot()):null,operator:data.operator||options.operator||'',rule_id:data.rule_id||null};
+  return {message_mode:mode.value,previous_operator:previous.value||'Ninguno',text:nameExistingMessage(text.value,previous.value).trim(),send:send.checked,send_at:send.checked?madridIso(timing.value==='custom'?date.value+'T'+hour.value+':'+minute.value:nextDaySlot()):null,operator:data.operator||options.operator||'',rule_id:data.rule_id||null};
  },snapshot(){return {message_mode:mode.value,previous_operator:previous.value,text:text.value,send:send.checked,timing:timing.value,local_date:date.value+'T'+hour.value+':'+minute.value};}};
 }
 async function preview(options){await loadTemplates();const {data,error}=await sb.rpc('crm_router_return_preview',{p_opportunity_id:options.id||null,p_contact_id:options.contactId||null,p_manager_contact_id:options.managerId||null,p_recipient_contact_id:options.recipientId||null,p_operator:options.operator||null,p_netflix_followup:!!options.netflix});if(error)throw error;return data;}

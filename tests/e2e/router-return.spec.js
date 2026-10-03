@@ -11,9 +11,12 @@ test('Tramitado previews and edits without writes; cancellation saves nothing',a
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
  await expect(page.locator('[data-error]')).toContainText('Selecciona');
  await page.locator('[data-previous]').selectOption('Yoigo');
+ await expect(page.locator('[data-text]')).toHaveValue(/Devolución del router de Yoigo/);
  await expect(page.locator('[data-text]')).toHaveValue(/SMS/);
  await expect(page.locator('[data-text]')).toHaveValue(/Netflix/);
  await page.locator('[data-previous]').selectOption('O2');
+ await expect(page.locator('[data-text]')).toHaveValue(/Devolución del router de O2/);
+ await expect(page.locator('[data-text]')).not.toHaveValue(/Devolución del router de Yoigo/);
  await expect(page.locator('[data-text]')).toHaveValue(/tienda Movistar/);
  await page.locator('[data-mode]').selectOption('return');
  await expect(page.locator('[data-text]')).not.toHaveValue(/Cuando te instalen|Netflix/);
@@ -32,6 +35,8 @@ test('Tramitado previews and edits without writes; cancellation saves nothing',a
  await page.locator('[data-send]').uncheck();
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
  await expect.poll(()=>page.evaluate(()=>window.result?.send)).toBe(false);
+ const restored=await page.evaluate(()=>{const root=document.createElement('div');const form=TPFRouterReturn.bind(root,{available:true,preferences:{previous_operator:'Yoigo',text:'Hola Ana 👋\n\n📦 Instrucciones personalizadas antiguas.'}});return form.get().text;});
+ expect(restored).toContain('Devolución del router de Yoigo');expect(restored).toContain('Instrucciones personalizadas antiguas.');expect(restored.match(/Devolución del router de/g)).toHaveLength(1);
 });
 
 test('Offer and direct sale party preview survives unavailable linked contacts',async({page,context})=>{
@@ -124,10 +129,12 @@ test('Shared operator text persists across customers and fresh sessions; failure
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
  await expect.poll(()=>page.evaluate(()=>saved.length)).toBe(1);
  expect(await page.evaluate(()=>saved[0].value.text)).not.toContain('Ana');
+ expect(await page.evaluate(()=>result.text)).toContain('Devolución del router de Digi');
  // Reload the module to model another PC with an empty in-memory cache.
  await page.evaluate(()=>window.customer='Luis');await page.addScriptTag({path:source});
  await page.locator('#start').click();await page.locator('[data-previous]').selectOption('Digi');
  await expect(page.locator('[data-text]')).toHaveValue(/Hola Luis[\s\S]*Guarda el justificante/);
+ await expect(page.locator('[data-text]')).toHaveValue(/Devolución del router de Digi/);
  await expect(page.locator('[data-send]')).toBeChecked();
  await page.locator('[data-template-panel] summary').click();
  await page.locator('[data-new-operator]').fill('Operador Nuevo');await page.locator('[data-add-operator]').click();
@@ -139,6 +146,7 @@ test('Shared operator text persists across customers and fresh sessions; failure
  await expect.poll(()=>page.evaluate(()=>saved.length)).toBe(2);
  await page.addScriptTag({path:source});await page.locator('#start').click();await page.locator('[data-previous]').selectOption('Operador Nuevo');
  await expect(page.locator('[data-text]')).toHaveValue(/Hola Luis[\s\S]*Instrucciones reutilizables/);
+ await expect(page.locator('[data-text]')).toHaveValue(/Devolución del router de Operador Nuevo/);
  await page.locator('[data-template-panel] summary').click();await page.locator('[data-template]').fill('Borrador cancelado');
  await page.getByRole('button',{name:'Cancelar',exact:true}).click();expect(await page.evaluate(()=>saved.length)).toBe(2);
 });
