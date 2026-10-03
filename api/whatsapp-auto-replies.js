@@ -19,9 +19,14 @@ async function run(){
  C.validate(config);const now=new Date(),period=C.closure(now,config.schedule);if(!period)return {sent:0,open:true};
  const since=new Date(now.getTime()-300000).toISOString();
  const incoming=await db('wa_messages?direction=eq.in&created_at=gte.'+encodeURIComponent(since)+'&select=chat_id,id_message,direction,ts,type_message,text_content&order=created_at.desc&limit=100');
+ // Triggers have already classified bot exchanges in the same incoming-message transaction.
+ // Read their receipts before the absence claim, even while the bot's reply is still queued.
+ const transactional=new Set(incoming.length?(await db('rpc/crm_whatsapp_transactional_replies','POST',{p_incoming_ids:incoming.map(row=>row.id_message)})).map(row=>row.incoming_id):[]);
  let sent=0,uncertain=0;const chats=new Set(),started=Date.now();
  for(const row of incoming){
-  if(chats.has(row.chat_id)||!C.eligible(row,now,config.enabled_since)||C.closure(new Date(Number(row.ts)*(Number(row.ts)>1e12?1:1000)),config.schedule)!==period)continue;chats.add(row.chat_id);
+  if(chats.has(row.chat_id))continue;
+  if(transactional.has(row.id_message)){chats.add(row.chat_id);continue;}
+  if(!C.eligible(row,now,config.enabled_since)||C.closure(new Date(Number(row.ts)*(Number(row.ts)>1e12?1:1000)),config.schedule)!==period)continue;chats.add(row.chat_id);
   if(sent+uncertain>=8||Date.now()-started>40000)break;
   // Don't send a stale acknowledgement after the team has already answered.
   const outgoing=await db('wa_messages?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&direction=eq.out&ts=gte.'+Number(row.ts)+'&select=id&limit=1');if(outgoing.length)continue;
