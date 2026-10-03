@@ -132,7 +132,8 @@ function css(){if($('tpfOffersCss'))return;const style=document.createElement('s
  #opOfferModal .opHead{position:static;flex:none;padding:16px 22px}
  #opOfferModal .opBody{display:flex;flex-direction:column;min-height:0;overflow:hidden;flex:1;padding:14px 20px}
  #opOfferModal #opContent{min-height:0;display:flex;flex-direction:column;flex:1}
- #opOfferModal .opGrid{flex:1;min-height:0;margin-top:12px}
+ #opOfferModal .opGrid{flex:1;min-height:0;margin-top:12px;grid-template-rows:minmax(0,1fr)}
+ @media(min-width:761px){#opOfferModal .opBody{overflow:hidden!important}#opOfferModal .opPanel{max-height:100%;box-sizing:border-box}}
  #opOfferModal .opPanel{overflow:auto;min-height:0;padding:14px}
  #opOfferModal .opBenefits{background:#edf5ff;border:1px solid #a8c8f8;margin:0 0 14px;padding:12px}
  #opOfferModal .opBenefitsTitle{font-size:14px;color:#175cd3}
