@@ -78,6 +78,7 @@ function style(){if($('tpfRouterStyle'))return;const s=document.createElement('s
 @container(max-width:680px){.tpfRouterColumns{grid-template-columns:minmax(0,1fr);gap:8px}.tpfRouterOperator label{flex-basis:100%}.tpfRouterOperator button{flex:1}.tpfRouterFields [data-text]{min-height:210px}}
 @media(max-width:500px){#tpfRouterDialog{padding:14px}#tpfRouterDialog h3{font-size:17px}.tpfRouterFields [data-date-label]{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr)}}`;document.head.appendChild(s);}
 function bind(root,data,options={}){
+ if(data.workflow==='installation_v1'&&window.TPFInstallations)return window.TPFInstallations.bind(root,data,options);
  style();root.innerHTML=fields();const q=x=>root.querySelector('[data-'+x+']');
  const mode=q('mode'),previous=q('previous'),text=q('text'),send=q('send'),timing=q('timing'),date=q('date'),hour=q('hour'),minute=q('minute');
  const saved=options.preferences||data.preferences||{},available=!!data.available;
@@ -113,7 +114,7 @@ function bind(root,data,options={}){
   return {message_mode:mode.value,previous_operator:previous.value||'Ninguno',text:nameExistingMessage(text.value,previous.value).trim(),send:send.checked,send_at:send.checked?madridIso(timing.value==='custom'?date.value+'T'+hour.value+':'+minute.value:nextDaySlot()):null,operator:data.operator||options.operator||'',rule_id:data.rule_id||null};
  },snapshot(){return {message_mode:mode.value,previous_operator:previous.value,text:text.value,send:send.checked,timing:timing.value,local_date:date.value+'T'+hour.value+':'+minute.value};}};
 }
-async function preview(options){await loadTemplates();const {data,error}=await sb.rpc('crm_router_return_preview',{p_opportunity_id:options.id||null,p_contact_id:options.contactId||null,p_manager_contact_id:options.managerId||null,p_recipient_contact_id:options.recipientId||null,p_operator:options.operator||null,p_netflix_followup:!!options.netflix});if(error)throw error;return data;}
+async function preview(options){await loadTemplates();if(window.TPFInstallations)return window.TPFInstallations.preview(options);const {data,error}=await sb.rpc('crm_router_return_preview',{p_opportunity_id:options.id||null,p_contact_id:options.contactId||null,p_manager_contact_id:options.managerId||null,p_recipient_contact_id:options.recipientId||null,p_operator:options.operator||null,p_netflix_followup:!!options.netflix});if(error)throw error;return data;}
 async function choose(options){
  if($('tpfRouterDialog'))throw Error('Termina primero la devolución de router abierta.');
  const data=await preview(options),d=document.createElement('dialog');d.id='tpfRouterDialog';d.setAttribute('aria-label','Tramitado: instalación y devolución de router');
@@ -129,7 +130,7 @@ async function prepare(id,payload){
  let current=id?(typeof salesCache!=='undefined'?salesCache.opportunities:[])?.find(x=>String(x.id)===String(id)):null;
  if(id&&!current){const r=await sb.from('sales_opportunities').select('id,stage_id').eq('id',id).single();if(r.error)throw r.error;current=r.data;}
  if(current&&String(current.stage_id)===String(payload.stage_id))return payload;
- const party=payload.contract_party||{},operator=(String(payload.title||'').match(/\b(Vodafone|Yoigo|MásMóvil|Masmovil|O2|Orange|Lowi)\b/i)||[])[1];
+ const party=payload.contract_party||{},operator=(String(payload.title||'').match(/\b(Vodafone|Yoigo|MásMóvil|Masmovil|O2|Orange|Lowi|Jazztel|Digi|Movistar|Pepephone)\b/i)||[])[1];
  const prefs=await choose({id,contactId:payload.record_id,managerId:party.manager_record_id||party.manager_contact_id,recipientId:party.recipient_contact_id,operator});
  return prefs?{...payload,after_sale_preferences:prefs}:null;
 }

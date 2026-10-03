@@ -8,6 +8,7 @@
     "verify": "npm run check && npm test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "@electric-sql/pglite": "0.5.8"
   }
 }

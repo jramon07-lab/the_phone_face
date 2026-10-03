@@ -73,6 +73,10 @@ jobs:
         run: npx playwright test --config=tests/e2e/monthly-reviews.config.js --retries=0 --reporter=line
       - name: Verify sales list layout and conversation recipient with isolated fixtures
         run: npx playwright test --config=tests/e2e/sales-chat.config.js --retries=0 --reporter=line
+      - name: Verify installation communications on PC and mobile with isolated fixtures
+        run: npx playwright test --config=tests/e2e/installation-communications.config.js --retries=0 --reporter=line
+      - name: Verify compact management drawer with isolated fixtures
+        run: npx playwright test --config=tests/e2e/home-manage.config.js --retries=0 --reporter=line
       - name: Wait for exact main commit in production
         env:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}

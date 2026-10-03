@@ -643,7 +643,10 @@ export default async function handler(req, res) {
         return res.status(200).json({ ok: true, chatId, idMessage: data?.idMessage || null, interactive: true, data });
       } catch (error) {
         if (![400, 403, 404].includes(Number(error?.status || 0))) throw error;
-        const fallback = `${message}\n\nResponde con una opción:\n1. ${buttons[0]?.buttonText || ""}\n2. ${buttons[1]?.buttonText || ""}\n3. ${buttons[2]?.buttonText || ""}`;
+        const options = buttons.map((button, index) => `${index + 1}. ${button.buttonText}`).join("\n");
+        const fallback = buttons.length === 1
+          ? `${message}\n\nResponde «${buttons[0].buttonText.replace(/^✓\s*/, "")}» para confirmar.`
+          : `${message}\n\nResponde con el texto de una opción:\n${options}`;
         const data = await greenFetch("sendMessage", {
           method: "POST",
           headers: { "Content-Type": "application/json; charset=utf-8" },
