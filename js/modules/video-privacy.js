@@ -27,9 +27,10 @@
  }
  function setOther(e,hide){if(hide&&!e.hasAttribute('data-video-private-other'))e.setAttribute('data-video-private-other','');else if(!hide&&e.hasAttribute('data-video-private-other'))e.removeAttribute('data-video-private-other');}
  function filterUnrelated(){
-  for(const row of document.querySelectorAll('#dashAlerts tr,.salesListRow,.cpOpp,.waSideOpp,.tpfInstallation tbody tr')){
+  for(const row of document.querySelectorAll('#dashAlerts tr,.salesListRow,.cpOpp,.waSideOpp,#waSideOpps .waSideItem,.tpfInstallation tbody tr')){
    if(row.tagName==='TR'&&!row.querySelector('td'))continue;
-   const ids=Array.from(row.querySelectorAll('[data-id],[data-opportunity-id],[data-of-manage],[data-of-install]')).flatMap(e=>[e.dataset.id,e.dataset.opportunityId,e.dataset.ofManage,e.dataset.ofInstall]);
+   const ids=Array.from(row.querySelectorAll('[data-id],[data-opportunity-id],[data-of-manage],[data-of-opportunity],[data-install-manage]')).flatMap(e=>[e.dataset.id,e.dataset.opportunityId,e.dataset.ofManage,e.dataset.ofOpportunity,e.dataset.installManage]);
+   ids.push(...(row.getAttribute('onclick')||'').match(/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}/gi)||[]);
    const belongs=!focus.size||ids.some(id=>focus.has(id));
    setOther(row,!belongs||!/m[aá]sm[oó]vil/i.test(row.textContent));
   }
