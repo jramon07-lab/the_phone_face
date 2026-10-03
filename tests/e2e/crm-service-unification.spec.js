@@ -15,7 +15,8 @@ const READ_RPCS = new Set([
   'crm_list_system_events', 'crm_offer_delivery_status', 'crm_offer_followup_latest',
   'crm_system_health_snapshot', 'crm_welcome_capability', 'crm_contact_authorship',
   'wa_get_messages', 'wa_list_templates', 'crm_whatsapp_internal_reads',
-  'crm_list_monthly_reviews', 'crm_router_return_preview', 'crm_direct_sale_day_one_preview'
+  'crm_list_monthly_reviews', 'crm_router_return_preview', 'crm_direct_sale_day_one_preview',
+  'crm_installation_preview','crm_installation_settings','crm_installations_list','crm_operator_communication_templates'
 ]);
 const GREEN_READ = new Map([
   ['state', 'GET'], ['settings', 'GET'], ['summary', 'GET'], ['chats', 'GET'],
@@ -158,10 +159,10 @@ test('PC: textos de devolución compartidos en producción, solo lectura',async(
     await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();
     await expect(page.locator('#app')).toBeVisible({timeout:35000});
     await page.locator('.nav[data-view="settings"]').first().click();await page.locator('#view-settings-router-texts-tab').click();
-    const card=page.locator('#tpfRouterSettingsCard');await expect(card.locator('[data-settings-text]')).toBeEnabled({timeout:15000});
-    await expect(card.locator('[data-settings-preview]')).toContainText('Devolución del router de Yoigo');
-    await card.locator('[data-settings-search]').fill('masmovil');await card.locator('[data-settings-operator="MásMóvil"]').click();
-    await expect(card.locator('[data-settings-title]')).toHaveText('Texto de MásMóvil');await expect(card.locator('[data-settings-preview]')).toContainText('Devolución del router de MásMóvil');
+    const card=page.locator('#tpfRouterSettingsCard');await expect(card.locator('[data-router-text]')).toBeEnabled({timeout:15000});
+    await expect(card.locator('[data-preview]')).toContainText('Vodafone');
+    await card.locator('[data-search]').fill('masmovil');await card.locator('[data-operator="MásMóvil"]').click();
+    await expect(card.locator('[data-title]')).toHaveText('MásMóvil');await expect(card.locator('[data-preview]')).toContainText('MásMóvil');
     for(const width of [1366,700]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);}
     await expect.poll(()=>report.pendingReads.length,{timeout:20000}).toBe(0);assertReadHealth(report);
   }finally{reportScope(report,'PC textos de devolución');}
@@ -342,8 +343,8 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
     await page.locator('#view-settings-search-tab').click();
     await expect(page.locator('#settingsSearchSave')).toBeVisible();
     await page.locator('#view-settings-router-texts-tab').click();
-    await expect(page.locator('#tpfRouterSettingsCard [data-settings-text]')).toBeEnabled();
-    await expect(page.locator('#tpfRouterSettingsCard [data-settings-preview]')).toContainText('Devolución del router de Yoigo');
+    await expect(page.locator('#tpfRouterSettingsCard [data-router-text]')).toBeEnabled();
+    await expect(page.locator('#tpfRouterSettingsCard [data-preview]')).toContainText('Vodafone');
     await page.locator('#view-settings-connections-tab').click();
     await expect(card).toBeVisible();
     expect(await page.locator('#notifyTelegramChatId').inputValue()).toBe(telegramBefore);
@@ -465,8 +466,8 @@ test.describe('Móvil de solo lectura', () => {
       await page.locator('#directSaleModal [data-direct-close]').first().click();
       await page.locator('#mobileMenu').click();
       await page.locator('[data-route="router-texts"]').click();
-      await expect(page.locator('#mobileRouterSettings [data-settings-text]')).toBeEnabled();
-      await expect(page.locator('#mobileRouterSettings [data-settings-preview]')).toContainText('Devolución del router de Yoigo');
+      await expect(page.locator('#mobileRouterSettings [data-router-text]')).toBeEnabled();
+      await expect(page.locator('#mobileRouterSettings [data-preview]')).toContainText('Vodafone');
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
       await page.locator('[data-mobile-route="whatsapp"]').click();
       await expect(page.locator('[data-action="wa-auto-settings"]')).toBeVisible();

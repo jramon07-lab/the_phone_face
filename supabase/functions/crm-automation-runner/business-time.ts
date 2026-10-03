@@ -5,7 +5,14 @@ const ZONE = "Europe/Madrid";
 export function automaticSendWindow(job:any,now:Date):Date|null {
   if(!["__send_whatsapp","schedule_whatsapp","send_template"].includes(job.action_type))return null;
   if(job.context?.trigger_type==="manual_offer"&&job.action_config?.offer_phase==="initial"&&Number(job.attempts||0)<=1)return null;
+  const phase=String(job.context?.installation_phase||'');
+  if(['installation_date','installation_confirmed'].includes(phase))return null;
+  if(phase==='installation_notice'&&Number(job.attempts||0)<=1)return null;
   const p=madridParts(now),minute=p.hour*60+p.minute;
+  if(phase==='installation_return'&&(isSaturday(p)||isSunday(p))){
+    const monday=addLocalDays(p,isSaturday(p)?2:1);
+    return localDate(monday.year,monday.month,monday.day,600);
+  }
   if(!isSunday(p)&&((minute>=600&&minute<840)||(!isSaturday(p)&&minute>=1050&&minute<1230)))return null;
   if(isSunday(p)){
     const monday=addLocalDays(p,1);
