@@ -16,15 +16,15 @@ function replied(x){return F.responses.some(e=>String(e.offer_instance_id)===del
 function matching(id,filter){const rows=F.byOpportunity.get(String(id))||[];return filter==='all'||(filter==='pending'?rows.some(x=>x.status==='error'||x.status==='accepted'||(x.status==='following'&&replied(x))||(x.next_action_at&&time(x.next_action_at)<=Date.now()&&['following','paused'].includes(x.status)&&x.plan_task?.status!=='completed')):filter==='replied'?rows.some(replied):filter==='error'?rows.some(x=>x.status==='error'):(filter==='other'?!rows.some(x=>['paused','following'].includes(x.status)):rows.some(x=>filter==='paused'?x.status==='paused':x.status==='following')))}
 function next(x){if(x.status!=='following')return '';const times=F.jobs.filter(j=>String(j.context?.offer_instance_id||'')===deliveryId(x)).map(j=>j.run_at).filter(time).sort((a,b)=>time(a)-time(b));return times[0]||''}
 function summary(x,now){const paused=x.status==='paused',sent=x.sent_at;return{label:paused?`Pausado${x.paused_at?' '+ago(x.paused_at,now):' · fecha no registrada'}`:x.status==='following'&&replied(x)?'Cliente respondió':x.status==='following'&&!F.error&&!next(x)?'Sin envíos pendientes':labels[x.status]||x.status,
- age:sent?`Enviada ${ago(sent,now)}`:'Sin envío confirmado',
+ age:sent?`Enviada ${ago(sent,now)}`:'Sin envío registrado',
  next:paused?'Sin recordatorios':x.status==='following'?(F.error?'Recordatorio no disponible':next(x)?`Próximo WhatsApp: ${date(next(x))} · Seguimiento activo`:'Sin recordatorio pendiente'):x.status==='queued'?'Pendiente de envío':x.status_changed_at?`Desde ${date(x.status_changed_at)}`:''}}
-function htmlOffer(x,actions=false){const s=summary(x);const controls=actions&&!!x.id?`<button type="button" class="ofView" data-of-view="${esc(x.id)}">${x.sent_at?'Ver oferta enviada':'Ver oferta'}</button><button type="button" class="ofManage" data-of-manage="${esc(x.id)}">${x.status==='error'?'Ver motivo':'Gestionar'}</button>`:'';return `<div class="ofItem"><span class="ofBadge ${esc(x.status)}">${esc(s.label)}</span><small>${esc(s.age)}</small>${s.next&&!(x.status==='paused'||(x.status==='following'&&!F.error&&!next(x)))?`<small class="ofNext">${esc(s.next)}</small>`:''}${window.TPFOfferWorkPlan?.summary(x)||''}${controls}</div>`}
+function htmlOffer(x,actions=false){const s=summary(x);const controls=actions&&!!x.id?`<button type="button" class="ofView" data-of-view="${esc(x.id)}">Ver oferta</button><button type="button" class="ofManage" data-of-manage="${esc(x.id)}">${x.status==='error'?'Ver motivo':'Gestionar'}</button>`:'';return `<div class="ofItem"><span class="ofBadge ${esc(x.status)}">${esc(s.label)}</span><small>${esc(s.age)}</small>${s.next&&!(x.status==='paused'||(x.status==='following'&&!F.error&&!next(x)))?`<small class="ofNext">${esc(s.next)}</small>`:''}${window.TPFOfferWorkPlan?.summary(x)||''}${controls}</div>`}
 // Read-only viewer: retrieve the saved offer only when requested. No send/control calls.
 function savedOfferModel(x){const snap=x.snapshot||{};return {message:typeof x.message_text==='string'?x.message_text:'',recipient:snap.recipient_name||snap.contact_name||'',phone:snap.recipient_phone||snap.contact_phone||'',sentAt:x.sent_at||null};}
 function viewerShell(){document.getElementById('ofViewDialog')?.remove();const d=document.createElement('dialog');d.id='ofViewDialog';d.className='ofViewDialog';d.setAttribute('aria-label','Oferta guardada');d.innerHTML='<header><h3>Oferta</h3><button type="button" data-of-close aria-label="Cerrar oferta">×</button></header><div class="ofViewBody" aria-live="polite">Cargando oferta…</div>';document.body.appendChild(d);d.addEventListener('close',()=>d.remove());d.showModal();return d;}
-function renderSavedOffer(d,x,rows){if(!d.isConnected)return;const model=savedOfferModel(x),body=d.querySelector('.ofViewBody');body.innerHTML=`<div class="ofViewHeading"><strong>${esc(x.operator)} · ${esc(x.offer_name||'Oferta')}</strong><b>${esc(new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(Number(x.total_price)||0))}/mes</b></div><div class="ofViewMeta"><span>Destinatario registrado<br><b>${esc(model.recipient||'Nombre no registrado')}</b>${model.phone?`<br>${esc(model.phone)}`:''}</span><span>${model.sentAt?'Enviada':'Sin envío confirmado'}<br><b>${esc(model.sentAt?date(model.sentAt):labels[x.status]||x.status)}</b></span></div>${rows.length>1?`<label>Ofertas de esta oportunidad<select data-of-history aria-label="Elegir oferta">${rows.map(r=>`<option value="${esc(r.id)}" ${String(r.id)===String(x.id)?'selected':''}>${esc(r.operator)} · ${esc(r.offer_name)} · ${esc(date(r.sent_at||r.created_at))}</option>`).join('')}</select></label>`:''}<h4>${model.sentAt?'Mensaje de la oferta enviada':'Mensaje guardado de la oferta'}</h4><pre class="ofViewMessage">${esc(model.message||'Esta oferta antigua no tiene el texto guardado. No se ha reconstruido ni enviado ningún mensaje.')}</pre><section class="ofViewFollowup"><h4>Seguimiento</h4>${htmlOffer(x,false)}</section><footer><small>Consulta de la oferta guardada. Abrirla no envía mensajes.</small><button type="button" data-of-close>Cerrar</button></footer>`;body.querySelector('[data-of-history]')?.addEventListener('change',e=>{const selected=rows.find(r=>String(r.id)===e.target.value);if(selected)renderSavedOffer(d,selected,rows)});}
+function renderSavedOffer(d,x,rows){if(!d.isConnected)return;const model=savedOfferModel(x),body=d.querySelector('.ofViewBody');body.innerHTML=`<div class="ofViewHeading"><strong>${esc(x.operator)} · ${esc(x.offer_name||'Oferta')}</strong><b>${esc(new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(Number(x.total_price)||0))}/mes</b></div><div class="ofViewMeta"><span>Destinatario registrado<br><b>${esc(model.recipient||'Nombre no registrado')}</b>${model.phone?`<br>${esc(model.phone)}`:''}</span><span>${model.sentAt?'Enviada':'Sin envío registrado'}<br><b>${esc(model.sentAt?date(model.sentAt):labels[x.status]||x.status)}</b></span></div>${rows.length>1?`<label>Ofertas de esta oportunidad<select data-of-history aria-label="Elegir oferta">${rows.map(r=>`<option value="${esc(r.id)}" ${String(r.id)===String(x.id)?'selected':''}>${esc(r.operator)} · ${esc(r.offer_name)} · ${esc(date(r.sent_at||r.created_at))}</option>`).join('')}</select></label>`:''}<h4>${model.sentAt?'Mensaje de la oferta enviada':'Mensaje guardado de la oferta'}</h4><pre class="ofViewMessage">${esc(model.message||'Esta oferta antigua no tiene el texto guardado. No se ha reconstruido ni enviado ningún mensaje.')}</pre><section class="ofViewFollowup"><h4>Seguimiento</h4>${htmlOffer(x,false)}</section><footer><small>Consulta de la oferta guardada. Abrirla no envía mensajes.</small><button type="button" data-of-close>Cerrar</button></footer>`;body.querySelector('[data-of-history]')?.addEventListener('change',e=>{const selected=rows.find(r=>String(r.id)===e.target.value);if(selected)renderSavedOffer(d,selected,rows)});}
 async function viewSavedOffer(id,opportunity=false){const d=viewerShell();try{const query=sb.from('crm_offer_instances').select('id,opportunity_id,operator,offer_name,total_price,status,sent_at,created_at,paused_at,status_changed_at,next_action,next_action_at,message_text,snapshot').eq(opportunity?'opportunity_id':'id',id).order('created_at',{ascending:false}).limit(50);let timer;const r=await Promise.race([query,new Promise((_,reject)=>timer=setTimeout(()=>reject(Error('La consulta tarda demasiado. Cierra y vuelve a intentarlo.')),12000))]).finally(()=>clearTimeout(timer));if(!d.isConnected)return;if(r.error)throw r.error;const rows=r.data||[];if(!rows.length){d.querySelector('.ofViewBody').textContent='No hay ofertas guardadas para esta oportunidad.';return}renderSavedOffer(d,rows[0],rows);}catch(e){if(d.isConnected)d.querySelector('.ofViewBody').textContent='No se pudo abrir la oferta. '+(e?.message||'Vuelve a intentarlo.');}}
-function opportunityButton(id){return id?`<button type="button" class="ofView" data-of-opportunity="${esc(id)}">Ver oferta enviada</button>`:'';}
+function opportunityButton(id){return id?`<button type="button" class="ofView" data-of-opportunity="${esc(id)}">Ver oferta</button>`:'';}
 function manage(id){
  if(window.TPFHomeManage)return window.TPFHomeManage.open(id);
  const x=F.offers.find(o=>String(o.id)===String(id))||[...F.byOpportunity.values()].flat().find(o=>String(o.id)===String(id));if(!x)return;
@@ -37,7 +37,7 @@ function html(id,actions=false){if(F.error)return '<small class="ofError">Seguim
 function homeOffer(id){return (F.byOpportunity.get(String(id))||[]).filter(x=>x.id).slice().sort((a,b)=>Number(['archived','cancelled','lost'].includes(a.status))-Number(['archived','cancelled','lost'].includes(b.status))||time(b.created_at)-time(a.created_at))[0];}
 function homeActions(id){
  const rows=F.byOpportunity.get(String(id))||[],x=homeOffer(id);if(!x)return '';
- return `<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">Gestionar</button><button type="button" class="ofHomeView" data-of-opportunity="${esc(id)}">${rows.some(r=>r.sent_at)?'Ver oferta enviada':'Ver oferta'}</button>`;
+ return `<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">Gestionar</button><button type="button" class="ofHomeView" data-of-opportunity="${esc(id)}">Ver oferta</button>`;
 }
 function homeSummary(id){
  if(F.error)return '<small class="ofError">Seguimiento no disponible · Actualiza para reintentar</small>';
@@ -57,18 +57,35 @@ function listActions(o={}){
  const rows=F.byOpportunity.get(String(o.id))||[],phone=conversationPhone(o);
  return `<div class="ofSalesActions">${rows.some(x=>x.sent_at)?opportunityButton(o.id):''}<button type="button" class="ofChat" data-of-chat="${esc(o.id)}" ${phone?'':'disabled'} title="${phone?'Abrir la conversación del destinatario':'No hay teléfono del destinatario registrado'}">Abrir conversación</button>${rows.filter(x=>x.id).map(x=>`<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">${rows.length>1?'Gestionar · '+esc(x.offer_name||x.operator||'Oferta'):'Gestionar'}</button>`).join('')}</div>`;
 }
+function opportunityFor(id,supplied){const o=supplied||((typeof salesCache!=='undefined'?salesCache.opportunities:[])||[]).find(o=>String(o.id)===String(id));if(!o||String(o.id)!==String(id))throw Error('La oportunidad ya no está disponible. Actualiza el listado.');return o;}
+function quickActions(id){return `<button type="button" data-of-quick="conversation" data-opportunity-id="${esc(id)}">Abrir conversación</button><button type="button" data-of-quick="message" data-opportunity-id="${esc(id)}">Enviar WhatsApp</button><button type="button" data-of-quick="task" data-opportunity-id="${esc(id)}">Crear tarea</button>`;}
+async function quickAction(kind,id,supplied){
+ const o=opportunityFor(id,supplied),party=o.contract_party||{},saved=homeOffer(id)?.snapshot||{},phone=conversationPhone(o),name=party.recipient_name||saved.recipient_name||o.client_name||'Cliente';
+ if(kind==='conversation')return openConversation(id,o);
+ if(kind==='task'){
+  if(typeof crmCan==='function'&&!crmCan('can_manage_agenda'))throw Error('No tienes permiso para crear tareas.');
+  if(typeof window.openAgendaComposer!=='function')throw Error('El editor de tareas no está disponible. Actualiza la página.');
+  return window.openAgendaComposer({overlay:true,contactId:o.record_id||o.contact_id||null,customerName:o.client_name||name,phone:o.phone||phone,title:'Seguimiento · '+(o.title||'Oportunidad'),description:'Oportunidad: '+(o.title||'Oportunidad'),type:'Tarea'},{overlay:true,opportunityId:String(o.id),onSaved:()=>window.dispatchEvent(new CustomEvent('tpf:sales-updated'))});
+ }
+ if(kind!=='message')throw Error('Acción no disponible.');
+ if(typeof crmCan==='function'&&!crmCan('can_use_whatsapp'))throw Error('No tienes permiso para enviar WhatsApp.');
+ if(!/^[1-9][0-9]{7,14}$/.test(phone.replace(/\D/g,'')))throw Error('Revisa el teléfono del destinatario en la ficha.');
+ const fn=window.openWaQuick||(typeof openWaQuick==='function'?openWaQuick:null);if(!fn)throw Error('El editor de WhatsApp no está disponible. Actualiza la página.');
+ const contactId=party.recipient_contact_id||saved.recipient_contact_id||(party.same===false?null:o.record_id||o.contact_id||null);
+ return fn({phone,name,contactId});
+}
 let salesConversationOrigin=null;
 function clearConversationReturn(){salesConversationOrigin=null;document.getElementById('ofBackToSales')?.remove();}
 function showConversationReturn(){
  let button=document.getElementById('ofBackToSales');
- if(!button){const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(!header)return;button=document.createElement('button');button.id='ofBackToSales';button.type='button';button.className='secondary';button.textContent='← Volver a ventas';button.onclick=returnToSales;header.prepend(button);}
+ if(!button){const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(!header)return;button=document.createElement('button');button.id='ofBackToSales';button.type='button';button.className='secondary';button.textContent=salesConversationOrigin?.view==='dashboard'?'← Volver a Inicio':'← Volver a ventas';button.onclick=returnToSales;header.prepend(button);}
 }
 async function returnToSales(){
  const origin=salesConversationOrigin;if(!origin)return;
  const button=document.getElementById('ofBackToSales');if(button)button.disabled=true;
  try{
   if(origin.screen&&typeof window.tpfRestoreCapturedScreen==='function')await window.tpfRestoreCapturedScreen(origin.screen);
-  else{const nav=document.querySelector('.nav[data-view="sales"]');if(!nav)throw Error('El panel de ventas no está disponible.');nav.dataset.tpfRouterRestore='1';try{nav.click()}finally{delete nav.dataset.tpfRouterRestore}}
+  else{const nav=document.querySelector('.nav[data-view="'+(origin.view||'sales')+'"]');if(!nav)throw Error('El listado de origen no está disponible.');nav.dataset.tpfRouterRestore='1';try{nav.click()}finally{delete nav.dataset.tpfRouterRestore}}
   if(Array.isArray(window.__TPF_HISTORY)&&origin.historyLength!==null)window.__TPF_HISTORY.splice(origin.historyLength);
   const restore=()=>{for(const [id,position] of Object.entries(origin.scroll)){const el=document.getElementById(id);if(el){el.scrollTop=position.top;el.scrollLeft=position.left;}}};
   restore();requestAnimationFrame(restore);setTimeout(restore,120);
@@ -76,15 +93,15 @@ async function returnToSales(){
  }catch(error){if(button)button.disabled=false;alert(error.message||'No se pudo volver al panel de ventas.');}
 }
 
-async function openConversation(id){
+async function openConversation(id,supplied){
  if(typeof crmCan==='function'&&!crmCan('can_use_whatsapp'))throw Error('No tienes permiso para abrir WhatsApp.');
- const opportunity=typeof salesCache!=='undefined'?(salesCache.opportunities||[]).find(o=>String(o.id)===String(id)):null;
+ const opportunity=opportunityFor(id,supplied);
  if(!opportunity)throw Error('La oportunidad ya no está disponible. Actualiza el panel.');
  let phone=conversationPhone(opportunity).replace(/\D/g,'');if(phone.startsWith('00'))phone=phone.slice(2);if(phone.length===9)phone='34'+phone;
  if(!/^[1-9][0-9]{7,14}$/.test(phone))throw Error('El destinatario no tiene un teléfono válido.');
  const nav=document.querySelector('.nav[data-view="whatsapplive"]');
  if(!nav||typeof window.selectWhatsAppChat!=='function')throw Error('WhatsApp no está disponible. Actualiza y vuelve a intentarlo.');
- if(!salesConversationOrigin){salesConversationOrigin={screen:window.tpfCaptureCurrentScreen?.()||null,historyLength:Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null,scroll:Object.fromEntries(['salesListView','salesListRows','salesScroll','view-sales'].map(id=>{const el=document.getElementById(id);return [id,{top:el?.scrollTop||0,left:el?.scrollLeft||0}]}))};}
+ if(!salesConversationOrigin){salesConversationOrigin={view:document.getElementById('view-dashboard')&&!document.getElementById('view-dashboard').classList.contains('hidden')?'dashboard':'sales',screen:window.tpfCaptureCurrentScreen?.()||null,historyLength:Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null,scroll:Object.fromEntries(['salesListView','salesListRows','salesScroll','view-sales','view-dashboard'].map(id=>{const el=document.getElementById(id);return [id,{top:el?.scrollTop||0,left:el?.scrollLeft||0}]}))};}
  nav.click();showConversationReturn();
  await window.selectWhatsAppChat(phone+'@c.us');
 }
@@ -111,7 +128,7 @@ function install(){document.addEventListener('click',e=>{const nav=e.target.clos
  const refresh=()=>{if(document.hidden||document.getElementById('app')?.classList.contains('hidden'))return;const visible=['view-sales','view-dashboard','view-contact','view-whatsapplive'].some(id=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden')});if(visible)load().then(refreshViews)};
  window.addEventListener('focus',refresh);setInterval(refresh,60000);
 }
-window.TPFOfferFollowup={homeActions,homeSummary,acceptanceTime,listHtml,listActions,conversationPhone,openConversation,returnToSales,viewSavedOffer,savedOfferModel,opportunityButton,manage,load,html,htmlOffer,summary,filterRows,controls,salesControls,matching,age,ago,state:F};
+window.TPFOfferFollowup={quickActions,quickAction,homeActions,homeSummary,acceptanceTime,listHtml,listActions,conversationPhone,openConversation,returnToSales,viewSavedOffer,savedOfferModel,opportunityButton,manage,load,html,htmlOffer,summary,filterRows,controls,salesControls,matching,age,ago,state:F};
 if(typeof sb!=='undefined')sb.auth?.onAuthStateChange?.(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){F.revision++;if(event==='SIGNED_OUT'){try{window.sessionStorage?.removeItem('tpf-followup-filters')}catch(_){}F.filter='all';F.homeFilter='all';F.order=''}F.offers=[];F.jobs=[];F.responses=[];F.byOpportunity=new Map();F.loaded=false;F.error='';F.at=0;}});
 if(window.TPFModules)window.TPFModules.register('offer-followup-ui',{install});
 })();

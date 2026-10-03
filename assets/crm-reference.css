@@ -1535,3 +1535,6 @@ body.tpfUnified #view-dashboard .tdRowActions .tdDots{flex:0 0 36px;display:grid
 body.tpfUnified #view-dashboard .tdRowActions button:focus-visible{outline:2px solid #1763d6;outline-offset:2px}
 
 body.tpfUnified #view-dashboard .ofHomeSummary{display:grid;gap:5px;font-size:12px;line-height:1.5;color:#38506e}body.tpfUnified #view-dashboard .ofHomeSummary small:last-child{font-size:11px;color:#64748b}
+
+/* Daily installations and customer actions. */
+body.tpfUnified #view-dashboard .tdPulseWithInstallations{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px!important}.tdPulse.green .tdPulseIcon{background:#e9f6ef;color:#168257}.ofQuickActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.ofQuickActions button{padding:8px 10px;font-size:12px;border:1px solid #ccd8e7;border-radius:8px;background:white;color:#245fba}.tdRowMenu button{min-height:36px}@media(max-width:1000px){body.tpfUnified #view-dashboard .tdPulseWithInstallations{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){body.tpfUnified #view-dashboard .tdPulseWithInstallations{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
