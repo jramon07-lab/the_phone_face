@@ -58,14 +58,23 @@ function applyFinalFix(html){
   return html;
 }
 
+function applyVideoPrivacy(html,req){
+  const enabled=String(req?.query?.videoPrivacy||new URL(req?.url||'/', 'https://crm.local').searchParams.get('videoPrivacy')||'')==='1';
+  if(!enabled)return html;
+  // Only this explicitly requested recording view is hidden until its masks are ready.
+  const privateHead='<style id="tpf-video-private-start">html:not([data-video-private-ready="1"]) body{visibility:hidden!important}html[data-video-private-pending="1"] #app,html[data-video-private-pending="1"] dialog{visibility:hidden!important}</style><script src="/js/modules/video-privacy.js?v=20261004-recording-1"></script>';
+  return html.replace(/<head(?:\s[^>]*)?>/i,match=>match+privateHead);
+}
+
 module.exports=async function(req,res){
   try{
     const captured=await new Promise((resolve,reject)=>clean(req,captureResponse(resolve,reject)).catch(reject));
     Object.entries(captured.headers).forEach(([k,v])=>res.setHeader(k,v));
     res.setHeader('X-TPF-Final-Fix','late-modals+logout-event-driven+contact-profile-v12+whatsapp-read-safe');
-    res.status(captured.statusCode).send(applyFinalFix(captured.body));
+    res.status(captured.statusCode).send(applyVideoPrivacy(applyFinalFix(captured.body),req));
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));}
 };
 
 module.exports.applyFinalFix=applyFinalFix;
 module.exports.relocateLateModals=relocateLateModals;
+module.exports.applyVideoPrivacy=applyVideoPrivacy;
