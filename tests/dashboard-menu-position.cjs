@@ -4,11 +4,11 @@ const source=fs.readFileSync('js/modules/dashboard-performance-guard.js','utf8')
 const nodes=new Map(),events={},windowEvents={};
 let rect={left:940,right:968,top:400,bottom:434};
 const classes=new Set();
-const dots={getBoundingClientRect:()=>rect};
+const attributes={'aria-expanded':'true'},dots={getBoundingClientRect:()=>rect,setAttribute:(key,value)=>attributes[key]=value};
 const row={querySelector:()=>dots};
 const menu={style:{},classList:{contains:v=>classes.has(v),add:v=>classes.add(v),remove:v=>classes.delete(v)},getBoundingClientRect:()=>({width:140,height:125}),closest:()=>row};
 const sandbox={window:{TPFModules:{register(){}},innerWidth:1000,innerHeight:700,addEventListener:(name,fn)=>{windowEvents[name]=fn}},
- document:{getElementById(id){if(!nodes.has(id))nodes.set(id,{addEventListener:(name,fn)=>{events[id+':'+name]=fn}});return nodes.get(id)},addEventListener:(name,fn)=>{events[name]=fn},querySelectorAll:selector=>selector.includes(':not(.hidden)')&&classes.has('hidden')?[]:[menu]},
+ document:{getElementById(id){if(!nodes.has(id))nodes.set(id,{addEventListener:(name,fn)=>{events[id+':'+name]=fn}});return nodes.get(id)},addEventListener:(name,fn)=>{events[name]=fn},querySelectorAll:selector=>selector.includes('[data-dots]')?[dots]:selector.includes(':not(.hidden)')&&classes.has('hidden')?[]:[menu]},
  Intl,Date,Map,console,setTimeout,clearTimeout};
 vm.runInNewContext(source.replace("M.register('dashboard-performance-guard'","window.menuTests={bind};M.register('dashboard-performance-guard'"),sandbox);
 sandbox.window.menuTests.bind();
@@ -23,8 +23,8 @@ sandbox.window.innerWidth=960;windowEvents.resize();
 assert.equal(menu.style.left,'812px','Resize keeps the menu within the right edge');
 rect={...rect,top:-50,bottom:-16};events.scroll({target:{}});
 assert.equal(classes.has('hidden'),true,'Close only when the trigger leaves the viewport');
-classes.delete('hidden');events['view-dashboard:keydown']({key:'Escape'});
-assert.equal(classes.has('hidden'),true,'Escape still closes the menu');
+assert.equal(attributes['aria-expanded'],'false','Leaving the viewport resets the expanded state');classes.delete('hidden');attributes['aria-expanded']='true';events['view-dashboard:keydown']({key:'Escape'});
+assert.equal(classes.has('hidden'),true,'Escape still closes the menu');assert.equal(attributes['aria-expanded'],'false');
 classes.delete('hidden');events.click({target:{closest:()=>null}});
 assert.equal(classes.has('hidden'),true,'An outside click closes the menu before opening another screen');
 classes.delete('hidden');events.click({target:{closest:()=>menu}});

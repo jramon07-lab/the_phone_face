@@ -44,6 +44,7 @@ async function main(){const db=new PGlite();await db.exec(`
  await db.exec('reset role;');
  await db.exec(fs.readFileSync('supabase/migrations/20261003193000_restore_offer_validation_permissions.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/20261003193500_exclude_legacy_undated_installations.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261003200000_home_manage_stage_change.sql','utf8'));
  await db.exec('set role authenticated;');
  assert.equal((await db.query('select crm_private.router_return_preferences(null::jsonb) v')).rows[0].v,null);
  assert.equal((await db.query('select crm_private.router_return_preferences($1) v',[JSON.stringify({previous_operator:'Yoigo',send:false})])).rows[0].v.previous_operator,'Yoigo');
@@ -56,16 +57,59 @@ async function main(){const db=new PGlite();await db.exec(`
  insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone,client_name,title,contract_party,after_sale_preferences) values('${O}','${C}','${U}','${S}','${S}','600000000','Titular Ejemplo','Vodafone','{"recipient_name":"Gestora Ejemplo","recipient_first_name":"Gestora","recipient_phone":"34600000001"}','{"workflow":"installation_v1","send":true,"text":"Hola Gestora, aviso de cita","return_text":"Hola {nombre}. Router de {operador_anterior}","previous_operator":"Yoigo","operator":"Vodafone"}');
  insert into crm_offer_instances(id,opportunity_id,contact_id,operator,created_by,snapshot,status) values('${F}','${O}','${C}','Vodafone','${U}','{}','processed');
  select crm_private.enqueue_opportunity_stage('${O}');`);
+ // Exercise the new invoker RPC with the existing commercial control and stage hooks.
+ await db.exec('alter table crm_offer_instances add accepted_at timestamptz,add processed_at timestamptz;alter table sales_opportunities add position integer default 0;');
+ const controls=fs.readFileSync('supabase/migrations/20260911195620_offer_response_actions.sql','utf8');await db.exec(controls.slice(controls.indexOf('create or replace function public.crm_control_offer('),controls.indexOf('grant execute on function public.crm_control_offer(uuid,text) to authenticated;')+'grant execute on function public.crm_control_offer(uuid,text) to authenticated;'.length));
+ const composition=fs.readFileSync('db/proposals/offer-composition-followup.sql','utf8');await db.exec(composition.slice(composition.indexOf('create or replace function public.crm_control_offer_composition(')));
+ await db.exec(`create function crm_private.offer_record_sale(public.crm_offer_instances,timestamptz) returns void language plpgsql as $$begin return;end;$$;`);
+ await db.exec(fs.readFileSync('supabase/migrations/20260921120633_fix_counteroffer_label_variable.sql','utf8'));
+ const trigger=fs.readFileSync('db/proposals/offer-configurator-v4.sql','utf8');await db.exec(trigger.slice(trigger.indexOf('create or replace function public.crm_server_on_opportunity_stage()')));
+ await db.exec(`create trigger crm_offer_stage_state after update of stage_id on sales_opportunities for each row execute function crm_private.offer_stage_state();create trigger crm_server_opportunity_stage_trigger after update of stage_id on sales_opportunities for each row execute function public.crm_server_on_opportunity_stage();
+ grant select,update on sales_opportunities,crm_offer_instances,crm_server_automation_jobs to authenticated;grant select on sales_stages,crm_installations to authenticated;
+ alter table sales_opportunities enable row level security;create policy fixture_actor on sales_opportunities for all to authenticated using(owner_user_id=auth.uid()) with check(owner_user_id=auth.uid());
+ alter table crm_offer_instances enable row level security;create policy fixture_actor on crm_offer_instances for all to authenticated using(created_by=auth.uid()) with check(created_by=auth.uid());`);
+ const O2='20000000-0000-0000-0000-000000000022',F2='40000000-0000-0000-0000-000000000022',FOLLOW='50000000-0000-0000-0000-000000000011',PENDING='50000000-0000-0000-0000-000000000012',LOST='50000000-0000-0000-0000-000000000013';
+ await db.exec(`begin;insert into sales_stages(id,name,pipeline_id) values('${FOLLOW}','Seguimiento','${S}'),('${PENDING}','Pendiente de tramitar','${S}'),('${LOST}','Perdido','${S}');insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone,contract_party) values('${O2}','${C}','${U}','${FOLLOW}','${S}','600000001','{"recipient_name":"Gestora Ejemplo","recipient_phone":"34600000001"}');insert into crm_offer_instances(id,opportunity_id,contact_id,operator,created_by,status,snapshot) values('${F2}','${O2}','${C}','Lowi','${U}','following','{}');set role authenticated;`);
+ const row=async(table,id)=>(await db.query('select * from '+table+' where id=$1',[id])).rows[0];
+ const stageChange=async(stage,prefs=null,installation=null,oldOffer=null,oldOpportunity=null)=>{const o=oldOpportunity||await row('sales_opportunities',O2),f=oldOffer||await row('crm_offer_instances',F2);return (await db.query('select crm_change_offer_stage($1,$2,$3,$4,$5,$6) v',[F2,f.updated_at,o.updated_at,stage,prefs&&JSON.stringify(prefs),installation?.updated_at||null])).rows[0].v;};
+ const stageReject=async(fn,re)=>{await db.exec('savepoint expected_error');try{await assert.rejects(fn,re);}finally{await db.exec('rollback to savepoint expected_error;release savepoint expected_error;');}};
+ const staleOffer=await row('crm_offer_instances',F2),staleOpportunity=await row('sales_opportunities',O2);
+ await stageReject(()=>stageChange('ganado'),/Excel/);await stageReject(()=>stageChange('tramitado'),/Revisa la cita/);
+ let change=await stageChange('pendiente de tramitar');assert.equal(change.offer.status,'accepted');assert.equal(change.opportunity.stage_id,PENDING);assert(change.offer.accepted_at);
+ await stageReject(()=>stageChange('perdido',null,null,staleOffer,staleOpportunity),/otro dispositivo/);assert.equal((await row('sales_opportunities',O2)).stage_id,PENDING);
+ change=await stageChange('seguimiento');assert.equal(change.offer.status,'following');assert.equal(change.opportunity.stage_id,FOLLOW);
+ change=await stageChange('perdido');assert.equal(change.offer.status,'lost');assert.equal(change.opportunity.status,'lost');
+ const prefs={workflow:'installation_v1',operator:'Lowi',previous_operator:'Yoigo',text:'Aviso revisado',return_text:'Router anterior',send:true};
+ change=await stageChange('tramitado',prefs);assert.equal(change.offer.status,'processed');assert.equal(change.opportunity.stage_id,S);assert.equal(change.opportunity.status,'open');
+ let existing=(await db.query('select * from crm_installations where opportunity_id=$1',[O2])).rows[0];assert(existing);const firstId=existing.id;
+ await stageChange('seguimiento');assert(!(await db.query('select * from crm_installations_list()')).rows.some(r=>Object.values(r)[0].opportunity_id===O2));
+ await stageReject(()=>stageChange('tramitado',{...prefs,send:false}),/instalación cambió/);
+ await stageChange('tramitado',{...prefs,send:false},existing);existing=(await db.query('select * from crm_installations where opportunity_id=$1',[O2])).rows[0];assert.equal(existing.id,firstId);
+ await stageChange('tramitado',{...prefs,text:'Aviso editado sin cambiar fecha',send:true},existing);assert.equal((await db.query('select count(*)::int n from crm_installations where opportunity_id=$1',[O2])).rows[0].n,1);
+ await db.query("update sales_opportunities set installation_date='2026-10-01' where id=$1",[O2]);await stageReject(()=>stageChange('perdido'),/Excel/);
+ await db.exec(`set request.jwt.claim.sub='10000000-0000-0000-0000-000000000099';`);await stageReject(()=>db.query('select crm_change_offer_stage($1,$2,$3,$4,null,null)',[F2,staleOffer.updated_at,staleOpportunity.updated_at,'perdido']),/no disponible/);
+ await db.exec(`reset role;rollback;set request.jwt.claim.sub='${U}';`);
+ assert.equal((await db.query("select prosecdef from pg_proc where proname='crm_change_offer_stage'")).rows[0].prosecdef,false);assert.equal((await db.query("select has_function_privilege('anon','crm_change_offer_stage(uuid,timestamptz,timestamptz,text,jsonb,timestamptz)','EXECUTE') allowed")).rows[0].allowed,false);
  const scalar=async(sql,args)=>(await db.query(sql,args)).rows[0];
  let i=await scalar('select * from crm_installations');assert.equal(i.previous_operator,'Yoigo');assert.equal(i.recipient_context.phone,'34600000001');assert.equal(i.notice_text,'Hola Gestora, aviso de cita');
  let jobs=(await db.query('select * from crm_server_automation_jobs')).rows;assert.equal(jobs.length,4);assert.equal(jobs.filter(j=>j.action_config.offer_phase==='installation_notice').length,1);const root=jobs.find(j=>j.action_config.steps?.[0]?.action_type==='record_sale_month');assert.equal(root.action_config.steps.length,1);assert(jobs.some(j=>j.action_config.steps?.[0]?.value===3));assert(jobs.some(j=>j.action_config.steps?.[0]?.value===11));
  await db.query(`select crm_private.enqueue_opportunity_stage($1)`,[O]);assert.equal((await db.query('select * from crm_installations')).rows.length,1);assert.equal((await db.query('select * from crm_server_automation_jobs')).rows.length,4);
+ // Resend an edited notice without changing its date, and cancel only the superseded notice.
+ const beforeNotice=i.notice_job_id;
+ await db.query('select crm_installation_update($1,$2,$3)',[O,i.updated_at,JSON.stringify({text:'Aviso revisado sin cambiar cita',send:true})]);i=await scalar('select * from crm_installations');assert.notEqual(i.notice_job_id,beforeNotice);assert.equal((await scalar('select status from crm_server_automation_jobs where id=$1',[beforeNotice])).status,'cancelled');assert.equal(i.notice_text,'Aviso revisado sin cambiar cita');assert.equal(i.appointment_date,null);
+ const versionBefore=i.updated_at,jobBefore=i.notice_job_id;
+ await assert.rejects(db.query('select crm_installation_update($1,$2,$3)',[O,versionBefore,JSON.stringify({text:'Un único reenvío',send:true})]).then(async()=>db.query('select crm_installation_update($1,$2,$3)',[O,versionBefore,JSON.stringify({text:'Un único reenvío',send:true})])),/otro dispositivo/);
+ i=await scalar('select * from crm_installations');assert.notEqual(i.notice_job_id,jobBefore);
+ await db.query("update crm_server_automation_jobs set status='running' where id=$1",[i.notice_job_id]);await assert.rejects(db.query('select crm_installation_update($1,$2,$3)',[O,i.updated_at,JSON.stringify({text:'No cambiar mientras se envía'})]),/en envío/);await db.query("update crm_server_automation_jobs set status='pending' where id=$1",[i.notice_job_id]);
+ // Time edits preserve the current appointment date, and confirmed historical dates permit observations.
+ const future=(await scalar("select ((now() at time zone 'Europe/Madrid')::date+3)::text d")).d;
+ await db.query('select crm_installation_update($1,$2,$3)',[O,i.updated_at,JSON.stringify({appointment_date:future,time_from:'10:00',time_to:'12:00',send:false})]);i=await scalar('select * from crm_installations');await db.query('select crm_installation_update($1,$2,$3)',[O,i.updated_at,JSON.stringify({time_from:'10:30',send:false})]);i=await scalar('select * from crm_installations');assert.equal(i.appointment_date.toISOString().slice(0,10),future);assert.equal(i.time_from,'10:30:00');
  const incoming=async(id,action,phone='34600000001',text='',stamp=null)=>db.query('insert into wa_messages(id_message,chat_id,direction,raw,type_message,text_content,created_at) values($1,$2,\'in\',$3,\'interactiveButtonsResponse\',$4,coalesce($5,now()))',[id,phone+'@c.us',JSON.stringify({messageData:{interactiveButtonsResponse:{selectedButtonId:action}}}),text,stamp]);
  await incoming('wrong','install_done:'+i.id,'34600000002');assert.equal((await scalar('select * from crm_installations')).awaiting_date,false);
  await incoming('date-before-done','install_today:'+i.id);assert.equal((await scalar('select * from crm_installations')).installed_on,null);
  await incoming('installed','install_done:'+i.id);i=await scalar('select * from crm_installations');assert.equal(i.awaiting_date,true);assert.equal(i.installed_on,null);assert.equal((await scalar('select * from sales_opportunities')).installation_date,null);
  await incoming('invalid','',undefined,'31/02/2026');assert.equal((await scalar('select * from crm_installations')).installed_on,null);
- await incoming('confirm','install_yesterday:'+i.id);i=await scalar('select * from crm_installations');assert(i.installed_on);assert(i.return_job_id);let rj=await scalar('select * from crm_server_automation_jobs where id=$1',[i.return_job_id]);assert.equal(rj.action_config.text,'Hola Gestora. Router de Yoigo');assert.equal(new Date(rj.run_at).getUTCDay()===0||new Date(rj.run_at).getUTCDay()===6,false);
+ await incoming('confirm','install_yesterday:'+i.id);i=await scalar('select * from crm_installations');assert(i.installed_on);assert(i.return_job_id);await db.query('select crm_installation_update($1,$2,$3)',[O,i.updated_at,JSON.stringify({incident:'Observación sobre cita anterior'})]);i=await scalar('select * from crm_installations');assert.equal(i.incident,'Observación sobre cita anterior');await assert.rejects(db.query('select crm_installation_update($1,$2,$3)',[O,i.updated_at,JSON.stringify({send:true})]),/confirmada/);let rj=await scalar('select * from crm_server_automation_jobs where id=$1',[i.return_job_id]);assert.equal(rj.action_config.text,'Hola Gestora. Router de Yoigo');assert.equal(new Date(rj.run_at).getUTCDay()===0||new Date(rj.run_at).getUTCDay()===6,false);
  assert.equal((await scalar('select * from sales_opportunities')).installation_date,null);assert.equal((await scalar('select * from sales_opportunities')).stage_id,S);
  await incoming('repeated','install_done:'+i.id);assert.equal((await db.query("select * from crm_server_automation_jobs where context->>'installation_phase'='installation_return'")).rows.length,1);
  // Guard cancels a late appointment notice after customer confirmation, but permits the return.
@@ -91,6 +135,7 @@ async function main(){const db=new PGlite();await db.exec(`
  assert.equal((await scalar("select count(*)::int n from app_settings where key='crm_installation_template:bad'")).n,0);
  // The calendar is evaluated in Madrid, including the autumn DST transition.
  assert.equal((await scalar("select crm_private.installation_due('2026-10-23','10:00') d")).d.toISOString(),'2026-10-27T09:00:00.000Z');
+ await db.query("update crm_installations set incident='' where opportunity_id=$1",[O]);
  // Legacy undated Tramitado rows are excluded, while Excel dates remain consultable.
  await db.exec(`insert into sales_opportunities(id,stage_id,client_name,installation_date) values('20000000-0000-0000-0000-000000000002','${S}','Legacy sin fecha',null),('20000000-0000-0000-0000-000000000003','${S}','Legacy Excel','2026-09-01');`);
  const list=(await db.query('select * from crm_installations_list()')).rows.map(r=>Object.values(r)[0]);

@@ -150,15 +150,16 @@ function bind(){
   $('tdPrevPage').onclick=()=>{D.page=Math.max(0,D.page-1);renderHomePanels()};
   $('tdNextPage').onclick=()=>{D.page++;renderHomePanels()};
   $('view-dashboard').addEventListener('click',handleClick);
-  $('view-dashboard').addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'))});
+  $('view-dashboard').addEventListener('keydown',e=>{if(e.key==='Escape')closeRowMenus()});
   document.addEventListener('scroll',repositionRowMenus,true);
   window.addEventListener('resize',repositionRowMenus);
-  document.addEventListener('click',e=>{if(!e.target?.closest?.('#view-dashboard [data-dots], #view-dashboard .tdRowMenu'))document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'))},true);
+  document.addEventListener('click',e=>{if(!e.target?.closest?.('#view-dashboard [data-dots], #view-dashboard .tdRowMenu'))closeRowMenus()},true);
 }
 
+function closeRowMenus(){document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));document.querySelectorAll('#view-dashboard [data-dots]').forEach(b=>b.setAttribute('aria-expanded','false'));}
 function positionRowMenu(menu,dots){
   const anchor=dots.getBoundingClientRect(),box=menu.getBoundingClientRect();
-  if(anchor.bottom<=0||anchor.top>=window.innerHeight||anchor.right<=0||anchor.left>=window.innerWidth){menu.classList.add('hidden');return}
+  if(anchor.bottom<=0||anchor.top>=window.innerHeight||anchor.right<=0||anchor.left>=window.innerWidth){menu.classList.add('hidden');dots.setAttribute('aria-expanded','false');return}
   menu.style.left=Math.max(8,Math.min(anchor.right-box.width,window.innerWidth-box.width-8))+'px';
   menu.style.top=Math.max(8,Math.min(window.innerHeight-box.height-8,anchor.bottom+box.height+8<=window.innerHeight?anchor.bottom+5:anchor.top-box.height-5))+'px';
 }
@@ -179,8 +180,8 @@ function handleClick(e){
   const r=el.closest('[data-route]')?.dataset.route;
   if(r){runAction(()=>navigate(r));return}
   const dots=el.closest('[data-dots]');
-  if(dots){e.stopPropagation();const menu=dots.closest('tr')?.querySelector('.tdRowMenu'),wasOpen=menu&&!menu.classList.contains('hidden');document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));if(menu&&!wasOpen){menu.classList.remove('hidden');positionRowMenu(menu,dots)}return}
-  const act=el.closest('[data-action]');if(act){e.stopPropagation();document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));runAction(()=>action(act.dataset.action,act.dataset.type,act.dataset.id));return}
+  if(dots){e.stopPropagation();const menu=dots.closest('tr')?.querySelector('.tdRowMenu'),wasOpen=menu&&!menu.classList.contains('hidden');closeRowMenus();if(menu&&!wasOpen){menu.classList.remove('hidden');dots.setAttribute('aria-expanded','true');positionRowMenu(menu,dots)}return}
+  const act=el.closest('[data-action]');if(act){e.stopPropagation();closeRowMenus();runAction(()=>action(act.dataset.action,act.dataset.type,act.dataset.id));return}
   const row=el.closest('[data-open]');if(row)runAction(()=>openItem(row.dataset.type,row.dataset.id));
 }
 async function callAction(name,id){const fn=await waitFor(()=>typeof window[name]==='function'&&window[name],'Esta acción todavía no está disponible. Vuelve a intentarlo.');return fn(id)}
@@ -301,8 +302,8 @@ function renderPriority(d,map,pending){
   $('dashAlerts').innerHTML=page.length?`<table class="tdPriorityTable"><thead><tr><th scope="col">Cliente / gestión</th><th scope="col">Estado / fecha</th><th scope="col">Próxima acción / WhatsApp</th><th scope="col"><span class="tdSrOnly">Acciones</span></th></tr></thead><tbody>${page.map(x=>`<tr>
     <td>${x.contactId?`<button class="tdClientButton" data-open="1" data-type="contact" data-id="${esc(x.contactId)}" aria-label="Abrir contacto: ${esc(x.name)}">`:'<div class="tdClientButton" title="Sin contacto vinculado">'}<span class="tdAvatar">${esc(initials(x.name))}</span><span><b title="${esc(x.name)}">${esc(x.name)}</b><small>${esc(x.phone||'Sin teléfono')}${x.dni?' · DNI: '+esc(x.dni):''}${x.previous?'<br>Anterior: '+esc(x.previous):''}${x.contactId?'':' · Sin vincular'}</small></span>${x.contactId?'</button>':'</div>'}<div class="tdOpportunityLine"><button class="tdInterestButton" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">${esc(x.title)}</button><small class="tdLastActivity">${x.type==='opportunity'?esc(money(x.amount)):''}</small></div></td>
     <td><span class="tdStatusPill ${x.tone}">${icon(x.stage==='Llamar'?'phone':x.tone==='green'?'checkCircle':x.tone==='amber'?'file':'refresh')}<span>${esc(x.stage)}</span></span><span class="tdNextAction ${x.expired?'isLate':''}">${icon('calendar')}<span>${['processing','processed'].includes(D.filter)&&x.acceptedAt?'Aceptada: '+esc(localDateTime(x.acceptedAt)):esc(localDate(x.date))}${x.dateTime?'<small class="tdScheduledTime">'+(x.date===d.today?'Hoy · ':'')+esc(localTime(x.when))+'</small>':''}${x.expired?'<small>Vencida</small>':''}</span></span></td>
-    <td class="tdReminder">${x.type==='opportunity'?(window.TPFOfferFollowup?.html(x.id,true)||reminderText(x,d)):reminderText(x,d)}</td>
-    <td class="tdMenuCell"><button class="tdQuickOpen" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button class="tdDots" data-dots="1" aria-label="Acciones de ${esc(x.name)}">${icon('moreVertical')}</button><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
+    <td class="tdReminder">${x.type==='opportunity'?(window.TPFOfferFollowup?.homeSummary?.(x.id)||window.TPFOfferFollowup?.html(x.id,false)||reminderText(x,d)):reminderText(x,d)}</td>
+    <td class="tdMenuCell"><div class="tdRowActions">${x.type==='opportunity'&&window.TPFOfferFollowup?.homeActions?.(x.id)||`<button class="ofManage" data-open="1" data-type="${x.type}" data-id="${esc(x.id)}">Gestionar</button>`}<button class="tdDots" data-dots="1" aria-haspopup="true" aria-expanded="false" aria-label="Más acciones de ${esc(x.name)}">${icon('moreVertical')}</button></div><div class="tdRowMenu hidden"><button data-action="open" data-type="${x.type}" data-id="${esc(x.id)}">Abrir</button><button data-action="edit" data-type="${x.type}" data-id="${esc(x.id)}">Editar</button><button class="danger" data-action="delete" data-type="${x.type}" data-id="${esc(x.id)}">Eliminar</button></div></td>
   </tr>`).join('')}</tbody></table>`:`<div class="tdEmpty">${icon(D.query.trim()?'list':'checkCircle')}<strong>${D.query.trim()?'No hay coincidencias.':group?'No hay '+esc(group.title)+'.':'Todo al día.'}</strong><span>${D.query.trim()?'Prueba otro nombre, interés o teléfono, o limpia la búsqueda.':group?'Puedes consultar los otros grupos de tu mesa de trabajo.':'No hay gestiones vencidas ni pendientes para hoy.'}</span></div>`;
 }
 

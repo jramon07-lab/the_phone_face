@@ -159,7 +159,7 @@ test('PC: textos de devolución compartidos en producción, solo lectura',async(
     await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();
     await expect(page.locator('#app')).toBeVisible({timeout:35000});
     await page.locator('.nav[data-view="settings"]').first().click();await page.locator('#view-settings-router-texts-tab').click();
-    const card=page.locator('#tpfRouterSettingsCard');await expect(card.locator('[data-router-text]')).toBeEnabled({timeout:15000});
+    const card=page.locator('#tpfRouterSettingsCard');await card.getByRole('tab',{name:'Devolución',exact:true}).click();await expect(card.locator('[data-router-text]')).toBeEnabled({timeout:15000});
     await expect(card.locator('[data-preview]')).toContainText('Vodafone');
     await card.locator('[data-search]').fill('masmovil');await card.locator('[data-operator="MásMóvil"]').click();
     await expect(card.locator('[data-title]')).toHaveText('MásMóvil');await expect(card.locator('[data-preview]')).toContainText('MásMóvil');
@@ -343,7 +343,7 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
     await page.locator('#view-settings-search-tab').click();
     await expect(page.locator('#settingsSearchSave')).toBeVisible();
     await page.locator('#view-settings-router-texts-tab').click();
-    await expect(page.locator('#tpfRouterSettingsCard [data-router-text]')).toBeEnabled();
+    await page.locator('#tpfRouterSettingsCard').getByRole('tab',{name:'Devolución',exact:true}).click();await expect(page.locator('#tpfRouterSettingsCard [data-router-text]')).toBeEnabled();
     await expect(page.locator('#tpfRouterSettingsCard [data-preview]')).toContainText('Vodafone');
     await page.locator('#view-settings-connections-tab').click();
     await expect(card).toBeVisible();
@@ -466,7 +466,7 @@ test.describe('Móvil de solo lectura', () => {
       await page.locator('#directSaleModal [data-direct-close]').first().click();
       await page.locator('#mobileMenu').click();
       await page.locator('[data-route="router-texts"]').click();
-      await expect(page.locator('#mobileRouterSettings [data-router-text]')).toBeEnabled();
+      await page.locator('#mobileRouterSettings').getByRole('tab',{name:'Devolución',exact:true}).click();await expect(page.locator('#mobileRouterSettings [data-router-text]')).toBeEnabled();
       await expect(page.locator('#mobileRouterSettings [data-preview]')).toContainText('Vodafone');
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
       await page.locator('[data-mobile-route="whatsapp"]').click();
