@@ -3,7 +3,7 @@
  'use strict';
  const root=document.documentElement,params=new URLSearchParams(location.search);
  const focus=new Set([params.get('videoContact'),...(params.get('videoOpportunity')||'').split(',')].filter(Boolean));
- const names=new Set();let layer=null,queued=false;
+ const names=new Set();let layer=null,dialogLayer=null,queued=false;
  root.dataset.videoPrivatePending='1';
  const css=document.createElement('style');css.id='tpf-video-private-css';css.textContent=`
  [data-video-private-other]{visibility:hidden!important;pointer-events:none!important}
@@ -15,7 +15,7 @@
  #view-whatsapp .waAvatar,#contactModal .cpAvatar,.tdAvatar,.tdFocusAvatar{visibility:hidden!important}
  `;document.head.appendChild(css);
  function remember(name){
-  name=String(name||'').trim();if(name.length<3||/^(?:cliente|contacto|whatsapp)$/i.test(name))return;names.add(name);
+  name=String(name||'').trim();if(name.length<3||/^(?:cliente|contacto|whatsapp|oferta|ofertas|seguimiento)$/i.test(name))return;names.add(name);
   for(const part of name.split(/\s+/)){if(part.length>=4&&!/^(cliente|contacto|phone|house|store|face|whatsapp)$/i.test(part))names.add(part);}
  }
  function collectNames(){
@@ -41,14 +41,14 @@
    setOther(msg,!/m[aá]sm[oó]vil|^(?:✓\s*)?(?:me interesa|no me interesa|es por el precio|instalado)\b|cu[aá]l es el motivo principal|hemos anotado tu instalaci[oó]n|devoluci[oó]n del router de yoigo/i.test(text));
   }
  }
- function rects(){
+ function rects(scope){
   const found=[];const add=(r,large=false)=>{const x=Math.max(0,r.x-2),y=Math.max(0,r.y-2),right=Math.min(innerWidth,r.right+2),bottom=Math.min(innerHeight,r.bottom+2);if(right>x&&bottom>y)found.push({x,y,w:right-x,h:bottom-y,large});};
-  const cover=e=>{if(!e||e.closest('.videoPrivateLayer')||e.closest('[data-video-private-other]'))return;const r=e.getBoundingClientRect();if(r.width&&r.height)add(r,r.height>60);};
+  const cover=e=>{if(!e||!scope.contains(e)||e.closest('.videoPrivateLayer')||e.closest('[data-video-private-other]'))return;const r=e.getBoundingClientRect();if(r.width&&r.height)add(r,r.height>60);};
   const privateSelectors='#sideWho,#who,#contactName,#contactFirstName,#contactLastName,#contactPhone,#contactDni,#contactEmail,#contactIban,#contactBank,#contactNotes,#contactObs,#cpNotes,#cpObservations,#waChatName,#waChatNickname,#waChatPhone,#waSideName,#waSideNickname,#waSidePhone,#waSideDni,#waSidePhoneDetail,#tdFocusContent,#tdPendingTasks,#tdScheduledSends,#dashPriorityFollowups,#dashActivity,.waChatRowTop b,.waChatPreview,.ofClientIdentity h2,.ofIdentityGrid strong,.ofRecipientSection p,.ofProcessingCustomer,.tpfInstallationRecipient,.waAvatar,.cpAvatar';
-  document.querySelectorAll(privateSelectors).forEach(cover);
-  document.querySelectorAll('img').forEach(cover);
-  for(const select of document.querySelectorAll('select'))if(/contact|recipient|manager|titular|owner|responsable/i.test(select.id+' '+select.name+' '+select.getAttribute('aria-label')))cover(select);
-  for(const input of document.querySelectorAll('input,textarea')){
+  scope.querySelectorAll(privateSelectors).forEach(cover);
+  scope.querySelectorAll('img').forEach(cover);
+  for(const select of scope.querySelectorAll('select'))if(/contact|recipient|manager|titular|owner|responsable/i.test(select.id+' '+select.name+' '+select.getAttribute('aria-label')))cover(select);
+  for(const input of scope.querySelectorAll('input,textarea')){
    if(!input.value||['date','time','datetime-local','checkbox','radio','number'].includes(input.type))continue;
    // Message editors remain visible only if they contain the public offer text without identifiers.
    const text=input.value;
@@ -60,8 +60,8 @@
     }else cover(input);
    }
   }
-  for(const label of document.querySelectorAll('label'))if(/descuento|regalo|abono/i.test(label.childNodes[0]?.textContent||''))cover(label);
-  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;
+  for(const label of scope.querySelectorAll('label'))if(/descuento|regalo|abono/i.test(label.childNodes[0]?.textContent||''))cover(label);
+  const walker=document.createTreeWalker(scope,NodeFilter.SHOW_TEXT);let node;
   const sensitive=[/\b(?:\+34\s?)?[6-9]\d(?:[\s.-]?\d){7}\b/g,/\b(?:\d{8}[A-Z]|[XYZ]\d{7}[A-Z])\b/gi,/\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b/g,/\bES\d{2}(?:\s?\d){20}\b/gi];
   while((node=walker.nextNode())){
    const p=node.parentElement,text=node.nodeValue||'';
@@ -77,11 +77,14 @@
  function mask(){
   queued=false;try{
    collectNames();filterUnrelated();
-   const host=Array.from(document.querySelectorAll('dialog[open]')).at(-1)||document.body;
-   if(!layer||layer.parentElement!==host){layer?.remove();layer=document.createElement('div');layer.className='videoPrivateLayer';layer.setAttribute('aria-hidden','true');host.appendChild(layer);}
-   const boxes=rects(),frag=document.createDocumentFragment();
+   const host=Array.from(document.querySelectorAll('dialog[open]')).at(-1);
+   if(!layer){layer=document.createElement('div');layer.className='videoPrivateLayer';layer.setAttribute('aria-hidden','true');document.body.appendChild(layer);}
+   const boxes=rects(document.body);
+   function render(target,boxes){const frag=document.createDocumentFragment();
    for(const r of boxes){const b=document.createElement('div');b.className=r.editor?'videoPrivateMirror':'videoPrivateMask'+(r.large?' large':'');Object.assign(b.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});if(r.editor){Object.assign(b.style,{font:r.font,color:r.color,padding:r.padding,background:r.background||'white'});const t=document.createElement('div');t.textContent=r.editor;t.style.transform='translateY(-'+r.scroll+'px)';b.appendChild(t);}frag.appendChild(b);}
-   const badge=document.createElement('div');badge.className='videoPrivateBadge';badge.textContent='Grabación · datos ocultos';frag.appendChild(badge);layer.replaceChildren(frag);
+   const badge=document.createElement('div');badge.className='videoPrivateBadge';badge.textContent='Grabación · datos ocultos';frag.appendChild(badge);target.replaceChildren(frag);}
+   render(layer,boxes);
+   if(host){if(!dialogLayer||dialogLayer.parentElement!==host){dialogLayer?.remove();dialogLayer=document.createElement('div');dialogLayer.className='videoPrivateLayer';dialogLayer.setAttribute('aria-hidden','true');host.appendChild(dialogLayer);}render(dialogLayer,rects(host));}else{dialogLayer?.remove();dialogLayer=null;}
    root.dataset.videoPrivateMasks=String(boxes.length);root.dataset.videoPrivateReady='1';root.removeAttribute('data-video-private-pending');
   }catch(_){root.dataset.videoPrivatePending='1';root.removeAttribute('data-video-private-ready');}
  }
