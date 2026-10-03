@@ -15,8 +15,9 @@
  #view-whatsapp .waAvatar,#contactModal .cpAvatar,.tdAvatar,.tdFocusAvatar{visibility:hidden!important}
  `;document.head.appendChild(css);
  function remember(name){
-  name=String(name||'').trim();if(name.length<3||/^(?:cliente|contacto|whatsapp|oferta|ofertas|seguimiento)$/i.test(name))return;names.add(name);
-  for(const part of name.split(/\s+/)){if(part.length>=4&&!/^(cliente|contacto|phone|house|store|face|whatsapp|oferta|ofertas|seguimiento)$/i.test(part))names.add(part);}
+  const publicWord=/^(?:cliente|clientes|contacto|contactos|whatsapp|oferta|ofertas|seguimiento|phone|house|store|face|fibra|precio|final|pendiente|pendientes|mes|meses|prueba|tienda|correos|yoigo|m[aá]sm[oó]vil|vodafone|instalaci[oó]n|instalado|instalada|router|ma[nñ]ana|hoy|ayer|volver|l[ií]neas)$/i;
+  name=String(name||'').trim();if(name.length<3||publicWord.test(name))return;names.add(name);
+  const first=name.split(/\s+/)[0];if(first.length>=4&&!publicWord.test(first))names.add(first);
  }
  function collectNames(){
   for(const e of document.querySelectorAll('#sideWho,#who,#contactName,#contactFirstName,#contactLastName,#waChatName,#waChatNickname,#waSideName,#waSideNickname,.tdClientButton b,.waChatRowTop b'))remember(e.value||e.textContent);
