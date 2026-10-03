@@ -130,7 +130,7 @@ async function prepare(id,payload){
  if(id&&!current){const r=await sb.from('sales_opportunities').select('id,stage_id').eq('id',id).single();if(r.error)throw r.error;current=r.data;}
  if(current&&String(current.stage_id)===String(payload.stage_id))return payload;
  const party=payload.contract_party||{},operator=(String(payload.title||'').match(/\b(Vodafone|Yoigo|MásMóvil|Masmovil|O2|Orange|Lowi)\b/i)||[])[1];
- const prefs=await choose({id,contactId:payload.record_id,managerId:party.manager_contact_id,recipientId:party.recipient_contact_id,operator});
+ const prefs=await choose({id,contactId:payload.record_id,managerId:party.manager_record_id||party.manager_contact_id,recipientId:party.recipient_contact_id,operator});
  return prefs?{...payload,after_sale_preferences:prefs}:null;
 }
 window.TPFRouterReturn={choose,bind,preview,nextDaySlot,prepare:async(id,payload)=>{try{return await prepare(id,payload);}catch(error){alert('No se pudo preparar Tramitado: '+error.message);return null;}},message,returnOnly,madridIso,businessSlot,paragraphs,defaults,operatorName,loadTemplates,storeTemplate};
