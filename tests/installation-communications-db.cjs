@@ -13,6 +13,7 @@ async function main(){const db=new PGlite();await db.exec(`
  create table public.sales_stages(id uuid primary key,name text,pipeline_id uuid,active boolean default true,position integer default 0);
  create table public.sales_opportunities(id uuid primary key default gen_random_uuid(),record_id uuid,owner_user_id uuid,stage_id uuid,pipeline_id uuid,phone text,client_name text,title text,amount numeric,contract_party jsonb,after_sale_preferences jsonb,installation_date date,installation_operator text,status text default 'open',created_at timestamptz default now(),updated_at timestamptz default now());
  create table public.crm_offer_instances(id uuid primary key,opportunity_id uuid,contact_id uuid,operator text,snapshot jsonb,created_by uuid,total_price numeric,status text,created_at timestamptz default now(),sent_at timestamptz,updated_at timestamptz default now());
+ create table public.crm_labels(id uuid primary key,name text);
  create table public.crm_automations(id uuid primary key default gen_random_uuid(),user_id uuid,enabled boolean default true,name text,trigger_type text,trigger_config jsonb,action_type text,action_config jsonb,created_at timestamptz default now());
  create table public.crm_server_automation_jobs(id uuid primary key default gen_random_uuid(),automation_id uuid,user_id uuid not null,event_key text,action_type text,action_config jsonb,context jsonb,run_at timestamptz,status text default 'pending',attempts integer default 0,error_message text,created_at timestamptz default now(),updated_at timestamptz default now(),completed_at timestamptz,unique(automation_id,event_key));
  create table public.app_settings(key text primary key,value jsonb,updated_at timestamptz default now());
@@ -45,6 +46,7 @@ async function main(){const db=new PGlite();await db.exec(`
  await db.exec(fs.readFileSync('supabase/migrations/20261003193000_restore_offer_validation_permissions.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/20261003193500_exclude_legacy_undated_installations.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/20261003200000_home_manage_stage_change.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/20261003200500_daily_installations_and_actions.sql','utf8'));
  await db.exec('set role authenticated;');
  assert.equal((await db.query('select crm_private.router_return_preferences(null::jsonb) v')).rows[0].v,null);
  assert.equal((await db.query('select crm_private.router_return_preferences($1) v',[JSON.stringify({previous_operator:'Yoigo',send:false})])).rows[0].v.previous_operator,'Yoigo');
@@ -136,6 +138,20 @@ async function main(){const db=new PGlite();await db.exec(`
  // The calendar is evaluated in Madrid, including the autumn DST transition.
  assert.equal((await scalar("select crm_private.installation_due('2026-10-23','10:00') d")).d.toISOString(),'2026-10-27T09:00:00.000Z');
  await db.query("update crm_installations set incident='' where opportunity_id=$1",[O]);
+ // Staff confirmation is versioned, audited and never activates the commercial sale.
+ await db.exec('begin');
+ await db.query("update crm_installations set installed_on=null,return_job_id=null,return_due_at=null,incident='',awaiting_date=true,updated_at=clock_timestamp() where opportunity_id=$1",[O]);
+ await db.query("update crm_server_automation_jobs set status='pending',action_config=action_config-'__delivery_receipt' where id=(select notice_job_id from crm_installations where opportunity_id=$1)",[O]);
+ let staffRow=await scalar('select * from crm_installations where opportunity_id=$1',[O]);const oldStage=await scalar('select stage_id,status,installation_date from sales_opportunities where id=$1',[O]);
+ const todayRow=await scalar("select (now() at time zone 'Europe/Madrid')::date::text d"),day=new Date(todayRow.d+'T12:00:00Z');day.setUTCDate(day.getUTCDate()-((day.getUTCDay()+2)%7));const friday=day.toISOString().slice(0,10);
+ await stageReject(()=>db.query('select crm_installation_update($1,$2,$3)',[O,staffRow.updated_at,JSON.stringify({confirm_installed_on:'2999-01-01'})]),/fecha real/);
+ await stageReject(()=>db.query('select crm_installation_update($1,$2,$3)',[O,'2000-01-01',JSON.stringify({confirm_installed_on:friday})]),/otro dispositivo/);
+ await db.query("update crm_server_automation_jobs set status='running' where id=$1",[staffRow.notice_job_id]);await stageReject(()=>db.query('select crm_installation_update($1,$2,$3)',[O,staffRow.updated_at,JSON.stringify({confirm_installed_on:friday})]),/en envío/);await db.query("update crm_server_automation_jobs set status='pending' where id=$1",[staffRow.notice_job_id]);
+ const staffVersion=staffRow.updated_at;await db.query('select crm_installation_update($1,$2,$3)',[O,staffVersion,JSON.stringify({confirm_installed_on:friday,incident:'Fecha comprobada en tienda'})]);staffRow=await scalar('select * from crm_installations where opportunity_id=$1',[O]);assert.equal(staffRow.confirmation_source,'store');assert.equal(staffRow.confirmed_by,U);assert.equal(staffRow.confirmation_message_id,null);assert.equal(staffRow.awaiting_date,false);assert(staffRow.return_job_id);assert.equal(new Date(staffRow.return_due_at).getUTCDay(),2);assert.equal((await scalar('select status from crm_server_automation_jobs where id=$1',[staffRow.notice_job_id])).status,'cancelled');assert.deepEqual(await scalar('select stage_id,status,installation_date from sales_opportunities where id=$1',[O]),oldStage);
+ await stageReject(()=>db.query('select crm_installation_update($1,$2,$3)',[O,staffVersion,JSON.stringify({confirm_installed_on:friday})]),/otro dispositivo/);await stageReject(()=>db.query('select crm_installation_update($1,$2,$3)',[O,staffRow.updated_at,JSON.stringify({confirm_installed_on:friday})]),/ya está confirmada/);
+ await incoming('late-customer-confirm','install_today:'+staffRow.id);const afterLate=await scalar('select * from crm_installations where opportunity_id=$1',[O]);assert.equal(afterLate.confirmation_source,'store');assert.equal(afterLate.installed_on.toISOString(),staffRow.installed_on.toISOString());assert.equal(afterLate.return_job_id,staffRow.return_job_id);
+ await db.exec('rollback');
+ const messages=(await db.query("select * from crm_operator_communication_templates('Vodafone')")).rows.map(r=>Object.values(r)[0]);assert(messages.length);assert(messages.every(r=>typeof r.enabled==='boolean'));assert(messages.some(r=>r.legacy===true&&/ventas anteriores/.test(r.schedule)));
  // Legacy undated Tramitado rows are excluded, while Excel dates remain consultable.
  await db.exec(`insert into sales_opportunities(id,stage_id,client_name,installation_date) values('20000000-0000-0000-0000-000000000002','${S}','Legacy sin fecha',null),('20000000-0000-0000-0000-000000000003','${S}','Legacy Excel','2026-09-01');`);
  const list=(await db.query('select * from crm_installations_list()')).rows.map(r=>Object.values(r)[0]);

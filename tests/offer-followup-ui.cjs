@@ -27,7 +27,7 @@ F.byOpportunity.set('failed',[{status:'error'}]);F.byOpportunity.set('accepted',
 F.filter='active';assert.equal(api.filterRows(rows)[0].id,'one');F.filter='all';assert.equal(api.filterRows(rows).length,3);
 assert.equal(api.summary(paused,new Date('2026-09-26T10:00:00Z')).label,'Pausado hace 2 días');
 assert.equal(api.summary({...paused,paused_at:null}).label,'Pausado · fecha no registrada');
-assert.equal(api.summary({...active,sent_at:null,created_at:'2026-01-01'}).age,'Sin envío confirmado');
+assert.equal(api.summary({...active,sent_at:null,created_at:'2026-01-01'}).age,'Sin envío registrado');
 assert.equal(api.age('2026-03-28T12:00:00Z','2026-03-29T12:00:00Z'),1);
 F.jobs=[{context:{offer_instance_id:'other'},run_at:'2026-09-27T12:00:00Z'}];assert.equal(api.summary(active).next,'Sin recordatorio pendiente');
 F.jobs.push({context:{offer_instance_id:'a'},run_at:'2026-09-28T12:00:00Z'});assert.match(api.summary(active).next,/28\/0?9/);assert.equal(api.summary(paused).next,'Sin recordatorios');
