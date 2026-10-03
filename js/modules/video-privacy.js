@@ -34,7 +34,8 @@
    const belongs=!focus.size||ids.some(id=>focus.has(id));
    setOther(row,!belongs||!/m[aá]sm[oó]vil/i.test(row.textContent));
   }
-  for(const row of document.querySelectorAll('.waChatRow'))setOther(row,!row.classList.contains('active'));
+  const searchedPhone=String(document.getElementById('waLiveSearch')?.value||'').replace(/\D/g,'');
+  for(const row of document.querySelectorAll('.waChatRow'))setOther(row,!row.classList.contains('active')&&!(searchedPhone.length>=9&&(row.dataset.waChatId||'').replace(/\D/g,'').includes(searchedPhone)));
   for(const msg of document.querySelectorAll('#waMessages .waMsg')){
    const text=msg.textContent.trim();
    setOther(msg,!/m[aá]sm[oó]vil|^(?:✓\s*)?(?:me interesa|no me interesa|es por el precio|instalado)\b|cu[aá]l es el motivo principal|hemos anotado tu instalaci[oó]n|devoluci[oó]n del router de yoigo/i.test(text));
@@ -46,6 +47,7 @@
   const privateSelectors='#sideWho,#who,#contactName,#contactFirstName,#contactLastName,#contactPhone,#contactDni,#contactEmail,#contactIban,#contactBank,#contactNotes,#contactObs,#cpNotes,#cpObservations,#waChatName,#waChatNickname,#waChatPhone,#waSideName,#waSideNickname,#waSidePhone,#waSideDni,#waSidePhoneDetail,#tdFocusContent,#tdPendingTasks,#tdScheduledSends,#dashPriorityFollowups,#dashActivity,.waChatRowTop b,.waChatPreview,.ofClientIdentity h2,.ofIdentityGrid strong,.ofRecipientSection p,.ofProcessingCustomer,.tpfInstallationRecipient,.waAvatar,.cpAvatar';
   document.querySelectorAll(privateSelectors).forEach(cover);
   document.querySelectorAll('img').forEach(cover);
+  for(const select of document.querySelectorAll('select'))if(/contact|recipient|manager|titular|owner|responsable/i.test(select.id+' '+select.name+' '+select.getAttribute('aria-label')))cover(select);
   for(const input of document.querySelectorAll('input,textarea')){
    if(!input.value||['date','time','datetime-local','checkbox','radio','number'].includes(input.type))continue;
    // Message editors remain visible only if they contain the public offer text without identifiers.
