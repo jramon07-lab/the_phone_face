@@ -129,7 +129,7 @@ test('Shared operator text persists across customers and fresh sessions; failure
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
  await expect.poll(()=>page.evaluate(()=>saved.length)).toBe(1);
  expect(await page.evaluate(()=>saved[0].value.text)).not.toContain('Ana');
- expect(await page.evaluate(()=>result.text)).toContain('Devolución del router de Digi');
+ await expect.poll(()=>page.evaluate(()=>result?.text)).toContain('Devolución del router de Digi');
  // Reload the module to model another PC with an empty in-memory cache.
  await page.evaluate(()=>window.customer='Luis');await page.addScriptTag({path:source});
  await page.locator('#start').click();await page.locator('[data-previous]').selectOption('Digi');
