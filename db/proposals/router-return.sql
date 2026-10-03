@@ -47,7 +47,7 @@ begin
    select * into inst from public.crm_offer_instances where opportunity_id=opp.id order by created_at desc limit 1;
    operator_name:=coalesce(nullif(inst.operator,''),nullif(opp.after_sale_preferences->>'operator',''),(regexp_match(opp.title,'(Vodafone|Yoigo|MásMóvil|Masmovil|O2|Orange|Lowi)','i'))[1]);
    p_contact_id:=coalesce(nullif(opp.contract_party->>'holder_record_id','')::uuid,opp.record_id);
-   p_manager_contact_id:=nullif(opp.contract_party->>'manager_contact_id','')::uuid;
+   p_manager_contact_id:=coalesce(nullif(opp.contract_party->>'manager_record_id','')::uuid,nullif(opp.contract_party->>'manager_contact_id','')::uuid);
    p_recipient_contact_id:=nullif(opp.contract_party->>'recipient_contact_id','')::uuid;
    p_netflix_followup:=inst.operator='Vodafone' and coalesce((inst.snapshot->>'netflix_followup')::boolean,exists(select 1 from jsonb_array_elements(case when jsonb_typeof(inst.snapshot->'selections')='array' then inst.snapshot->'selections' else '[]'::jsonb end) x where coalesce(x->>'show_in_message','true')<>'false' and coalesce((x->>'quantity')::integer,0)>0 and lower(coalesce(x->>'name','')) like 'netflix%'));
  end if;

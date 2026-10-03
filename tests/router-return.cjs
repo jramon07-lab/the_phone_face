@@ -33,3 +33,21 @@ for(const start of ['2030-03-25','2030-10-21'])for(let d=0;d<7;d++)for(const tim
  assert.equal(api.madridIso(api.businessSlot(requested)),serverStamp.toISOString(),requested);
 }
 console.log('Router return: grouped operators, Netflix preserved, no-router option and Madrid scheduling verified.');
+
+(async()=>{
+ const calls=[],alerts=[];
+ context.document.getElementById=()=>null;
+ context.salesCache={stages:[{id:'processed',name:'Tramitado'}],opportunities:[]};
+ context.alert=text=>alerts.push(text);
+ context.sb={from:()=>({select:()=>({like:async()=>({data:[],error:null})})}),rpc:async(name,args)=>{calls.push({name,args});return {error:new Error('STOP_BEFORE_DIALOG')};}};
+ for(const [party,expected] of [[{manager_record_id:'manager',manager_contact_id:'legacy',recipient_contact_id:'manager'},'manager'],[{manager_contact_id:'legacy',recipient_contact_id:'legacy'},'legacy'],[{},null]]){
+  const payload={stage_id:'processed',record_id:'holder',title:'CAMBIO VODAFONE',contract_party:party};
+  assert.equal(await api.prepare(null,payload),null);
+  assert.equal(calls.at(-1).args.p_manager_contact_id,expected);
+  assert.equal(calls.at(-1).args.p_recipient_contact_id,party.recipient_contact_id||null);
+  assert.equal(calls.at(-1).args.p_contact_id,'holder');
+  assert.equal(alerts.at(-1),'No se pudo preparar Tramitado: STOP_BEFORE_DIALOG');
+ }
+ assert.equal(calls.length,3);
+ console.log('Tramitado manager routing: canonical ID, legacy ID and sole holder verified before any write.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
