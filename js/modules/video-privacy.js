@@ -10,6 +10,7 @@
  .videoPrivateLayer{position:fixed!important;inset:0!important;pointer-events:none!important;z-index:2147483646!important;overflow:hidden!important;background:transparent!important;border:0!important;padding:0!important;margin:0!important}
  .videoPrivateMask{position:absolute;background:#e3e8ef!important;border:1px solid #d6dde6!important;border-radius:3px;pointer-events:none;box-sizing:border-box}
  .videoPrivateMask.large{background:#f4f7fa!important}
+ .videoPrivateMirror{position:absolute;box-sizing:border-box;border:1px solid #d6dde6;border-radius:6px;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere}
  .videoPrivateBadge{position:absolute;bottom:8px;left:10px;background:#172b45;color:white;padding:5px 9px;border-radius:6px;font:11px/1.3 Arial,sans-serif;box-shadow:0 1px 4px #0002}
  #view-whatsapp .waAvatar,#contactModal .cpAvatar,.tdAvatar,.tdFocusAvatar{visibility:hidden!important}
  `;document.head.appendChild(css);
@@ -48,7 +49,13 @@
    if(!input.value||['date','time','datetime-local','checkbox','radio','number'].includes(input.type))continue;
    // Message editors remain visible only if they contain the public offer text without identifiers.
    const text=input.value;
-   if(/\b(?:[6-9]\d{8}|\d{8}[A-Z])\b|@|\bES\d{2}/i.test(text)||Array.from(names).some(n=>text.includes(n)))cover(input);
+   if(/\b(?:[6-9]\d{8}|\d{8}[A-Z])\b|@|\bES\d{2}/i.test(text)||Array.from(names).some(n=>text.includes(n))){
+    if(input.tagName==='TEXTAREA'&&/m[aá]sm[oó]vil|instalaci[oó]n|devoluci[oó]n del router/i.test(text)){
+     let safe=text;for(const name of Array.from(names).sort((a,b)=>b.length-a.length)){const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');safe=safe.replace(new RegExp('(?<![\\p{L}\\p{N}])'+escaped+'(?![\\p{L}\\p{N}])','giu'),'•••');}
+     for(const re of [/\b(?:\+34\s?)?[6-9]\d(?:[\s.-]?\d){7}\b/g,/\b(?:\d{8}[A-Z]|[XYZ]\d{7}[A-Z])\b/gi,/\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b/g,/\bES\d{2}(?:\s?\d){20}\b/gi])safe=safe.replace(re,'•••');
+     const r=input.getBoundingClientRect(),s=getComputedStyle(input);if(r.width&&r.height&&r.bottom>0&&r.top<innerHeight)found.push({x:r.x,y:r.y,w:r.width,h:r.height,editor:safe,font:s.font,color:s.color,padding:s.padding,background:s.backgroundColor,scroll:input.scrollTop});
+    }else cover(input);
+   }
   }
   for(const label of document.querySelectorAll('label'))if(/descuento|regalo|abono/i.test(label.childNodes[0]?.textContent||''))cover(label);
   const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;
@@ -70,7 +77,7 @@
    const host=Array.from(document.querySelectorAll('dialog[open]')).at(-1)||document.body;
    if(!layer||layer.parentElement!==host){layer?.remove();layer=document.createElement('div');layer.className='videoPrivateLayer';layer.setAttribute('aria-hidden','true');host.appendChild(layer);}
    const boxes=rects(),frag=document.createDocumentFragment();
-   for(const r of boxes){const b=document.createElement('div');b.className='videoPrivateMask'+(r.large?' large':'');Object.assign(b.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});frag.appendChild(b);}
+   for(const r of boxes){const b=document.createElement('div');b.className=r.editor?'videoPrivateMirror':'videoPrivateMask'+(r.large?' large':'');Object.assign(b.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});if(r.editor){Object.assign(b.style,{font:r.font,color:r.color,padding:r.padding,background:r.background||'white'});const t=document.createElement('div');t.textContent=r.editor;t.style.transform='translateY(-'+r.scroll+'px)';b.appendChild(t);}frag.appendChild(b);}
    const badge=document.createElement('div');badge.className='videoPrivateBadge';badge.textContent='Grabación · datos ocultos';frag.appendChild(badge);layer.replaceChildren(frag);
    root.dataset.videoPrivateMasks=String(boxes.length);root.dataset.videoPrivateReady='1';root.removeAttribute('data-video-private-pending');
   }catch(_){root.dataset.videoPrivatePending='1';root.removeAttribute('data-video-private-ready');}
