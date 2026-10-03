@@ -2140,9 +2140,8 @@
         { phone: finalPhone, dni: finalDni, email: finalEmail },
       );
       const syncPending = !!savedRow.data?.TPF_CONTACT_SYNC &&
-        savedRow.data.TPF_CONTACT_SYNC.status !== "verified",
-        deferredCleanup = syncPending && (mergeDuplicate || deleteOthers);
-      if (mergeDuplicate && !syncPending) {
+        savedRow.data.TPF_CONTACT_SYNC.status !== "verified";
+      if (mergeDuplicate) {
         const merged = await sb.rpc("crm_merge_duplicate_contact", {
           p_keep_id: savedRow.id,
           p_duplicate_id: mergeRow.id,
@@ -2160,7 +2159,7 @@
       rememberUnifiedName(correctionChat, savedRow);
       let removed = 0,
         failed = 0;
-      if (deleteOthers && !syncPending) {
+      if (deleteOthers) {
         for (const duplicate of available) {
           if (
             safe(duplicate.resourceName) === safe(verifiedGoogle.resourceName)
@@ -2184,12 +2183,14 @@
         );
       }
       clearGoogleCache();
-      msg.textContent = syncPending
-        ? deferredCleanup
-          ? "Datos guardados. Google y WhatsApp se están comprobando. Los duplicados se conservan hasta completar la comprobación; vuelve a revisar después."
-          : "Datos guardados. Comprobando Google y WhatsApp automáticamente…"
-        : failed
+      msg.textContent = failed
         ? `La ficha se guardó, pero ${failed} duplicados no pudieron eliminarse.`
+        : syncPending
+          ? (mergeDuplicate
+              ? "Ficha unificada y datos guardados. "
+              : deleteOthers
+                ? `Datos guardados y eliminados ${removed} duplicados de Google. `
+                : "Datos guardados. ") + "Comprobando Google y WhatsApp automáticamente…"
         : separate
           ? `Guardado “${visible}” y asociado como persona que gestiona a ${correctionHolder.name}.`
           : mergeDuplicate
@@ -2205,7 +2206,7 @@
           },
         }),
       );
-      if (failed || deferredCleanup) return;
+      if (failed) return;
       setTimeout(() => {
         $("tpfInlineBack").classList.add("hidden");
         if (saveReturn === "whatsapp") {
