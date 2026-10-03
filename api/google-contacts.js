@@ -44,7 +44,21 @@ async function identity(req){
  return {permissions,headers:{apikey:publicKey,Authorization:bearer,'Content-Type':'application/json'}};
 }
 async function storedCredential(){const r=await request(SB+'/rest/v1/crm_external_credentials?provider=eq.'+PROVIDER+'&select=encrypted_value',{headers:serviceHeaders()});if(!r.ok)throw fail(503,'No se pudo consultar la conexión de Google Contacts.');const encrypted=(await r.json())[0]?.encrypted_value;return encrypted?unseal(encrypted):null;}
-async function accessToken(){const stored=await storedCredential();if(!stored?.refresh_token)throw fail(409,'Google Contacts no está conectado.');const r=await request('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:stored.refresh_token,grant_type:'refresh_token'})}),data=await r.json();if(!r.ok||!data.access_token)throw fail(409,'Google ha caducado o retirado el permiso. Vuelve a conectar Google Contacts.');return {token:data.access_token,stored};}
+async function accessToken(stored=undefined){
+ if(stored===undefined)stored=await storedCredential();
+ if(!stored?.refresh_token)throw Object.assign(fail(409,'Google Contacts no está conectado.'),{code:'google_not_connected'});
+ let r,data;
+ try{
+  r=await request('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:CLIENT_ID,client_secret:CLIENT_SECRET,refresh_token:stored.refresh_token,grant_type:'refresh_token'})});
+  data=await r.json().catch(()=>({}));
+ }catch(_){throw Object.assign(fail(503,'Google no responde temporalmente. Inténtalo de nuevo; no es necesario reconectar.'),{code:'google_unavailable'});}
+ if(!r.ok||!data.access_token){
+  if(data.error==='invalid_grant')throw Object.assign(fail(409,'Google ha caducado o retirado el permiso. Vuelve a conectar Google Contacts.'),{code:'google_reauthorization_required',reauthorize:true});
+  if(['invalid_client','unauthorized_client'].includes(data.error))throw Object.assign(fail(503,'La configuración de Google Contacts necesita revisión del administrador.'),{code:'google_configuration_error'});
+  throw Object.assign(fail(503,'Google no pudo comprobar la conexión. Inténtalo de nuevo; no es necesario reconectar.'),{code:'google_unavailable'});
+ }
+ return {token:data.access_token,stored};
+}
 function validatePeoplePath(value){const raw=String(value||'');if(!raw||raw.length>1800||raw.includes('://')||raw.includes('..'))throw fail(400,'Petición de Google no válida.');const [pathname]=raw.split('?');const allowed=pathname==='people:searchContacts'||pathname==='people/me/connections'||pathname==='people:createContact'||/^people\/c[\w-]+(?::(?:updateContact|deleteContact))?$/.test(pathname);if(!allowed)throw fail(400,'Operación de Google Contacts no permitida.');return raw;}
 function cleanPhone(value){let digits=String(value||'').replace(/\D/g,'');if(digits.startsWith('00'))digits=digits.slice(2);if(digits.startsWith('34')&&digits.length===11)digits=digits.slice(2);return digits.slice(-9);}
 function recordPhone(data){for(const key of ['TELÉFONO','TELEFONO','PHONE','MOVIL'])if(data&&data[key])return cleanPhone(data[key]);return '';}
@@ -122,7 +136,9 @@ module.exports=async function(req,res){
   const who=await identity(req);
   if(action==='status'){
    if(req.method!=='GET')throw fail(405,'Método no permitido.');const stored=configured()?await storedCredential():null;
-   return json(res,200,{ok:true,configured:configured(),connected:!!stored?.refresh_token,email:stored?.email||'',canManage:!!who.permissions.is_admin,callback:who.permissions.is_admin?CALLBACK:undefined});
+   const status={ok:true,configured:configured(),connected:false,email:stored?.email||'',canManage:!!who.permissions.is_admin,callback:who.permissions.is_admin?CALLBACK:undefined};
+   if(stored?.refresh_token)try{await accessToken(stored);status.connected=true;}catch(error){status.error=error.message;status.code=error.code||'google_unavailable';status.reauthorize=!!error.reauthorize;}
+   return json(res,200,status);
   }
   if(!configured())throw fail(503,'Falta configurar Google Contacts en el servidor.');
   if(action==='authorize'){
@@ -183,7 +199,8 @@ module.exports=async function(req,res){
    if(!google.ok)throw fail(google.status===401?409:502,data?.error?.message||'Google Contacts no pudo completar la operación.');return json(res,200,data);
   }
   throw fail(404,'Operación no encontrada.');
- }catch(error){console.error('google-contacts',error.message);return json(res,error.status||500,{ok:false,error:error.message||'Error interno'});}
+ }catch(error){console.error('google-contacts',error.message);return json(res,error.status||500,{ok:false,error:error.message||'Error interno',code:error.code,reauthorize:!!error.reauthorize});}
 };
 
-module.exports._test={seal,unseal,validatePeoplePath,identity};
+module.exports._test={seal,unseal,validatePeoplePath,identity,accessToken};
+
