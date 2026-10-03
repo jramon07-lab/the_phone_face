@@ -16,7 +16,7 @@
  `;document.head.appendChild(css);
  function remember(name){
   name=String(name||'').trim();if(name.length<3||/^(?:cliente|contacto|whatsapp|oferta|ofertas|seguimiento)$/i.test(name))return;names.add(name);
-  for(const part of name.split(/\s+/)){if(part.length>=4&&!/^(cliente|contacto|phone|house|store|face|whatsapp)$/i.test(part))names.add(part);}
+  for(const part of name.split(/\s+/)){if(part.length>=4&&!/^(cliente|contacto|phone|house|store|face|whatsapp|oferta|ofertas|seguimiento)$/i.test(part))names.add(part);}
  }
  function collectNames(){
   for(const e of document.querySelectorAll('#sideWho,#who,#contactName,#contactFirstName,#contactLastName,#waChatName,#waChatNickname,#waSideName,#waSideNickname,.tdClientButton b,.waChatRowTop b'))remember(e.value||e.textContent);
@@ -37,7 +37,8 @@
   const searchedPhone=String(document.getElementById('waLiveSearch')?.value||'').replace(/\D/g,'');
   for(const row of document.querySelectorAll('.waChatRow'))setOther(row,!row.classList.contains('active')&&!(searchedPhone.length>=9&&(row.dataset.waChatId||'').replace(/\D/g,'').includes(searchedPhone)));
   for(const msg of document.querySelectorAll('#waMessages .waMsg')){
-   const text=msg.textContent.trim();
+   const bubble=msg.querySelector('.waBubble');
+   const text=(bubble?Array.from(bubble.childNodes).filter(n=>n.nodeType===3).map(n=>n.nodeValue).join(''):msg.textContent).trim();
    setOther(msg,!/m[aá]sm[oó]vil|^(?:✓\s*)?(?:me interesa|no me interesa|es por el precio|instalado)\b|cu[aá]l es el motivo principal|hemos anotado tu instalaci[oó]n|devoluci[oó]n del router de yoigo/i.test(text));
   }
  }
