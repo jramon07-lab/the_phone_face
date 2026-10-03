@@ -190,6 +190,9 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
         // A visible section alone is insufficient: the normal navigation must
         // finish and contain rendered content while the real reads stay active.
         await expect.poll(() => page.locator(`#view-${view}`).evaluate(el => el.childElementCount > 0)).toBe(true);
+        if(view==='dashboard'){
+          const installations=page.locator('.tdPulse[data-install-all]');await expect(installations).toBeVisible();await expect(page.locator('#tdPulseInstallations')).toHaveText(/^\d+$/,{timeout:20000});await installations.click();const registry=page.locator('#tpfInstallRegistryDialog');await expect(registry).toBeVisible();await expect(registry.locator('[data-filter="active"]')).toHaveAttribute('aria-pressed','true');await expect(registry.locator('[data-filter="today"]')).toBeVisible();await expect(registry.locator('[data-filter="pending"]')).toBeVisible();await registry.locator('[data-close]').first().click();await expect(registry).toHaveCount(0);
+        }
         const searchSelector={dashboard:'#tdWorkSearch',sales:'#salesSearch',agenda:'#agendaSearch',labels:'#lmSearch'}[view];
         if(searchSelector){
           const input=page.locator(searchSelector);await expect(input).toBeVisible();

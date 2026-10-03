@@ -258,6 +258,7 @@ $("agendaSave").onclick=async()=>{
   tpfSetSaving(btn,msg);
   try{
     const {data:{user}}=await sb.auth.getUser(),meta=agendaCreateMeta();
+    const linkedOpportunity=String(context?.opportunityId||editing?.agenda_meta?.opportunity_id||'').trim();if(linkedOpportunity)meta.opportunity_id=linkedOpportunity;
     const row={title:$("agendaTitle").value.trim(),agenda_type:agendaSelectedType,agenda_meta:meta,description:$("agendaDescription").value,customer_name:$("agendaCustomer").value,customer_phone:$("agendaPhone").value,related_record_id:$("agendaCustomer").dataset.contactId||null,starts_at:$("agendaStarts").value,reminder_at:$("agendaReminder").value||null,status:editing?$("agendaEditStatus").value:'pending',reminder_minutes:selectedAgendaReminderMinutes(),notify_in_app:$("agendaNotifyApp")?.checked??true,notify_email:$("agendaNotifyEmail")?.checked??false,sync_google_calendar:$("agendaSyncGoogle")?.checked??false};
     if(agendaTypeKey(agendaSelectedType)==='whatsapp'){row.whatsapp_enabled=true;row.whatsapp_phone=row.customer_phone;row.whatsapp_message=meta.whatsapp_message||null;row.whatsapp_scheduled_at=row.starts_at;}
     const saved=await window.TPFTaskModel.save(sb,row,{id:editing?.id,previous:editing||{},canManage:!!(perms?.is_admin||perms?.can_manage_agenda),userId:user?.id,allowScheduled:true});

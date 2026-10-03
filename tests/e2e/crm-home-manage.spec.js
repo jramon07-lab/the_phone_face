@@ -23,13 +23,18 @@ async function fixture(page,status='accepted',realRouter=false,processing=true){
 }
 test('Gestionar shows identity, saved offer and checked send; closes preserving list',async({page})=>{
  await page.setViewportSize({width:1280,height:800});await fixture(page,'accepted',false,false);
- await expect(page.locator('.ofClientIdentity')).toContainText('Ana Ejemplo');await expect(page.locator('.ofClientIdentity')).toContainText('12345678Z');await expect(page.locator('.ofClientIdentity')).toContainText('600000000');await expect(page.locator('.ofClientIdentity')).toContainText('Orange');await expect(page.locator('[data-of-view]')).toHaveText('Ver oferta enviada');
+ await expect(page.locator('.ofClientIdentity')).toContainText('Ana Ejemplo');await expect(page.locator('.ofClientIdentity')).toContainText('12345678Z');await expect(page.locator('.ofClientIdentity')).toContainText('600000000');await expect(page.locator('.ofClientIdentity')).toContainText('Orange');await expect(page.locator('[data-of-view]')).toHaveText('Ver oferta');
  await expect(page.locator('[data-processing]')).toBeHidden();await page.getByRole('button',{name:'Preparar tramitación',exact:true}).click();expect(await page.evaluate(()=>window.__fixture.send)).toBe(true);await page.getByRole('button',{name:'Volver a la gestión'}).click();
  const box=await page.locator('#ofManageDialog').boundingBox();expect(box.x+box.width).toBeCloseTo(1280,0);expect(box.height).toBeCloseTo(800,0);
  await page.getByRole('button',{name:'Volver al listado'}).click();await expect(page.locator('dialog')).toHaveCount(0);expect(await page.locator('#view-dashboard').evaluate(el=>el.scrollTop)).toBe(300);await expect(page.locator('#origin')).toBeFocused();
 });
 test('conflict keeps reviewed message open and does not show false success',async({page})=>{
  await fixture(page);await page.evaluate(()=>window.__fixture.conflict=true);await page.locator('[data-text]').fill('Texto revisado');await page.locator('[data-confirm-processing]').click();await expect(page.locator('[data-process-error]')).toContainText('otro dispositivo');await expect(page.locator('[data-text]')).toHaveValue('Texto revisado');await expect(page.locator('dialog')).toBeVisible();
+});
+test('Gestionar opens conversation, WhatsApp and task actions after closing the drawer',async({page})=>{
+ await fixture(page,'following');await page.getByRole('button',{name:'Volver al listado'}).click();await page.addScriptTag({path:path.resolve('js/modules/offer-followup-ui.js')});await page.evaluate(()=>{TPFOfferFollowup.state.offers=[__fixture.x];TPFOfferFollowup.state.byOpportunity=new Map([['op',[__fixture.x]]]);TPFOfferFollowup.load=async()=>TPFOfferFollowup.state;window.quickOpened=[];TPFOfferFollowup.quickAction=(kind,id,o)=>quickOpened.push({kind,id,opportunityId:o.id,drawerClosed:!document.getElementById('ofManageDialog')?.open});});
+ for(const kind of ['conversation','message','task']){await page.evaluate(()=>TPFHomeManage.open('offer'));await page.locator('[data-of-quick="'+kind+'"]').click();await expect(page.locator('#ofManageDialog')).toHaveCount(0);}
+ const results=await page.evaluate(()=>quickOpened);expect(results.map(r=>r.kind)).toEqual(['conversation','message','task']);expect(results.every(r=>r.id==='op'&&r.opportunityId==='op'&&r.drawerClosed)).toBe(true);expect(await page.evaluate(()=>__fixture.writes)).toBe(0);
 });
 test('acceptance prepares tramitation without losing controls or leaving confirm disabled',async({page})=>{
  await fixture(page,'following');
