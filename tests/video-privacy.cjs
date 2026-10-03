@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {applyVideoPrivacy}=require('../api/final-fix');
+const html='<!doctype html><html><head><title>CRM</title></head><body>CRM</body></html>';
+assert.equal(applyVideoPrivacy(html,{url:'/'}),html,'Normal stable view must not change');
+assert.equal(applyVideoPrivacy(html,{url:'/?videoPrivacy=0'}),html);
+const guarded=applyVideoPrivacy(html,{url:'/?videoPrivacy=1'});
+assert(guarded.indexOf('tpf-video-private-start')<guarded.indexOf('<title>'),'Privacy guard must precede all page content');
+assert(guarded.includes('body{visibility:hidden!important}'),'Failed or loading privacy script must not expose content');
+assert(guarded.includes('/js/modules/video-privacy.js'));
+assert.equal(applyVideoPrivacy(html,{query:{videoPrivacy:'1'}}),guarded);
+console.log('Video recording route is opt-in and fail-closed');
