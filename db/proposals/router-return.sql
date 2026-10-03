@@ -9,7 +9,12 @@ begin
  if jsonb_typeof(p)<>'object' then raise exception 'Configuración de devolución no válida';end if;
  if coalesce(p->>'send','') not in ('true','false') then raise exception 'Indica si se envía el mensaje';end if;
  send:=(p->>'send')::boolean;
- if coalesce(p->>'previous_operator','') not in ('Yoigo','MásMóvil','O2','Vodafone','Ninguno','Otro') then raise exception 'Selecciona el operador anterior';end if;
+ if jsonb_typeof(p->'previous_operator') is distinct from 'string'
+    or length(btrim(coalesce(p->>'previous_operator','')))=0
+    or length(p->>'previous_operator')>80
+    or p->>'previous_operator' ~ '[[:cntrl:]]'
+    or p->>'previous_operator' in ('__proto__','prototype','constructor')
+ then raise exception 'Selecciona el operador anterior';end if;
  if send and (length(btrim(coalesce(p->>'text','')))=0 or length(p->>'text')>10000) then raise exception 'El mensaje debe tener entre 1 y 10000 caracteres';end if;
  if send and nullif(p->>'rule_id','') is null then raise exception 'No hay mensaje del día siguiente configurado';end if;
  if send and nullif(p->>'send_at','') is not null then
