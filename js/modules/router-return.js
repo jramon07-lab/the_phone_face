@@ -126,15 +126,16 @@ async function choose(options){
  return new Promise(resolve=>{d.addEventListener('close',()=>{const result=d._result||null;d.remove();resolve(result);},{once:true});d.querySelector('form').addEventListener('submit',async e=>{if(e.submitter?.value!=='save')return;e.preventDefault();try{const result=controller.get();e.submitter.disabled=true;await controller.saveTemplate();d._result=result;d.close('save');}catch(error){const status=d.querySelector('[data-error]');status.textContent=error.message;status.tabIndex=-1;status.scrollIntoView({block:'nearest'});status.focus({preventScroll:true});e.submitter.disabled=false;}});d.showModal();});
 }
 async function prepare(id,payload){
- if(!payload.stage_id||payload.after_sale_preferences)return payload;
+ if(!payload.stage_id)return payload;
  let stage=(typeof salesCache!=='undefined'?salesCache.stages:[])?.find(x=>String(x.id)===String(payload.stage_id));
  if(!stage){const r=await sb.from('sales_stages').select('id,name').eq('id',payload.stage_id).single();if(r.error)throw r.error;stage=r.data;}
  if(String(stage?.name||'').trim().toLowerCase()!=='tramitado')return payload;
- let current=id?(typeof salesCache!=='undefined'?salesCache.opportunities:[])?.find(x=>String(x.id)===String(id)):null;
- if(id&&!current){const r=await sb.from('sales_opportunities').select('id,stage_id').eq('id',id).single();if(r.error)throw r.error;current=r.data;}
+ // A cached Tramitado row or saved preferences are not confirmation of a new change.
+ let current=null;
+ if(id){const r=await sb.from('sales_opportunities').select('id,stage_id').eq('id',id).single();if(r.error)throw r.error;current=r.data;}
  if(current&&String(current.stage_id)===String(payload.stage_id))return payload;
  const party=payload.contract_party||{},operator=(String(payload.title||'').match(/\b(Vodafone|Yoigo|MásMóvil|Masmovil|O2|Orange|Lowi|Jazztel|Digi|Movistar|Pepephone)\b/i)||[])[1];
- const prefs=await choose({id,contactId:payload.record_id,managerId:party.manager_record_id||party.manager_contact_id,recipientId:party.recipient_contact_id,operator});
+ const prefs=await choose({id,contactId:payload.record_id,managerId:party.manager_record_id||party.manager_contact_id,recipientId:party.recipient_contact_id,operator,preferences:payload.after_sale_preferences});
  return prefs?{...payload,after_sale_preferences:prefs}:null;
 }
 window.TPFRouterReturn={choose,bind,preview,nextDaySlot,prepare:async(id,payload)=>{try{return await prepare(id,payload);}catch(error){alert('No se pudo preparar Tramitado: '+error.message);return null;}},message,returnOnly,madridIso,businessSlot,paragraphs,defaults,operatorName,loadTemplates,storeTemplate};
