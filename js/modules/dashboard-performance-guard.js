@@ -153,15 +153,20 @@ function bind(){
   $('view-dashboard').addEventListener('keydown',e=>{if(e.key==='Escape')closeRowMenus()});
   document.addEventListener('scroll',repositionRowMenus,true);
   window.addEventListener('resize',repositionRowMenus);
+  window.visualViewport?.addEventListener('resize',repositionRowMenus);
+  window.visualViewport?.addEventListener('scroll',repositionRowMenus);
   document.addEventListener('click',e=>{if(!e.target?.closest?.('#view-dashboard [data-dots], #view-dashboard .tdRowMenu'))closeRowMenus()},true);
 }
 
 function closeRowMenus(){document.querySelectorAll('#view-dashboard .tdRowMenu').forEach(m=>m.classList.add('hidden'));document.querySelectorAll('#view-dashboard [data-dots]').forEach(b=>b.setAttribute('aria-expanded','false'));}
 function positionRowMenu(menu,dots){
+  const viewport=window.visualViewport,left=viewport?.offsetLeft||0,top=viewport?.offsetTop||0,width=viewport?.width||window.innerWidth,height=viewport?.height||window.innerHeight;
+  menu.style.maxHeight=Math.max(80,height-16)+'px';
+  menu.style.maxWidth=Math.max(80,width-16)+'px';
   const anchor=dots.getBoundingClientRect(),box=menu.getBoundingClientRect();
-  if(anchor.bottom<=0||anchor.top>=window.innerHeight||anchor.right<=0||anchor.left>=window.innerWidth){menu.classList.add('hidden');dots.setAttribute('aria-expanded','false');return}
-  menu.style.left=Math.max(8,Math.min(anchor.right-box.width,window.innerWidth-box.width-8))+'px';
-  menu.style.top=Math.max(8,Math.min(window.innerHeight-box.height-8,anchor.bottom+box.height+8<=window.innerHeight?anchor.bottom+5:anchor.top-box.height-5))+'px';
+  if(anchor.bottom<=top||anchor.top>=top+height||anchor.right<=left||anchor.left>=left+width){menu.classList.add('hidden');dots.setAttribute('aria-expanded','false');return}
+  menu.style.left=Math.max(left+8,Math.min(anchor.right-box.width,left+width-box.width-8))+'px';
+  menu.style.top=Math.max(top+8,Math.min(top+height-box.height-8,anchor.bottom+box.height+8<=top+height?anchor.bottom+5:anchor.top-box.height-5))+'px';
 }
 function repositionRowMenus(){
   document.querySelectorAll('#view-dashboard .tdRowMenu:not(.hidden)').forEach(menu=>{
