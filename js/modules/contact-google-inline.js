@@ -1531,7 +1531,8 @@
     const normalizedFirst = displayCase(first),
       normalizedLast = displayCase(last),
       normalizedNickname = displayCase(nickname),
-      d = { ...(row.data || {}) },
+      originalData = JSON.parse(JSON.stringify(row.data || {})),
+      d = { ...originalData },
       name = [normalizedFirst, normalizedLast].filter(Boolean).join(" ").trim(),
       chatId = safe(chat?.id);
     d.NOMBRE = normalizedFirst;
@@ -1592,11 +1593,11 @@
       .from("records")
       .update({ data: d })
       .eq("id", row.id)
-      .eq("data", JSON.stringify(row.data || {}))
+      .eq("data", JSON.stringify(originalData))
       .select("id,data")
       .single();
-    // La comparación puede tardar y actualizar metadatos del propio CRM. Reintentamos
-    // una vez sobre la ficha recién leída, conservando todo lo que no ha decidido el usuario.
+    // La sincronización puede renovar marcas de comprobación mientras está abierto
+    // el editor. Conservamos los cambios ajenos y protegemos los datos elegidos.
     if (!r.data) {
       const latest = await sb
         .from("records")
@@ -1605,24 +1606,65 @@
         .single();
       if (latest.error || !latest.data)
         throw latest.error || Error("La ficha del CRM ya no existe.");
-      const changed = Object.fromEntries(
-          Object.entries(d).filter(
-            ([key, value]) =>
-              JSON.stringify(value) !== JSON.stringify((row.data || {})[key]),
-          ),
-        ),
-        retryData = { ...(latest.data.data || {}), ...changed };
-      for (const key of Object.keys(changed)) {
-        const before = JSON.stringify((row.data || {})[key]);
-        const currentValue = JSON.stringify((latest.data.data || {})[key]);
-        if (currentValue !== before && currentValue !== JSON.stringify(changed[key]))
+      const currentData = latest.data.data || {},
+        derivedKeys = new Set([
+          "TPF_GOOGLE_CONTACT", "TPF_CONTACT_VERIFIED",
+          "TPF_CRM_GOOGLE_SYNC", "TPF_WHATSAPP_NAME_CONFIRMED",
+        ]),
+        changedKeys = [...new Set([...Object.keys(originalData), ...Object.keys(d)])]
+          .filter((key) => JSON.stringify(d[key]) !== JSON.stringify(originalData[key])),
+        chosenKeys = [
+          "NOMBRE", "APELLIDOS", "NOMBRE Y APELLIDOS", "APODO",
+          ...(Object.hasOwn(override, "phone") ? ["TELÉFONO"] : []),
+          ...(Object.hasOwn(override, "dni") ? ["DNI / NIF"] : []),
+          ...(Object.hasOwn(override, "email") ? ["EMAIL"] : []),
+        ],
+        conflict = () => {
           throw Error("La ficha cambió en otro dispositivo. Vuelve a abrirla y revisa los datos antes de guardar.");
+        },
+        scope = (key, value) => {
+          if (!value) return null;
+          if (key === "TPF_GOOGLE_CONTACT")
+            return [safe(value.resource_name), fold(value.google_account)];
+          if (key === "TPF_WHATSAPP_NAME_CONFIRMED")
+            return [safe(value.chat_id)];
+          return [safe(value.google_resource), fold(value.google_account), safe(value.chat_id)];
+        };
+      for (const key of new Set([...changedKeys, ...chosenKeys])) {
+        const before = JSON.stringify(originalData[key]),
+          currentValue = JSON.stringify(currentData[key]),
+          wanted = JSON.stringify(d[key]);
+        if (currentValue === before || currentValue === wanted) continue;
+        if (!derivedKeys.has(key)) conflict();
+        // Solo admitimos renovaciones del mismo vínculo. Una cuenta, recurso o
+        // conversación diferente requiere volver a revisar la ficha.
+        const currentScope = JSON.stringify(scope(key, currentData[key]));
+        if (currentScope !== JSON.stringify(scope(key, originalData[key])) &&
+            currentScope !== JSON.stringify(scope(key, d[key]))) conflict();
+        if (currentData[key]?.signature &&
+            currentData[key].signature !== verificationSignature(latest.data))
+          conflict();
+      }
+      const retryData = { ...currentData };
+      for (const key of changedKeys) {
+        if (Object.hasOwn(d, key)) retryData[key] = d[key];
+        else delete retryData[key];
+      }
+      if (verifiedGoogle) {
+        if (chatId)
+          retryData.TPF_CONTACT_VERIFIED = makeVerification(
+            { id: row.id, data: retryData }, chat, verifiedGoogle,
+          );
+        else
+          retryData.TPF_CRM_GOOGLE_SYNC = makeCrmGoogleSync(
+            { id: row.id, data: retryData }, verifiedGoogle,
+          );
       }
       r = await sb
         .from("records")
         .update({ data: retryData })
         .eq("id", row.id)
-        .eq("data", JSON.stringify(latest.data.data || {}))
+        .eq("data", JSON.stringify(currentData))
         .select("id,data")
         .single();
     }
