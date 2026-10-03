@@ -55,7 +55,7 @@ const buildMessage=(offer,quantities={},customer='Cliente',extra='',finalPrice=n
   if(String(extra||'').trim())rows.push('',String(extra).trim());
   return rows.join('\n');
 };
-const groupOfferMessages=(messages,customer='Cliente',operator='')=>{const bodies=messages.map(text=>String(text||'').replace(/^Hola[^\n]*(?:\n|$)/i,'').trim());return `Hola ${customerName(customer)}, te envío las ofertas${operator?' de '+operator:''} que hemos comentado:\n\n`+bodies.join('\n\n');};
+const groupOfferMessages=(messages,customer='Cliente',operator='')=>{const bodies=messages.map(text=>String(text||'').replace(/^Hola[^\n]*(?:\n|$)/i,'').trim());const welcome=String(messages[0]||'').split('\n')[0];return (welcome.includes(' de Phone House Albolote.')?welcome.replace('una oferta que puede interesarte','unas ofertas que pueden interesarte')+`\n\n`:`Hola ${customerName(customer)}, te envío las ofertas${operator?' de '+operator:''} que hemos comentado:\n\n`)+bodies.join('\n\n');};
 window.TPFOffersPro={groupOfferMessages,contractMessage,baseLineGroups,visibleBaseFeatures,OPERATORS,calculateTotal,buildMessage,directSaleMessage,money,madridDateKey,localDateTimeValue,nextHalfHourLocal,scheduledSendIso,offerGroupLabel,CRM_TEST_MODE,CRM_TEST_PHONE,phoneDigits};
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
@@ -132,7 +132,8 @@ function css(){if($('tpfOffersCss'))return;const style=document.createElement('s
  #opOfferModal .opHead{position:static;flex:none;padding:16px 22px}
  #opOfferModal .opBody{display:flex;flex-direction:column;min-height:0;overflow:hidden;flex:1;padding:14px 20px}
  #opOfferModal #opContent{min-height:0;display:flex;flex-direction:column;flex:1}
- #opOfferModal .opGrid{flex:1;min-height:0;margin-top:12px}
+ #opOfferModal .opGrid{flex:1;min-height:0;margin-top:12px;grid-template-rows:minmax(0,1fr)}
+ @media(min-width:761px){#opOfferModal .opBody{overflow:hidden!important}#opOfferModal .opPanel{max-height:100%;box-sizing:border-box}}
  #opOfferModal .opPanel{overflow:auto;min-height:0;padding:14px}
  #opOfferModal .opBenefits{background:#edf5ff;border:1px solid #a8c8f8;margin:0 0 14px;padding:12px}
  #opOfferModal .opBenefitsTitle{font-size:14px;color:#175cd3}
@@ -268,10 +269,10 @@ function refreshOpportunityFollowup(){
 function renderInstances(){const root=$('cpOfferInstances');if(!root)return;root.innerHTML=instances.length?instances.map(x=>`<div class="cpOfferCard"><div class="cpOfferTop"><b>${esc(x.operator)} · ${esc(x.offer_name)}</b><strong>${esc(money(x.total_price))}</strong></div><div class="cpOfferMeta">${new Date(x.created_at).toLocaleString('es-ES')}</div><span class="cpOfferStatus ${esc(x.status)}">${esc(statusLabel(x.status))}</span>${window.TPFOfferFollowup?.htmlOffer(x,true)||""}${deliveryCheck(x)}</div>`).join(''):'<div class="cpEmpty">Todavía no hay ofertas para este cliente.</div>';root.querySelectorAll('[data-offer-action]').forEach(b=>b.onclick=()=>control(b.dataset.id,b.dataset.offerAction))}
 async function control(id,action,{sidebar=false}={}){
  if(busy)return false;const label={pause:'pausar',resume:'reanudar',accept:'marcar como aceptada',cancel:'finalizar'}[action];
- if(!label||!confirm(`¿Quieres ${label} esta oferta?`))return false;
+ if(!label||!confirm(`¿Quieres ${label} esta oferta? Si comparte mensaje con otros servicios, pausar o finalizar detiene el seguimiento del grupo; aceptar solo acepta este servicio.`))return false;
  busy=true;const profileId=current()?.id;
  try{
-  const {error}=await sb.rpc('crm_control_offer',{p_offer_id:id,p_action:action});if(error)throw error;
+  const {error}=await sb.rpc('crm_control_offer_composition',{p_offer_id:id,p_action:action});if(error)throw error;
   window.dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{offerId:id}}));
   if(!sidebar&&profileId===current()?.id){await loadInstances(profileId);if(typeof renderContactProfile==='function')renderContactProfile()}
   return true;

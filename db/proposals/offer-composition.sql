@@ -35,13 +35,13 @@ begin
    case when idx=0 then p_request_key else md5(p_request_key::text||':'||idx)::uuid end,
    coalesce(item->'selections','[]'),item->>'extra_text',p_mode,(item->>'final_price')::numeric,p_send_message,
    p_processing_date,p_test_mode,p_allow_duplicate,p_send_at,p_welcome,p_recipient_contact_id,p_manager_contact_id,
-   message,coalesce(item->'after_sale',p_after_sale));
+   message,coalesce(nullif(item->'after_sale','null'::jsonb),p_after_sale));
   if not coalesce((result->>'safety_verified')::boolean,false) then raise exception 'No se pudo verificar la oferta';end if;
   offer_id:=(result->>'offer_id')::uuid;opp_id:=(result->>'opportunity_id')::uuid;
   if idx=0 then first_id:=offer_id;end if;ids:=array_append(ids,offer_id);results:=results||jsonb_build_array(result);idx:=idx+1;
   update public.crm_offer_instances set snapshot=coalesce(snapshot,'{}')||jsonb_build_object('composition',p_composition,'composition_request_key',p_request_key,'previous_operator',coalesce(item->>'previous_operator',''),'shop_gift',coalesce((item->>'shop_gift')::boolean,false),'permanence_refund',coalesce((item->>'permanence_refund')::boolean,false),'permanence_amount',coalesce((item->>'permanence_amount')::numeric,0),'permanence_visible',coalesce((item->>'permanence_visible')::boolean,true)) where id=offer_id and created_by=uid;
   -- Preserve the chosen previous operator for the later router-return dialog.
-  if nullif(item->>'previous_operator','') is not null then
+  if nullif(item->>'previous_operator','') is not null and coalesce(nullif(item->'after_sale','null'::jsonb),p_after_sale) is null then
    update public.sales_opportunities set after_sale_preferences=coalesce(after_sale_preferences,jsonb_build_object('send',false,'text','','operator',first_op,'rule_id',null))||jsonb_build_object('previous_operator',case when item->>'previous_operator' in ('Yoigo','MásMóvil','O2','Vodafone','Ninguno','Otro') then item->>'previous_operator' when item->>'previous_operator'='Sin compañía' then 'Ninguno' else 'Otro' end) where id=opp_id and owner_user_id=uid;
   end if;
  end loop;
@@ -54,7 +54,7 @@ begin
   get diagnostics changed_jobs=row_count;
   if changed_jobs<>expected_jobs then raise exception 'No se pudo verificar el envío agrupado; no se guardó nada';end if;
   update public.crm_server_automation_jobs set context=context||jsonb_build_object('offer_group_ids',to_jsonb(ids)),
-   action_config=jsonb_set(coalesce(action_config,'{}'),'{steps}',coalesce((select jsonb_agg(case when jsonb_typeof(value->'config')='object' then jsonb_set(value,'{config}',(value->'config')-'reply_buttons',true) else value end order by ord) from jsonb_array_elements(action_config->'steps') with ordinality a(value,ord)),'[]'::jsonb),true)
+   action_config=jsonb_set(coalesce(action_config,'{}'),'{steps}',coalesce((select jsonb_agg(case when jsonb_typeof(value->'config')='object' then jsonb_set(value,'{config}',(value->'config')-'reply_buttons'||case when value->'config'->>'offer_phase' in ('reminder_2','reminder_5') then jsonb_build_object('text','Hola {nombre}, ¿has podido revisar las ofertas que te enviamos? Si tienes alguna duda, te ayudo por aquí.') else '{}'::jsonb end,true) else value end order by ord) from jsonb_array_elements(action_config->'steps') with ordinality a(value,ord)),'[]'::jsonb),true)
    where user_id=uid and context->>'offer_instance_id'=first_id::text and event_key in ('manual-offer:'||first_id,'manual-offer-accepted:'||first_id) and status='pending';
   update public.crm_offer_instances set snapshot=snapshot||jsonb_build_object('group_leader_offer_id',first_id,'offer_group_ids',to_jsonb(ids)) where id=any(ids) and created_by=uid;
  end if;
@@ -69,10 +69,10 @@ grant execute on function public.crm_create_offer_composition(uuid,uuid,uuid,uui
 create or replace function crm_private.offer_group_delivery_status() returns trigger language plpgsql security invoker set search_path='' as $$
 begin
  if jsonb_typeof(new.context->'offer_group_ids') is distinct from 'array' then return new;end if;
- if new.action_type='__send_whatsapp' and new.action_config->>'offer_phase'='initial' and new.status in ('done','failed') then
-  update public.crm_offer_instances i set status=case when new.status='done' then 'following' else 'error' end,
+ if new.action_type='__send_whatsapp' and new.action_config->>'offer_phase' in ('initial','accepted') and new.status in ('done','failed') then
+  update public.crm_offer_instances i set status=case when i.status in ('accepted','processed') then i.status when new.status='done' then 'following' else 'error' end,
    sent_at=case when new.status='done' then coalesce(i.sent_at,new.completed_at,now()) else i.sent_at end
-   where i.created_by=new.user_id and i.snapshot->>'group_leader_offer_id'=new.context->>'offer_instance_id' and i.id::text in(select jsonb_array_elements_text(new.context->'offer_group_ids')) and i.status in ('queued','error');
+   where i.created_by=new.user_id and i.snapshot->>'group_leader_offer_id'=new.context->>'offer_instance_id' and i.id::text in(select jsonb_array_elements_text(new.context->'offer_group_ids')) and i.status in ('queued','error','accepted','processed');
  elsif new.status='cancelled' and coalesce(new.error_message,'') like 'Cliente respondió:%' then
   update public.crm_offer_instances i set status='paused' where i.created_by=new.user_id and i.snapshot->>'group_leader_offer_id'=new.context->>'offer_instance_id' and i.id::text in(select jsonb_array_elements_text(new.context->'offer_group_ids')) and i.status='following';
  end if;
