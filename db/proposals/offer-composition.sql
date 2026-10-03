@@ -35,13 +35,13 @@ begin
    case when idx=0 then p_request_key else md5(p_request_key::text||':'||idx)::uuid end,
    coalesce(item->'selections','[]'),item->>'extra_text',p_mode,(item->>'final_price')::numeric,p_send_message,
    p_processing_date,p_test_mode,p_allow_duplicate,p_send_at,p_welcome,p_recipient_contact_id,p_manager_contact_id,
-   message,coalesce(item->'after_sale',p_after_sale));
+   message,coalesce(nullif(item->'after_sale','null'::jsonb),p_after_sale));
   if not coalesce((result->>'safety_verified')::boolean,false) then raise exception 'No se pudo verificar la oferta';end if;
   offer_id:=(result->>'offer_id')::uuid;opp_id:=(result->>'opportunity_id')::uuid;
   if idx=0 then first_id:=offer_id;end if;ids:=array_append(ids,offer_id);results:=results||jsonb_build_array(result);idx:=idx+1;
   update public.crm_offer_instances set snapshot=coalesce(snapshot,'{}')||jsonb_build_object('composition',p_composition,'composition_request_key',p_request_key,'previous_operator',coalesce(item->>'previous_operator',''),'shop_gift',coalesce((item->>'shop_gift')::boolean,false),'permanence_refund',coalesce((item->>'permanence_refund')::boolean,false),'permanence_amount',coalesce((item->>'permanence_amount')::numeric,0),'permanence_visible',coalesce((item->>'permanence_visible')::boolean,true)) where id=offer_id and created_by=uid;
   -- Preserve the chosen previous operator for the later router-return dialog.
-  if nullif(item->>'previous_operator','') is not null then
+  if nullif(item->>'previous_operator','') is not null and coalesce(nullif(item->'after_sale','null'::jsonb),p_after_sale) is null then
    update public.sales_opportunities set after_sale_preferences=coalesce(after_sale_preferences,jsonb_build_object('send',false,'text','','operator',first_op,'rule_id',null))||jsonb_build_object('previous_operator',case when item->>'previous_operator' in ('Yoigo','MásMóvil','O2','Vodafone','Ninguno','Otro') then item->>'previous_operator' when item->>'previous_operator'='Sin compañía' then 'Ninguno' else 'Otro' end) where id=opp_id and owner_user_id=uid;
   end if;
  end loop;
