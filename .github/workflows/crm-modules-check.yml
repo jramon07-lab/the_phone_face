@@ -18,6 +18,12 @@ jobs:
           node-version: 24
       - name: Run offline regression suite
         run: npm run verify
+      - name: Install browser test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify router templates on desktop and mobile with isolated fixtures
+        run: npx playwright test --config=tests/e2e/router-return.config.js --workers=2 --retries=0 --reporter=line
       - name: Verify CRM module files and registrations
         shell: bash
         run: |
