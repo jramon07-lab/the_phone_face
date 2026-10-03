@@ -54,9 +54,9 @@ async function chooseProcessing(options,data){
  d.querySelector('[data-edit-preferences]')?.addEventListener('click',()=>{fields.hidden=false;fields.querySelector('[data-extra]').open=true;fields.scrollIntoView({block:'nearest'})});
  if(confirmed)api.bindCorrection(d.querySelector('[data-correction]'),data,()=>{d.addEventListener('close',()=>{void window.TPFOfferFollowup.load(true).then(()=>openOpportunity(options.id))},{once:true});d.close();});
  return new Promise(resolve=>{
-  d.addEventListener('close',()=>{const result=d._result||null;d.remove();if(origin?.isConnected)origin.focus({preventScroll:true});resolve(result)},{once:true});
+  d.addEventListener('close',()=>{const result=d.returnValue==='confirm'?d._result||null:null;d.remove();if(origin?.isConnected)origin.focus({preventScroll:true});resolve(result)},{once:true});
   d.addEventListener('cancel',e=>{if(busy)e.preventDefault()});d.querySelectorAll('[data-cancel-choice]').forEach(b=>b.onclick=()=>{if(!busy)d.close()});
-  d.querySelector('[data-save-choice]').onclick=async()=>{if(busy)return;const error=fields.querySelector('[data-error]');try{busy=true;d.querySelectorAll('footer button').forEach(b=>b.disabled=true);const preferences=binding.get();await binding.saveTemplate();d._result=preferences;d.close();}catch(e){fields.hidden=false;error.textContent=e.message||'No se pudo continuar.';error.scrollIntoView({block:'nearest'});}finally{busy=false;d.querySelectorAll('footer button').forEach(b=>b.disabled=false)}};d.showModal();
+  d.querySelector('[data-save-choice]').onclick=async()=>{if(busy||!d.open)return;const error=fields.querySelector('[data-error]');try{busy=true;d.querySelectorAll('footer button').forEach(b=>b.disabled=true);const preferences=binding.get();await binding.saveTemplate();if(!d.open)return;d._result=preferences;d.close('confirm');}catch(e){fields.hidden=false;error.textContent=e.message||'No se pudo continuar.';error.scrollIntoView({block:'nearest'});}finally{busy=false;d.querySelectorAll('footer button').forEach(b=>b.disabled=false)}};d.showModal();
  });
 }
 async function openOpportunity(id){
@@ -110,7 +110,7 @@ async function open(id){
   }
   void showRecipient();
   const setBusy=value=>{busy=value;d.querySelectorAll('button').forEach(b=>{if(value){b.dataset.wasDisabled=String(b.disabled);b.disabled=true}else if(b.dataset.wasDisabled!==undefined){b.disabled=b.dataset.wasDisabled==='true';delete b.dataset.wasDisabled}})};
-  function screen(processing){body.querySelectorAll('.ofClientIdentity,.ofOfferSection,.ofRecipientSection,.ofFollowSection,[data-client-documents],.ofPlanHistory,[data-installation-section]').forEach(el=>el.hidden=processing||(el.hasAttribute('data-installation-section')&&el.dataset.available!=='true'));body.querySelector('[data-processing]').hidden=!processing;d.querySelector('.ofDrawerHead h3').textContent=processing?'Confirmar tramitación':'Gestionar';d.querySelector('.ofDrawerFoot [data-of-close]').hidden=processing;d.querySelector('[data-back-summary]').hidden=!processing;d.querySelector('[data-confirm-processing]').hidden=!processing;body.scrollTop=0;}
+  function screen(processing){body.querySelectorAll('.ofClientIdentity,.ofOfferSection,.ofRecipientSection,.ofFollowSection,[data-client-documents],.ofPlanHistory,[data-installation-section]').forEach(el=>el.hidden=processing||(el.hasAttribute('data-installation-section')&&el.dataset.available!=='true'));body.querySelector('[data-processing]').hidden=!processing;d.querySelector('.ofDrawerHead h3').textContent=processing?'Confirmar tramitación':'Gestionar';d.querySelector('.ofDrawerHead [data-of-close]').setAttribute('aria-label',processing?'Cerrar sin tramitar':'Cerrar gestión');d.querySelector('.ofDrawerFoot [data-of-close]').hidden=processing;d.querySelector('[data-back-summary]').hidden=!processing;d.querySelector('[data-confirm-processing]').hidden=!processing;body.scrollTop=0;}
   d.querySelector('[data-back-summary]').onclick=()=>screen(false);
   body.querySelector('[data-prepare]')?.addEventListener('click',()=>prepare());
   const statePanel=body.querySelector('[data-state-panel]'),stateSelect=body.querySelector('[data-new-state]'),stateButton=body.querySelector('[data-change-state]');
@@ -123,12 +123,13 @@ async function open(id){
    try{const data=await window.TPFRouterReturn.preview({id:o.id,operator:x.operator,netflix:!!x.snapshot?.netflix_followup});if(!d.isConnected)return;
     if(!data.available&&data.workflow!=='installation_v1')throw Error(data.reason||'No se puede preparar el envío: revisa el destinatario y la plantilla de instalación.');
     body.querySelector('[data-processing-recipient]').textContent='WhatsApp para: '+(data.recipient||'Nombre no disponible')+' · '+(data.phone||'Sin teléfono válido');
+    if(!body.querySelector('[data-confirm-hint]')){const hint=document.createElement('p');hint.dataset.confirmHint='';hint.textContent='El cambio a Tramitado se guarda al pulsar «Confirmar tramitación». Cerrar o volver conserva el estado actual.';body.querySelector('[data-processing-recipient]').after(hint);}
     const confirmed=!!(data.installation?.installed_on||data.excel_date),preferences={...(data.preferences||{}),...(o.after_sale_preferences||{}),send:!confirmed};
     const router=body.querySelector('[data-router]');body.querySelector('[data-processing-history]')?.remove();if(confirmed){const history=document.createElement('div');history.dataset.processingHistory='';history.innerHTML=window.TPFInstallations.summary(data)+window.TPFInstallations.messages(data);router.before(history);window.TPFInstallations.bindCorrection(history,data,()=>{d.addEventListener('close',()=>void open(x.id),{once:true});d.close();});}button.textContent=confirmed?'Confirmar sin reenviar':'Confirmar tramitación';
     if(Object.hasOwn(x.snapshot||{},'previous_operator_override')){const previous=x.snapshot.previous_operator_override;if(preferences.workflow!=='installation_v1'&&preferences.previous_operator!==previous&&preferences.text)preferences.text=window.TPFRouterReturn.message(preferences.text,previous);preferences.previous_operator=previous;}
     const binding=routerBinding=window.TPFRouterReturn.bind(body.querySelector('[data-router]'),data,{id:o.id,operator:x.operator,preferences,compact:true});
     const previous=body.querySelector('[data-router] [data-previous]');previous?.addEventListener('change',()=>{body.querySelector('[data-previous-status]').textContent=previous.value!== (previousValue()==='Sin indicar'?'':previousValue())?'Selección para el mensaje · se guarda al confirmar tramitación':''});
-    routerReady=true;button.disabled=false;button.onclick=async()=>{if(busy)return;err.hidden=true;try{
+    routerReady=true;button.disabled=false;button.onclick=async()=>{if(busy||!d.open||body.querySelector('[data-processing]').hidden)return;err.hidden=true;try{
      const preferences=binding.get();setBusy(true);
      const sr=await sb.from('sales_stages').select('id,name,pipeline_id').eq('active',true);if(sr.error)throw sr.error;
      const stage=(sr.data||[]).find(s=>s.pipeline_id===o.pipeline_id&&String(s.name).trim().toLowerCase()==='tramitado');

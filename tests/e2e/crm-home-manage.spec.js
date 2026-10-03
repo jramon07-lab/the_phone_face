@@ -96,3 +96,54 @@ test('Gestionar and the appointment review show the real compact installation in
  await page.setViewportSize(viewport);await fixture(page,'accepted',true,false);await page.addStyleTag({path:path.resolve('assets/crm-reference.css')});await page.evaluate(()=>{document.body.classList.add('tpfUnified');sb.rpc=async()=>({data:{workflow:'installation_v1',available:true,operator:'Vodafone',recipient:'Ana Ejemplo',phone:'600000000',installation_config:{slots:[{from:'10:00',to:'12:00'}],appointment_text:'Hola {nombre} 👋\n\nTu instalación de {operador} está prevista para el {fecha}, {franja}. Estate pendiente del teléfono: el técnico podría llamarte para confirmar o adelantar la visita.\n\nSi tienes algún problema, {ayuda}.',no_appointment_text:'Hola {nombre} 👋\n\nHemos tramitado tu contrato con {operador}. Estamos pendientes de que el operador confirme la cita. Estate pendiente del teléfono por si el técnico te llama para concertar o adelantar la visita.\n\nSi tienes algún problema, {ayuda}.'}}});});await page.addScriptTag({path:path.resolve('js/modules/installation-communications.js')});await expect(page.getByRole('button',{name:'Cambiar estado',exact:true})).toBeVisible();if(process.env.TPF_VISUAL_REVIEW)await page.screenshot({path:'/tmp/tpf-polish/manage-'+viewport.width+'.png'});await page.getByRole('button',{name:'Preparar tramitación',exact:true}).click();await expect(page.locator('[data-appointment-fields]')).toBeHidden();await expect(page.locator('[data-notice-preview]')).toContainText('Estate pendiente');await page.locator('[data-appointment-mode=scheduled]').click();await page.locator('[data-date]').fill('2026-10-08');await page.locator('[data-slot]').selectOption('0');await expect(page.locator('[data-notice-preview]')).toContainText('08/10/2026');const footer=await page.locator('.ofDrawerFoot').boundingBox(),confirm=await page.locator('[data-confirm-processing]').boundingBox();expect(confirm.y+confirm.height).toBeLessThanOrEqual(footer.y+footer.height);expect(await page.locator('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);if(process.env.TPF_VISUAL_REVIEW)await page.screenshot({path:'/tmp/tpf-polish/processing-'+viewport.width+'.png'});await page.getByRole('button',{name:'Volver a la gestión'}).click();await page.getByRole('button',{name:'Volver al listado'}).click();
  }
 });
+
+for(const viewport of [{width:1280,height:800},{width:390,height:844}])for(const cancel of ['close','escape','back'])test(`Accept then ${cancel} keeps Pending with real event handlers (${viewport.width})`,async({page})=>{
+ await page.setViewportSize(viewport);await fixture(page,'following',true,false);
+ await page.getByRole('button',{name:'Volver al listado'}).click();
+ await page.evaluate(()=>{window.TPFModules={register(name,api){api.install()}};});
+ await page.addScriptTag({path:path.resolve('js/modules/offer-followup-ui.js')});
+ await page.addScriptTag({path:path.resolve('js/modules/installation-communications.js')});
+ await page.evaluate(()=>{
+  const {o,x}=__fixture;o.stage_id='following';__fixture.stageWrites=[];
+  TPFOfferFollowup.state.offers=[x];TPFOfferFollowup.state.byOpportunity=new Map([['op',[x]]]);TPFOfferFollowup.load=async()=>TPFOfferFollowup.state;
+  TPFControlWhatsappOffer=async()=>{o.stage_id='pending';x.status='accepted';return true};
+  sb.rpc=async(name,args)=>{if(name==='crm_change_offer_stage'){__fixture.stageWrites.push(args);throw Error('Unexpected processing write')}
+   return{data:{workflow:'installation_v1',available:true,operator:'Vodafone',recipient:'Ana',phone:'600000000',installation_config:{no_appointment_text:'Hola {nombre}, avísanos cuando esté instalada.'}}};};
+  TPFHomeManage.open('offer');
+ });
+ await page.getByRole('button',{name:'Marcar aceptada y preparar tramitación'}).click();
+ await expect(page.locator('[data-confirm-processing]')).toBeEnabled();
+ if(cancel==='close')await page.getByRole('button',{name:'Cerrar sin tramitar',exact:true}).click();
+ else if(cancel==='escape')await page.keyboard.press('Escape');
+ else{await page.getByRole('button',{name:'Volver a la gestión'}).click();await page.getByRole('button',{name:'Volver al listado'}).click();}
+ await expect(page.locator('dialog')).toHaveCount(0);
+ expect(await page.evaluate(()=>__fixture.stageWrites)).toEqual([]);expect(await page.evaluate(()=>__fixture.writes)).toBe(0);
+ expect(await page.evaluate(()=>({stage:__fixture.o.stage_id,offer:__fixture.x.status}))).toEqual({stage:'pending',offer:'accepted'});
+});
+
+test('Closing while the preview is loading cannot later process the opportunity',async({page})=>{
+ await fixture(page,'accepted',false,false);
+ await page.evaluate(()=>{TPFRouterReturn.preview=()=>new Promise(resolve=>window.completePreview=resolve);});
+ await page.getByRole('button',{name:'Preparar tramitación',exact:true}).click();
+ await page.getByRole('button',{name:'Cerrar sin tramitar',exact:true}).click();
+ await page.evaluate(()=>completePreview({available:true}));
+ await expect(page.locator('dialog')).toHaveCount(0);expect(await page.evaluate(()=>__fixture.writes)).toBe(0);
+});
+
+test('Saved preferences and stale Tramitado cache still require an explicit new confirmation',async({page})=>{
+ await fixture(page,'accepted',true,false);await page.getByRole('button',{name:'Volver al listado'}).click();
+ await page.addScriptTag({path:path.resolve('js/modules/installation-communications.js')});
+ await page.evaluate(()=>{
+  window.salesCache={stages:[{id:'processed',name:'Tramitado'}],opportunities:[{...__fixture.o,stage_id:'processed'}]};
+  sb.rpc=async()=>({data:{workflow:'installation_v1',available:true,recipient:'Ana',phone:'600000000',operator:'Vodafone',installation_config:{no_appointment_text:'Hola {nombre}, avísanos cuando esté instalada.'}}});
+  window.preparation='waiting';TPFRouterReturn.prepare('op',{stage_id:'processed',after_sale_preferences:{workflow:'installation_v1',previous_operator:'Orange',send:false}}).then(result=>window.preparation=result);
+ });
+ await expect(page.locator('#tpfRouterDialog')).toBeVisible();
+ await page.getByRole('button',{name:'Cerrar gestión',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>window.preparation)).toBeNull();
+ expect(await page.evaluate(()=>__fixture.writes)).toBe(0);expect(await page.evaluate(()=>__fixture.o.stage_id)).toBe('pending');
+ await page.evaluate(()=>{window.preparation='waiting';TPFRouterReturn.prepare('op',{stage_id:'processed'}).then(result=>window.preparation=result)});
+ await expect(page.locator('#tpfRouterDialog')).toBeVisible();
+ await page.getByRole('button',{name:'Confirmar tramitación',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>window.preparation?.stage_id)).toBe('processed');
+});
