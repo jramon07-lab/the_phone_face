@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+let result,calls=[];
+const query={update(v){calls.push(['update',v]);return this},eq(k,v){calls.push(['eq',k,v]);return this},select(){return this},single(){return Promise.resolve(result)}};
+const window={dispatchEvent(){calls.push(['event'])}},sandbox={window,document:{createElement(){return{}},head:{appendChild(){}}},sb:{from(table){assert.equal(table,'sales_opportunities');return query}},CustomEvent:class{},Intl,Date};
+vm.runInNewContext(fs.readFileSync('js/modules/home-manage-panel.js','utf8'),sandbox);
+const api=window.TPFHomeManage;
+const person=api.identity({client_name:'Titular',phone:'600000000',contract_party:{same:false,contact_name:'Gestora',contact_dni:'CONTACTO',holder_name:'Titular',holder_dni:'TITULAR',recipient_phone:''}},{snapshot:{recipient_phone:'699999999'}},{data:{APODO:'Alias'}});
+assert.equal(person.name,'Gestora');assert.equal(person.dni,'CONTACTO');assert.equal(person.holderDni,'TITULAR');assert.equal(person.recipientPhone,'','explicit empty recipient never borrows another number');assert.equal(person.alias,'Alias');
+(async()=>{
+ const o={id:'o',stage_id:'accepted',updated_at:'version'},prefs={send:true,text:'Texto real',previous_operator:'Orange'};
+ result={error:{code:'PGRST116'}};
+ await assert.rejects(api.tramitate(o,{id:'processed'},prefs),/otro dispositivo/);
+ assert.ok(!calls.some(c=>c[0]==='event'),'failed writes must not announce success');
+ assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='updated_at'&&c[2]==='version'));
+ calls=[];result={data:{...o,stage_id:'processed'}};
+ await api.tramitate(o,{id:'processed'},prefs);
+ assert.equal(calls[0][1].after_sale_preferences,prefs,'persist exactly the reviewed recipient message and timing');
+ assert.ok(calls.some(c=>c[0]==='event'));
+ await assert.rejects(api.tramitate(o,null,prefs),/columna Tramitado/);
+ console.log('home manage: identities, blank recipients, confirmed writes and concurrency passed');
+})().catch(e=>{console.error(e);process.exitCode=1});
