@@ -137,7 +137,7 @@ function css(){if($('tpfOffersCss'))return;const style=document.createElement('s
  #opOfferModal .opPanel{overflow:auto;min-height:0;padding:14px}
  #opOfferModal .opBenefits{background:#edf5ff;border:1px solid #a8c8f8;margin:18px 0 0;padding:14px}
  #opOfferModal .opBenefitsTitle{font-size:14px;color:#175cd3}
- #opOfferModal .opBenefit{font-size:13px;gap:9px}
+ #opOfferModal .opBenefit{font-size:13px;gap:9px}#opOfferModal .opBenefitAmount{grid-column:2 / -1;justify-content:flex-start}
  #opOfferModal .opPreview{min-height:210px;max-height:300px;line-height:1.6}
  .opComposition{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid #e4e7ec}.opComposition label{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:700}.opComposition select{width:auto!important;max-width:170px;padding:7px!important}.opCompositionModes,#opDraftTabs{display:flex;gap:7px;flex-wrap:wrap}.opComposition button{font-size:12px;padding:7px 10px}.opComposition button[aria-pressed=true]{background:#175cd3;color:white}.opMore{margin-top:12px;border-top:1px solid #e4e7ec;padding-top:10px}.opMore summary{cursor:pointer;font-weight:700}.opAcceptedCheck{border:0;padding:0;flex-wrap:wrap!important}.opAcceptedCheck legend{font-weight:700;margin-bottom:8px}.opAcceptedCheck label{display:flex;gap:7px;align-items:center}.opAcceptedCheck input[type=radio]{width:16px!important;flex:none}.opAcceptedCheck [hidden]{display:none!important}#opOtherMessages textarea{width:100%;box-sizing:border-box;background:#f3f9f2;margin:6px 0}#opOtherMessages label{display:block;margin-top:12px}#opRegenerate{font-size:11px;padding:6px 9px;margin:9px 0}
 
