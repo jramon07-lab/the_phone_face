@@ -150,6 +150,23 @@ test.beforeAll(async () => {
   expect(await verifyHealth(origin, expectation(), process.env.VERCEL_AUTOMATION_BYPASS_SECRET), 'Commit, rama y entorno exactos antes de abrir una sesión').toBe(true);
 });
 
+test('PC: textos de devolución compartidos en producción, solo lectura',async({context,page})=>{
+  test.setTimeout(60000);
+  const origin=crmOrigin(process.env.VERCEL_PREVIEW_URL||process.env.PLAYWRIGHT_BASE_URL),report=await installReadOnlyGuard(context,page,origin);
+  try{
+    await page.goto('/',{waitUntil:'domcontentloaded'});
+    await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();
+    await expect(page.locator('#app')).toBeVisible({timeout:35000});
+    await page.locator('.nav[data-view="settings"]').first().click();await page.locator('#view-settings-router-texts-tab').click();
+    const card=page.locator('#tpfRouterSettingsCard');await expect(card.locator('[data-settings-text]')).toBeEnabled({timeout:15000});
+    await expect(card.locator('[data-settings-preview]')).toContainText('Devolución del router de Yoigo');
+    await card.locator('[data-settings-search]').fill('masmovil');await card.locator('[data-settings-operator="MásMóvil"]').click();
+    await expect(card.locator('[data-settings-title]')).toHaveText('Texto de MásMóvil');await expect(card.locator('[data-settings-preview]')).toContainText('Devolución del router de MásMóvil');
+    for(const width of [1366,700]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);}
+    await expect.poll(()=>report.pendingReads.length,{timeout:20000}).toBe(0);assertReadHealth(report);
+  }finally{reportScope(report,'PC textos de devolución');}
+});
+
 test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lectura', async ({ context, page }) => {
   test.setTimeout(150000);
   const origin = crmOrigin(process.env.VERCEL_PREVIEW_URL || process.env.PLAYWRIGHT_BASE_URL);
@@ -230,9 +247,8 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
             for(const key of keys){
               const button=page.locator('#view-whatsapplive .waLivePage>.waTabs>button[data-wa-tab="'+key+'"]');
               await expect(button).toHaveCount(1);
-              await button.scrollIntoViewIfNeeded();
-              const reachable=await button.evaluate(b=>{const r=b.getBoundingClientRect(),p=b.parentElement.getBoundingClientRect();return r.left>=p.left-1&&r.right<=p.right+1&&r.top>=p.top-1&&r.bottom<=p.bottom+1});
-              expect(reachable,'Pestaña accesible: '+key).toBe(true);
+              // Live badge counts can resize the tab after the initial scroll.
+              await expect.poll(async()=>{await button.scrollIntoViewIfNeeded();return button.evaluate(b=>{const r=b.getBoundingClientRect(),p=b.parentElement.getBoundingClientRect();return r.left>=p.left-1&&r.right<=p.right+1&&r.top>=p.top-1&&r.bottom<=p.bottom+1});},{message:'Pestaña accesible: '+key,timeout:5000}).toBe(true);
             }
             await page.locator('#view-whatsapplive .waLivePage>.waTabs>button[data-wa-tab="all"]').click();
           }
@@ -241,13 +257,18 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
           if(await row.count()){
             await row.click();
             await expect(page.locator('#waChatActive')).toBeVisible();
+            await expect(page.locator('#waContactCard')).not.toHaveAttribute('aria-busy','true',{timeout:15000});
             if(await page.locator('#waContactCard').isVisible()){
               for(const tab of ['work','history','client']){
                 await page.locator('[data-wa-side-tab="'+tab+'"]').click();
                 await expect(page.locator('#waSidePanel-'+tab)).toBeVisible();
               }
-              await expect(page.locator('#waCleanReview')).toBeVisible();
-              await expect(page.locator('#waSideNewOffer')).toBeVisible();
+              // The first live chat can be unlinked or a group. Its card still
+              // exists, but review/offer actions require a linked contact.
+              if(await page.evaluate(()=>!!waLiveState.contact?.id)){
+                await expect(page.locator('#waCleanReview')).toBeVisible();
+                await expect(page.locator('#waSideNewOffer')).toBeVisible();
+              }else await expect(page.locator('#waCleanReview')).toBeHidden();
             }
           }
         }
