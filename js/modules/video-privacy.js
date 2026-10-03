@@ -44,7 +44,7 @@
   }
  }
  function rects(scope){
-  const found=[];const add=(r,large=false)=>{const x=Math.max(0,r.x-2),y=Math.max(0,r.y-2),right=Math.min(innerWidth,r.right+2),bottom=Math.min(innerHeight,r.bottom+2);if(right>x&&bottom>y)found.push({x,y,w:right-x,h:bottom-y,large});};
+  const found=[];const add=(r,large=false,clip=null)=>{const x=Math.max(0,r.x-2,clip?.left??0),y=Math.max(0,r.y-2,clip?.top??0),right=Math.min(innerWidth,r.right+2,clip?.right??innerWidth),bottom=Math.min(innerHeight,r.bottom+2,clip?.bottom??innerHeight);if(right>x&&bottom>y)found.push({x,y,w:right-x,h:bottom-y,large});};
   const cover=e=>{if(!e||!scope.contains(e)||e.closest('.videoPrivateLayer')||e.closest('[data-video-private-other]'))return;const r=e.getBoundingClientRect();if(r.width&&r.height)add(r,r.height>60);};
   const privateSelectors='#sideWho,#who,#contactName,#contactFirstName,#contactLastName,#contactPhone,#contactDni,#contactEmail,#contactIban,#contactBank,#contactNotes,#contactObs,#cpNotes,#cpObservations,#waChatName,#waChatNickname,#waChatPhone,#waSideName,#waSideNickname,#waSidePhone,#waSideDni,#waSidePhoneDetail,#tdFocusContent,#tdPendingTasks,#tdScheduledSends,#dashPriorityFollowups,#dashActivity,.waChatRowTop b,.waChatPreview,.ofClientIdentity h2,.ofIdentityGrid strong,.ofRecipientSection p,.ofProcessingCustomer,.tpfInstallationRecipient,.waAvatar,.cpAvatar';
   scope.querySelectorAll(privateSelectors).forEach(cover);
@@ -68,11 +68,11 @@
   while((node=walker.nextNode())){
    const p=node.parentElement,text=node.nodeValue||'';
    if(!p||!text.trim()||p.closest('.videoPrivateLayer,[data-video-private-other]')||/SCRIPT|STYLE|OPTION|TEXTAREA/.test(p.tagName))continue;
-   const r=p.getBoundingClientRect();if(!r.width||!r.height||r.bottom<=0||r.top>=innerHeight)continue;
+   const r=p.getBoundingClientRect(),clip=p.closest('#waMessages')?.getBoundingClientRect();if(!r.width||!r.height||r.bottom<=0||r.top>=innerHeight||(clip&&(r.bottom<=clip.top||r.top>=clip.bottom)))continue;
    const matches=[];
    for(const re of sensitive)for(const m of text.matchAll(re))matches.push([m.index,m.index+m[0].length]);
    for(const name of names){let start=0;while((start=text.toLowerCase().indexOf(name.toLowerCase(),start))>=0){const end=start+name.length;if(!/[\p{L}\p{N}]/u.test(text[start-1]||'')&&!/[\p{L}\p{N}]/u.test(text[end]||''))matches.push([start,end]);start=end;}}
-   for(const [start,end] of matches){const range=document.createRange();range.setStart(node,start);range.setEnd(node,end);for(const r of range.getClientRects())add(r);}
+   for(const [start,end] of matches){const range=document.createRange();range.setStart(node,start);range.setEnd(node,end);for(const r of range.getClientRects())add(r,false,clip);}
   }
   return found;
  }
