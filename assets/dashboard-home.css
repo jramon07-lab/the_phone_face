@@ -387,3 +387,13 @@
 #view-dashboard.tpfDashPro .tdHomeFold .tdListRow{gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0}
 #view-dashboard.tpfDashPro .tdHomeFold .tdListRow small{display:block;color:#64748b;margin-top:4px}
 #view-dashboard.tpfDashPro .tdHomeFold>button{margin-bottom:16px}
+/* Daily tasks use one editor and keep completion independent from message sending. */
+.tdTaskFilters,.tdTaskPaging{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}
+.tdTaskFilters button,.tdTaskPaging button{border:1px solid #d4deed;border-radius:7px;background:#fff;color:#24446e;padding:6px 9px;cursor:pointer;font:inherit;font-size:12px}
+.tdTaskFilters [aria-pressed=true]{background:#eaf2ff;border-color:#87b4ff;color:#075de3}
+.tdTaskRow{display:grid;grid-template-columns:32px minmax(0,1fr) 165px auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #e7edf5}
+.tdTaskText{display:grid;gap:4px;min-width:0;font-size:13px}.tdTaskText span{overflow-wrap:anywhere;color:#34465f}
+.tdTaskDate{display:grid;gap:4px;font-size:12px;color:#53657c}.tdTaskDate small{font-size:11px}.tdTaskLate{color:#b42318}
+.tdTaskComplete{width:30px;height:30px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#64748b;cursor:pointer;font-size:15px}.tdTaskComplete:hover{background:#e5f6ec;color:#127047;border-color:#92cba9}
+.tdTaskPaging small{margin-right:auto}.tdTaskPaging button:disabled{opacity:.45;cursor:default}
+@media(max-width:650px){.tdTaskRow{grid-template-columns:30px minmax(0,1fr) auto;gap:8px}.tdTaskDate{grid-column:2;grid-row:2}.tdTaskRow>.tdBtn{grid-column:3;grid-row:1 / span 2}.tdTaskComplete{grid-row:1 / span 2}}

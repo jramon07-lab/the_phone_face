@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync('js/modules/dashboard-performance-guard.js','utf8');
 const html=fs.readFileSync('index.html','utf8'),runtime=fs.readFileSync('js/modules/runtime.js','utf8'),css=fs.readFileSync('assets/dashboard-home.css','utf8');
 const sandbox={window:{TPFModules:{register(){}}},document:{getElementById(){return null}},Intl,Date,Map,setTimeout,clearInterval,setInterval};
-vm.runInNewContext(source.replace("M.register('dashboard-performance-guard'","window.testHome={commercialGroups,priorityRows};M.register('dashboard-performance-guard'"),sandbox);
+vm.runInNewContext(source.replace("M.register('dashboard-performance-guard'","window.testHome={commercialGroups,priorityRows,renderOperationalFolds,completeTask,D,setRenderer(fn){renderHomePanels=fn}};M.register('dashboard-performance-guard'"),sandbox);
 const {commercialGroups:groups,priorityRows}=sandbox.window.testHome;
 const stages=new Map([['1',{name:'Seguimiento'}],['2',{name:'Pendiente de tramitar'}],['3',{name:'Tramitado'}],['4',{name:'Ganado'}],['5',{name:'Perdido'}]]);
 const data={today:'2026-09-19',opps:[
@@ -55,7 +55,14 @@ assert.match(html,/runtime\.js\?v=[^"\s]+/);
 assert.ok(!/\.referenceSidebar|\.referenceNav|\.referenceWorkspace/.test(css),'Inicio must not restyle the shared CRM navigation');
 assert.ok(!source.includes('scrollIntoView'),'filters never force the page to scroll');
 assert.ok(!source.includes('tdPipelineRows'),'do not duplicate and truncate the worklist into previews');
-assert.equal((source.match(/sb\.from\(/g)||[]).length,6,'contact identities are read in batches and reminders reuse the shared follow-up read');
+assert.equal((source.slice(source.indexOf('async function fetchData'),source.indexOf('function removeConfirmed')).match(/sb\.from\(/g)||[]).length,6,'contact identities are read in batches and reminders reuse the shared follow-up read');
 assert.equal((source.match(/sb\.rpc\(/g)||[]).length,2,'only existing goal RPCs');
 assert.ok(!/sb\.(?:from|rpc)[\s\S]{0,100}sendMessage/.test(source));
 console.log('dashboard home reference: counts, pending status, Madrid dates, closed exclusions, pagination and scope passed');
+const api=sandbox.window.testHome,elements=new Map(['tdPendingTasks','tdScheduledSends','tdTaskFoldCount','tdSendFoldCount'].map(id=>[id,{}]));sandbox.document.getElementById=id=>elements.get(id)||null;
+sandbox.Date=class extends Date{static now(){return Date.parse('2026-10-03T10:00:00Z')}};
+const tasks=Array.from({length:12},(_,n)=>({id:String(n),title:n===0?'Tarea <b>texto</b>':'Tarea '+n,customer_name:'Cliente '+n,starts_at:n===0?'2026-10-03T09:00:00Z':'2026-10-03T11:00:00Z',status:'pending',updated_at:'task-version'})),daily={today:'2026-10-03',reminders:[],opps:[],tasks};
+api.renderOperationalFolds(daily,tasks);let markup=elements.get('tdPendingTasks').innerHTML;assert.equal((markup.match(/data-complete-task=/g)||[]).length,10);assert.equal((markup.match(/>Gestionar</g)||[]).length,10);assert(!markup.includes('Cambiar fecha'));assert(markup.includes('&lt;b&gt;texto&lt;/b&gt;'));assert(markup.includes('1–10 de 12'));
+api.D.taskFilter='late';api.renderOperationalFolds(daily,tasks);assert.equal((elements.get('tdPendingTasks').innerHTML.match(/data-complete-task=/g)||[]).length,1);api.D.taskFilter='today';api.renderOperationalFolds(daily,tasks);assert.equal((elements.get('tdPendingTasks').innerHTML.match(/data-complete-task=/g)||[]).length,10);
+api.D.taskFilter='all';api.D.taskPage=1;api.renderOperationalFolds(daily,tasks);assert.equal((elements.get('tdPendingTasks').innerHTML.match(/data-complete-task=/g)||[]).length,2);
+(async()=>{const selectors=[];let fail=true,rendered=0,refreshed=0;api.D.data=daily;api.setRenderer(()=>rendered++);sandbox.window.TPFRefreshTasks=()=>refreshed++;sandbox.sb={from(table){assert.equal(table,'agenda_items');const q={update(values){assert.equal(values.status,'completed');return q},eq(key,value){selectors.push([key,value]);return q},select(){return q},async single(){return fail?{error:{code:'PGRST116'}}:{data:{...tasks[0],status:'completed'}}}};return q}};await assert.rejects(api.completeTask('0'),/otro dispositivo/);assert.equal(tasks[0].status,'pending');assert.equal(rendered,0);fail=false;await api.completeTask('0');assert.equal(tasks[0].status,'completed');assert.equal(rendered,1);assert.equal(refreshed,1);assert.deepEqual(selectors.slice(-3),[['id','0'],['status','pending'],['updated_at','task-version']]);console.log('daily tasks: filters, paging, escaping, single editor and verified completion passed')})().catch(e=>{console.error(e);process.exitCode=1});

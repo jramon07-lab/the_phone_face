@@ -3,7 +3,7 @@
 const M=window.TPFModules;if(!M)return;
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
-const D={built:false,busy:false,actionBusy:false,lastLoad:0,revision:0,reloadPending:false,data:null,activityAll:false,activityFilter:'commercial',upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0};
+const D={built:false,busy:false,actionBusy:false,lastLoad:0,revision:0,reloadPending:false,data:null,activityAll:false,activityFilter:'commercial',upcomingAll:false,backupJson:null,backupCsv:null,filter:'priority',query:'',pageSize:'10',page:0,taskFilter:'all',taskPage:0};
 const WORK_STATE_KEY='tpf.home.worklist.v1';
 function restoreWorkState(){try{const saved=JSON.parse(window.sessionStorage.getItem(WORK_STATE_KEY)||'null');if(!saved)return;if(['priority','calls','followup','processing','processed'].includes(saved.filter))D.filter=saved.filter;if(typeof saved.query==='string')D.query=saved.query;if(['10','25','50','all'].includes(saved.pageSize))D.pageSize=saved.pageSize;if(Number.isInteger(saved.page)&&saved.page>=0)D.page=saved.page}catch(_){}}
 function saveWorkState(){try{window.sessionStorage.setItem(WORK_STATE_KEY,JSON.stringify({filter:D.filter,query:D.query,pageSize:D.pageSize,page:D.page}))}catch(_){}}
@@ -85,7 +85,7 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20261003-home-manage-1';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20261003-daily-management-2';document.head.appendChild(link);
 }
 
 function build(){
@@ -177,6 +177,9 @@ function repositionRowMenus(){
 
 function handleClick(e){
   const el=e.target instanceof Element?e.target:null;if(!el)return;
+  const taskFilter=el.closest('[data-task-filter]');if(taskFilter&&D.data){D.taskFilter=taskFilter.dataset.taskFilter;D.taskPage=0;renderHomePanels();return}
+  const taskPage=el.closest('[data-task-page]');if(taskPage&&D.data){D.taskPage=Math.max(0,D.taskPage+Number(taskPage.dataset.taskPage));renderHomePanels();return}
+  const complete=el.closest('[data-complete-task]');if(complete){runAction(()=>completeTask(complete.dataset.completeTask));return}
   if(el.closest('[data-home-action="new-contact"]')){runAction(openNewContact);return}
   const filter=el.closest('[data-home-filter]');
   if(filter&&D.data){if(D.filter!==filter.dataset.homeFilter){D.filter=filter.dataset.homeFilter;D.page=0}renderHomePanels();return}
@@ -190,6 +193,12 @@ function handleClick(e){
   const row=el.closest('[data-open]');if(row)runAction(()=>openItem(row.dataset.type,row.dataset.id));
 }
 async function callAction(name,id){const fn=await waitFor(()=>typeof window[name]==='function'&&window[name],'Esta acción todavía no está disponible. Vuelve a intentarlo.');return fn(id)}
+async function completeTask(id){
+ const task=D.data?.tasks.find(t=>String(t.id)===String(id));if(!task||task.status!=='pending')throw Error('La tarea cambió. Actualiza Inicio antes de completarla.');
+ let q=sb.from('agenda_items').update({status:'completed'}).eq('id',id).eq('status','pending');if(task.updated_at)q=q.eq('updated_at',task.updated_at);
+ const r=await q.select('*').single();if(r.error||r.data?.status!=='completed')throw Error(r.error?.code==='PGRST116'?'La tarea cambió en otro dispositivo. Actualiza antes de completarla.':r.error?.message||'No se pudo confirmar la tarea.');
+ D.revision++;D.lastLoad=0;if(D.busy)D.reloadPending=true;Object.assign(task,r.data);renderHomePanels();window.TPFRefreshTasks?.();
+}
 async function openItem(type,id){
   if(type==='opportunity'){await prepareSales();await callAction('openOpportunityFull',id);await waitFor(()=>visible('opportunityFullPage'),'No se pudo abrir la oportunidad. Puede haberse eliminado o no estar accesible.');}
   else if(type==='task')await callAction(typeof window.openAlertTask==='function'?'openAlertTask':'openContactTaskDetail',id);
@@ -337,7 +346,10 @@ function renderUpcoming(d,map,pending){
 function renderOperationalFolds(d,pending){
  const tasks=$('tdPendingTasks'),sends=$('tdScheduledSends');if(!tasks||!sends)return;
  $('tdTaskFoldCount').textContent=pending.length;
- tasks.innerHTML=pending.slice().sort((a,b)=>String(a.starts_at||'9999').localeCompare(String(b.starts_at||'9999'))).map(t=>`<div class="tdListRow"><span><b>${esc(t.customer_name||'Sin cliente')}</b><br>${esc(t.title||'Tarea')}<small>${t.starts_at?esc(localDateTime(t.starts_at)):'Sin fecha'}</small></span><span><button class="tdBtn" data-open="1" data-type="task" data-id="${esc(t.id)}">Gestionar</button><button class="tdBtn" data-action="edit" data-type="task" data-id="${esc(t.id)}">Cambiar fecha</button></span></div>`).join('')||'<p>No hay tareas pendientes.</p>';
+ const now=Date.now(),bucket=t=>t.starts_at&&Date.parse(t.starts_at)<now?'late':t.starts_at&&localDay(t.starts_at)===d.today?'today':'next';
+ const filters=[['late','Vencidas'],['today','Hoy'],['next','Próximas'],['all','Todas']],filtered=pending.filter(t=>D.taskFilter==='all'||bucket(t)===D.taskFilter).sort((a,b)=>String(a.starts_at||'9999').localeCompare(String(b.starts_at||'9999')));
+ D.taskPage=Math.min(D.taskPage,Math.max(0,Math.ceil(filtered.length/10)-1));const from=D.taskPage*10;
+ tasks.innerHTML=`<div class="tdTaskFilters" aria-label="Filtrar tareas">${filters.map(([key,label])=>`<button type="button" data-task-filter="${key}" aria-pressed="${D.taskFilter===key}">${label} <b>${key==='all'?pending.length:pending.filter(t=>bucket(t)===key).length}</b></button>`).join('')}</div><div class="tdTaskRows">${filtered.slice(from,from+10).map(t=>`<div class="tdTaskRow"><button type="button" class="tdTaskComplete" data-complete-task="${esc(t.id)}" aria-label="Completar ${esc(t.title||'tarea')}">✓</button><div class="tdTaskText"><b>${esc(t.customer_name||'Sin cliente')}</b><span>${esc(t.title||'Tarea')}</span></div><div class="tdTaskDate"><time>${t.starts_at?esc(localDateTime(t.starts_at)):'Sin fecha'}</time><small class="${bucket(t)==='late'?'tdTaskLate':''}">${bucket(t)==='late'?'Vencida':bucket(t)==='today'?'Hoy':t.starts_at?'Próxima':'Pendiente de fecha'}</small></div><button type="button" class="tdBtn" data-open="1" data-type="task" data-id="${esc(t.id)}" title="Editar tarea, fecha y recordatorios">Gestionar</button></div>`).join('')||'<p class="tdEmpty">No hay tareas en este grupo.</p>'}</div>${filtered.length>10?`<div class="tdTaskPaging"><small>${from+1}–${Math.min(from+10,filtered.length)} de ${filtered.length}</small><button type="button" data-task-page="-1" ${from===0?'disabled':''}>Anterior</button><button type="button" data-task-page="1" ${from+10>=filtered.length?'disabled':''}>Siguiente</button></div>`:''}`;
  const jobs=(d.reminders||[]).slice().sort((a,b)=>String(a.run_at).localeCompare(String(b.run_at)));$('tdSendFoldCount').textContent=d.remindersError?'—':jobs.length;
  sends.innerHTML=d.remindersError?'<p>No se pudieron consultar los envíos. Actualiza para reintentar.</p>':jobs.map(j=>{const x=window.TPFOfferFollowup?.state?.offers.find(o=>String(o.id)===String(j.context?.offer_instance_id)),o=d.opps.find(o=>String(o.id)===String(x?.opportunity_id));return `<div class="tdListRow"><span><b>${esc(o?.client_name||x?.snapshot?.recipient_name||'Destinatario registrado')}</b><br>${esc(localDateTime(j.run_at))} · Madrid<small>${esc(x?.operator||'')} · Recordatorio si no responde</small></span>${x?`<button type="button" class="tdBtn" data-of-manage="${esc(x.id)}">Gestionar</button>`:''}</div>`}).join('')||'<p>No hay recordatorios de ofertas programados.</p>';
 }
@@ -414,6 +426,6 @@ function startWhenReady(){
   observer.observe(app,{attributes:true,attributeFilter:['class','hidden','style']});
   ready();
 }
-function install(){ensureCss();window.addEventListener('tpf:followup-ready',()=>{if(D.data&&dashboardOpen())render()});window.loadDashboard=load;window.addEventListener('tpf:sales-updated',()=>{D.lastLoad=0;if(!$('view-dashboard')?.classList.contains('hidden'))load()});window.addEventListener('tpf:opportunity-deleted',e=>removeConfirmed('opportunity',e.detail?.id));window.addEventListener('tpf:task-deleted',e=>removeConfirmed('task',e.detail?.id));document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))build()},true);startWhenReady()}
+function install(){ensureCss();window.addEventListener('tpf:followup-ready',()=>{if(D.data&&dashboardOpen())render()});window.loadDashboard=load;window.addEventListener('tpf:sales-updated',()=>{D.lastLoad=0;if(!$('view-dashboard')?.classList.contains('hidden'))load()});window.addEventListener('tpf:tasks-changed',()=>{D.revision++;D.lastLoad=0;if(D.busy)D.reloadPending=true;else if(dashboardOpen())load()});window.addEventListener('tpf:opportunity-deleted',e=>removeConfirmed('opportunity',e.detail?.id));window.addEventListener('tpf:task-deleted',e=>removeConfirmed('task',e.detail?.id));document.addEventListener('click',e=>{const el=e.target instanceof Element?e.target:null;if(!el)return;if(!el.closest('#tdMoreBtn,.tdMoreMenu'))$('tdMoreMenu')?.classList.add('hidden');if(el.closest('.nav[data-view="dashboard"]'))build()},true);startWhenReady()}
 M.register('dashboard-performance-guard',{install});
 })();
