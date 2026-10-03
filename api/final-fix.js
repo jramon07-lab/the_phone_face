@@ -62,7 +62,7 @@ function applyVideoPrivacy(html,req){
   const enabled=String(req?.query?.videoPrivacy||new URL(req?.url||'/', 'https://crm.local').searchParams.get('videoPrivacy')||'')==='1';
   if(!enabled)return html;
   // Only this explicitly requested recording view is hidden until its masks are ready.
-  const privateHead='<style id="tpf-video-private-start">html:not([data-video-private-ready="1"]) body{visibility:hidden!important}html[data-video-private-pending="1"] #app,html[data-video-private-pending="1"] dialog{visibility:hidden!important}</style><script src="/js/modules/video-privacy.js?v=20261004-recording-2"></script>';
+  const privateHead='<style id="tpf-video-private-start">html:not([data-video-private-ready="1"]) body{visibility:hidden!important}html[data-video-private-pending="1"] #app,html[data-video-private-pending="1"] dialog{visibility:hidden!important}</style><script src="/js/modules/video-privacy.js?v=20261004-recording-3"></script>';
   return html.replace(/<head(?:\s[^>]*)?>/i,match=>match+privateHead);
 }
 
