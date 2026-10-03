@@ -51,7 +51,7 @@ function decorateIdentity(){
  (async()=>{try{for(let n=0;n<ids.length;n+=100){const batch=ids.slice(n,n+100),r=await sb.from('records').select('id,data').eq('source_sheet','BASE DE DATOS').in('id',batch);if(r.error)throw r.error;if(revision!==dniRevision)return;batch.forEach(id=>dniRecords.set(id,null));(r.data||[]).forEach(r=>dniRecords.set(String(r.id),r));}decorateIdentity();}catch(e){console.warn('No se pudo cargar el DNI en Ventas',e);}})();
 }
 window.addEventListener('tpf:contacts-loaded',e=>{dniRevision++;dniPending.clear();dniRecords=new Map((e.detail?.records||[]).map(r=>[String(r.id),r]));decorateIdentity();});
-window.addEventListener('tpf:sales-updated',()=>{dniRevision++;dniRecords.clear();dniPending.clear();decorateIdentity();});
+window.addEventListener('tpf:sales-updated',()=>{dniRevision++;dniRecords.clear();dniPending.clear();decorateIdentity();requestAnimationFrame(decorateStageColors);});
 function open(id){try{return (0,eval)(`openOpportunityCard(${JSON.stringify(String(id))})`)}catch(e){console.error('sales-list native open',e);return false}}
 function close(){document.querySelectorAll('.tpfListMenu').forEach(x=>x.remove())}
 function wa(o,schedule){const p=String(o?.phone||'').trim();if(!p)return alert('Esta oportunidad no tiene teléfono.');if(typeof openWaQuick==='function'){openWaQuick({phone:p,name:String(o?.client_name||''),message:''});if(schedule)setTimeout(()=>document.getElementById('waScheduleBtn')?.click(),20);return}if(document.getElementById('waQuickPhone'))document.getElementById('waQuickPhone').value=p;document.getElementById('waQuickModal')?.classList.remove('hidden');if(schedule)document.getElementById('waQuickSend')?.click()}

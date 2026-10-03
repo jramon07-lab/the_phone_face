@@ -768,7 +768,7 @@ async function loadSales(){
  window.dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:salesCache.opportunities}}));
  renderSales();
 }
-window.moveOpp=async(id,stage)=>{const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stage,position:0});if(!payload){window.loadSales?.();return false;}const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);if(error){alert(error.message);return false;}else{loadSales();return true;}};
+window.moveOpp=async(id,stage)=>{const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stage,position:0});if(!payload){await window.loadSales?.();return false;}const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);if(error){alert(error.message);await loadSales();return false;}else{await loadSales();return true;}};
 
 window.deleteOpp=async(id)=>{
  if(!confirm("¿Eliminar esta oportunidad?"))return;

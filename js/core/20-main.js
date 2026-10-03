@@ -125,12 +125,12 @@ document.addEventListener("click",e=>{
 });
 
 window.moveOpp=async(id,stage)=>{
-  const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stage,position:0});if(!payload){loadSales();return false;}
+  const payload=await window.TPFRouterReturn.prepare(id,{stage_id:stage,position:0});if(!payload){await loadSales();return false;}
   const {error}=await sb.from("sales_opportunities").update(payload).eq("id",id);
-  if(error){alert(error.message);return false;}
+  if(error){alert(error.message);await loadSales();return false;}
   else{
     await runOpportunityAutomations(id);
-    loadSales();return true;
+    await loadSales();return true;
   }
 };
 window.deleteOpp=async(id)=>{
@@ -1698,6 +1698,13 @@ function renderSalesList(){
     target.innerHTML=markup;
     target._salesMarkup=markup;
     if(view){view.scrollTop=top;view.scrollLeft=left;}
+  }
+  // A native select changes before saving. Reconcile it after cancellation or a failed write,
+  // even when the persisted markup is unchanged; keep date drafts and row nodes intact.
+  const byId=new Map(rows.map(o=>[String(o.id),o]));
+  for(const row of target.querySelectorAll('.salesListRow')){
+    const o=byId.get(String(row.dataset.oppId)),select=row.querySelector('select');
+    if(o&&select&&select.value!==String(o.stage_id))select.value=String(o.stage_id);
   }
   updateSalesBulkUi();
 }
