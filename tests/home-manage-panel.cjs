@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 let result,calls=[];
 const query={update(v){calls.push(['update',v]);return this},eq(k,v){calls.push(['eq',k,v]);return this},select(){return this},single(){return Promise.resolve(result)}};
-const window={dispatchEvent(){calls.push(['event'])}},sandbox={window,document:{createElement(){return{}},head:{appendChild(){}}},sb:{from(table){assert.equal(table,'sales_opportunities');return query}},CustomEvent:class{},Intl,Date};
+const window={dispatchEvent(){calls.push(['event'])}},sandbox={window,document:{createElement(){return{}},head:{appendChild(){}}},sb:{from(table){assert.ok(['sales_opportunities','crm_offer_instances'].includes(table));calls.push(['table',table]);return query}},CustomEvent:class{},Intl,Date};
 vm.runInNewContext(fs.readFileSync('js/modules/home-manage-panel.js','utf8'),sandbox);
 const api=window.TPFHomeManage;
 const person=api.identity({client_name:'Titular',phone:'600000000',contract_party:{same:false,contact_name:'Gestora',contact_dni:'CONTACTO',holder_name:'Titular',holder_dni:'TITULAR',recipient_phone:''}},{snapshot:{recipient_phone:'699999999'}},{data:{APODO:'Alias'}});
@@ -15,8 +15,16 @@ assert.equal(person.name,'Gestora');assert.equal(person.dni,'CONTACTO');assert.e
  assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='updated_at'&&c[2]==='version'));
  calls=[];result={data:{...o,stage_id:'processed'}};
  await api.tramitate(o,{id:'processed'},prefs);
- assert.equal(calls[0][1].after_sale_preferences,prefs,'persist exactly the reviewed recipient message and timing');
+ assert.equal(calls.find(c=>c[0]==='update')[1].after_sale_preferences,prefs,'persist exactly the reviewed recipient message and timing');
  assert.ok(calls.some(c=>c[0]==='event'));
  await assert.rejects(api.tramitate(o,null,prefs),/columna Tramitado/);
+ const offer={id:'offer',updated_at:'offer-version',snapshot:{recipient_phone:'699000001',group_leader_offer_id:'group',previous_operator:'Old'},message_text:'Mensaje enviado',status:'following'};
+ calls=[];result={error:{code:'PGRST116'}};await assert.rejects(api.savePrevious(offer,'Orange'),/otro dispositivo/);assert.equal(offer.snapshot.previous_operator_override,undefined);assert.ok(!calls.some(c=>c[0]==='event'));
+ calls=[];result={data:{...offer,updated_at:'saved-version',snapshot:{...offer.snapshot,previous_operator_override:'Orange'}}};await api.savePrevious(offer,' Orange ');
+ const write=calls.find(c=>c[0]==='update')[1];assert.deepEqual(Object.keys(write),['snapshot']);assert.equal(write.snapshot.recipient_phone,'699000001');assert.equal(write.snapshot.group_leader_offer_id,'group');assert.equal(offer.message_text,'Mensaje enviado');assert.equal(offer.updated_at,'saved-version');assert.equal(api.identity({after_sale_preferences:{previous_operator:'Old'}},offer).previous,'Orange');
+ assert.ok(calls.some(c=>c[0]==='eq'&&c[1]==='updated_at'&&c[2]==='offer-version'));
+ result={data:{...offer,snapshot:{...offer.snapshot,previous_operator_override:''}}};await api.savePrevious(offer,'');assert.equal(api.identity({after_sale_preferences:{previous_operator:'Old'}},offer).previous,'Sin indicar');
+ await assert.rejects(api.savePrevious(offer,'x'.repeat(81)),/válida/);await assert.rejects(api.savePrevious(offer,'Orange\n'),/válida/);await assert.rejects(api.savePrevious({id:'missing'},'Orange'),/versión/);
+ assert.match(api.followHtml({status:'following'},{}),/Seguimiento activo/);assert.match(api.followHtml({status:'processed'},{}),/Excel/);
  console.log('home manage: identities, blank recipients, confirmed writes and concurrency passed');
 })().catch(e=>{console.error(e);process.exitCode=1});
