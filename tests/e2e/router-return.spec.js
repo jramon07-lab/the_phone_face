@@ -39,6 +39,34 @@ test('Tramitado previews and edits without writes; cancellation saves nothing',a
  expect(restored).toContain('Devolución del router de Yoigo');expect(restored).toContain('Instrucciones personalizadas antiguas.');expect(restored.match(/Devolución del router de/g)).toHaveLength(1);
 });
 
+test('Settings edits one shared operator, restores defaults and previews the allowed window',async({page})=>{
+ await page.clock.setFixedTime(new Date('2026-10-03T08:14:00Z'));
+ await page.setContent('<section id="view-settings"><div class="card">Configuración</div></section>');
+ await page.evaluate(()=>{window.rows={};window.writes=[];window.fail=false;window.sb={from(){let row;return{select(){return this},async like(){return{data:Object.values(rows)}},upsert(value){row=value;return this},async single(){if(fail)return{error:{message:'Sin conexión'}};rows[row.key]=row;writes.push(row);return{data:row}}}}};});
+ for(const file of ['router-return','router-return-settings','admin-sections'])await page.addScriptTag({path:path.resolve('js/modules/'+file+'.js')});
+ await page.locator('#view-settings-router-texts-tab').click();const root=page.locator('#tpfRouterSettingsCard');
+ await expect(root.locator('[data-settings-text]')).toBeEnabled();
+ await root.locator('[data-settings-search]').fill('masmovil');await root.locator('[data-settings-operator="MásMóvil"]').click();
+ await root.locator('[data-settings-text]').fill('Texto compartido de MásMóvil.');
+ await expect(root.locator('[data-settings-preview]')).toContainText('Devolución del router de MásMóvil');
+ await root.locator('[data-settings-save]').click();await expect(root.locator('[data-settings-status]')).toContainText('guardado para todos');
+ expect(await page.evaluate(()=>Object.keys(rows))).toEqual(['crm_router_template:m%C3%A1sm%C3%B3vil']);
+ await root.locator('[data-settings-restore]').click();await expect(root.locator('[data-settings-text]')).toHaveValue(/código por SMS/);
+ await root.locator('[data-settings-add]').click();await root.locator('[data-settings-name]').fill('Euskaltel');await root.locator('[data-settings-create]').click();
+ await expect(root.locator('[data-settings-restore]')).toBeDisabled();
+ await root.locator('[data-settings-text]').fill('Entrega el equipo según las instrucciones de Euskaltel.');
+ await page.evaluate(()=>window.fail=true);await root.locator('[data-settings-save]').click();await expect(root.locator('[data-settings-status]')).toContainText('Sin conexión');await expect(root.locator('[data-settings-text]')).toHaveValue(/Entrega el equipo/);
+ await page.evaluate(()=>window.fail=false);await root.locator('[data-settings-save]').click();await expect(root.locator('[data-settings-status]')).toContainText('guardado para todos');
+ await page.addScriptTag({path:path.resolve('js/modules/router-return.js')});await root.locator('[data-settings-reload]').click();await expect(root.locator('[data-settings-text]')).toHaveValue(/Entrega el equipo/);
+ await page.evaluate(()=>{const div=document.createElement('div');div.id='forecastFixture';document.body.appendChild(div);window.fixture=TPFRouterReturn.bind(div,{available:true,recipient:'Ana',text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos.'},{preferences:{previous_operator:'Yoigo'}});});
+ const form=page.locator('#forecastFixture');await expect(form.locator('[data-forecast]')).toContainText('lunes, 5 de octubre');await expect(form.locator('[data-forecast]')).toContainText('10:00');
+ await expect(form.locator('[data-edit-template]')).toHaveText('Editar texto de Yoigo');
+ await form.locator('[data-text]').fill('Texto solo para Ana');expect(await page.evaluate(()=>writes.length)).toBe(3);
+ await form.locator('[data-choose-time]').click();await form.locator('[data-date]').fill('2026-10-05');await form.locator('[data-hour]').selectOption('14');await form.locator('[data-minute]').selectOption('00');
+ await expect(form.locator('[data-forecast]')).toContainText('17:30');expect(await page.evaluate(()=>fixture.get().send_at)).toBe('2026-10-05T12:00:00.000Z');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
 test('Offer and direct sale party preview survives unavailable linked contacts',async({page,context})=>{
  const fs=require('node:fs');await context.route('**/*',route=>route.abort());
  await page.setContent('<button id="offer">Enviar oferta</button><button id="direct">Venta directa</button>');
@@ -123,7 +151,7 @@ test('Shared operator text persists across customers and fresh sessions; failure
  await page.locator('#start').click();
  for(const operator of ['Digi','Pepephone','Jazztel'])await expect(page.locator('[data-previous] option[value="'+operator+'"]')).toHaveCount(1);
  await page.locator('[data-previous]').selectOption('Digi');
- await page.locator('[data-template-panel] summary').click();
+ await page.locator('[data-edit-template]').click();
  await page.locator('[data-template]').fill('Contacta con el operador. Guarda el justificante.');
  await expect(page.locator('[data-text]')).toHaveValue(/Hola Ana[\s\S]*Guarda el justificante/);
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
@@ -136,8 +164,8 @@ test('Shared operator text persists across customers and fresh sessions; failure
  await expect(page.locator('[data-text]')).toHaveValue(/Hola Luis[\s\S]*Guarda el justificante/);
  await expect(page.locator('[data-text]')).toHaveValue(/Devolución del router de Digi/);
  await expect(page.locator('[data-send]')).toBeChecked();
- await page.locator('[data-template-panel] summary').click();
- await page.locator('[data-new-operator]').fill('Operador Nuevo');await page.locator('[data-add-operator]').click();
+ await page.locator('[data-edit-template]').click();
+ await page.locator('[data-show-add]').click();await page.locator('[data-new-operator]').fill('Operador Nuevo');await page.locator('[data-add-operator]').click();
  await page.locator('[data-template]').fill('Instrucciones reutilizables de este operador.');
  await page.evaluate(()=>window.failSave=true);
  await page.getByRole('button',{name:'Confirmar y continuar'}).click();
@@ -147,6 +175,6 @@ test('Shared operator text persists across customers and fresh sessions; failure
  await page.addScriptTag({path:source});await page.locator('#start').click();await page.locator('[data-previous]').selectOption('Operador Nuevo');
  await expect(page.locator('[data-text]')).toHaveValue(/Hola Luis[\s\S]*Instrucciones reutilizables/);
  await expect(page.locator('[data-text]')).toHaveValue(/Devolución del router de Operador Nuevo/);
- await page.locator('[data-template-panel] summary').click();await page.locator('[data-template]').fill('Borrador cancelado');
+ await page.locator('[data-edit-template]').click();await page.locator('[data-template]').fill('Borrador cancelado');
  await page.getByRole('button',{name:'Cancelar',exact:true}).click();expect(await page.evaluate(()=>saved.length)).toBe(2);
 });
