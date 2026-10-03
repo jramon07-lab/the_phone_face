@@ -24,6 +24,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify router templates on desktop and mobile with isolated fixtures
         run: npx playwright test --config=tests/e2e/router-return.config.js --workers=2 --retries=0 --reporter=line
+      - name: Verify home management drawer with isolated fixtures
+        run: npx playwright test --config=tests/e2e/home-manage.config.js --workers=2 --retries=0 --reporter=line
       - name: Verify CRM module files and registrations
         shell: bash
         run: |
