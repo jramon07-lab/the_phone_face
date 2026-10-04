@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const vm=require('node:vm');
+const fs=require('node:fs');
+const scope={window:{},Intl,Date};
+vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../js/modules/installation-communications.js'),'utf8'),scope);
+const api=scope.window.TPFInstallations;
+const data={recipient:'Ana',operator:'Yoigo',installation:{previous_operator:'O2',return_text:'Hola {nombre} 👋\n\n📦 Devuelve el router de O2 en Movistar.',config_snapshot:{confirmed_text:'Thanks should not be sent'}}};
+assert.equal(api.returnMessage(data),'Hola Ana 👋\n\n📦 Devuelve el router de O2 en Movistar.');
+assert.equal(api.returnMessage({...data,installation:{...data.installation,previous_operator:'Ninguno'}}),'');
+assert.equal(api.returnMessage({...data,installation:{...data.installation,return_message:'Previously sent message'}}),'Previously sent message');
+const party={holder_name:'Titular Ejemplo',holder_record_id:'holder',recipient_contact_id:'manager'};
+const rendered=api.returnMessage({...data,contract_party:party});
+assert.ok(rendered.includes('Sobre el contrato de Titular Ejemplo.'));
+assert.ok(!rendered.includes('Thanks should not'));
+console.log('Installation reply preview: passed');
