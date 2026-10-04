@@ -45,6 +45,9 @@ async function recordFailure(message:string,detail:unknown){
 // esperen a la cola periódica. Ante cualquier ambigüedad se dejan en cola:
 // nunca se envía un mensaje a otra oferta ni se duplica un envío.
 async function sendOfferReplyNow(incomingMessageId:string,chatId:string,secret:string){
+  const {data:engine,error:engineError}=await sb.rpc('crm_server_automations_enabled');
+  if(engineError)throw engineError;
+  if(engine!==true)return {sent:false,reason:'automation_engine_paused'};
   const {data:decision,error:decisionError}=await sb.from("crm_offer_response_states")
     .select("offer_instance_id,action")
     .eq("decision_message_id",incomingMessageId)
