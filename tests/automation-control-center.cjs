@@ -22,7 +22,7 @@ assert.equal(api.operatorOf({name:'Revisión MásMóvil'},{}),'MásMóvil');
 assert.match(source,/crm_set_automation_job_pause/,'debe pausar y reanudar de forma controlada');
 assert.match(source,/crm_cancel_automation_job/,'debe cancelar sin borrar el historial');
 assert.match(source,/crm_retry_automation_step/,'debe reutilizar el reintento seguro y deduplicado');
-assert.match(source,/Posibles duplicados activos/,'debe señalar posibles duplicados');
+assert.match(source,/Posibles duplicados pendientes/,'debe señalar posibles duplicados');
 assert.match(source,/Resultado incierto|Revisar antes de reenviar/,'debe impedir reenvíos ciegos');
 assert.match(source,/view-whatsapp.*wapHeaderActions/,'el botón debe insertarse en WhatsApp programados');
 assert.match(source,/view-whatsapplive.*ccLaunch.*remove/,'el botón no debe recargar las conversaciones normales');
@@ -35,3 +35,27 @@ assert.match(sql,/grant execute .* to authenticated/i,'las funciones deben exigi
 assert.match(sql,/revoke all .* from public, anon/i,'las funciones no deben quedar públicas');
 
 console.log('PASS automation control center: estados, seguridad, duplicados y acciones sin borrado');
+
+// Behavioral regression: mix manual/automatic rows, deduplicate provider receipts,
+// order pending sends and expose editing only before delivery.
+const nodes={ccStatus:{value:'pending'},ccSearch:{value:''},ccOperator:{value:''},ccSource:{value:''}};
+const calls=[];
+const sandbox={window:{TPFModules:{register(){}}},document:{getElementById:id=>nodes[id]||null},
+sb:{rpc:async(name,args)=>{calls.push({name,args});return {data:'paused'}}}};
+vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram};window.TPFAutomationControlCenter={statusOf'),sandbox);
+const t=sandbox.window.__test,a=sandbox.window.TPFAutomationControlCenter;
+t.state.jobs=[
+{id:'later',action_type:'send_whatsapp_now',status:'pending',run_at:'2026-11-02T10:00:00Z',context:{name:'Ejemplo automático',phone:'34000000001'},action_config:{text:'Oferta'}},
+{id:'delivered',action_type:'send_whatsapp_now',status:'cancelled',context:{phone:'34000000002'},action_config:{text:'Mensaje',__delivery_receipt:{idMessage:'provider1',acceptedAt:'2026-10-04T10:00:00Z'}}}
+];
+t.state.programs=[{id:'manual',status:'pending',whatsapp_enabled:true,whatsapp_delivery_status:'pending',whatsapp_message:'Mensaje manual',whatsapp_scheduled_at:'2026-11-01T10:00:00Z',customer_name:'Ejemplo manual',whatsapp_phone:'34000000003',updated_at:'2026-10-04T09:00:00Z'}];
+t.state.history=[{source:'automation',id:'delivered',message_key:'provider1',sent_at:'2026-10-04T10:00:00Z',message:'Mensaje',phone:'34000000002'}];
+const rows=a.makeRows();
+assert.equal(rows.filter(x=>x.messageKey==='provider1').length,1);
+assert.equal(rows.find(x=>x.id==='delivered').status,'sent');
+assert.deepEqual(Array.from(t.filtered(),x=>x.id),['manual','later']);
+assert.match(t.actions(rows.find(x=>x.id==='manual')),/>Editar</);
+assert.doesNotMatch(t.actions(rows.find(x=>x.id==='later')),/>Editar</);
+assert.equal(t.actions(rows.find(x=>x.id==='delivered'),false),'');
+assert.equal(t.actions({source:'program',id:'sending',status:'sending'},false),'');
+(async()=>{await t.updateProgram(rows.find(x=>x.id==='manual'),'pause');assert.equal(calls[0].name,'crm_control_scheduled_whatsapp');assert.equal(calls[0].args.p_expected_at,'2026-10-04T09:00:00Z');console.log('PASS unified sends: ordering, receipt history, editing eligibility and guarded RPC');})().catch(e=>{console.error(e);process.exitCode=1});
