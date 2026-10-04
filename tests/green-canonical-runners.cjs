@@ -24,6 +24,7 @@ function loadEdge(slug, options = {}) {
   const sb = {
     async rpc(name, args) {
       rpcs.push({ name, args });
+      if (name === 'crm_server_automations_enabled') return { data: options.enabled !== false, error: null };
       if (name === 'crm_check_runner_secret') return { data: args.p_secret === secret, error: null };
       if (name === 'crm_lifecycle_job_guard') return { data: { allow: true }, error: null };
       if (name === 'crm_recover_stale_scheduled_whatsapp') return { data: 0, error: null };
@@ -245,4 +246,12 @@ test('webhook: unavailable provider defers the claimed reply without sending', a
   assert.equal(result.body.immediate.reason, 'whatsapp_unavailable');
   assert.deepEqual(edge.calls.map(call => call.action), ['state']);
   assert.equal(edge.queries.at(-1).value.status, 'pending');
+});
+
+test('webhook: paused automation engine stores incoming message without dispatching a reply', async () => {
+  const edge = loadEdge('crm-green-webhook', { enabled: false, query: webhookQuery });
+  const result = await invoke(edge, { webhook: true, body: webhookBody });
+  assert.equal(result.body.immediate.reason, 'automation_engine_paused');
+  assert.equal(edge.calls.length, 0);
+  assert.ok(edge.queries.every(query => query.table === 'wa_messages'));
 });
