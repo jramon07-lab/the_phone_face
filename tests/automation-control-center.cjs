@@ -42,7 +42,7 @@ const nodes={ccStatus:{value:'pending'},ccSearch:{value:''},ccOperator:{value:''
 const calls=[];
 const sandbox={window:{TPFModules:{register(){}}},document:{getElementById:id=>nodes[id]||null},
 sb:{rpc:async(name,args)=>{calls.push({name,args});return {data:'paused'}}}};
-vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram};window.TPFAutomationControlCenter={statusOf'),sandbox);
+vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs};window.TPFAutomationControlCenter={statusOf'),sandbox);
 const t=sandbox.window.__test,a=sandbox.window.TPFAutomationControlCenter;
 t.state.jobs=[
 {id:'later',action_type:'send_whatsapp_now',status:'pending',run_at:'2026-11-02T10:00:00Z',context:{name:'Ejemplo automático',phone:'34000000001'},action_config:{text:'Oferta'}},
@@ -64,3 +64,27 @@ t.state.jobs.push({id:'manager',action_type:'send_whatsapp_now',status:'pending'
 const preview=a.makeRows().find(x=>x.id==='manager').message;
 assert.match(preview,/Hola Gestor\nSobre el contrato de Titular Apellido\./);
 assert.match(preview,/Vodafone: 59,00 €/);
+
+assert.equal(t.reasonCategory({source:'automation',raw:{action_config:{offer_phase:'initial'},context:{lifecycle:{mode:'offer'}}},auto:{name:'OFERTAS · Seguimiento general'}}),'offer');
+assert.equal(t.reasonCategory({raw:{action_config:{offer_phase:'reminder_2'}}}),'reminder');
+assert.equal(t.reasonCategory({auto:{name:'POSVENTA · Yoigo · 3 meses'}}),'followup');
+assert.equal(t.reasonCategory({auto:{name:'POSVENTA · Yoigo · 11 meses'}}),'review');
+assert.equal(t.reasonCategory({raw:{action_config:{offer_phase:'router_return'}}}),'return');
+assert.equal(t.dateMatches({when:'2026-10-03T22:30:00Z'},'today','','','2026-10-04T10:00:00Z'),true,'Madrid day starts before UTC midnight');
+assert.equal(t.dateMatches({when:'2026-10-05T10:00:00Z'},'tomorrow','','','2026-10-04T10:00:00Z'),true);
+assert.equal(t.dateMatches({when:'2026-10-05T10:00:00Z'},'week','','','2026-10-04T10:00:00Z'),false,'next Monday is not this week');
+assert.equal(t.dateMatches({when:'2026-10-04T10:00:00Z'},'range','2026-10-03','2026-10-05'),true);
+assert.equal(t.dateMatches({when:'2026-10-04T10:00:00Z'},'range','2026-10-05','2026-10-03'),false);
+assert.equal(t.needsReview({status:'sent',when:'2026-10-01T10:00:00Z'},'overdue','2026-10-04T10:00:00Z'),false);
+assert.equal(t.needsReview({status:'pending',when:'2026-10-01T10:00:00Z'},'overdue',Date.parse('2026-10-04T10:00:00Z')),true);
+assert.equal(t.needsReview({status:'uncertain'},'needs'),true);
+nodes.ccStatus.value='';nodes.ccReason={value:'reminder'};nodes.ccDate={value:''};nodes.ccReview={value:''};nodes.ccSource.value='';
+assert.deepEqual(Array.from(t.filtered(),x=>x.id),['manager']);
+nodes.ccReason.value='';nodes.ccDate.value='range';nodes.ccFrom={value:'2026-11-01'};nodes.ccTo={value:'2026-11-01'};
+assert.deepEqual(Array.from(t.filtered(),x=>x.id),['manual']);
+console.log('PASS send filters: reason, inclusive Madrid dates, review and combined filters');
+
+assert.equal(t.madridBoundary('2026-10-04'),'2026-10-03T22:00:00.000Z');
+assert.equal(t.madridBoundary('2026-10-26'),'2026-10-25T23:00:00.000Z','DST boundary uses Madrid offset');
+nodes.ccDate.value='range';nodes.ccFrom.value='2026-10-24';nodes.ccTo.value='2026-10-25';
+assert.equal(t.historyArgs().p_to,'2026-10-25T23:00:00.000Z','inclusive custom end becomes next local midnight');

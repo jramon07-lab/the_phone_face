@@ -35,4 +35,4 @@ const files=['automations-stability-guard.js','contacts-active-only.js','contact
   document.head.appendChild(s);
 })();
 
-(function(){const s=document.createElement('script');s.src='/js/modules/whatsapp-send-monitor.js?v=20261004-control-1';s.async=false;document.head.appendChild(s);})();
+(function(){const s=document.createElement('script');s.src='/js/modules/whatsapp-send-monitor.js?v=20261004-compact-1';s.async=false;document.head.appendChild(s);})();
