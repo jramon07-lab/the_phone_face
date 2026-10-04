@@ -54,7 +54,11 @@ const rows=a.makeRows();
 assert.equal(rows.filter(x=>x.messageKey==='provider1').length,1);
 assert.equal(rows.find(x=>x.id==='delivered').status,'sent');
 assert.deepEqual(Array.from(t.filtered(),x=>x.id),['manual','later']);
-assert.match(t.actions(rows.find(x=>x.id==='manual')),/>Editar</);
+assert.match(t.actions(rows.find(x=>x.id==='manual')),/>Gestionar</);
+assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual')),/data-cc-action/,'la lista solo abre el detalle');
+assert.match(t.actions(rows.find(x=>x.id==='manual'),false),/>Editar</);
+assert.match(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Pausar</);
+assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Editar</,'el editor no debe abrir un segundo editor');
 assert.doesNotMatch(t.actions(rows.find(x=>x.id==='later')),/>Editar</);
 assert.equal(t.actions(rows.find(x=>x.id==='delivered'),false),'');
 assert.equal(t.actions({source:'program',id:'sending',status:'sending'},false),'');
@@ -88,3 +92,4 @@ assert.equal(t.madridBoundary('2026-10-04'),'2026-10-03T22:00:00.000Z');
 assert.equal(t.madridBoundary('2026-10-26'),'2026-10-25T23:00:00.000Z','DST boundary uses Madrid offset');
 nodes.ccDate.value='range';nodes.ccFrom.value='2026-10-24';nodes.ccTo.value='2026-10-25';
 assert.equal(t.historyArgs().p_to,'2026-10-25T23:00:00.000Z','inclusive custom end becomes next local midnight');
+
