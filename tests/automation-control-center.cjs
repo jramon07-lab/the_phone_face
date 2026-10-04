@@ -93,3 +93,15 @@ assert.equal(t.madridBoundary('2026-10-26'),'2026-10-25T23:00:00.000Z','DST boun
 nodes.ccDate.value='range';nodes.ccFrom.value='2026-10-24';nodes.ccTo.value='2026-10-25';
 assert.equal(t.historyArgs().p_to,'2026-10-25T23:00:00.000Z','inclusive custom end becomes next local midnight');
 
+const octoberNow='2026-10-04T10:00:00Z';
+assert.equal(t.dateMatches({when:'2026-09-30T22:15:00Z'},'month','','',octoberNow),true,'month starts at Madrid midnight');
+assert.equal(t.dateMatches({when:'2026-10-31T23:00:00Z'},'month','','',octoberNow),false,'next Madrid month excluded');
+nodes.ccDate={value:'month'};
+const octoberBounds=t.historyArgs(new Date(octoberNow).getTime());
+assert.equal(octoberBounds.p_from,'2026-09-30T22:00:00.000Z');
+assert.equal(octoberBounds.p_to,'2026-10-31T23:00:00.000Z','month history handles October DST change');
+nodes.ccDate.value='';nodes.ccStatus.value='pending';nodes.ccSource.value='automation';nodes.ccSearch.value='';nodes.ccOperator.value='';nodes.ccReason={value:''};nodes.ccReview={value:''};
+t.state.rows=[{id:'auto',source:'automation',status:'pending',when:'2026-10-05T10:00:00Z'},{id:'mine',source:'program',status:'pending',when:'2026-10-06T10:00:00Z'}];
+assert.deepEqual(Array.from(t.filtered(),r=>r.id),['auto']);
+assert.deepEqual(Array.from(t.filtered('program'),r=>r.id),['mine'],'source counts use same filters independently');
+console.log('PASS send sources and Madrid calendar month boundaries');
