@@ -43,7 +43,40 @@ function templateOf(config){
  if(config?.template_id){const found=state.templates.find(x=>String(x.id)===String(config.template_id));if(found)return found}
  const index=Number(config?.template_index);return Number.isInteger(index)&&index>=0?state.templates[index]||null:null;
 }
-function messageOf(source,row){if(source==='program')return String(row.whatsapp_message||'');const config=row.action_config||{},tpl=templateOf(config);return String(config.text||tpl?.body||'')}
+function contactVar(ctx,key){const data=ctx?.contact_data&&typeof ctx.contact_data==="object"?ctx.contact_data:{};const wanted=String(key||"").trim().toLowerCase();for(const [k,v] of Object.entries(data)){if(String(k).trim().toLowerCase()===wanted)return String(v??"");}return "";}
+function firstName(ctx){
+  const explicit=String(ctx?.contract_party?.recipient_first_name||ctx?.recipient_first_name||"").trim();if(explicit)return explicit;
+  const party=ctx?.contract_party;
+  if(party?.recipient==="holder")return String(party.holder_first_name||"").trim()||String(party.recipient_name||ctx?.name||"").trim().split(/\s+/)[0]||"cliente";
+  // A separate manager must never inherit the customer's first name.
+  if(ctx?.recipient_contact_id&&ctx.recipient_contact_id!==ctx.contact_id)return String(ctx?.name||"").trim().split(/\s+/)[0]||"cliente";
+  return String(ctx?.contact_data?.NOMBRE||"").trim()||String(ctx?.name||"").trim().split(/\s+/)[0]||"cliente";
+}
+function vars(text,ctx){return String(text||"")
+  .replaceAll("{{contacto.nombre}}",String(ctx?.name||""))
+  .replaceAll("{{contacto.telefono}}",String(ctx?.phone||""))
+  .replace(/\{\{contacto\.([^}]+)\}\}/gi,(_m,k)=>contactVar(ctx,k))
+  .replace(/\{contacto\.([^}]+)\}/gi,(_m,k)=>contactVar(ctx,k))
+  .replaceAll("{nombre}",String(ctx?.name||""))
+  .replaceAll("{nombre_seguimiento}",firstName(ctx))
+  .replaceAll("{dni}",String(ctx?.dni||""))
+  .replaceAll("{telefono}",String(ctx?.phone||""))
+  .replaceAll("{oferta_mensaje}",String(ctx?.oferta_mensaje||""))
+  .replaceAll("{operador}",String(ctx?.operator||""))
+  .replaceAll("{precio_total}",String(ctx?.precio_total||""))
+  .replaceAll("{mensaje}",String(ctx?.message||""));}
+function contractMessage(text,party){
+ const body=String(text||'');if(!body.trim()||!party)return body;
+ const holder=String(party.holder_name||'').replace(/\s+/g,' ').trim();
+ const different=party.holder_record_id&&party.recipient_contact_id?party.holder_record_id!==party.recipient_contact_id:party.same===false&&party.recipient==='contact';
+ if(!different||!holder)return body;
+ const reference='Sobre el contrato de '+holder+'.';
+ if(body.includes(reference))return body;
+ const firstBreak=body.indexOf('\n');
+ return /^Hola\b/i.test(body)&&firstBreak>=0?body.slice(0,firstBreak)+'\n'+reference+body.slice(firstBreak):reference+'\n\n'+body;
+}
+
+function messageOf(source,row){if(source==='program')return String(row.whatsapp_message||'');const config=row.action_config||{},tpl=templateOf(config);let text=String(config.text||tpl?.body||'');if(['reminder_2','reminder_5'].includes(config.offer_phase))text=text.replaceAll('{nombre}','{nombre_seguimiento}');return contractMessage(vars(text,row.context||{}),row.context?.contract_party)}
 function reasonOf(source,row,auto){
  if(source==='program')return row.description||row.title||'WhatsApp programado';
  const trigger={opportunity_stage:'Cambio de columna',label_assigned:'Etiqueta asignada',message_received:'WhatsApp recibido',message_contains:'Palabra recibida',unanswered:'Sin respuesta'}[auto?.trigger_type]||'Automatización';
@@ -73,9 +106,9 @@ function render(){
  const counts={pending:Number(state.monitor?.pending_today||0)+Number(state.monitor?.manual_pending_today||0),sent:Number(state.monitor?.sent_today||0),failed:Number(state.monitor?.failed_24h||0),duplicates:Number(state.monitor?.duplicate_pending||0)};
  [['ccKpiPending',counts.pending],['ccKpiSent',counts.sent],['ccKpiFailed',counts.failed],['ccKpiDuplicate',counts.duplicates]].forEach(([id,value])=>{if($(id))$(id).textContent=state.monitor?String(value):'—'});
  const body=$('ccRows');if(!body)return;
- if(!rows.length){$('ccPageInfo').textContent='0 resultados';$('ccPrev').disabled=true;$('ccNext').disabled=true;$('ccOlder').hidden=state.history.length>=state.historyTotal;body.innerHTML='<div class="ccEmpty"><b>Sin envíos</b><span>No hay registros que coincidan con los filtros.</span></div>';return}
+ if(!rows.length){$('ccPageInfo').textContent='0 resultados';$('ccPrev').disabled=true;$('ccNext').disabled=true;$('ccOlder').hidden=state.history.length>=state.historyTotal||!['','sent'].includes($('ccStatus')?.value||'');body.innerHTML='<div class="ccEmpty"><b>Sin envíos</b><span>No hay registros que coincidan con los filtros.</span></div>';return}
  state.page=Math.min(state.page,Math.max(1,Math.ceil(rows.length/30)));
- $('ccPageInfo').textContent=rows.length+' resultados · Página '+state.page+' de '+Math.max(1,Math.ceil(rows.length/30));
+ $('ccPageInfo').textContent=rows.length+(rows.length===1?' resultado':' resultados')+' · Página '+state.page+' de '+Math.max(1,Math.ceil(rows.length/30));
  $('ccPrev').disabled=state.page<=1;$('ccNext').disabled=state.page*30>=rows.length;
  $('ccOlder').hidden=state.history.length>=state.historyTotal;
  body.innerHTML=rows.slice((state.page-1)*30,state.page*30).map(row=>`<article class="ccRow ${row.duplicate?'duplicate':''}">

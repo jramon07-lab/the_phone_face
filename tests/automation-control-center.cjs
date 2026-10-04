@@ -59,3 +59,8 @@ assert.doesNotMatch(t.actions(rows.find(x=>x.id==='later')),/>Editar</);
 assert.equal(t.actions(rows.find(x=>x.id==='delivered'),false),'');
 assert.equal(t.actions({source:'program',id:'sending',status:'sending'},false),'');
 (async()=>{await t.updateProgram(rows.find(x=>x.id==='manual'),'pause');assert.equal(calls[0].name,'crm_control_scheduled_whatsapp');assert.equal(calls[0].args.p_expected_at,'2026-10-04T09:00:00Z');console.log('PASS unified sends: ordering, receipt history, editing eligibility and guarded RPC');})().catch(e=>{console.error(e);process.exitCode=1});
+
+t.state.jobs.push({id:'manager',action_type:'send_whatsapp_now',status:'pending',context:{name:'Gestor Apellido',contact_id:'holder',recipient_contact_id:'manager',contact_data:{NOMBRE:'Titular'},operator:'Vodafone',precio_total:'59,00',contract_party:{same:false,recipient:'contact',holder_name:'Titular Apellido'}},action_config:{offer_phase:'reminder_2',text:'Hola {nombre}\nOferta de {operador}: {precio_total} €/mes'}});
+const preview=a.makeRows().find(x=>x.id==='manager').message;
+assert.match(preview,/Hola Gestor\nSobre el contrato de Titular Apellido\./);
+assert.match(preview,/Vodafone: 59,00 €/);
