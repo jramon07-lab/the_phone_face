@@ -460,6 +460,7 @@ function crmApplyExpandedPermissions(){
   crmShowNav('.nav[data-view="agenda"]',crmCan("can_view_agenda")||crmCan("can_manage_agenda"));
   crmShowNav('.nav[data-view="whatsapplive"]',crmCan("can_use_whatsapp"));
   crmShowNav('.nav[data-view="whatsapp"]',crmCan("can_schedule_whatsapp"));
+  crmShowNav('.nav[data-view="sendcontrol"]',crmCan("can_schedule_whatsapp")||crmCan("can_manage_automations"));
   crmShowNav('.nav[data-view="labels"]',crmCan("can_manage_labels"));
   crmShowNav('.nav[data-view="automations"]',crmCan("can_manage_automations"));
   crmShowNav('.nav[data-view="settings"]',crmCan("can_view_settings"));
@@ -537,6 +538,7 @@ function applyCurrentPermissions(){
  show('[data-view="agenda"]',perms?.can_view_agenda||perms?.can_manage_agenda);
  show('[data-view="whatsapplive"]',perms?.can_use_whatsapp);
  show('[data-view="whatsapp"]',perms?.can_schedule_whatsapp);
+ show('[data-view="sendcontrol"]',perms?.can_schedule_whatsapp||perms?.can_manage_automations);
  show('[data-view="labels"]',perms?.can_manage_labels);
  show('[data-view="automations"]',perms?.can_manage_automations);
  show('[data-view="settings"]',perms?.can_view_settings);
@@ -1763,3 +1765,4 @@ renderSales=function(){
 })();
 
 /* ---- script inline extraído ---- */
+

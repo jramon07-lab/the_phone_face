@@ -397,3 +397,19 @@
 .tdTaskComplete{width:30px;height:30px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#64748b;cursor:pointer;font-size:15px}.tdTaskComplete:hover{background:#e5f6ec;color:#127047;border-color:#92cba9}
 .tdTaskPaging small{margin-right:auto}.tdTaskPaging button:disabled{opacity:.45;cursor:default}
 @media(max-width:650px){.tdTaskRow{grid-template-columns:30px minmax(0,1fr) auto;gap:8px}.tdTaskDate{grid-column:2;grid-row:2}.tdTaskRow>.tdBtn{grid-column:3;grid-row:1 / span 2}.tdTaskComplete{grid-row:1 / span 2}}
+
+
+/* Compact home actions and activity summary. */
+#view-dashboard.tpfDashPro{padding:18px 24px!important}
+#view-dashboard.tpfDashPro:not(.hidden)>.tdCommandBar{margin-bottom:14px;gap:10px}
+#view-dashboard.tpfDashPro .tdPageIntro h1{font-size:25px;margin-bottom:3px}
+#view-dashboard.tpfDashPro .tdDate #mrDashboard{display:inline-flex;width:auto;margin:0 0 0 7px;padding:3px 8px;border:1px solid #d6e4f6;border-radius:7px;background:#eaf2ff;color:#285783;font-size:11px;line-height:1.4}
+#view-dashboard.tpfDashPro .tdPulse{padding:9px 12px;gap:8px;min-height:66px}
+#view-dashboard.tpfDashPro .tdPulseIcon{width:32px;height:32px;flex-basis:32px}
+#view-dashboard.tpfDashPro .tdPulse b{font-size:22px}
+#view-dashboard.tpfDashPro .tdPulseGrid{gap:8px;margin-bottom:12px}
+#view-dashboard.tpfDashPro .tdCard{padding:16px}
+#view-dashboard.tpfDashPro .tdHead{margin-bottom:10px}
+#view-dashboard.tpfDashPro .tdWorkspaceControls{padding-bottom:10px;margin-bottom:10px;gap:8px}
+@media(min-width:1250px){#view-dashboard.tpfDashPro:not(.hidden)>.tdCommandBar{flex-wrap:nowrap}#view-dashboard.tpfDashPro .tdCommandActions{flex-wrap:nowrap}#view-dashboard.tpfDashPro .tdPageIntro{flex:1}}
+@media(max-width:700px){#view-dashboard.tpfDashPro{padding:14px!important}#view-dashboard.tpfDashPro .tdDate #mrDashboard{margin-left:0}#view-dashboard.tpfDashPro .tdCommandActions{gap:6px}}
