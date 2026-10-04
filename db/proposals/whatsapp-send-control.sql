@@ -438,3 +438,35 @@ begin
  and action_type not in ('record_offer_month','record_sale_month') and not(action_config ? '__delivery_receipt');
  get diagnostics changed=row_count;return changed;
 end;$$;
+CREATE OR REPLACE FUNCTION crm_private.whatsapp_sent_records() RETURNS TABLE(message_key text,sent_at timestamptz) LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
+ with messages as (
+ select coalesce(nullif(id_message,''),'wa:'||id::text) key,
+ case when ts>1000000000000 then to_timestamp(ts::double precision/1000) when ts>0 then to_timestamp(ts::double precision) else created_at end at_time from public.wa_messages where direction='out'
+ union all
+ select action_config#>>'{__delivery_receipt,idMessage}',coalesce(nullif(action_config#>>'{__delivery_receipt,acceptedAt}','')::timestamptz,completed_at,updated_at)
+ from public.crm_server_automation_jobs where action_type in ('send_template','send_whatsapp_now','__send_whatsapp','schedule_whatsapp') and nullif(action_config#>>'{__delivery_receipt,idMessage}','') is not null
+ union all
+ select coalesce(nullif(whatsapp_provider_message_id,''),'agenda:'||id::text),whatsapp_sent_at
+ from public.agenda_items where whatsapp_delivery_status='sent' and whatsapp_sent_at is not null
+ )
+ select key,min(at_time) from messages where key is not null group by key;
+$$;
+REVOKE ALL ON FUNCTION crm_private.whatsapp_sent_records() FROM public,anon,authenticated;
+CREATE OR REPLACE FUNCTION public.crm_whatsapp_send_monitor() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+declare start_at timestamptz:=((current_timestamp at time zone 'Europe/Madrid')::date+time '00:00') at time zone 'Europe/Madrid';end_at timestamptz:=(((current_timestamp at time zone 'Europe/Madrid')::date+1)+time '00:00') at time zone 'Europe/Madrid';result jsonb;
+begin
+ if auth.uid() is null or not public.current_user_is_admin() then raise exception 'Solo administración';end if;
+ select jsonb_build_object(
+ 'enabled',public.crm_server_automations_enabled(),
+ 'sent_today',(select count(*) from crm_private.whatsapp_sent_records() where sent_at>=start_at and sent_at<end_at),
+ 'pending_today',(select count(*) from public.crm_server_automation_jobs where status='pending' and action_type in ('send_template','send_whatsapp_now','__send_whatsapp','schedule_whatsapp') and run_at<end_at),
+ 'failed_24h',(select count(*) from public.crm_server_automation_jobs where status='failed' and updated_at>=now()-interval '24 hours' and action_type in ('send_template','send_whatsapp_now','__send_whatsapp','schedule_whatsapp')),
+ 'unanswered_reminders',(select count(*) from public.crm_server_automation_jobs j where status='pending' and action_config->>'offer_phase' in ('reminder_2','reminder_5') and not exists(select 1 from public.wa_messages m where m.direction='in' and public.crm_server_normalize_phone(split_part(m.chat_id,'@',1))=public.crm_server_normalize_phone(j.context->>'phone') and m.created_at>j.created_at)),
+ 'duplicate_pending',(select count(*) from (select public.crm_server_normalize_phone(context->>'phone'), action_config->>'text',date_trunc('hour',run_at) from public.crm_server_automation_jobs where status='pending' and action_type in ('send_whatsapp_now','__send_whatsapp','schedule_whatsapp') and nullif(action_config->>'text','') is not null group by 1,2,3 having count(*)>1) x),
+ 'manual_pending_today',(select count(*) from public.agenda_items where whatsapp_enabled and status='pending' and coalesce(whatsapp_delivery_status,'pending')='pending' and coalesce(whatsapp_scheduled_at,starts_at)<end_at),
+ 'daily_average',(select round(count(*)::numeric/7,1) from crm_private.whatsapp_sent_records() where sent_at>=start_at-interval '7 days' and sent_at<start_at)
+ ) into result;return result;
+end;$$;
+REVOKE ALL ON FUNCTION public.crm_whatsapp_send_monitor() FROM public,anon;
+GRANT EXECUTE ON FUNCTION public.crm_whatsapp_send_monitor() TO authenticated;
+
