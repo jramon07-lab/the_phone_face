@@ -415,7 +415,7 @@
 @media(max-width:700px){#view-dashboard.tpfDashPro{padding:14px!important}#view-dashboard.tpfDashPro .tdDate #mrDashboard{margin-left:0}#view-dashboard.tpfDashPro .tdCommandActions{gap:6px}}
 
 /* Compact home toolbar, original search and actions preserved. */
-body.tpfHomeCompact .referenceTopbar{display:none}
+body.tpfHomeCompact .referenceTopbar{display:none!important}
 #view-dashboard.tpfDashPro .tdQuickActions{position:relative}
 #view-dashboard.tpfDashPro .tdQuickActions>summary{list-style:none;cursor:pointer;border-radius:8px;background:#0861df;color:white;padding:9px 12px;font-size:12px;font-weight:650;white-space:nowrap}
 #view-dashboard.tpfDashPro .tdQuickActions>summary::-webkit-details-marker{display:none}
@@ -430,11 +430,11 @@ body.tpfHomeCompact .referenceTopbar{display:none}
 #view-dashboard.tpfDashPro .tdCommandBar{margin-bottom:10px!important}
 #view-dashboard.tpfDashPro .tdWorkSearchField label,#view-dashboard.tpfDashPro .tdPageSizeField label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @media(min-width:1150px){
-#view-dashboard.tpfDashPro .tdWorkspaceControls{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px}
+#view-dashboard.tpfDashPro .tdWorkspaceControls{display:flex!important;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px}
 #view-dashboard.tpfDashPro .tdFilterBar{flex:1;min-width:0;flex-wrap:nowrap;margin:0}
 #view-dashboard.tpfDashPro .tdFilterBar .tdWorkTab{font-size:11px;padding:9px 8px;white-space:nowrap}
 #view-dashboard.tpfDashPro .tdWorkToolbar{flex:0 0 auto;gap:6px;margin:0;align-items:center;flex-wrap:nowrap}
-#view-dashboard.tpfDashPro .tdWorkSearchField{width:205px;min-width:0;flex:0 0 205px}
+#view-dashboard.tpfDashPro .tdWorkSearchField{width:205px!important;min-width:0;flex:0 0 205px!important}
 #view-dashboard.tpfDashPro #tdWorkSearch{width:100%;height:34px;font-size:11px;padding:7px 9px}
 #view-dashboard.tpfDashPro #tdPageSize{width:60px;min-width:0;height:34px;font-size:11px}
 #view-dashboard.tpfDashPro #tdClearSearch:disabled{display:none}
