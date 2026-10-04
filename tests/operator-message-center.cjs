@@ -1,0 +1,10 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modules/offers-pro.js','utf8');
+const context={window:{},Intl};vm.createContext(context);
+vm.runInContext(source.replace('let operatorMessages={};','let operatorMessages={"Yoigo":{"offer_initial":"Hola {nombre}. Oferta {operador}:\\n{servicios}\\nCuota: {precio_total} €/mes"}};'),context);
+const api=context.window.TPFOffersPro;
+const offer={operator:'Yoigo',base_price:25,base_features:['Fibra 1 Gb','2 líneas ilimitadas'],line_options:[]};
+const text=api.buildMessage(offer,{},'Ana','Regalo tienda',30);
+assert.match(text,/Hola Ana\. Oferta Yoigo:/);assert.match(text,/• Fibra 1 Gb/);assert.match(text,/Cuota: 30,00 €/);assert.match(text,/Regalo tienda/);assert.doesNotMatch(text,/\{servicios\}|\{precio_total\}/);
+assert.match(api.buildMessage(offer,{},'Ana','',30,{},true),/Phone House Albolote/);
+console.log('PASS operator offer templates preserve services, selected prices, extras and welcome');

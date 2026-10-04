@@ -39,6 +39,7 @@ const visibleBaseFeatures=(offer,features,visible={})=>{
   }
   return result.filter(x=>x!=null);
 };
+let operatorMessages={};
 const buildMessage=(offer,quantities={},customer='Cliente',extra='',finalPrice=null,visibility={},welcome=false,baseVisible={})=>{
   if(!offer)return'';
   let features=Array.isArray(offer.base_features)?[...offer.base_features]:[];
@@ -53,6 +54,8 @@ const buildMessage=(offer,quantities={},customer='Cliente',extra='',finalPrice=n
   const rows=[greeting,...features.concat(lineFeatures,serviceFeatures).map(x=>`• ${x}`)];
   rows.push(`Precio final: ${money(finalPrice==null?calculateTotal(offer,quantities):finalPrice)}/mes`);
   if(String(extra||'').trim())rows.push('',String(extra).trim());
+  const custom=operatorMessages[offer.operator]?.offer_initial;
+  if(custom&&!welcome){const replacements={nombre:customerName(customer),operador:offer.operator||'',servicios:features.concat(lineFeatures,serviceFeatures).map(x=>'• '+x).join('\n'),precio_total:money(finalPrice==null?calculateTotal(offer,quantities):finalPrice).replace(/\s*€$/,'')};let body=custom.replace(/\{(nombre|operador|servicios|precio_total)\}/g,(_,k)=>replacements[k]);if(String(extra||'').trim())body+='\n\n'+String(extra).trim();return body;}
   return rows.join('\n');
 };
 const groupOfferMessages=(messages,customer='Cliente',operator='')=>{const bodies=messages.map(text=>String(text||'').replace(/^Hola[^\n]*(?:\n|$)/i,'').trim());const welcome=String(messages[0]||'').split('\n')[0];return (welcome.includes(' de Phone House Albolote.')?welcome.replace('una oferta que puede interesarte','unas ofertas que pueden interesarte')+`\n\n`:`Hola ${customerName(customer)}, te envío las ofertas${operator?' de '+operator:''} que hemos comentado:\n\n`)+bodies.join('\n\n');};
@@ -254,7 +257,8 @@ async function submitDirectSale(){
   try{await directRouter.saveTemplate();const {data,error}=await sb.rpc('crm_create_direct_sale_v8',{p_after_sale:afterSale,p_contact_id:c.id,p_operator:directOperator,p_total_price:price,p_send_message:sendMessage,p_netflix_followup:directOperator==='Vodafone'&&directNetflix,p_counteroffer:directOperator==='Vodafone'&&directCounteroffer,p_manager_contact_id:c.managerId,p_recipient_contact_id:c.recipientId,p_day_one_text:afterSale.send?afterSale.text:null,p_send_day_one:afterSale.send,p_sale_month:$('directSaleMonth').value||null});if(error)throw error;$('directSaleModal').classList.add('hidden');await loadInstances(c.id);if(typeof renderContactProfile==='function')await renderContactProfile();if(typeof matchWaContact==='function'&&whatsappContact())await matchWaContact();alert(`Venta creada en Tramitado.${sendMessage?' El mensaje inmediato ha quedado preparado.':''}${!afterSale.send?' No se ha programado el WhatsApp del día siguiente.':dayOneAvailable?' El WhatsApp del día siguiente ha quedado programado.':''}`);return data}catch(e){$('directSaleMsg').textContent=e?.message||'No se pudo crear la venta directa.'}finally{busy=false;if($('directSaleSubmit'))$('directSaleSubmit').disabled=false}
 }
 async function loadCatalog(){
-  const [offers,lines]=await Promise.all([sb.from('crm_offer_catalog').select('*').order('position').order('name'),sb.from('crm_offer_line_options').select('*').order('position').order('name')]);
+  const [offers,lines,messages]=await Promise.all([sb.from('crm_offer_catalog').select('*').order('position').order('name'),sb.from('crm_offer_line_options').select('*').order('position').order('name'),sb.rpc('crm_operator_message_defaults')]);
+  if(messages.error)throw messages.error;operatorMessages=messages.data||{};
   if(offers.error)throw offers.error;if(lines.error)throw lines.error;
   catalog=(offers.data||[]).map(o=>({...o,line_options:(lines.data||[]).filter(l=>String(l.offer_id)===String(o.id))}));return catalog;
 }
