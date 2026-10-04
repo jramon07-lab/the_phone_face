@@ -446,3 +446,5 @@ body.tpfHomeCompact .referenceTopbar{display:none!important}
 #view-dashboard.tpfDashPro .globalSearchResults{min-width:0;width:min(320px,calc(100vw - 28px))}
 #view-dashboard.tpfDashPro .tdQuickItems{width:220px}
 }
+
+@media(min-width:1150px){body.tpfUnified.tpfHomeCompact #view-dashboard.tpfDashPro .tdWorkspaceControls{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:8px!important;margin:0 0 8px!important}body.tpfUnified.tpfHomeCompact #view-dashboard.tpfDashPro .tdFilterBar{flex:1;min-width:0;margin:0!important}body.tpfUnified.tpfHomeCompact #view-dashboard.tpfDashPro .tdWorkToolbar{width:auto!important;flex:0 0 auto!important;margin:0!important}body.tpfUnified.tpfHomeCompact #view-dashboard.tpfDashPro .tdFilterBar .tdWorkTab{padding:9px 7px!important;font-size:11px!important}}
