@@ -110,7 +110,7 @@ function render(){
  state.page=Math.min(state.page,Math.max(1,Math.ceil(rows.length/30)));
  $('ccPageInfo').textContent=rows.length+(rows.length===1?' resultado':' resultados')+' · Página '+state.page+' de '+Math.max(1,Math.ceil(rows.length/30));
  $('ccPrev').disabled=state.page<=1;$('ccNext').disabled=state.page*30>=rows.length;
- $('ccOlder').hidden=state.history.length>=state.historyTotal;
+ $('ccOlder').hidden=state.history.length>=state.historyTotal||!['','sent'].includes($('ccStatus')?.value||'');
  body.innerHTML=rows.slice((state.page-1)*30,state.page*30).map(row=>`<article class="ccRow ${row.duplicate?'duplicate':''}">
   <div class="ccWho"><button type="button" data-cc-detail="${esc(row.source)}:${esc(row.id)}"><b>${esc(row.contact)}</b></button><span>${esc(row.phone||'Sin teléfono')} · ${esc(row.operator)}</span></div>
   <div><b>${esc(sourceLabel(row))}</b><span>${esc(row.reason)}</span></div>
