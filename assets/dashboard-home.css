@@ -413,3 +413,36 @@
 #view-dashboard.tpfDashPro .tdWorkspaceControls{padding-bottom:10px;margin-bottom:10px;gap:8px}
 @media(min-width:1250px){#view-dashboard.tpfDashPro:not(.hidden)>.tdCommandBar{flex-wrap:nowrap}#view-dashboard.tpfDashPro .tdCommandActions{flex-wrap:nowrap}#view-dashboard.tpfDashPro .tdPageIntro{flex:1}}
 @media(max-width:700px){#view-dashboard.tpfDashPro{padding:14px!important}#view-dashboard.tpfDashPro .tdDate #mrDashboard{margin-left:0}#view-dashboard.tpfDashPro .tdCommandActions{gap:6px}}
+
+/* Compact home toolbar, original search and actions preserved. */
+body.tpfHomeCompact .referenceTopbar{display:none}
+#view-dashboard.tpfDashPro .tdQuickActions{position:relative}
+#view-dashboard.tpfDashPro .tdQuickActions>summary{list-style:none;cursor:pointer;border-radius:8px;background:#0861df;color:white;padding:9px 12px;font-size:12px;font-weight:650;white-space:nowrap}
+#view-dashboard.tpfDashPro .tdQuickActions>summary::-webkit-details-marker{display:none}
+#view-dashboard.tpfDashPro .tdQuickActions>summary:after{content:' ▾'}
+#view-dashboard.tpfDashPro .tdQuickItems{position:absolute;right:0;top:calc(100% + 6px);z-index:900;width:230px;padding:6px;background:#fff;border:1px solid #d9e2ee;border-radius:10px;box-shadow:0 12px 32px #18355225}
+#view-dashboard.tpfDashPro .tdQuickItems button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:white;color:#344e70;font-size:13px;font-weight:600;padding:11px;border-radius:6px;justify-content:flex-start;box-shadow:none;white-space:normal}
+#view-dashboard.tpfDashPro .tdQuickItems button:hover{background:#eef4ff}
+#view-dashboard.tpfDashPro .globalSearchWrap{width:235px;flex:0 1 235px;min-width:180px}
+#view-dashboard.tpfDashPro .globalSearch{font-size:12px;padding:8px 10px;height:36px;border-radius:8px}
+#view-dashboard.tpfDashPro .globalSearchResults{top:41px;min-width:300px;left:auto;right:0}
+#view-dashboard.tpfDashPro .tdPriorityTable td{padding-top:11px;padding-bottom:11px}
+#view-dashboard.tpfDashPro .tdCommandBar{margin-bottom:10px!important}
+#view-dashboard.tpfDashPro .tdWorkSearchField label,#view-dashboard.tpfDashPro .tdPageSizeField label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(min-width:1150px){
+#view-dashboard.tpfDashPro .tdWorkspaceControls{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px}
+#view-dashboard.tpfDashPro .tdFilterBar{flex:1;min-width:0;flex-wrap:nowrap;margin:0}
+#view-dashboard.tpfDashPro .tdFilterBar .tdWorkTab{font-size:11px;padding:9px 8px;white-space:nowrap}
+#view-dashboard.tpfDashPro .tdWorkToolbar{flex:0 0 auto;gap:6px;margin:0;align-items:center;flex-wrap:nowrap}
+#view-dashboard.tpfDashPro .tdWorkSearchField{width:205px;min-width:0;flex:0 0 205px}
+#view-dashboard.tpfDashPro #tdWorkSearch{width:100%;height:34px;font-size:11px;padding:7px 9px}
+#view-dashboard.tpfDashPro #tdPageSize{width:60px;min-width:0;height:34px;font-size:11px}
+#view-dashboard.tpfDashPro #tdClearSearch:disabled{display:none}
+#view-dashboard.tpfDashPro #tdClearSearch{font-size:11px;padding:7px}
+}
+@media(max-width:700px){
+#view-dashboard.tpfDashPro .tdCommandActions{width:100%;flex-wrap:wrap}
+#view-dashboard.tpfDashPro .globalSearchWrap{flex:1 1 180px;width:auto}
+#view-dashboard.tpfDashPro .globalSearchResults{min-width:0;width:min(320px,calc(100vw - 28px))}
+#view-dashboard.tpfDashPro .tdQuickItems{width:220px}
+}

@@ -85,7 +85,7 @@ return '<svg class="tdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor
 function ensureCss(){
  if($('dashboardSafeProCss'))return;
  const link=document.createElement('link');link.id='dashboardSafeProCss';link.rel='stylesheet';
- link.href='/assets/dashboard-home.css?v=20261003-daily-management-2';document.head.appendChild(link);
+ link.href='/assets/dashboard-home.css?v=20261004-compact-toolbar-1';document.head.appendChild(link);
 }
 
 function build(){
