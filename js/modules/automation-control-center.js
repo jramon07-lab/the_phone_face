@@ -224,10 +224,11 @@ async function openOrigin(row){
  throw Error('No se pudo abrir el origen de este envío.');
 }
 async function act(action,row){
- if(!row||state.loading)return;
+ if(!row)return;
  if(action==='conversation'){try{return await openConversation(row)}catch(error){alert(error.message);return}}
  if(action==='edit')return row.source==='automation'?editAutomation(row):editProgram(row);
  if(action==='origin'){try{return await openOrigin(row)}catch(error){alert(error.message);return}}
+ if(state.loading)return;
  if(action==='resume'&&!confirm('¿Reanudar este envío? Si su fecha ya pasó, quedará pendiente para enviarse a partir de un minuto.'))return;
  if(action==='cancel'&&!confirm('¿Cancelar este envío? No se eliminará y seguirá visible en el historial.'))return;
  if(action==='retry'&&!confirm('¿Reintentar este envío ahora? Solo se permite cuando el envío anterior consta como fallido.'))return;
