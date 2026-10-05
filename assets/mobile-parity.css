@@ -273,3 +273,13 @@ html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
 .m-wa-composer .m-form-msg:empty{display:none}.m-wa-chat-page .m-wa-bubble{padding:8px 10px 5px;box-shadow:none}
 
 .m-wa-chat-page{display:flex;flex-direction:column}.m-wa-chat-page .m-wa-messages{flex:1 1 0}.m-wa-chat-page>.m-wa-chat-head,.m-wa-chat-page>.m-wa-chat-controls,.m-wa-chat-page>.m-wa-composer,.m-wa-chat-page>.m-wa-contact-link{flex-shrink:0}
+
+/* Compact chat helpers: details stay collapsed and the jump control is conditional. */
+body.m-wa-chat-open .m-wa-message-area{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+body.m-wa-chat-open .m-wa-message-area .m-wa-messages{flex:1;min-height:0}
+.m-wa-bottom{position:absolute;right:12px;bottom:10px;z-index:2;border-radius:50%;box-shadow:0 2px 10px #20304733}
+.m-wa-bottom[hidden],.m-wa-quote[hidden]{display:none}
+.m-wa-contract{font-size:12px;padding:6px 10px;background:#f4f7fb;border-bottom:1px solid #e0e7ef;max-height:25dvh;overflow:auto}
+.m-wa-contract summary{cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m-wa-contract small{display:block;color:#64748b;margin:4px 0}.m-wa-contract>div{padding:8px 0}
+.m-wa-quote{display:flex;gap:8px;padding:8px 12px;font-size:12px;background:#edf4ff}.m-wa-quote span{flex:1;overflow:hidden}.m-wa-quote button{border:0;background:none}

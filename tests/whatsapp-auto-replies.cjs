@@ -16,10 +16,11 @@ assert(C.eligible(row,date,'2026-09-26T20:00:00Z'));
 for(const patch of [{direction:'out'},{type_message:'audioMessage'},{chat_id:'1@g.us'},{ts:date/1000-600},{text_content:'Me interesa'}])assert(!C.eligible({...row,...patch},date,'2026-09-26T20:00:00Z'));
 const RealDate=Date;global.Date=class extends RealDate{constructor(...args){super(...(args.length?args:['2026-09-26T21:20:00Z']))}static now(){return date.getTime()}};
 Object.assign(process.env,{SUPABASE_SERVICE_ROLE_KEY:'test-service',GREEN_API_INSTANCE_ID:'test',GREEN_API_TOKEN:'test-token',CRON_SECRET:'test-cron',VERCEL_ENV:'production'});
-const handler=require('../api/whatsapp-auto-replies');let records=new Map(),sends=0,fail=false,answered=false,phoneAnswered=false,historyFails=false,historyMissing=false,transactional=false,rpcFails=false;
+const handler=require('../api/whatsapp-auto-replies');let records=new Map(),sends=0,fail=false,answered=false,phoneAnswered=false,historyFails=false,historyMissing=false,transactional=false,rpcFails=false,recentManual=false;
 global.fetch=async(url,opts={})=>{let value=[];const path=url.split('/rest/v1/')[1];
  if(path?.startsWith('crm_whatsapp_reply_settings'))value=[{...C.DEFAULTS,enabled:true,enabled_since:'2026-09-26T20:00:00Z',updated_at:'v1'}];
  else if(path==='rpc/crm_whatsapp_transactional_replies'){if(rpcFails)throw Error('classification unavailable');value=transactional?[{incoming_id:row.id_message}]:[];}
+ else if(path?.startsWith('crm_whatsapp_manual_activity'))value=recentManual?[{chat_id:row.chat_id}]:[];
  else if(path?.startsWith('wa_messages?direction'))value=[row];
  else if(path?.startsWith('wa_messages?chat_id'))value=answered?[{id:1}]:[];
  else if(path?.startsWith('crm_whatsapp_reply_receipts?on_conflict')){const data=JSON.parse(opts.body);if(!records.has(data.dedupe_key)){records.set(data.dedupe_key,data);value=[data];}}
@@ -42,5 +43,6 @@ const call=async(secret='test-cron')=>{const result={setHeader(){},status(n){thi
  historyMissing=false;await call();assert.equal(sends,3,'unanswered verified incoming message receives acknowledgement');
  records.clear();transactional=true;await call();assert.equal(sends,3,'bot-handled written reasons and return replies must not send absence, even before the bot sends');assert.equal(records.size,0);
  transactional=false;rpcFails=true;const unavailable=await call();assert.equal(sends,3,'an unavailable classification must not send a competing absence');assert.equal(unavailable.code,503);rpcFails=false;await call();assert.equal(sends,4,'ordinary unanswered enquiries keep the absence message');
+ records.clear();recentManual=true;await call();assert.equal(sends,4,'recent manual activity suppresses absence before incoming');recentManual=false;await call();assert.equal(sends,5,'automatic traffic does not open human window');
  console.log('PASS: Madrid hours/DST, eligibility, auth, concurrent dedupe, uncertain send, answered chat');
 })().catch(e=>{console.error(e);process.exitCode=1});

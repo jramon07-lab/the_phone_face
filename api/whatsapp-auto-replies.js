@@ -30,6 +30,8 @@ async function run(){
   if(sent+uncertain>=8||Date.now()-started>40000)break;
   // Don't send a stale acknowledgement after the team has already answered.
   const outgoing=await db('wa_messages?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&direction=eq.out&ts=gte.'+Number(row.ts)+'&select=id&limit=1');if(outgoing.length)continue;
+  // Keep a human conversation open for two hours after an accepted manual send.
+  const recentManual=await db('crm_whatsapp_manual_activity?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&last_sent_at=gte.'+encodeURIComponent(new Date(Number(row.ts)*1000-7200000).toISOString())+'&last_sent_at=lte.'+encodeURIComponent(now.toISOString())+'&select=chat_id&limit=1');if(recentManual.length)continue;
   // Check disabled/edited state again before every claim.
   const [fresh]=await db('crm_whatsapp_reply_settings?id=eq.1&select=enabled,updated_at');if(!fresh?.enabled||fresh.updated_at!==config.updated_at)break;
   const key=crypto.createHash('sha256').update(row.chat_id+'|'+period).digest('hex');
