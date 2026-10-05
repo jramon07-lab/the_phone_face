@@ -12,7 +12,7 @@ function apply(row){
  const st=state(),live=st?.livePreview?.[id];
  let n=Math.max(0,Number(row.unread_count||0));
  if(live&&!live.outgoing&&Number(live.timestamp)>Math.max(ts,Number(row.last_incoming_ts||0)))n=Math.max(n,Number(st?.unread?.[id]||0));
- markers.set(id,{ts,count:n});
+ markers.set(id,{ts,count:n,lastIncoming:Number(row.last_incoming_ts||0)});
  if(st?.unread)st.unread[id]=n;
  window.waSetLastReadAt?.(id,ts);window.waSaveUnread?.();
 }
@@ -28,7 +28,7 @@ async function reconcileNative(result){
  if(!at||result?.degraded||result?.rateLimited||!Array.isArray(result?.chats)||!db()?.rpc||document.hidden)return;
  const ready=[],present=new Set();
  for(const chat of result.chats){
-  const id=String(chat?.id||''),ts=Number(chat?._lastIncomingAt||0);present.add(id);
+  const id=String(chat?.id||''),ts=Number(chat?._lastIncomingAt||markers.get(id)?.lastIncoming||0);present.add(id);
   if(!/^\d{10,15}@(c\.us|lid)$/.test(id)||chat?.unreadCount!==0||!Number.isSafeInteger(ts)||ts<=0||ts*1000>at-120000){
    nativeObservations.delete(id);continue;
   }
