@@ -16,6 +16,13 @@ function interactiveText(message:any){
   return String(legacy?.selectedButtonText||legacy?.selectedDisplayText||data?.textMessageData?.textMessage||data?.extendedTextMessageData?.text||message?.textMessage||message?.caption||"").trim();
 }
 function incoming(body:any){return String(body?.typeWebhook||body?.type||"").toLowerCase().includes("incoming");}
+function manualReplyReadMarker(body:any){
+  if(String(body?.typeWebhook||"")!=="outgoingMessageReceived")return null;
+  const chatId=String(body?.senderData?.chatId||body?.chatId||"").trim(),ts=Number(body?.timestamp||0);
+  if(!chatId||chatId.endsWith("@g.us")||!Number.isFinite(ts)||ts<=1)return null;
+  // Keep messages in the response's own second unread: their ordering is unknown.
+  return {chatId,ts:Math.floor(ts)-1};
+}
 function safeDetail(value:unknown){return String(value||"").replace(/(authorization\s*:\s*bearer\s+)[^\s]+/gi,"$1[REDACTADO]").slice(0,500);}
 function phoneToChat(ctx:any){
   const existing=String(ctx?.chat_id||"").trim();
@@ -148,6 +155,12 @@ Deno.serve(async(req:Request)=>{
   const {data:authorized,error:authError}=await sb.rpc("crm_check_runner_secret",{p_secret:secret});
   if(authError||authorized!==true)return reply({ok:false,error:"Unauthorized"},401);
   let body:any;try{body=await req.json();}catch{await recordFailure("Webhook de WhatsApp con JSON inválido","GREEN no entregó una notificación válida");return reply({ok:false,error:"Invalid JSON"},400);}
+  const manualRead=manualReplyReadMarker(body);
+  if(manualRead){
+    const {error}=await sb.rpc("crm_whatsapp_mark_internal_read",{p_chat_id:manualRead.chatId,p_ts:manualRead.ts});
+    if(error){await recordFailure("No se pudo sincronizar la lectura tras una respuesta manual",error.message||"Persistence failed");return reply({ok:false,error:"Read synchronization failed"},500);}
+    return reply({ok:true,manualReply:true,readSynced:true});
+  }
   if(!incoming(body))return reply({ok:true,ignored:true});
   const chatId=String(body?.senderData?.chatId||body?.chatId||"").trim();
   const idMessage=String(body?.idMessage||body?.messageData?.idMessage||"").trim();

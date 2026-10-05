@@ -28,3 +28,5 @@ assert.match(proxy,/webhookUrlToken: data\?\.webhookUrlToken \? "configured"/,'s
 const ensure=proxy.slice(proxy.indexOf('action === "ensure"'),proxy.indexOf('action === "setwebhook"'));
 assert.doesNotMatch(ensure,/webhookUrl:\s*""/,'ensure must never erase direct webhook configuration');
 console.log('Authenticated direct GREEN webhook configured; continuous polling removed; pre-send safety retained.');
+
+require('./whatsapp-phone-reply-read.cjs');
