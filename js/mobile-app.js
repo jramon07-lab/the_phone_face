@@ -1867,7 +1867,14 @@ function crmInteractiveText(message){
       let query=client.from('crm_offer_instances').select('*');
       query=byOpportunity?query.in('opportunity_id',Array.isArray(id)?id:[id]).in('status',['following','queued','paused','accepted']).order('created_at',{ascending:false}):query.eq('id',id);
       const result=await query;if(result.error)throw result.error;
-      const offers=(result.data||[]).filter(x=>['following','queued','paused','accepted'].includes(x.status));
+      const candidates=(result.data||[]).filter(x=>['following','queued','paused','accepted'].includes(x.status));
+      const ids=[...new Set(candidates.map(x=>x.opportunity_id).filter(Boolean))];
+      let current=[];
+      if(ids.length){
+        const fresh=await client.from('sales_opportunities').select('id,status,stage_id').in('id',ids);
+        if(fresh.error)throw fresh.error;current=fresh.data||[];
+      }
+      const offers=candidates.filter(x=>mobileWaCanAcceptContract(current.find(o=>String(o.id)===String(x.opportunity_id))));
       if(!offers.length)throw Error('No hay ofertas pendientes de aceptar para este contrato.');
       const d=document.createElement('dialog');d.className='m-offer-accept-dialog';d.setAttribute('aria-label','Aceptar oferta');
       d.innerHTML=`<h2>Aceptar oferta</h2><label class="m-field"><span>Oferta y contrato</span><select class="m-select" data-offer>${offers.map(x=>`<option value="${esc(x.id)}">${esc(mobilePausedIdentity(x).holder)} · ${esc(x.operator)} · ${esc(x.offer_name)} · ${esc(money(x.total_price))}/mes</option>`).join('')}</select></label><p data-recipient></p><label class="m-field"><span>¿Cuándo quieres tramitarla?</span><select class="m-select" data-mode><option value="now">Ahora, revisar tramitación</option><option value="later">Elegir fecha</option></select></label><label class="m-field" data-processing-field hidden><span>Fecha prevista de tramitación</span><input class="m-input" type="date" data-processing min="${madridDateKey()}" value="${madridDateKey()}"></label><label class="m-field"><span>Instalación prevista (opcional)</span><input class="m-input" type="date" data-appointment min="${madridDateKey()}"></label><label class="m-field" data-time-field hidden><span>Hora prevista de instalación</span><input class="m-input" type="time" data-time value="10:00"></label><p class="m-subtitle">La fecha real de activación llegará del Excel. Aceptar detiene los recordatorios de oferta. Elegir fecha deja la tramitación pendiente; no envía WhatsApp.</p><p role="alert" data-error></p><div class="m-detail-actions"><button class="m-secondary" data-cancel>Cancelar</button><button class="m-primary" data-save>Aceptar y continuar</button></div>`;
@@ -1891,9 +1898,22 @@ function crmInteractiveText(message){
       };d.showModal();
     }catch(e){toast(e.message||'No se pudo abrir la oferta.','error');}
   }
+  function mobileWaContractStage(opp){
+    return state.board.stages.find(stage=>String(stage.id)===String(opp?.stage_id))?.name||'Estado no disponible';
+  }
+  function mobileWaCanAcceptContract(opp){
+    const stage=mobileWaContractStage(opp);
+    return !!opp&&!opportunityIsClosed(opp,stage)&&['seguimiento','pendiente de tramitar'].includes(foldText(stage));
+  }
   function renderMobileWaContractContext(chatId){
     const rows=mobileWaChatOpportunities(chatId);if(String(chatId).includes('@g.us'))return '';
-    return `${rows.length&&has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin:8px 0" data-action="mobile-accept-chat">Aceptar oferta / tramitar</button>`:''}<details id="mobileWaContract" class="m-wa-contract"><summary>${rows.length===1?'Contrato de '+esc(rows[0].contract_party?.holder_name||rows[0].client_name||'titular'):rows.length?rows.length+' contratos':'Conversación'} · Próximos envíos</summary><div id="mobileWaUpcoming"></div>${rows.map(o=>`<div><strong>${esc(o.contract_party?.holder_name||o.client_name||o.title)}</strong><small>Comunicaciones con ${esc(o.contract_party?.recipient_name||mobileWaChatName(mobileWaSelectedChat(chatId)))}</small>${mobileLinkedNavigation({opportunity_id:o.id},'offer')}${has('can_edit_sales')?`<button class="m-primary" data-action="mobile-accept-contract" data-id="${esc(o.id)}">Aceptar oferta / tramitar</button>`:''}<button class="m-secondary" data-action="wa-next-steps" data-id="${esc(o.id)}">Ver próximos envíos / editar</button></div>`).join('')}</details>`;
+    const pending=rows.filter(mobileWaCanAcceptContract);
+    const primary=pending.length&&has('can_edit_sales')?
+      '<button class="m-secondary" style="width:100%;margin:8px 0" data-action="mobile-accept-chat">Aceptar oferta / tramitar</button>':
+      rows.length?rows.length===1?
+        `<button class="m-secondary" style="width:100%;margin:8px 0" data-action="route" data-route="opportunity/${esc(rows[0].id)}">Gestionar contrato · ${esc(mobileWaContractStage(rows[0]))}</button>`:
+        '<button class="m-secondary" style="width:100%;margin:8px 0" data-action="mobile-manage-chat">Gestionar contratos</button>':'';
+    return `${primary}<details id="mobileWaContract" class="m-wa-contract"><summary>${rows.length===1?'Contrato de '+esc(rows[0].contract_party?.holder_name||rows[0].client_name||'titular'):rows.length?rows.length+' contratos':'Conversación'} · Próximos envíos</summary><div id="mobileWaUpcoming"></div>${rows.map(o=>`<div><strong>${esc(o.contract_party?.holder_name||o.client_name||o.title)}</strong><small>Estado: ${esc(mobileWaContractStage(o))}</small><small>Comunicaciones con ${esc(o.contract_party?.recipient_name||mobileWaChatName(mobileWaSelectedChat(chatId)))}</small>${mobileLinkedNavigation({opportunity_id:o.id},'offer')}${has('can_edit_sales')&&mobileWaCanAcceptContract(o)?`<button class="m-primary" data-action="mobile-accept-contract" data-id="${esc(o.id)}">Aceptar oferta / tramitar</button>`:`<button class="m-secondary" data-action="route" data-route="opportunity/${esc(o.id)}">Gestionar contrato</button>`}<button class="m-secondary" data-action="wa-next-steps" data-id="${esc(o.id)}">Ver próximos envíos / editar</button></div>`).join('')}</details>`;
   }
   async function loadMobileWaUpcoming(chatId){
     const target=byId('mobileWaUpcoming');if(!target)return;target.textContent='Comprobando próximos envíos…';
@@ -2249,7 +2269,8 @@ function crmInteractiveText(message){
     if(action==='wa-find-message'){const row=document.querySelector('[data-message-index="'+Number(target.dataset.index)+'"]');closeMobileWaSheet(false);row?.scrollIntoView?.({block:'center'});}
     if(action==='wa-edit-program')window.editProgrammedWhatsapp?.(target.dataset.id);
     if(action==='mobile-accept-offer')openMobileOfferAcceptance(target.dataset.id);
-    if(action==='mobile-accept-chat')openMobileOfferAcceptance(mobileWaChatOpportunities(safeDecode(route().parts[1])).map(o=>o.id),true);
+    if(action==='mobile-accept-chat')openMobileOfferAcceptance(mobileWaChatOpportunities(safeDecode(route().parts[1])).filter(mobileWaCanAcceptContract).map(o=>o.id),true);
+    if(action==='mobile-manage-chat'){const detail=byId('mobileWaContract');if(detail){detail.open=true;detail.scrollIntoView?.({block:'nearest'});}}
     if(action==='mobile-accept-contract')openMobileOfferAcceptance(target.dataset.id,true);
     if(action==='wa-next-steps'){rememberMobileDraft();window.TPFWorkspace?.nextSteps(target.dataset.id);}
     if(action==='wa-send')sendMobileWaMessage();
