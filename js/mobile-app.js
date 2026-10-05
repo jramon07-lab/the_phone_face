@@ -193,7 +193,7 @@
   function rememberMobileView(){
     const view=byId('mobileView');if(!view||!mobileRenderedPath||mobileRestoringView)return;
     mobileNavigationViews.set(mobileRenderedPath,{scroll:view.scrollTop,profileTab:state.profileTab,
-      details:[...view.querySelectorAll('details[id][open]')].map(x=>x.id)});
+      details:[...(view.querySelectorAll?.('details[id][open]')||[])].map(x=>x.id)});
     if(mobileNavigationViews.size>100)mobileNavigationViews.delete(mobileNavigationViews.keys().next().value);
   }
   function restoreMobileView(path){
@@ -203,8 +203,8 @@
       (saved?.details||[]).forEach(id=>{const x=byId(id);if(x?.tagName==='DETAILS')x.open=true;});
       view.scrollTop=saved?.scroll??(route().parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0);
     };
-    restore();requestAnimationFrame(()=>{restore();mobileRestoringView=false;});
-    if(saved?.scroll){mobileRestoreObserver=new MutationObserver(()=>{mobileRestoringView=true;restore();mobileRestoringView=false;});
+    restore();if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{restore();mobileRestoringView=false;});else mobileRestoringView=false;
+    if(saved?.scroll&&typeof MutationObserver==='function'){mobileRestoreObserver=new MutationObserver(()=>{mobileRestoringView=true;restore();mobileRestoringView=false;});
       mobileRestoreObserver.observe(view,{childList:true,subtree:true});
       const observer=mobileRestoreObserver;setTimeout(()=>observer.disconnect(),2500);
     }
@@ -214,6 +214,7 @@
     const target='#/'+String(path||'home').replace(/^\//,'');
     if(location.hash===target){render();return;}
     const previous=location.hash||'#/home';
+    if(typeof history==='undefined'||typeof history.pushState!=='function'||typeof history.replaceState!=='function'){if(replace)location.replace(target);else location.hash=target;return;}
     const entry={tpfMobile:true,path:target,back:replace?history.state?.back:previous};
     if(replace)history.replaceState(entry,'',target);else history.pushState(entry,'',target);
     closeMobileWaSheet(false);
@@ -221,7 +222,7 @@
   }
   function goBack(fallback='home'){
     rememberMobileView();
-    if(history.state?.tpfMobile&&history.state.path===location.hash&&history.state.back)history.back();
+    if(typeof history!=='undefined'&&history.state?.tpfMobile&&history.state.path===location.hash&&history.state.back)history.back();
     else go(fallback,true);
   }
   function pageHead(title,back='home',action=''){
