@@ -609,3 +609,43 @@ test('WhatsApp: búsqueda entre bandejas y lista estable al escribir y refrescar
  });
  expect(phases).toEqual({both:true,pending:true,processing:true,notWaiting:true,planned:true,due:true,completed:true,autoPending:true,phoneResolved:true,offerPreserved:true});
 });
+
+test('PC: remaining sections, send filters and all system tabs, strictly read-only',async({page,context})=>{
+ test.setTimeout(180000);
+ const origin=crmOrigin(process.env.VERCEL_PREVIEW_URL||process.env.PLAYWRIGHT_BASE_URL);
+ const report=await installReadOnlyGuard(context,page,origin);
+ try{
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();
+  await expect(page.locator('#app')).toBeVisible({timeout:35000});
+  for(const view of ['alerts','search','import','wa-templates-v3','whatsapp','email','users','trash','system','sendcontrol']){
+   await test.step('Full audit: '+view,async()=>{
+    await page.locator('.nav[data-view="'+view+'"]').first().click();
+    const section=page.locator(view==='sendcontrol'?'#ccPanel':'#view-'+view);
+    await expect(section).toBeVisible({timeout:15000});
+    await expect.poll(()=>section.evaluate(el=>el.childElementCount>0)).toBe(true);
+    if(view==='import'){await expect(page.locator('#previewImport')).toBeVisible();await expect(page.locator('#runImport')).toBeDisabled();}
+    if(view==='wa-templates-v3'){await expect(page.locator('#tv3Search')).toBeVisible();await page.locator('#tv3Search').fill('zzzz audit no match');await page.locator('#tv3Search').fill('');}
+    if(view==='whatsapp'){await expect(page.locator('#waNewProgram')).toBeVisible();await expect(page.locator('#waReload')).toBeVisible();}
+    if(view==='email'){await expect(page.locator('#tpfMailAccountName')).toBeVisible();await page.locator('[data-mail-tab="templates"]').click();await expect(page.locator('#tpfTemplateList')).toBeVisible();await page.locator('[data-mail-tab="mail"]').click();}
+    if(view==='users'){await expect(page.locator('#userSelect')).toBeVisible();await expect.poll(()=>page.locator('#userSelect option').count()).toBeGreaterThan(0);}
+    if(view==='trash'){await expect(page.locator('#trashList')).toBeVisible();}
+    if(view==='system'){
+     for(const key of ['overview','incidents','followups','backups','advanced']){
+      await page.locator('#view-system-'+key+'-tab').click();await expect(page.locator('#view-system-'+key)).toBeVisible();
+     }
+     await page.locator('#view-system-overview-tab').click();
+    }
+    if(view==='sendcontrol'){
+     await expect(page.locator('#ccSearch')).toBeVisible();await expect(page.locator('#ccStatus')).toBeVisible();
+     await page.locator('#ccSearch').fill('zzzz audit no match');
+     await expect(page.locator('#ccRows')).toContainText('No hay registros');
+     await page.locator('#ccSearch').fill('');
+     for(const state of ['paused','sent','failed','cancelled','pending'])await page.locator('#ccStatus').selectOption(state);
+    }
+    await expect.poll(()=>report.pendingReads.length,{timeout:25000}).toBe(0);
+    assertReadHealth(report);console.log('CRM_FULL_AUDIT_SECTION',view);
+   });
+  }
+ }finally{reportScope(report,'PC all remaining sections');}
+});
