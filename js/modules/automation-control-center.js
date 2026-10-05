@@ -168,7 +168,8 @@ function render(){
 function actions(row,includeView=true,skipEdit=false){
  if(includeView)return `<button type="button" class="secondary" data-cc-detail="${esc(row.source)}:${esc(row.id)}">Gestionar</button>`;
  const out=[];
- if(!skipEdit&&['pending','paused'].includes(row.status)&&row.source==='program')out.push('<button type="button" class="secondary" data-cc-action="edit" data-cc-row="'+esc(row.source)+':'+esc(row.id)+'">Editar</button>');
+ if(row.phone)out.push(`<button type="button" class="secondary" data-cc-action="conversation" data-cc-row="${esc(row.source)}:${esc(row.id)}">Ir a conversación</button>`);
+ if(!skipEdit&&['pending','paused'].includes(row.status)&&['program','automation'].includes(row.source))out.push('<button type="button" class="secondary" data-cc-action="edit" data-cc-row="'+esc(row.source)+':'+esc(row.id)+'">Editar texto</button>');
  if(['pending','paused'].includes(row.status)&&row.source==='automation')out.push('<button type="button" class="secondary" data-cc-action="origin" data-cc-row="'+esc(row.source)+':'+esc(row.id)+'">Gestionar origen</button>');
  if(row.status==='pending')out.push(`<button type="button" data-cc-action="pause" data-cc-row="${esc(row.source)}:${esc(row.id)}">Pausar</button>`,`<button type="button" class="danger" data-cc-action="cancel" data-cc-row="${esc(row.source)}:${esc(row.id)}">Cancelar</button>`);
  if(row.status==='paused')out.push(`<button type="button" data-cc-action="resume" data-cc-row="${esc(row.source)}:${esc(row.id)}">Reanudar</button>`,`<button type="button" class="danger" data-cc-action="cancel" data-cc-row="${esc(row.source)}:${esc(row.id)}">Cancelar</button>`);
@@ -198,17 +199,34 @@ function editProgram(row){
  d.querySelector('form').onsubmit=async e=>{e.preventDefault();const buttons=[...d.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{const text=d.querySelector('[name=message]').value,when=new Date(d.querySelector('[name=date]').value+'T'+d.querySelector('[name=time]').value);if(!text.trim()||!Number.isFinite(when.getTime())||when<=new Date())throw Error('Indica un mensaje y una fecha futura.');await updateProgram(row,'edit',text,when.toISOString());d.close();await load(true);window.TPFWhatsappSendMonitor?.refresh(true);window.dispatchEvent(new CustomEvent('tpf:sales-updated'));}catch(error){d.querySelector('[data-error]').textContent=error.message||'No se pudo guardar';}finally{buttons.forEach(b=>b.disabled=false);}};
  d.showModal();
 }
+async function openConversation(row){
+ let phone=String(row.phone||'').replace(/\D/g,'');if(phone.startsWith('00'))phone=phone.slice(2);if(phone.length===9)phone='34'+phone;
+ if(!/^[1-9][0-9]{7,14}$/.test(phone))throw Error('El destinatario no tiene un teléfono válido.');
+ if(typeof crmCan==='function'&&!crmCan('can_use_whatsapp'))throw Error('No tienes permiso para abrir WhatsApp.');
+ const nav=document.querySelector('.nav[data-view="whatsapplive"]');if(!nav||typeof window.selectWhatsAppChat!=='function')throw Error('WhatsApp no está disponible. Actualiza la página.');
+ state.savedScroll=$('ccPanel')?.scrollTop||0;$('ccDetail')?.close();$('ccEdit')?.close();nav.click();
+ const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(header){$('ccBackFromChat')?.remove();const back=document.createElement('button');back.id='ccBackFromChat';back.className='secondary';back.textContent='← Volver a Control de envíos';back.onclick=()=>{back.remove();document.querySelector('.nav[data-view="sendcontrol"]')?.click()};header.prepend(back);}
+ await window.selectWhatsAppChat(phone+'@c.us');
+}
+function editAutomation(row){
+ if(row.source!=='automation'||!['pending','paused'].includes(row.status))return;
+ $('ccDetail')?.close();$('ccEdit')?.remove();const d=document.createElement('dialog');d.id='ccEdit';d.className='ccDetail';
+ d.innerHTML=`<form><div class="ccDetailHead"><div><span>Automático · Solo este envío</span><h3>${esc(row.contact)}</h3></div><button type="button" data-close aria-label="Cerrar">×</button></div><div class="ccDetailGrid"><div><span>Fecha y hora</span><b>${fmt(row.when)}</b></div><div><span>Estado</span>${badge(row.status)}</div><div class="wide"><span>${esc(row.phone)} · ${esc(row.operator)}</span></div><label class="wide">Mensaje que recibirá el cliente<textarea name="message" rows="7" maxlength="10000" required>${esc(row.message)}</textarea></label><p class="wide ccDetailHint">El cambio se aplica solo a este envío. Mantiene su fecha y su estado; no cambia la plantilla ni los próximos avisos.</p><p class="wide" data-error role="alert"></p></div><div class="ccDetailActions"><button type="button" data-close>Volver</button><button type="submit" class="ccSave">Guardar cambios</button></div></form>`;
+ document.body.appendChild(d);d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close());d.onclose=()=>d.remove();
+ d.querySelector('form').onsubmit=async e=>{e.preventDefault();const buttons=[...d.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{const text=d.querySelector('[name=message]').value;if(!text.trim())throw Error('Escribe el mensaje.');const {data,error}=await sb.rpc('crm_edit_automation_send_text',{p_job_id:row.id,p_expected_at:row.updatedAt,p_text:text});if(error)throw error;if(data==='cancelled')throw Error('Este cliente ha pedido no recibir mensajes. El envío permanece cancelado.');d.close();await load(true);window.TPFWhatsappSendMonitor?.refresh(true);}catch(error){d.querySelector('[data-error]').textContent=error.message||'No se pudo guardar';}finally{buttons.forEach(b=>b.disabled=false);}};d.showModal();
+}
 async function openOrigin(row){
  const context=row.raw?.context||{},phase=row.raw?.action_config?.offer_phase||'',opId=context.opportunity_id;
- close();
+ state.savedScroll=$('ccPanel')?.scrollTop||0;
  if(opId&&(/^installation/.test(context.lifecycle?.mode||'')||row.raw?.action_config?.installation_phase||phase==='router_return')&&window.TPFInstallations?.manage)return window.TPFInstallations.manage(opId);
  if(context.offer_instance_id&&window.TPFOfferFollowup?.manage){await window.TPFOfferFollowup.load();return window.TPFOfferFollowup.manage(context.offer_instance_id);}
- if(window.TPFInstallationSettings?.openOperator){window.TPFInstallationSettings.openOperator(row.operator);document.querySelector('.nav[data-view="settings"]')?.click();return;}
+ if(window.TPFInstallationSettings?.openOperator)throw Error('Este aviso procede de una plantilla. Puedes cambiar este envío con «Editar texto»; la plantilla general se edita en Configuración.');
  throw Error('No se pudo abrir el origen de este envío.');
 }
 async function act(action,row){
  if(!row||state.loading)return;
- if(action==='edit')return editProgram(row);
+ if(action==='conversation'){try{return await openConversation(row)}catch(error){alert(error.message);return}}
+ if(action==='edit')return row.source==='automation'?editAutomation(row):editProgram(row);
  if(action==='origin'){try{return await openOrigin(row)}catch(error){alert(error.message);return}}
  if(action==='resume'&&!confirm('¿Reanudar este envío? Si su fecha ya pasó, quedará pendiente para enviarse a partir de un minuto.'))return;
  if(action==='cancel'&&!confirm('¿Cancelar este envío? No se eliminará y seguirá visible en el historial.'))return;
@@ -305,6 +323,7 @@ function bind(){if(state.bound)return;state.bound=true;css();document.addEventLi
 window.TPFAutomationControlCenter={statusOf,operatorOf,makeRows,open:panel,reload:()=>load(true)};
 M.register('automation-control-center',{install(){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind()}});
 })();
+
 
 
 

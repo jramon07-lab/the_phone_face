@@ -56,11 +56,12 @@ assert.equal(rows.find(x=>x.id==='delivered').status,'sent');
 assert.deepEqual(Array.from(t.filtered(),x=>x.id),['manual','later']);
 assert.match(t.actions(rows.find(x=>x.id==='manual')),/>Gestionar</);
 assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual')),/data-cc-action/,'la lista solo abre el detalle');
-assert.match(t.actions(rows.find(x=>x.id==='manual'),false),/>Editar</);
+assert.match(t.actions(rows.find(x=>x.id==='manual'),false),/>Editar texto</);
 assert.match(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Pausar</);
-assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Editar</,'el editor no debe abrir un segundo editor');
-assert.doesNotMatch(t.actions(rows.find(x=>x.id==='later')),/>Editar</);
-assert.equal(t.actions(rows.find(x=>x.id==='delivered'),false),'');
+assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Editar texto</,'el editor no debe abrir un segundo editor');
+assert.doesNotMatch(t.actions(rows.find(x=>x.id==='later')),/>Editar texto</);
+assert.match(t.actions(rows.find(x=>x.id==='delivered'),false),/Ir a conversación/);
+assert.doesNotMatch(t.actions(rows.find(x=>x.id==='delivered'),false),/data-cc-action="edit"/);
 assert.equal(t.actions({source:'program',id:'sending',status:'sending'},false),'');
 (async()=>{await t.updateProgram(rows.find(x=>x.id==='manual'),'pause');assert.equal(calls[0].name,'crm_control_scheduled_whatsapp');assert.equal(calls[0].args.p_expected_at,'2026-10-04T09:00:00Z');console.log('PASS unified sends: ordering, receipt history, editing eligibility and guarded RPC');})().catch(e=>{console.error(e);process.exitCode=1});
 
@@ -105,3 +106,7 @@ t.state.rows=[{id:'auto',source:'automation',status:'pending',when:'2026-10-05T1
 assert.deepEqual(Array.from(t.filtered(),r=>r.id),['auto']);
 assert.deepEqual(Array.from(t.filtered('program'),r=>r.id),['mine'],'source counts use same filters independently');
 console.log('PASS send sources and Madrid calendar month boundaries');
+
+assert.match(t.actions({source:'automation',id:'auto',status:'paused',phone:'600000000'},false),/Editar texto/);
+assert.doesNotMatch(t.actions({source:'automation',id:'auto',status:'sending'},false),/Editar texto/);
+assert.doesNotMatch(source.slice(source.indexOf('async function openOrigin'),source.indexOf('async function act')),/\bclose\(\)/,'origin stays on send center');
