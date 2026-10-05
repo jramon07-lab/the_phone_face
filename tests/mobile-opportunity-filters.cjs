@@ -120,3 +120,5 @@ assert.equal(api.mobilePausedIdentity(corrected).phone,'34622334455');assert.equ
 assert.match(api.renderMobilePausedRows(),/Marcar oferta aceptada/);
 api.mobilePaused.query='sin coincidencias';assert.match(api.renderMobilePausedRows(),/Sin ofertas pausadas/);
 console.log('mobile opportunity filters and paused recipients: ok');
+
+require('./mobile-linked-navigation.cjs');

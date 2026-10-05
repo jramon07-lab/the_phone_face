@@ -188,14 +188,41 @@
     const raw=location.hash.replace(/^#\/?/,'')||'home';
     const [path,query='']=raw.split('?');return {path,parts:path.split('/').filter(Boolean),query:new URLSearchParams(query)};
   }
+  const mobileNavigationViews=new Map();
+  let mobileRenderedPath='',mobileRestoringView=false,mobileRestoreObserver=null;
+  function rememberMobileView(){
+    const view=byId('mobileView');if(!view||!mobileRenderedPath||mobileRestoringView)return;
+    mobileNavigationViews.set(mobileRenderedPath,{scroll:view.scrollTop,profileTab:state.profileTab,
+      details:[...view.querySelectorAll('details[id][open]')].map(x=>x.id)});
+    if(mobileNavigationViews.size>100)mobileNavigationViews.delete(mobileNavigationViews.keys().next().value);
+  }
+  function restoreMobileView(path){
+    const view=byId('mobileView'),saved=mobileNavigationViews.get(path);if(!view)return;
+    mobileRestoreObserver?.disconnect();mobileRestoringView=true;
+    const restore=()=>{if(route().path+(location.hash.includes('?')?'?'+route().query.toString():'')!==path)return;
+      (saved?.details||[]).forEach(id=>{const x=byId(id);if(x?.tagName==='DETAILS')x.open=true;});
+      view.scrollTop=saved?.scroll??(route().parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0);
+    };
+    restore();requestAnimationFrame(()=>{restore();mobileRestoringView=false;});
+    if(saved?.scroll){mobileRestoreObserver=new MutationObserver(()=>{mobileRestoringView=true;restore();mobileRestoringView=false;});
+      mobileRestoreObserver.observe(view,{childList:true,subtree:true});
+      const observer=mobileRestoreObserver;setTimeout(()=>observer.disconnect(),2500);
+    }
+  }
   function go(path,replace=false){
-    rememberMobileDraft();
+    rememberMobileDraft();rememberMobileView();
     const target='#/'+String(path||'home').replace(/^\//,'');
     if(location.hash===target){render();return;}
-    if(replace)location.replace(target);else location.hash=target;
+    const previous=location.hash||'#/home';
+    const entry={tpfMobile:true,path:target,back:replace?history.state?.back:previous};
+    if(replace)history.replaceState(entry,'',target);else history.pushState(entry,'',target);
+    closeMobileWaSheet(false);
+    if(typeof window.dispatchEvent==='function'&&typeof HashChangeEvent==='function')window.dispatchEvent(new HashChangeEvent('hashchange'));else render();
   }
   function goBack(fallback='home'){
-    if(history.length>1)history.back();else go(fallback,true);
+    rememberMobileView();
+    if(history.state?.tpfMobile&&history.state.path===location.hash&&history.state.back)history.back();
+    else go(fallback,true);
   }
   function pageHead(title,back='home',action=''){
     return `<div class="m-page-head"><button class="m-back" data-action="back" data-fallback="${esc(back)}" type="button" aria-label="Volver">‹</button><h1>${esc(title)}</h1>${action||'<span class="m-head-spacer"></span>'}</div>`;
@@ -343,7 +370,12 @@
     rememberMobileDraft();
     if(!state.user||byId('mobileApp').classList.contains('hidden'))return;
     mobileContactIndexSource=null;
-    const current=route();document.body?.classList?.toggle('m-wa-chat-open',current.parts[0]==='whatsapp-chat');document.body?.classList?.toggle('m-wa-list-open',current.parts[0]==='whatsapp');if(current.parts[0]!=='contact'||state.profileTab!=='documents')window.TPFMobileDocuments?.leave();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
+    const current=route(),navigationPath=current.path+(location.hash.includes('?')?'?'+current.query.toString():'');
+    if(mobileRenderedPath!==navigationPath){const saved=mobileNavigationViews.get(navigationPath);if(saved&&current.parts[0]==='contact')state.profileTab=saved.profileTab;
+      else if(current.parts[0]==='contact'&&['summary','opportunities','tasks','offers','documents','history'].includes(current.query.get('tab')))state.profileTab=current.query.get('tab');
+      mobileRenderedPath=navigationPath;
+    }
+    document.body?.classList?.toggle('m-wa-chat-open',current.parts[0]==='whatsapp-chat');document.body?.classList?.toggle('m-wa-list-open',current.parts[0]==='whatsapp');if(current.parts[0]!=='contact'||state.profileTab!=='documents')window.TPFMobileDocuments?.leave();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
     const view=byId('mobileView');
     try{
       switch(current.parts[0]){
@@ -385,7 +417,7 @@
       }
       updateMobileWhatsAppNav();
       if(!['whatsapp','whatsapp-chat'].includes(current.parts[0]))stopMobileWaRefresh();
-      view.scrollTop=current.parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0;
+      restoreMobileView(navigationPath);
     }catch(error){window.TPFMobileSystem?.report?.({type:'JavaScript',module:'Interfaz móvil',message:'No se pudo abrir una pantalla',detail:error?.message||''});view.innerHTML=`<div class="m-page">${pageHead('CRM móvil')} ${empty('No se pudo abrir esta pantalla',error?.message||'Vuelve a intentarlo.')}</div>`;}
   }
   window.TPFMobileRerender=render;
@@ -407,7 +439,7 @@
 
   function homePriorityRow(item){
     const row=item.row,isTask=item.type==='task',contact=isTask&&state.contacts.find(value=>String(value.id)===String(row.related_record_id));
-    const action=isTask?(contact?`data-action="route" data-route="contact/${esc(contact.id)}"`:'data-action="open-tasks" data-filter="pending"'):`data-action="route" data-route="opportunity/${esc(row.id)}"`;
+    const action=isTask?`data-action="route" data-route="task/${esc(row.id)}"`:`data-action="route" data-route="opportunity/${esc(row.id)}"`;
     const title=isTask?(row.title||'Tarea'):(row.title||'Oportunidad'),detail=isTask?`${row.customer_name||contact?.fullName||'Sin contacto'} · ${dateTime(row.starts_at)}`:`${row.client_name||'Sin contacto'} · ${opportunityDateLabel(row)}`;
     const label=item.category==='overdue'?'Vencido':item.category==='today'?'Hoy':'Próximo';
     return `<button class="m-home-priority-row" ${action} type="button"><span class="m-home-priority-icon">${isTask?'▣':'◇'}</span><span class="m-home-priority-main"><strong>${esc(title)}</strong><small>${esc(detail)}</small></span><span class="m-home-priority-badge ${item.category}">${label}</span></button>`;
@@ -1025,7 +1057,7 @@
   function renderMobilePausedRows(){
     if(mobilePaused.loading)return skeleton();if(mobilePaused.error)return empty('No se pudieron cargar las pausadas',mobilePaused.error);
     const rows=mobilePaused.rows.filter(x=>{const p=mobilePausedIdentity(x);return foldText([p.holder,p.recipient,p.phone,p.title,x.operator].join(' ')).includes(foldText(mobilePaused.query));});
-    return rows.length?rows.map(x=>{const p=mobilePausedIdentity(x),busy=mobilePaused.busy.has(String(x.id)),when=x.paused_at?new Date(x.paused_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'}):'Fecha no registrada';return `<section class="m-info-card m-paused-offer"><h3>${esc(p.holder)}</h3><p>${esc(x.operator||'')} · ${esc(p.title)}${x.total_price!=null?' · '+esc(money(x.total_price))+'/mes':''}</p><small>Destinatario: ${esc(p.recipient)}${p.phone?' · +'+esc(p.phone):' · Sin teléfono válido'}</small><small>Pausada: ${esc(when)}</small><div class="m-paused-actions"><button class="m-secondary" data-action="paused-conversation" data-id="${esc(x.id)}"${!p.phone||!has('can_use_whatsapp')?' disabled':''}>Ir a conversación</button><button class="m-primary" data-action="paused-resume" data-id="${esc(x.id)}"${busy||!has('can_edit_sales')?' disabled':''}>${busy?'Reanudando…':'Reanudar'}</button></div>${has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin-top:8px" data-action="mobile-accept-offer" data-id="${esc(x.id)}">Marcar oferta aceptada</button>`:''}</section>`;}).join(''):empty('Sin ofertas pausadas',mobilePaused.query?'No hay coincidencias con la búsqueda.':'No hay seguimientos pausados visibles con tus permisos.');
+    return rows.length?rows.map(x=>{const p=mobilePausedIdentity(x),busy=mobilePaused.busy.has(String(x.id)),when=x.paused_at?new Date(x.paused_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'}):'Fecha no registrada';return `<section class="m-info-card m-paused-offer"><h3>${esc(p.holder)}</h3><p>${esc(x.operator||'')} · ${esc(p.title)}${x.total_price!=null?' · '+esc(money(x.total_price))+'/mes':''}</p><small>Destinatario: ${esc(p.recipient)}${p.phone?' · +'+esc(p.phone):' · Sin teléfono válido'}</small><small>Pausada: ${esc(when)}</small>${mobileLinkedNavigation(x,'offer')}<div class="m-paused-actions"><button class="m-secondary" data-action="paused-conversation" data-id="${esc(x.id)}"${!p.phone||!has('can_use_whatsapp')?' disabled':''}>Ir a conversación</button><button class="m-primary" data-action="paused-resume" data-id="${esc(x.id)}"${busy||!has('can_edit_sales')?' disabled':''}>${busy?'Reanudando…':'Reanudar'}</button></div>${has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin-top:8px" data-action="mobile-accept-offer" data-id="${esc(x.id)}">Marcar oferta aceptada</button>`:''}</section>`;}).join(''):empty('Sin ofertas pausadas',mobilePaused.query?'No hay coincidencias con la búsqueda.':'No hay seguimientos pausados visibles con tus permisos.');
   }
   function renderMobilePausedOffers(){
     if(!has('can_view_sales')&&!has('can_edit_sales'))return empty('Acceso restringido','No tienes permiso para ver ventas.');
@@ -1069,7 +1101,7 @@
     const opp=state.board.opportunities.find(row=>String(row.id)===String(id));if(!opp)return `<div class="m-page">${pageHead('Oportunidad','opportunities')}${empty('No encontrada','Actualiza e inténtalo de nuevo.')}</div>`;
     if(!has('can_view_sales')&&!has('can_edit_sales'))return empty('Acceso restringido','No tienes permiso para ver oportunidades.');
     const stage=state.board.stages.find(row=>String(row.id)===String(opp.stage_id));
-    return `<div class="m-page">${pageHead('Oportunidad','opportunities')}<div class="m-profile-hero"><div class="m-avatar">◇</div><h1>${esc(opp.title||'Oportunidad')}</h1><p>${esc(opp.client_name||'Sin contacto')}</p></div><div class="m-info-card">${infoRow('Titular',mobileOpportunityIdentity(opp).holder)}${infoRow('DNI / NIF',mobileOpportunityIdentity(opp).dni)}${infoRow('Gestionado por',mobileOpportunityIdentity(opp).manager||'El propio titular')}${infoRow('Columna / Estado',stage?.name||'—')}${infoRow('Importe',opp.amount!=null?money(opp.amount):'—')}${infoRow('Cierre previsto',date(opp.expected_date))}${infoRow('Teléfono',opp.phone)}${infoRow('Notas',opp.notes)}</div><div id="mobileOpportunityFollowup" class="m-info-card" data-opportunity-id="${esc(id)}" style="display:none;margin-top:12px"></div>${has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin-top:12px" data-install-manage="${esc(id)}" type="button">Gestionar instalación</button><div class="m-detail-actions"><button class="m-primary" data-action="route" data-route="edit-opportunity/${esc(id)}">Editar oportunidad</button><button class="m-danger" data-action="profile-delete-opportunity" data-id="${esc(id)}">Eliminar oportunidad</button></div>`:''}${opp.record_id?`<button class="m-secondary" style="width:100%;margin-top:12px" data-action="route" data-route="contact/${esc(opp.record_id)}">Ver contacto</button>`:''}</div>`;
+    return `<div class="m-page">${pageHead('Oportunidad','opportunities')}<div class="m-profile-hero"><div class="m-avatar">◇</div><h1>${esc(opp.title||'Oportunidad')}</h1><p>${esc(opp.client_name||'Sin contacto')}</p></div><div class="m-info-card">${infoRow('Titular',mobileOpportunityIdentity(opp).holder)}${infoRow('DNI / NIF',mobileOpportunityIdentity(opp).dni)}${infoRow('Gestionado por',mobileOpportunityIdentity(opp).manager||'El propio titular')}${infoRow('Columna / Estado',stage?.name||'—')}${infoRow('Importe',opp.amount!=null?money(opp.amount):'—')}${infoRow('Cierre previsto',date(opp.expected_date))}${infoRow('Teléfono',opp.phone)}${infoRow('Notas',opp.notes)}</div><div id="mobileOpportunityFollowup" class="m-info-card" data-opportunity-id="${esc(id)}" style="display:none;margin-top:12px"></div>${has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin-top:12px" data-install-manage="${esc(id)}" type="button">Gestionar instalación</button><div class="m-detail-actions"><button class="m-primary" data-action="route" data-route="edit-opportunity/${esc(id)}">Editar oportunidad</button><button class="m-danger" data-action="profile-delete-opportunity" data-id="${esc(id)}">Eliminar oportunidad</button></div>`:''}${mobileLinkedNavigation(opp,'opportunity')}</div>`;
   }
 
   function mobileFollowupLabel(value){return({response_cancelled:'Respuesta recibida y seguimiento cancelado',pre_send_blocked:'Envío bloqueado por respuesta previa',verification_deferred:'Comprobación aplazada por seguridad',delivery_deferred:'Envío aplazado por seguridad',followup_failed:'Fallo de seguimiento',followup_sent:'Recordatorio enviado'})[value]||'Seguimiento registrado'}
@@ -1103,9 +1135,24 @@
     finally{savingMobileOpportunities.delete(String(id));if(button)button.disabled=false;}
   }
 
+  function mobileLinkedNavigation(row,kind='task'){
+    const opportunityId=kind==='opportunity'?row.id:row.opportunity_id||row.agenda_meta?.opportunity_id||row.context?.opportunity_id;
+    const opportunity=kind==='opportunity'?row:state.board.opportunities.find(x=>String(x.id)===String(opportunityId||''));
+    const party=opportunity?.contract_party||{};
+    const contactId=kind==='opportunity'?(party.holder_record_id||row.record_id):row.related_record_id||opportunity?.record_id||row.contact_id;
+    const managerId=party.manager_record_id||party.contact_record_id||party.contact_id;
+    const button=(path,label)=>'<button class="m-secondary" type="button" data-action="route" data-route="'+esc(path)+'">'+esc(label)+'</button>';
+    let html='';
+    if(contactId&&has('can_view_database'))html+=button('contact/'+contactId,'Ver ficha del cliente');
+    if(managerId&&String(managerId)!==String(contactId)&&has('can_view_database'))html+=button('contact/'+managerId,'Ver ficha del gestor');
+    if(opportunityId&&kind!=='opportunity'&&(has('can_view_sales')||has('can_edit_sales')))html+=button('opportunity/'+opportunityId,'Ver oportunidad');
+    else if(contactId&&kind!=='opportunity'&&(has('can_view_sales')||has('can_edit_sales')))html+=button('contact/'+contactId+'?tab=opportunities','Ver oportunidades del cliente');
+    if(!contactId&&has('can_view_database'))html+='<small>Sin ficha vinculada. No se identifica por teléfono.</small>'+button('contacts','Buscar ficha del cliente');
+    return html?'<div class="m-detail-actions m-linked-navigation" style="margin:12px 0">'+html+'</div>':'';
+  }
   function taskCard(task){
     const overdue=String(task.status)==='pending'&&task.starts_at&&new Date(task.starts_at).getTime()<Date.now();
-    return `<article class="m-list-card m-task-card"><button class="m-task-open" data-action="route" data-route="task/${esc(task.id)}" type="button"><span class="m-list-row"><span class="m-avatar">▣</span><span class="m-list-main"><strong>${esc(task.title||'Tarea')}</strong><small>${esc(task.customer_name||'Sin contacto')} · ${esc(dateTime(task.starts_at))}</small></span><span class="m-badge ${String(task.status)==='completed'?'':overdue?'red':'amber'}">${String(task.status)==='completed'?'Completada':overdue?'Vencida':String(task.status)==='cancelled'?'Cancelada':'Pendiente'}</span></span>${task.description?`<span class="m-task-description">${esc(task.description)}</span>`:''}</button>${has('can_manage_agenda')?`<div class="m-task-actions">${String(task.status)==='pending'?`<button class="m-secondary" data-action="complete-task" data-id="${esc(task.id)}">Marcar completada</button>`:''}<button class="m-danger" data-action="delete-task" data-id="${esc(task.id)}">Eliminar tarea</button></div>`:''}</article>`;
+    return `<article class="m-list-card m-task-card"><button class="m-task-open" data-action="route" data-route="task/${esc(task.id)}" type="button"><span class="m-list-row"><span class="m-avatar">▣</span><span class="m-list-main"><strong>${esc(task.title||'Tarea')}</strong><small>${esc(task.customer_name||'Sin contacto')} · ${esc(dateTime(task.starts_at))}</small></span><span class="m-badge ${String(task.status)==='completed'?'':overdue?'red':'amber'}">${String(task.status)==='completed'?'Completada':overdue?'Vencida':String(task.status)==='cancelled'?'Cancelada':'Pendiente'}</span></span>${task.description?`<span class="m-task-description">${esc(task.description)}</span>`:''}</button>${mobileLinkedNavigation(task)}${has('can_manage_agenda')?`<div class="m-task-actions">${String(task.status)==='pending'?`<button class="m-secondary" data-action="complete-task" data-id="${esc(task.id)}">Marcar completada</button>`:''}<button class="m-danger" data-action="delete-task" data-id="${esc(task.id)}">Eliminar tarea</button></div>`:''}</article>`;
   }
   function renderTaskFilters(counts,active=state.taskFilter){
     const options=[['all','Todas'],['pending','Pendientes'],['today','Hoy'],['overdue','Vencidas'],['completed','Completadas']];
@@ -1277,7 +1324,7 @@
     const editor=taskDetail;if(editor.id!==String(id)||editor.loading)return `<div class="m-page">${head}${skeleton()}</div>`;
     if(!editor.row)return `<div class="m-page">${head}${empty('No disponible',editor.error||'La tarea ya no existe.')}<button class="m-secondary" data-action="reload-task" data-id="${esc(id)}">Reintentar</button></div>`;
     const row=editor.row,canEdit=has('can_manage_agenda');
-    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description,row.agenda_meta?.attachments||[])}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
+    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p>${mobileLinkedNavigation(row)}<fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description,row.agenda_meta?.attachments||[])}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
   }
   function mergeTaskChange(id,row){
     window.dispatchEvent(new CustomEvent('tpf:tasks-changed'));
@@ -1366,7 +1413,7 @@
     const row=item.row,label=item.category==='overdue'?'Vencida':item.category==='today'?'Hoy':'Próxima';
     if(item.type==='task'){
       const contact=state.contacts.find(value=>String(value.id)===String(row.related_record_id));
-      return `<article class="m-alert-card m-alert-task"><div class="m-alert-card-head"><span class="m-avatar">▣</span><span class="m-alert-main"><strong>${esc(row.title||'Tarea')}</strong><small>${esc(row.customer_name||contact?.fullName||'Sin contacto')} · ${esc(dateTime(row.starts_at))}</small></span><span class="m-alert-badge ${item.category}">${label}</span></div>${row.description?`<p class="m-alert-description">${esc(row.description)}</p>`:''}<div class="m-alert-actions">${has('can_manage_agenda')?`<button class="m-secondary" data-action="complete-task" data-id="${esc(row.id)}" type="button">Completar</button>`:''}${contact?`<button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver contacto</button>`:'<button class="m-secondary" data-action="open-tasks" data-filter="pending" type="button">Ver tareas</button>'}</div></article>`;
+      return `<article class="m-alert-card m-alert-task"><div class="m-alert-card-head"><span class="m-avatar">▣</span><span class="m-alert-main"><strong>${esc(row.title||'Tarea')}</strong><small>${esc(row.customer_name||contact?.fullName||'Sin contacto')} · ${esc(dateTime(row.starts_at))}</small></span><span class="m-alert-badge ${item.category}">${label}</span></div>${row.description?`<p class="m-alert-description">${esc(row.description)}</p>`:''}${mobileLinkedNavigation(row)}<div class="m-alert-actions">${has('can_manage_agenda')?`<button class="m-secondary" data-action="complete-task" data-id="${esc(row.id)}" type="button">Completar</button>`:''}${contact?`<button class="m-secondary" data-action="route" data-route="contact/${esc(contact.id)}" type="button">Ver contacto</button>`:'<button class="m-secondary" data-action="open-tasks" data-filter="pending" type="button">Ver tareas</button>'}</div></article>`;
     }
     return `<button class="m-alert-card m-alert-opportunity" data-action="route" data-route="opportunity/${esc(row.id)}" type="button"><span class="m-alert-card-head"><span class="m-avatar">◇</span><span class="m-alert-main"><strong>${esc(row.title||'Oportunidad')}</strong><small>${esc(row.client_name||'Sin contacto')} · cierre ${esc(opportunityDateLabel(row))}</small></span><span class="m-alert-badge ${item.category}">${label}</span></span><span class="m-alert-meta"><span><small>Importe</small><b>${row.amount!=null?esc(money(row.amount)):'Sin importe'}</b></span><span><small>Columna</small><b>${esc(item.stage?.name||'Sin columna')}</b></span></span></button>`;
   }
@@ -1842,17 +1889,17 @@ function crmInteractiveText(message){
   }
   function renderMobileWaContractContext(chatId){
     const rows=mobileWaChatOpportunities(chatId);if(String(chatId).includes('@g.us'))return '';
-    return `${rows.length&&has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin:8px 0" data-action="mobile-accept-chat">Aceptar oferta / tramitar</button>`:''}<details id="mobileWaContract" class="m-wa-contract"><summary>${rows.length===1?'Contrato de '+esc(rows[0].contract_party?.holder_name||rows[0].client_name||'titular'):rows.length?rows.length+' contratos':'Conversación'} · Próximos envíos</summary><div id="mobileWaUpcoming"></div>${rows.map(o=>`<div><strong>${esc(o.contract_party?.holder_name||o.client_name||o.title)}</strong><small>Comunicaciones con ${esc(o.contract_party?.recipient_name||mobileWaChatName(mobileWaSelectedChat(chatId)))}</small>${has('can_edit_sales')?`<button class="m-primary" data-action="mobile-accept-contract" data-id="${esc(o.id)}">Aceptar oferta / tramitar</button>`:''}<button class="m-secondary" data-action="wa-next-steps" data-id="${esc(o.id)}">Ver próximos envíos / editar</button></div>`).join('')}</details>`;
+    return `${rows.length&&has('can_edit_sales')?`<button class="m-secondary" style="width:100%;margin:8px 0" data-action="mobile-accept-chat">Aceptar oferta / tramitar</button>`:''}<details id="mobileWaContract" class="m-wa-contract"><summary>${rows.length===1?'Contrato de '+esc(rows[0].contract_party?.holder_name||rows[0].client_name||'titular'):rows.length?rows.length+' contratos':'Conversación'} · Próximos envíos</summary><div id="mobileWaUpcoming"></div>${rows.map(o=>`<div><strong>${esc(o.contract_party?.holder_name||o.client_name||o.title)}</strong><small>Comunicaciones con ${esc(o.contract_party?.recipient_name||mobileWaChatName(mobileWaSelectedChat(chatId)))}</small>${mobileLinkedNavigation({opportunity_id:o.id},'offer')}${has('can_edit_sales')?`<button class="m-primary" data-action="mobile-accept-contract" data-id="${esc(o.id)}">Aceptar oferta / tramitar</button>`:''}<button class="m-secondary" data-action="wa-next-steps" data-id="${esc(o.id)}">Ver próximos envíos / editar</button></div>`).join('')}</details>`;
   }
   async function loadMobileWaUpcoming(chatId){
     const target=byId('mobileWaUpcoming');if(!target)return;target.textContent='Comprobando próximos envíos…';
     try{
       const rows=mobileWaChatOpportunities(chatId),jobs=[];
       const phone=mobileWaNormalizePhone(chatId);let programs=[];
-      if(phone){const result=await client.from('agenda_items').select('id,customer_name,whatsapp_message,whatsapp_scheduled_at').eq('status','pending').in('whatsapp_phone',[phone,'+'+phone,phone.slice(-9)]).not('whatsapp_scheduled_at','is',null).order('whatsapp_scheduled_at').limit(20);if(result.error)throw result.error;programs=result.data||[];}
+      if(phone){const result=await client.from('agenda_items').select('id,related_record_id,customer_name,whatsapp_message,whatsapp_scheduled_at').eq('status','pending').in('whatsapp_phone',[phone,'+'+phone,phone.slice(-9)]).not('whatsapp_scheduled_at','is',null).order('whatsapp_scheduled_at').limit(20);if(result.error)throw result.error;programs=result.data||[];}
       for(const o of rows){const {data,error}=await client.from('crm_server_automation_jobs').select('id,run_at,status,context').contains('context',{opportunity_id:o.id}).eq('status','pending').in('action_type',['send_whatsapp_now','send_template','__send_whatsapp']).order('run_at').limit(1);if(error)throw error;jobs.push(...data||[]);}
       if(chatId!==state.whatsapp.selectedId||!target.isConnected)return;jobs.sort((a,b)=>String(a.run_at).localeCompare(String(b.run_at)));
-      target.innerHTML=programs.map(p=>`<div><b>Programado por ti · ${esc(new Date(p.whatsapp_scheduled_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'}))}</b><p>${esc(p.whatsapp_message||'')}</p><button class="m-secondary" data-action="wa-edit-program" data-id="${esc(p.id)}">Editar programación</button></div>`).join('')+'<p>'+esc(jobs.length?'Próximo envío automático: '+new Date(jobs[0].run_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'}):'Sin envíos automáticos pendientes para estos contratos.')+'</p>';
+      target.innerHTML=programs.map(p=>`<div><b>Programado por ti · ${esc(new Date(p.whatsapp_scheduled_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'}))}</b><p>${esc(p.whatsapp_message||'')}</p>${mobileLinkedNavigation(p)}<button class="m-secondary" data-action="wa-edit-program" data-id="${esc(p.id)}">Editar programación</button></div>`).join('')+'<p>'+esc(jobs.length?'Próximo envío automático: '+new Date(jobs[0].run_at).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'}):'Sin envíos automáticos pendientes para estos contratos.')+'</p>';
     }catch(_){if(chatId===state.whatsapp.selectedId)target.textContent='No se pudieron comprobar los próximos envíos. Abre el contrato para reintentar.';}
   }
   function updateMobileWaBottomButton(){const box=byId('mobileWaMessages'),button=byId('mobileWaBottom');if(box&&button)button.hidden=box.scrollHeight-box.scrollTop-box.clientHeight<90;}
@@ -2116,6 +2163,9 @@ function crmInteractiveText(message){
     byId('mobileWaActionSheet').addEventListener('change',handleMobileWaSheetFilter);
     document.addEventListener('keydown',handleMobileWaSheetKeydown);
     addEventListener('hashchange',()=>{closeMobileWaSheet(false);render();});
+    byId('mobileView')?.addEventListener('scroll',()=>rememberMobileView(),{passive:true});
+    byId('mobileView')?.addEventListener('touchstart',()=>{mobileRestoreObserver?.disconnect();mobileRestoringView=false;},{passive:true});
+    byId('mobileView')?.addEventListener('wheel',()=>{mobileRestoreObserver?.disconnect();mobileRestoringView=false;},{passive:true});
     addEventListener('pageshow',()=>{if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(refreshVisibleMobileData);});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMobileWaRefresh();if(route().parts[0]==='scan'){state.cameraPaused=true;stopGuidedCamera();setGuidedCameraStatus('La cámara se ha detenido. Pulsa “Activar cámara” para continuar.');}return;}if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(refreshVisibleMobileData);const current=route();if(current.parts[0]==='whatsapp')loadMobileWaChats({silent:true,light:true});else if(current.parts[0]==='whatsapp-chat')loadMobileWaHistory(safeDecode(current.parts[1]),{silent:true});});
     addEventListener('pagehide',()=>{stopMobileWaRefresh();stopGuidedCamera();});
@@ -2187,7 +2237,7 @@ function crmInteractiveText(message){
     if(action==='wa-more'){state.whatsapp.limit+=MOBILE_WA_PAGE_SIZE;updateMobileWaListDom();}
     if(action==='wa-refresh')loadMobileWaChats();
     if(action==='wa-back-home')go('home',true);
-    if(action==='wa-back-list')go(mobileWaBackTarget(),true);
+    if(action==='wa-back-list')goBack(mobileWaBackTarget());
     if(action==='wa-refresh-chat')loadMobileWaHistory(state.whatsapp.selectedId,{scrollBottom:false});
     if(action==='wa-search-messages')openMobileWaMessageSearch();
     if(action==='wa-bottom')scrollMobileWaBottom();
@@ -2318,7 +2368,7 @@ function crmInteractiveText(message){
   ];
   function openMobileQuickReplies(){setMobileWaSheet('quick-replies','Respuestas rápidas',mobileQuickReplies.map((r,i)=>`<button class="m-wa-sheet-option" data-action="wa-quick-use" data-index="${i}" type="button"><span><b>${esc(r.name)}</b><small>${esc(r.text)}</small></span></button>`).join('')+'<p>Se añade al borrador. Revisa el texto antes de enviar.</p>');}
   function insertMobileQuickReply(index){const id=mobileWaSheetChatId(),r=mobileQuickReplies[index],input=byId('mobileWaComposer');if(!id||!r||!input)return;const text=resolveMobileWaTemplate(r.text,id);input.value=input.value.trim()?input.value+'\n\n'+text:text;closeMobileWaSheet();input.focus();}
-  async function loadMobileSharedOffers(id){const summary=byId('mobileSummaryOffer'),target=summary||byId('mobileSharedOffers');if(!target)return;try{const rows=await window.TPFWhatsappOfferSummary(id);if(!target.isConnected||route().parts[1]!==id)return;if(summary){const latest=rows[0];target.innerHTML=latest?`<small>Última oferta · ${esc(latest.status)}</small><b>${esc(latest.title)}</b><span><strong>${esc(latest.amount)}</strong> · Gestionar ›</span>`:'<small>Última oferta</small><b>Sin ofertas</b><span>Ver ofertas ›</span>';return;}target.innerHTML=rows.length?rows.map(r=>`<section class="m-info-card"><h3>${esc(r.title)}</h3><b>${esc(r.amount)}</b><p>${esc(r.status)}</p>${r.followupHtml}</section>`).join(''):empty('Sin ofertas','Todavía no hay ofertas para este contacto.');}catch(e){if(target.isConnected)target.textContent=summary?'No se pudo cargar la última oferta. Ver ofertas ›':'No se pudieron cargar las ofertas. Vuelve a abrir esta pestaña.';}}
+  async function loadMobileSharedOffers(id){const summary=byId('mobileSummaryOffer'),target=summary||byId('mobileSharedOffers');if(!target)return;try{const rows=await window.TPFWhatsappOfferSummary(id);if(!target.isConnected||route().parts[1]!==id)return;if(summary){const latest=rows[0];target.innerHTML=latest?`<small>Última oferta · ${esc(latest.status)}</small><b>${esc(latest.title)}</b><span><strong>${esc(latest.amount)}</strong> · Gestionar ›</span>`:'<small>Última oferta</small><b>Sin ofertas</b><span>Ver ofertas ›</span>';return;}target.innerHTML=rows.length?rows.map(r=>`<section class="m-info-card"><h3>${esc(r.title)}</h3><b>${esc(r.amount)}</b><p>${esc(r.status)}</p>${mobileLinkedNavigation({related_record_id:id,opportunity_id:r.opportunity_id||r.opportunityId},'offer')}${r.followupHtml}</section>`).join(''):empty('Sin ofertas','Todavía no hay ofertas para este contacto.');}catch(e){if(target.isConnected)target.textContent=summary?'No se pudo cargar la última oferta. Ver ofertas ›':'No se pudieron cargar las ofertas. Vuelve a abrir esta pestaña.';}}
   window.openWhatsAppTemplatePicker=async options=>{
     const d=document.createElement('dialog');d.className='m-shared-template-dialog';d.innerHTML='<h2>Elegir plantilla</h2><input type="search" placeholder="Buscar plantilla" aria-label="Buscar plantilla"><div data-list>Cargando…</div><button type="button" data-close>Cerrar</button>';document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.onclose=()=>d.remove();d.showModal();
     try{const {data,error}=await client.rpc('wa_list_templates');if(error)throw error;const renderList=()=>{const q=d.querySelector('input').value.toLowerCase(),list=d.querySelector('[data-list]');list.replaceChildren();for(const row of data||[]){if(!(row.name+' '+row.body).toLowerCase().includes(q))continue;const b=document.createElement('button');b.type='button';b.textContent=row.name;b.onclick=()=>{options.onSelect?.({template:row,text:resolveMobileWaTemplate(row.body,contactPhoneNumber(options.context?.phone)+'@c.us')});d.close();};list.append(b);}};d.querySelector('input').oninput=renderList;renderList();}catch(e){d.querySelector('[data-list]').textContent=e.message;}
