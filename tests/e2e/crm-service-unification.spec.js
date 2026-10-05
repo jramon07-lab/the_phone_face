@@ -448,6 +448,15 @@ test.describe('Móvil de solo lectura', () => {
         await expect(page.locator('#mobileView')).toBeVisible();
         await expect.poll(() => page.locator('#mobileView').evaluate(el => el.childElementCount > 0)).toBe(true);
       }
+      for(const extra of ['tasks','agenda','templates','labels','alerts']){
+        await page.goto('/movil/#/'+extra,{waitUntil:'domcontentloaded'});
+        await expect(page.locator('#mobileApp')).toBeVisible({timeout:20000});
+        await expect.poll(()=>page.locator('#mobileView').evaluate(el=>el.childElementCount>0)).toBe(true);
+        await expect(page.locator('#mobileView')).not.toContainText('No se pudo abrir');
+        await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+        console.log('CRM_FULL_AUDIT_MOBILE_SECTION',extra);
+      }
+      await page.locator('[data-mobile-route="whatsapp"]').click();
       await expect.poll(() => report.greenAuthorized, { timeout: 20000 }).toBe(true);
       await expect(page.locator('[data-action="wa-auto-settings"]')).toBeVisible();
       await page.locator('[data-action="wa-auto-settings"]').click();
@@ -620,7 +629,14 @@ test('PC: remaining sections, send filters and all system tabs, strictly read-on
   await expect(page.locator('#app')).toBeVisible({timeout:35000});
   for(const view of ['alerts','search','import','wa-templates-v3','whatsapp','email','users','trash','system','sendcontrol']){
    await test.step('Full audit: '+view,async()=>{
-    await page.locator('.nav[data-view="'+view+'"]').first().click();
+    const nav=page.locator('.nav[data-view="'+view+'"]').first();
+    if(view==='system'&&!await nav.isVisible()){
+     const admin=await page.evaluate(()=>typeof perms!=='undefined'&&perms.is_admin===true);
+     expect(admin,'An administrator must have access to system diagnostics').toBe(false);
+     console.log('CRM_FULL_AUDIT_ADMIN_SCOPE','system hidden for non-admin test account; verified separately with administrator');
+     return;
+    }
+    await expect(nav).toBeVisible({timeout:15000});await nav.click();
     const section=page.locator(view==='sendcontrol'?'#ccPanel':'#view-'+view);
     await expect(section).toBeVisible({timeout:15000});
     await expect.poll(()=>section.evaluate(el=>el.childElementCount>0)).toBe(true);
