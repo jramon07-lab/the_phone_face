@@ -16,7 +16,9 @@ const READ_RPCS = new Set([
   'crm_system_health_snapshot', 'crm_welcome_capability', 'crm_contact_authorship',
   'wa_get_messages', 'wa_list_templates', 'crm_whatsapp_internal_reads',
   'crm_list_monthly_reviews', 'crm_router_return_preview', 'crm_direct_sale_day_one_preview',
-  'crm_installation_preview','crm_installation_settings','crm_installations_list','crm_operator_communication_templates'
+  'crm_installation_preview','crm_installation_settings','crm_installations_list','crm_operator_communication_templates',
+  // Reviewed STABLE functions: only SELECTs of visible offers and operator text defaults.
+  'crm_contact_offer_ids', 'crm_operator_message_defaults'
 ]);
 const GREEN_READ = new Map([
   ['state', 'GET'], ['settings', 'GET'], ['summary', 'GET'], ['chats', 'GET'],
