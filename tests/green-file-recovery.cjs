@@ -19,6 +19,10 @@ async function request(provider,saved){
  const missing=()=>{throw Object.assign(Error('File message encrypted url not found'),{status:400})};
  r=await request(missing,'https://media.test/saved');assert.equal(r.result.available,true);
  r=await request(missing);assert.equal(r.status,200);assert.equal(r.result.available,false);assert.equal(r.result.reason,'file_unavailable');
+ const expired=()=>{throw Object.assign(Error('Internal error when downloading file by chatId synthetic-chat and idMessage synthetic-file'),{status:500})};
+ r=await request(expired,'https://media.test/saved');assert.equal(r.result.available,true,'An old provider error still tries the verified copy');
+ r=await request(expired);assert.equal(r.status,200);assert.equal(r.result.reason,'file_unavailable');
+ await assert.rejects(request(()=>{throw Object.assign(Error('Internal Server Error'),{status:500})}),/Internal Server Error/,'Unexpected server failures must remain visible');
  await assert.rejects(request(()=>{throw Object.assign(Error('permission denied'),{status:403})}),/permission denied/);
  const client=fs.readFileSync('js/modules/whatsapp.js','utf8');
  const from=client.indexOf('        const guardedApi=async'),to=client.indexOf('        guardedApi.__tpfGreenGuard',from);

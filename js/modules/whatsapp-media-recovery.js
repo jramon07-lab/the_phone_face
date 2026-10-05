@@ -11,9 +11,10 @@
   const current=()=>target.isConnected&&live()?.selected?.id===chatId&&live()?.selectionVersion===selection;
   function unavailable(error){
    if(!current())return;
-   target.setAttribute('aria-label','Archivo no disponible. Puedes intentar descargarlo.');
+   const text=error?.fileUnavailable?'Este archivo antiguo ya no está disponible en WhatsApp. Prueba desde el móvil o pide que lo reenvíen.':'No se pudo cargar el archivo. Puedes intentar descargarlo o volver a abrir la conversación.';
+   target.setAttribute('aria-label',text);
    let notice=target.parentElement?.querySelector('.waMediaRecoveryNotice');
-   if(!notice){notice=document.createElement('small');notice.className='waMediaRecoveryNotice';notice.textContent='Archivo no disponible. Puedes intentar descargarlo.';target.after(notice);}
+   if(!notice){notice=document.createElement('small');notice.className='waMediaRecoveryNotice';notice.textContent=text;target.after(notice);}
    const now=Date.now();
    if(now-(reported.get(key)||0)>=60000){
     if(reported.size>=100)reported.delete(reported.keys().next().value);
@@ -30,7 +31,10 @@
    // file is a download lookup: it never sends, marks read or consumes receipts.
    const result=await waApi('file',{chatId,idMessage}),url=String(result?.downloadUrl||'').trim();
    if(!current())return;
-   if(!/^https:\/\//i.test(url))throw Error(result?.reason==='file_unavailable'?'El archivo ya no está disponible en WhatsApp. Descárgalo desde el móvil o pide que lo reenvíen.':'WhatsApp no devolvió un archivo disponible.');
+   if(!/^https:\/\//i.test(url)){
+    const error=Error(result?.reason==='file_unavailable'?'El archivo ya no está disponible en WhatsApp. Descárgalo desde el móvil o pide que lo reenvíen.':'WhatsApp no devolvió un archivo disponible.');
+    error.fileUnavailable=result?.reason==='file_unavailable';throw error;
+   }
    attempt.phase='loading';
    const loaded=()=>{if(attempt.phase!=='loading')return;attempt.phase='loaded';clearTimeout(attempt.timer);target.parentElement?.querySelector('.waMediaRecoveryNotice')?.remove();};
    target.addEventListener(target.tagName==='IMG'?'load':'loadedmetadata',loaded,{once:true});

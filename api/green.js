@@ -506,7 +506,8 @@ export default async function handler(req, res) {
         if(saved){downloadUrl=saved.url;await saved.response.body?.cancel?.();}
       }
       if(downloadUrl)return res.status(200).json({ok:true,downloadUrl,available:true});
-      const missing=providerError?.status===400&&/encrypted url not found|file message/i.test(providerError.message||'');
+      const missing=(providerError?.status===400&&/encrypted url not found|file message/i.test(providerError.message||'')) ||
+        (providerError?.status>=500&&/^Internal error when downloading file by chatId /i.test(providerError.message||''));
       if(providerError&&!missing)throw providerError;
       return res.status(200).json({ok:true,downloadUrl:'',available:false,reason:'file_unavailable'});
     }
