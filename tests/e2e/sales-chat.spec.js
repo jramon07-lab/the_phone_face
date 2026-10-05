@@ -36,3 +36,27 @@ test('Opportunity dossier stays compact with offer access and the linked contact
  }
  expect(errors).toEqual([]);
 });
+
+
+test('Conversation opened from send control returns to send control instead of the sales screen',async({page,context})=>{
+ await context.route('**/*',r=>r.abort());
+ await page.setContent('<button class="nav active" data-view="sendcontrol">Control de envíos</button><button class="nav" data-view="whatsapplive">WhatsApp</button><section id="ccPanel" style="height:100px;overflow:auto"><input id="ccSearch" value="Prueba"><div style="height:500px">Envíos</div></section><section id="view-whatsapplive" hidden><div class="waLiveHeaderActions"></div></section>');
+ await page.evaluate(()=>{
+  window.crmCan=()=>true;window.chats=[];window.selectWhatsAppChat=async id=>chats.push(id);
+  window.tpfCaptureCurrentScreen=()=>({mainView:'sales'});window.restoreCalls=0;window.tpfRestoreCapturedScreen=async()=>restoreCalls++;
+  document.getElementById('ccPanel').scrollTop=80;
+  for(const nav of document.querySelectorAll('.nav'))nav.onclick=()=>{
+   for(const other of document.querySelectorAll('.nav'))other.classList.toggle('active',other===nav);
+   document.getElementById('ccPanel').hidden=nav.dataset.view!=='sendcontrol';
+   document.getElementById('view-whatsapplive').hidden=nav.dataset.view!=='whatsapplive';
+  };
+ });
+ await page.addScriptTag({content:fs.readFileSync('js/modules/offer-followup-ui.js','utf8')});
+ await page.evaluate(()=>TPFOfferFollowup.openConversation('test',{id:'test',phone:'600000001'}));
+ await expect(page.getByRole('button',{name:'← Volver a Control de envíos',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'← Volver a Control de envíos',exact:true}).click();
+ await expect(page.locator('#ccPanel')).toBeVisible();await expect(page.locator('#ccSearch')).toHaveValue('Prueba');
+ expect(await page.evaluate(()=>restoreCalls)).toBe(0);
+ expect(await page.locator('#ccPanel').evaluate(el=>el.scrollTop)).toBe(80);
+ expect(await page.evaluate(()=>chats)).toEqual(['34600000001@c.us']);
+});

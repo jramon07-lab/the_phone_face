@@ -87,13 +87,13 @@ let salesConversationOrigin=null;
 function clearConversationReturn(){salesConversationOrigin=null;document.getElementById('ofBackToSales')?.remove();}
 function showConversationReturn(){
  let button=document.getElementById('ofBackToSales');
- if(!button){const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(!header)return;button=document.createElement('button');button.id='ofBackToSales';button.type='button';button.className='secondary';button.textContent=salesConversationOrigin?.view==='dashboard'?'← Volver a Inicio':'← Volver a ventas';button.onclick=returnToSales;header.prepend(button);}
+ if(!button){const header=document.querySelector('#view-whatsapplive .waLiveHeaderActions');if(!header)return;button=document.createElement('button');button.id='ofBackToSales';button.type='button';button.className='secondary';button.textContent=salesConversationOrigin?.view==='sendcontrol'?'← Volver a Control de envíos':salesConversationOrigin?.view==='dashboard'?'← Volver a Inicio':'← Volver a ventas';button.onclick=returnToSales;header.prepend(button);}
 }
 async function returnToSales(){
  const origin=salesConversationOrigin;if(!origin)return;
  const button=document.getElementById('ofBackToSales');if(button)button.disabled=true;
  try{
-  if(origin.screen&&typeof window.tpfRestoreCapturedScreen==='function')await window.tpfRestoreCapturedScreen(origin.screen);
+  if(origin.view!=='sendcontrol'&&origin.screen&&typeof window.tpfRestoreCapturedScreen==='function')await window.tpfRestoreCapturedScreen(origin.screen);
   else{const nav=document.querySelector('.nav[data-view="'+(origin.view||'sales')+'"]');if(!nav)throw Error('El listado de origen no está disponible.');nav.dataset.tpfRouterRestore='1';try{nav.click()}finally{delete nav.dataset.tpfRouterRestore}}
   if(Array.isArray(window.__TPF_HISTORY)&&origin.historyLength!==null)window.__TPF_HISTORY.splice(origin.historyLength);
   const restore=()=>{for(const [id,position] of Object.entries(origin.scroll)){const el=document.getElementById(id);if(el){el.scrollTop=position.top;el.scrollLeft=position.left;}}};
@@ -110,7 +110,7 @@ async function openConversation(id,supplied){
  if(!/^[1-9][0-9]{7,14}$/.test(phone))throw Error('El destinatario no tiene un teléfono válido.');
  const nav=document.querySelector('.nav[data-view="whatsapplive"]');
  if(!nav||typeof window.selectWhatsAppChat!=='function')throw Error('WhatsApp no está disponible. Actualiza y vuelve a intentarlo.');
- if(!salesConversationOrigin){salesConversationOrigin={view:document.getElementById('view-dashboard')&&!document.getElementById('view-dashboard').classList.contains('hidden')?'dashboard':'sales',screen:window.tpfCaptureCurrentScreen?.()||null,historyLength:Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null,scroll:Object.fromEntries(['salesListView','salesListRows','salesScroll','view-sales','view-dashboard'].map(id=>{const el=document.getElementById(id);return [id,{top:el?.scrollTop||0,left:el?.scrollLeft||0}]}))};}
+ if(!salesConversationOrigin){salesConversationOrigin={view:document.querySelector('.nav[data-view="sendcontrol"].active')?'sendcontrol':document.getElementById('view-dashboard')&&!document.getElementById('view-dashboard').classList.contains('hidden')?'dashboard':'sales',screen:window.tpfCaptureCurrentScreen?.()||null,historyLength:Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null,scroll:Object.fromEntries(['salesListView','salesListRows','salesScroll','view-sales','view-dashboard','ccPanel'].map(id=>{const el=document.getElementById(id);return [id,{top:el?.scrollTop||0,left:el?.scrollLeft||0}]}))};}
  nav.click();showConversationReturn();
  await window.selectWhatsAppChat(phone+'@c.us');
 }
