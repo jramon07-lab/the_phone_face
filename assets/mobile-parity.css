@@ -283,3 +283,5 @@ body.m-wa-chat-open .m-wa-message-area .m-wa-messages{flex:1;min-height:0}
 .m-wa-contract summary{cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m-wa-contract small{display:block;color:#64748b;margin:4px 0}.m-wa-contract>div{padding:8px 0}
 .m-wa-quote{display:flex;gap:8px;padding:8px 12px;font-size:12px;background:#edf4ff}.m-wa-quote span{flex:1;overflow:hidden}.m-wa-quote button{border:0;background:none}
+
+.m-paused-offer small{display:block;color:#64748b;margin:6px 0}.m-paused-actions{display:flex;gap:8px;margin-top:12px}.m-paused-actions button{flex:1;font-size:13px;padding:10px 8px}.m-paused-heading{display:flex;justify-content:space-between;align-items:center;margin:8px 0}

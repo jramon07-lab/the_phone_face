@@ -6,7 +6,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 
 const source=fs.readFileSync(path.join(__dirname,'../js/mobile-app.js'),'utf8');
-const testSource=source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`\nwindow.__opportunityFilters={state,opportunityDateKey,opportunityIsClosed,opportunityMatchesFilter,filterOpportunities,opportunityFilterCounts,opportunityContactIndex,opportunityMatchesSearch,opportunityListModel,opportunityDisplayState,opportunityListCard,renderOpportunityFilters,handleViewClick};\n})();`);
+const testSource=source.replace(/\s*boot\(\);\s*\}\)\(\);\s*$/,`\nwindow.__opportunityFilters={state,opportunityDateKey,opportunityIsClosed,opportunityMatchesFilter,filterOpportunities,opportunityFilterCounts,opportunityContactIndex,opportunityMatchesSearch,opportunityListModel,opportunityDisplayState,opportunityListCard,renderOpportunityFilters,handleViewClick,mobilePausedIdentity,mobilePaused,renderMobilePausedRows};\n})();`);
 assert.notEqual(testSource,source,'No se pudo preparar mobile-app.js para la prueba');
 
 const fixedNow=new Date('2026-09-02T10:00:00+02:00').getTime();
@@ -109,4 +109,11 @@ assert.doesNotMatch(nodes.mobileOpportunitiesList.innerHTML,/Venta ganada|Venta 
 assert.equal(nodes.mobileOpportunityResultCount.textContent,'3 oportunidades');
 assert.match(nodes.mobileOpportunityFilters.innerHTML,/data-filter="month"[^>]*aria-pressed="true"/);
 
-console.log('mobile opportunity filters: ok');
+const paused={id:'paused-1',opportunity_id:'recipient-test',operator:'Vodafone',offer_name:'Fibra',paused_at:'2026-09-01T09:00:00Z',snapshot:{holder_name:'Titular Uno',recipient_name:'Gestor Dos',recipient_phone:'612345679'}};
+api.state.board.opportunities.push({id:'recipient-test',client_name:'Titular Uno',phone:'698765432',contract_party:{holder_name:'Titular Uno',recipient_name:'Titular Uno',recipient_phone:'698765432'}});
+assert.equal(api.mobilePausedIdentity(paused).phone,'34612345679','Use the saved recipient, never the holder phone');
+assert.equal(api.mobilePausedIdentity({...paused,snapshot:{...paused.snapshot,recipient_phone:''}}).phone,'','An explicitly missing saved recipient must stay blocked');
+api.mobilePaused.rows=[paused];api.state.perms={can_use_whatsapp:true,can_edit_sales:true};
+assert.match(api.renderMobilePausedRows(),/Titular Uno/);assert.match(api.renderMobilePausedRows(),/Gestor Dos/);assert.match(api.renderMobilePausedRows(),/Ir a conversación/);assert.match(api.renderMobilePausedRows(),/Reanudar/);
+api.mobilePaused.query='sin coincidencias';assert.match(api.renderMobilePausedRows(),/Sin ofertas pausadas/);
+console.log('mobile opportunity filters and paused recipients: ok');
