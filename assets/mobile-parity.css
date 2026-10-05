@@ -285,3 +285,5 @@ body.m-wa-chat-open .m-wa-message-area .m-wa-messages{flex:1;min-height:0}
 .m-wa-quote{display:flex;gap:8px;padding:8px 12px;font-size:12px;background:#edf4ff}.m-wa-quote span{flex:1;overflow:hidden}.m-wa-quote button{border:0;background:none}
 
 .m-paused-offer small{display:block;color:#64748b;margin:6px 0}.m-paused-actions{display:flex;gap:8px;margin-top:12px}.m-paused-actions button{flex:1;font-size:13px;padding:10px 8px}.m-paused-heading{display:flex;justify-content:space-between;align-items:center;margin:8px 0}
+
+.m-offer-accept-dialog{box-sizing:border-box;width:min(480px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #dbe4ef;border-radius:16px;padding:20px;color:#24354b}.m-offer-accept-dialog::backdrop{background:#14233766}.m-offer-accept-dialog h2{font-size:20px;margin:0 0 16px}.m-offer-accept-dialog .m-field{margin-bottom:12px}.m-offer-accept-dialog [hidden]{display:none!important}.m-offer-accept-dialog [role=alert]{color:#b42318}.m-wa-contract .m-primary{margin:8px 0}

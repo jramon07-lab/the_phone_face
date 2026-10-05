@@ -115,5 +115,8 @@ assert.equal(api.mobilePausedIdentity(paused).phone,'34612345679','Use the saved
 assert.equal(api.mobilePausedIdentity({...paused,snapshot:{...paused.snapshot,recipient_phone:''}}).phone,'','An explicitly missing saved recipient must stay blocked');
 api.mobilePaused.rows=[paused];api.state.perms={can_use_whatsapp:true,can_edit_sales:true};
 assert.match(api.renderMobilePausedRows(),/Titular Uno/);assert.match(api.renderMobilePausedRows(),/Gestor Dos/);assert.match(api.renderMobilePausedRows(),/Ir a conversación/);assert.match(api.renderMobilePausedRows(),/Reanudar/);
+const corrected={...paused,snapshot:{...paused.snapshot,current_delivery_party:{holder_name:'Titular Correcto',recipient_name:'Gestora Correcta',recipient_phone:'622334455'}}};
+assert.equal(api.mobilePausedIdentity(corrected).phone,'34622334455');assert.equal(api.mobilePausedIdentity(corrected).recipient,'Gestora Correcta');assert.equal(corrected.snapshot.recipient_phone,'612345679','Historical routing stays intact');
+assert.match(api.renderMobilePausedRows(),/Marcar oferta aceptada/);
 api.mobilePaused.query='sin coincidencias';assert.match(api.renderMobilePausedRows(),/Sin ofertas pausadas/);
 console.log('mobile opportunity filters and paused recipients: ok');
