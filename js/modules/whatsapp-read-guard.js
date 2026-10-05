@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const M=window.TPFModules;if(!M)return;
-const markers=new Map(),pending=new Map();let syncing=false;
+const markers=new Map(),pending=new Map(),nativeObservations=new Map();let syncing=false;
 const state=()=>{try{return waLiveState}catch(_){return window.waLiveState}};
 const db=()=>{try{return sb}catch(_){return window.sb}};
 function count(id){const row=markers.get(String(id));return row?row.count:null;}
@@ -22,6 +22,34 @@ async function sync(){
  catch(e){M.report?.('whatsapp-read',e,'shared-read-sync');}
  finally{syncing=false;}
 }
+
+async function reconcileNative(result){
+ const at=Number(result?.nativeReadSnapshotAt||0);
+ if(!at||result?.degraded||result?.rateLimited||!Array.isArray(result?.chats)||!db()?.rpc||document.hidden)return;
+ const ready=[],present=new Set();
+ for(const chat of result.chats){
+  const id=String(chat?.id||''),ts=Number(chat?._lastIncomingAt||0);present.add(id);
+  if(!/^\d{10,15}@(c\.us|lid)$/.test(id)||chat?.unreadCount!==0||!Number.isSafeInteger(ts)||ts<=0||ts*1000>at-120000){
+   nativeObservations.delete(id);continue;
+  }
+  if((markers.get(id)?.ts||0)>=ts){nativeObservations.delete(id);continue;}
+  const previous=nativeObservations.get(id);
+  if(!previous||previous.ts!==ts||at-previous.at>300000){nativeObservations.set(id,{ts,at});continue;}
+  if(at-previous.at>=90000&&!pending.has(id))ready.push({id,ts});
+ }
+ for(const id of nativeObservations.keys())if(!present.has(id))nativeObservations.delete(id);
+ // Exact last-message watermark preserves messages arriving during persistence.
+ // A missing/stale provider count never means that a chat has been read.
+ await Promise.all(ready.slice(0,20).map(async({id,ts})=>{
+  try{
+   const {data,error}=await db().rpc('crm_whatsapp_mark_internal_read',{p_chat_id:id,p_ts:ts});
+   if(error)throw error;
+   nativeObservations.delete(id);
+  }catch(e){M.report?.('whatsapp-read',e,'native-read-sync');}
+ }));
+ if(ready.length)await sync();
+}
+
 async function safeRead(payload){
  const id=String(payload?.chatId||'');if(!id)return {ok:true,setRead:false,localOnly:true};
  const ts=Math.floor(Date.now()/1000),old=markers.get(id);
@@ -32,9 +60,9 @@ async function safeRead(payload){
  const task=(async()=>{try{const {data,error}=await db().rpc('crm_whatsapp_mark_internal_read',{p_chat_id:id,p_ts:ts});if(error)throw error;const current=markers.get(id);if(current&&current.ts<=Number(data))current.ts=Number(data);return {ok:true,setRead:false,localOnly:true};}catch(e){M.report?.('whatsapp-read',e,'persist-read');return {ok:true,setRead:false,localOnly:true,degraded:true};}finally{if(pending.get(id)===task)pending.delete(id);}})();
  pending.set(id,task);return task;
 }
-window.TPFPrivateReads={count,sync};
+window.TPFPrivateReads={count,sync,reconcileNative};
 M.register('whatsapp-read',{install(){
- function installGuard(){const base=window.waApi;if(typeof base!=='function'||base.__tpfReadSafeGuard)return false;const wrapped=async function(action,payload){if(String(action||'').toLowerCase()==='read')return safeRead(payload||{});return base.apply(this,arguments);};wrapped.__tpfReadSafeGuard=true;wrapped.__tpfReadSafeBase=base;window.waApi=wrapped;return true;}
+ function installGuard(){const base=window.waApi;if(typeof base!=='function'||base.__tpfReadSafeGuard)return false;const wrapped=async function(action,payload){if(String(action||'').toLowerCase()==='read')return safeRead(payload||{});const result=await base.apply(this,arguments);if(String(action||'').toLowerCase()==='summary')await reconcileNative(result);return result;};wrapped.__tpfReadSafeGuard=true;wrapped.__tpfReadSafeBase=base;window.waApi=wrapped;return true;}
  if(!installGuard()){let tries=0;const timer=setInterval(()=>{if(installGuard()||++tries>40)clearInterval(timer)},100);}
  if(typeof document!=='undefined'){setTimeout(sync,1200);setInterval(sync,20000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)sync()});}
 }});

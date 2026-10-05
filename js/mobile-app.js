@@ -1815,7 +1815,7 @@ function crmInteractiveText(message){
   function enrichMobileWaChats(){
     if(mobileSummaryPromise)return mobileSummaryPromise;if(Date.now()-mobileSummaryAt<90000)return Promise.resolve();
     const userId=state.user?.id;
-    mobileSummaryPromise=mobileWaApi('summary').then(result=>{if(state.user?.id!==userId)return;mobileSummaryAt=Date.now();mergeMobileChats(Array.isArray(result?.chats)?result.chats:[]);for(const chat of state.whatsapp.chats){const last=chat._lastMessage;if(last)reopenMobileWaFromMessages(chat.id,[last]);}if(route().parts[0]==='whatsapp')updateMobileWaListDom();}).catch(()=>{}).finally(()=>{mobileSummaryPromise=null;});
+    mobileSummaryPromise=mobileWaApi('summary').then(async result=>{if(state.user?.id!==userId)return;await window.TPFPrivateReads?.reconcileNative(result);if(state.user?.id!==userId)return;mobileSummaryAt=Date.now();mergeMobileChats(Array.isArray(result?.chats)?result.chats:[]);for(const chat of state.whatsapp.chats){const last=chat._lastMessage;if(last)reopenMobileWaFromMessages(chat.id,[last]);}if(route().parts[0]==='whatsapp')updateMobileWaListDom();}).catch(()=>{}).finally(()=>{mobileSummaryPromise=null;});
     return mobileSummaryPromise;
   }
   async function loadMobileWaChats({silent=false,light=false}={}){

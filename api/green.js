@@ -424,6 +424,7 @@ export default async function handler(req, res) {
         // dispara una ráfaga adicional de getChatHistory (límite: 1/segundo).
         return {
           ok:true,
+          nativeReadSnapshotAt:chatResult.cached?0:startedAt,
           chats:chats.map(c=>({...c,_lastMessage:latest.get(normalizeChatId(c.id))||c.lastMessage||null,
             _lastIncomingAt:lastIncomingAt.get(normalizeChatId(c.id))||0,
             _lastOutgoingAt:lastOutgoingAt.get(normalizeChatId(c.id))||0}))
