@@ -189,10 +189,11 @@
     const [path,query='']=raw.split('?');return {path,parts:path.split('/').filter(Boolean),query:new URLSearchParams(query)};
   }
   const mobileNavigationViews=new Map();
-  let mobileRenderedPath='',mobileRestoringView=false,mobileRestoreObserver=null;
+  let mobileRenderedPath='',mobileRestoringView=false,mobileRestoreObserver=null,mobilePendingRestorePath='';
   function rememberMobileView(){
-    const view=byId('mobileView');if(!view||!mobileRenderedPath||mobileRestoringView)return;
+    const view=byId('mobileView');if(!view||!mobileRenderedPath||mobileRestoringView||mobilePendingRestorePath===mobileRenderedPath)return;
     mobileNavigationViews.set(mobileRenderedPath,{scroll:view.scrollTop,profileTab:state.profileTab,
+      panels:[...(view.querySelectorAll?.('[id]')||[])].filter(x=>x.scrollHeight>x.clientHeight).map(x=>({id:x.id,top:x.scrollTop,left:x.scrollLeft})),
       details:[...(view.querySelectorAll?.('details[id][open]')||[])].map(x=>x.id)});
     if(mobileNavigationViews.size>100)mobileNavigationViews.delete(mobileNavigationViews.keys().next().value);
   }
@@ -202,9 +203,11 @@
     const restore=()=>{if(route().path+(location.hash.includes('?')?'?'+route().query.toString():'')!==path)return;
       (saved?.details||[]).forEach(id=>{const x=byId(id);if(x?.tagName==='DETAILS')x.open=true;});
       view.scrollTop=saved?.scroll??(route().parts[0]==='whatsapp'?Number(state.whatsapp.listScroll||0):0);
+      mobilePendingRestorePath=saved?.scroll>view.scrollTop+1?path:'';
+      (saved?.panels||[]).forEach(p=>{const x=byId(p.id);if(x){x.scrollTop=p.top;x.scrollLeft=p.left;}});
     };
     restore();if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{restore();mobileRestoringView=false;});else mobileRestoringView=false;
-    if(saved?.scroll&&typeof MutationObserver==='function'){mobileRestoreObserver=new MutationObserver(()=>{mobileRestoringView=true;restore();mobileRestoringView=false;});
+    if((saved?.scroll||saved?.panels?.length)&&typeof MutationObserver==='function'){mobileRestoreObserver=new MutationObserver(()=>{mobileRestoringView=true;restore();mobileRestoringView=false;});
       mobileRestoreObserver.observe(view,{childList:true,subtree:true});
       const observer=mobileRestoreObserver;setTimeout(()=>observer.disconnect(),2500);
     }
@@ -2165,7 +2168,7 @@ function crmInteractiveText(message){
     document.addEventListener('keydown',handleMobileWaSheetKeydown);
     addEventListener('hashchange',()=>{closeMobileWaSheet(false);render();});
     byId('mobileView')?.addEventListener('scroll',()=>rememberMobileView(),{passive:true});
-    byId('mobileView')?.addEventListener('touchstart',()=>{mobileRestoreObserver?.disconnect();mobileRestoringView=false;},{passive:true});
+    byId('mobileView')?.addEventListener('touchstart',()=>{mobileRestoreObserver?.disconnect();mobileRestoringView=false;mobilePendingRestorePath='';},{passive:true});
     byId('mobileView')?.addEventListener('wheel',()=>{mobileRestoreObserver?.disconnect();mobileRestoringView=false;},{passive:true});
     addEventListener('pageshow',()=>{if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(refreshVisibleMobileData);});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){stopMobileWaRefresh();if(route().parts[0]==='scan'){state.cameraPaused=true;stopGuidedCamera();setGuidedCameraStatus('La cámara se ha detenido. Pulsa “Activar cámara” para continuar.');}return;}if(state.user&&Date.now()-state.lastRefresh>30000)refreshData({silent:true}).then(refreshVisibleMobileData);const current=route();if(current.parts[0]==='whatsapp')loadMobileWaChats({silent:true,light:true});else if(current.parts[0]==='whatsapp-chat')loadMobileWaHistory(safeDecode(current.parts[1]),{silent:true});});
