@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 75074)
-Total output lines: 2341
-
 (function(){
   'use strict';
 
@@ -1148,7 +1145,168 @@ Total output lines: 2341
     return new Date(wallTime-madridOffsetAt(first));
   }
   function agendaDayUtcRange(value){
-    const selected=validAgendaDateKey(value)?value:madridDateKey(),next=shiftAgendaDateKey(sel…5074 tokens truncated…d,'task');
+    const selected=validAgendaDateKey(value)?value:madridDateKey(),next=shiftAgendaDateKey(selected,1);
+    return {start:madridMidnight(selected).toISOString(),end:madridMidnight(next).toISOString()};
+  }
+  const agendaDateTime=value=>{if(!value)return 'Sin fecha';const parsed=new Date(value);return Number.isNaN(parsed.getTime())?'Sin fecha':parsed.toLocaleString('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});};
+  function agendaListModel(value=agendaSelectedDate(),tasks=state.tasks){
+    const selected=validAgendaDateKey(value)?value:madridDateKey(),rows=(tasks||[]).filter(task=>madridDateKey(task?.starts_at)===selected).sort((a,b)=>String(a.starts_at||'').localeCompare(String(b.starts_at||'')));
+    return {selected,rows,pending:rows.filter(task=>taskIsPending(task)).length,completed:rows.filter(task=>taskIsCompleted(task)).length,cancelled:rows.filter(task=>taskStatus(task)==='cancelled').length};
+  }
+  function agendaTaskCard(task){return taskCard(task);}
+  async function loadAgendaDay(value){
+    if(!client||(!has('can_view_agenda')&&!has('can_manage_agenda'))||!validAgendaDateKey(value))return;
+    const requestId=state.agenda.requestId+1;state.agenda={date:value,rows:[],loading:true,loaded:false,error:'',requestId};
+    try{
+      const range=agendaDayUtcRange(value),result=await client.from('agenda_items').select('id,title,description,customer_name,customer_phone,starts_at,reminder_at,assigned_to,related_record_id,status,whatsapp_enabled,created_at').or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').gte('starts_at',range.start).lt('starts_at',range.end).order('starts_at',{ascending:true}).limit(1000);
+      if(result.error)throw result.error;if(state.agenda.requestId!==requestId)return;state.agenda.rows=result.data||[];
+    }catch(error){
+      if(state.agenda.requestId!==requestId)return;state.agenda.rows=agendaListModel(value,state.tasks).rows;state.agenda.error=error?.message||'No se pudo actualizar este día.';
+    }finally{
+      if(state.agenda.requestId!==requestId)return;state.agenda.loading=false;state.agenda.loaded=true;const current=route();if(current.parts[0]==='agenda'&&agendaSelectedDate(current)===value)render();
+    }
+  }
+  function ensureAgendaDayLoaded(value){
+    if(state.agenda.date===value&&(state.agenda.loading||state.agenda.loaded))return;
+    loadAgendaDay(value);
+  }
+  function renderAgenda(){
+    if(!has('can_view_agenda')&&!has('can_manage_agenda'))return `<div class="m-page m-agenda-page">${pageHead('Agenda')}${empty('Acceso restringido','No tienes permiso para ver la agenda.')}</div>`;
+    const selected=agendaSelectedDate(),ready=state.agenda.date===selected&&state.agenda.loaded,model=agendaListModel(selected,ready?state.agenda.rows:[]),today=madridDateKey(),previous=shiftAgendaDateKey(model.selected,-1),next=shiftAgendaDateKey(model.selected,1),isToday=model.selected===today;
+    const content=!ready?skeleton():model.rows.length?`<div class="m-list m-agenda-list">${model.rows.map(agendaTaskCard).join('')}</div>`:empty('Día libre','No hay tareas ni recordatorios para este día.');
+    const warning=ready&&state.agenda.error?`<div class="m-duplicate warn">${esc(state.agenda.error)} Se muestran los datos disponibles.</div>`:'';
+    return `<div class="m-page m-agenda-page">${pageHead('Agenda','home','<button class="m-back" data-action="refresh" type="button" aria-label="Actualizar agenda">↻</button>')}
+      <section class="m-agenda-picker" aria-label="Seleccionar día de la agenda">
+        <button class="m-agenda-arrow" data-action="agenda-day" data-date="${previous}" type="button" aria-label="Día anterior">‹</button>
+        <label class="m-agenda-date"><span>Fecha</span><input id="mobileAgendaDate" type="date" value="${model.selected}" aria-label="Fecha de la agenda"></label>
+        <button class="m-agenda-arrow" data-action="agenda-day" data-date="${next}" type="button" aria-label="Día siguiente">›</button>
+      </section>
+      <div class="m-agenda-day-head"><div><small>${isToday?'Hoy':'Día seleccionado'}</small><h2>${esc(agendaDateLabel(model.selected))}</h2></div>${isToday?'':`<button class="m-secondary" data-action="agenda-day" data-date="${today}" type="button">Hoy</button>`}</div>
+      <div class="m-agenda-summary"><span><small>Recordatorios</small><b>${model.rows.length}</b></span><span><small>Pendientes</small><b>${model.pending}</b></span><span><small>Completados</small><b>${model.completed}</b></span><span><small>Cancelados</small><b>${model.cancelled}</b></span></div>
+      ${warning}${content}
+      <button class="m-secondary m-agenda-all" data-action="route" data-route="tasks" type="button">Ver todas las tareas</button>
+    </div>`;
+  }
+  function bindAgendaDate(){
+    const input=byId('mobileAgendaDate');if(!input)return;
+    input.onchange=()=>{if(validAgendaDateKey(input.value))go(`agenda?date=${input.value}`,true);};
+  }
+  async function completeTask(id){
+    if(!has('can_manage_agenda')||!confirm('¿Marcar esta tarea como completada?'))return;
+    try{const {error}=await client.from('agenda_items').update({status:'completed'}).eq('id',id).select('id').single();if(error)throw error;window.dispatchEvent(new CustomEvent('tpf:tasks-changed'));await refreshData({silent:true});render();toast('Tarea completada.','success');}catch(error){toast(error?.message||'No se pudo completar.','error');}
+  }
+  function taskLocalValue(value){if(!value)return '';const date=new Date(value);if(Number.isNaN(date.getTime()))return '';date.setMinutes(date.getMinutes()-date.getTimezoneOffset());return date.toISOString().slice(0,16);}
+  const MOBILE_TASK_DEFAULT_TYPES=['Tarea','Llamada','Cita','WhatsApp'];
+  let mobileTaskTypes=[...MOBILE_TASK_DEFAULT_TYPES];
+  async function loadMobileTaskTypes(){
+    try{
+      const {data,error}=await client.from('app_settings').select('value').eq('key','agenda_types').maybeSingle();
+      if(error)throw error;
+      const types=Array.isArray(data?.value)?data.value.filter(t=>t?.name&&t?.icon&&t?.color).slice(0,30).map(t=>String(t.name)):[];
+      mobileTaskTypes=types.length?[...new Set(types)]:[...MOBILE_TASK_DEFAULT_TYPES];
+    }catch(_){mobileTaskTypes=[...MOBILE_TASK_DEFAULT_TYPES];}
+  }
+  function taskTypeOptions(selected){return [...new Set([...mobileTaskTypes,selected])].filter(Boolean).map(name=>`<option value="${esc(name)}" ${name===selected?'selected':''}>${esc(name)}</option>`).join('');}
+  function taskTypeFields(prefix,type,meta={}){
+    const key=String(type).toLowerCase();
+    const select=(suffix,label,options,value)=>`<label class="m-field"><span>${label}</span><select id="${prefix}${suffix}" class="m-select">${options.map(([id,text])=>`<option value="${id}" ${String(value)===id?'selected':''}>${text}</option>`).join('')}</select></label>`;
+    const input=(suffix,label,value)=>`<label class="m-field"><span>${label}</span><input id="${prefix}${suffix}" class="m-input" value="${esc(value||'')}"></label>`;
+    if(key==='tarea')return select('Priority','Prioridad',[['normal','Normal'],['high','Alta'],['urgent','Urgente']],meta.priority||'normal');
+    if(key==='llamada')return select('Duration','Duración',[['15','15 minutos'],['30','30 minutos'],['45','45 minutos'],['60','1 hora']],meta.duration||'30')+select('Result','Resultado',[['','Sin indicar'],['pending','Pendiente de llamar'],['answered','Atendida'],['no_answer','No contesta'],['callback','Volver a llamar']],meta.result||'');
+    if(key==='cita')return select('Duration','Duración',[['30','30 minutos'],['60','1 hora'],['90','90 minutos'],['120','2 horas']],meta.duration||'30')+input('Location','Lugar',meta.location);
+    if(key==='whatsapp')return `<label class="m-field"><span>Mensaje de referencia</span><textarea id="${prefix}WhatsappMessage" class="m-textarea">${esc(meta.whatsapp_message||'')}</textarea></label><p class="m-subtitle">Este recordatorio no programa un envío de WhatsApp.</p>`;
+    return input('Custom','Detalle',meta.custom);
+  }
+  function readTaskTypeFields(prefix){
+    const original=prefix==='editTask'?taskDetail.row:null,type=clean(byId(prefix+'Type')?.value)||original?.agenda_type||'Tarea';
+    const meta={...(original?.agenda_meta||{})},keys={tarea:[['priority','Priority']],llamada:[['duration','Duration'],['result','Result']],cita:[['duration','Duration'],['location','Location']],whatsapp:[['whatsapp_message','WhatsappMessage']]};
+    for(const key of ['priority','duration','result','location','whatsapp_message','custom'])delete meta[key];
+    for(const [key,suffix] of keys[type.toLowerCase()]||[['custom','Custom']]){const value=clean(byId(prefix+suffix)?.value);if(value)meta[key]=value;}
+    if(prefix==='newTask'&&documentTaskDraft&&route().query.get('fromDocument')==='1'&&documentTaskDraft.contactId===String(route().parts[1]))meta.attachments=documentTaskDraft.files.map(f=>({id:f.id,name:f.name,url:f.webViewLink}));
+    return {agenda_type:type,agenda_meta:meta};
+  }
+  function taskDateFields(prefix,suffix,value){
+    const local=taskLocalValue(value),date=local.slice(0,10),time=local.slice(11,16);
+    return `<div class="m-task-date-row"><label class="m-field"><span>Fecha</span><input id="${prefix}${suffix}Date" class="m-input" type="date" value="${esc(date)}"></label><label class="m-field"><span>Hora</span><input id="${prefix}${suffix}Time" class="m-input" type="time" step="60" value="${esc(time)}"></label></div>`;
+  }
+  function taskDateInput(prefix,suffix){
+    const date=byId(prefix+suffix+'Date')?.value,time=byId(prefix+suffix+'Time')?.value;
+    if(!date||!time)return '';
+    return date+'T'+time;
+  }
+  function taskQuickDate(prefix,days){
+    if(!['newTask','editTask'].includes(prefix)||![0,1,7].includes(Number(days)))return;
+    const date=new Date();date.setDate(date.getDate()+Number(days));date.setHours(10,0,0,0);
+    byId(prefix+'StartsDate').value=taskLocalValue(date).slice(0,10);
+    if(!byId(prefix+'StartsTime').value)byId(prefix+'StartsTime').value='10:00';
+  }
+  function defaultTaskDate(){const date=new Date();date.setHours(10,0,0,0);if(date<=new Date())date.setDate(date.getDate()+1);return date;}
+  function taskFields(prefix,row={}){
+    const type=row.agenda_type||'Tarea';
+    return `<div class="m-form-grid m-task-form"><label class="m-field"><span>Asunto</span><input id="${prefix}Title" class="m-input" value="${esc(row.title||'')}" placeholder="Llamar al cliente"></label>${taskDateFields(prefix,'Starts',row.starts_at)}<div class="m-task-quick-dates" role="group" aria-label="Elegir fecha">${[[0,'Hoy'],[1,'Mañana'],[7,'En una semana']].map(([days,label])=>`<button type="button" class="m-secondary" data-action="task-quick-date" data-prefix="${prefix}" data-days="${days}">${label}</button>`).join('')}</div><label class="m-field"><span>Notas (opcional)</span><textarea id="${prefix}Notes" class="m-textarea" rows="2" placeholder="Escribe tus notas…">${esc(row.description||'')}</textarea></label><details class="m-task-more"><summary>Más opciones <small id="${prefix}OptionsSummary">${esc(type)} · tipo, prioridad y avisos</small></summary><div class="m-form-grid"><label class="m-field"><span>Tipo de tarea</span><select id="${prefix}Type" data-task-type-prefix="${prefix}" class="m-select">${taskTypeOptions(type)}</select></label><div id="${prefix}TypeFields" class="m-form-grid">${taskTypeFields(prefix,type,row.agenda_meta||{})}</div><label class="m-task-option"><input id="${prefix}ExtraReminder" data-task-reminder-prefix="${prefix}" type="checkbox" ${row.reminder_at?'checked':''}> Añadir otro aviso</label><div id="${prefix}ReminderBox" ${row.reminder_at?'':'hidden'}><small>Recordatorio adicional</small>${taskDateFields(prefix,'Reminder',row.reminder_at)}</div><label class="m-task-option"><input id="${prefix}NotifyEmail" type="checkbox" ${row.notify_email?'checked':''}> Email</label><label class="m-task-option"><input id="${prefix}Google" type="checkbox" ${row.sync_google_calendar?'checked':''}> Añadir a Google Calendar</label></div></details><label class="m-task-option"><input id="${prefix}NotifyApp" type="checkbox" ${row.notify_in_app!==false?'checked':''}> Avisarme en el CRM</label></div>`;
+  }
+  function readTaskFields(prefix){
+    const title=clean(byId(prefix+'Title')?.value),starts=taskDateInput(prefix,'Starts'),reminder=byId(prefix+'ExtraReminder')?.checked?taskDateInput(prefix,'Reminder'):'';
+    if(byId(prefix+'ExtraReminder')?.checked&&!reminder)throw new Error('Indica la fecha y hora del aviso adicional.');
+    if(!title||!starts)throw new Error('Escribe un asunto y una fecha/hora.');
+    if(!Number.isFinite(new Date(starts).getTime())||(reminder&&!Number.isFinite(new Date(reminder).getTime())))throw new Error('La fecha no es válida.');
+    return window.TPFTaskModel.payload({...readTaskTypeFields(prefix),title,description:clean(byId(prefix+'Notes')?.value)||null,starts_at:new Date(starts).toISOString(),reminder_at:reminder?new Date(reminder).toISOString():null,notify_in_app:!!byId(prefix+'NotifyApp')?.checked,notify_email:!!byId(prefix+'NotifyEmail')?.checked,sync_google_calendar:!!byId(prefix+'Google')?.checked});
+  }
+  let documentTaskDraft=null;
+  function taskDocumentLinks(description,attachments=[]){
+    const legacy=[...new Set(String(description||'').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<>"']+/g)||[])].map((url,i)=>({url,name:'Archivo '+(i+1)}));
+    const files=[...attachments,...legacy].filter((f,i,all)=>{try{const u=new URL(f.url);return u.protocol==='https:'&&['drive.google.com','docs.google.com'].includes(u.hostname)&&all.findIndex(x=>x.url===f.url)===i;}catch(_){return false;}});
+    return files.length?`<div class="m-info-card" style="padding:10px;margin-bottom:10px"><small>Archivos adjuntos</small>${files.map(f=>`<div><a target="_blank" rel="noopener noreferrer" href="${esc(f.url)}" style="display:block;padding:10px 0;overflow-wrap:anywhere">${esc(f.name||'Archivo')} ↗</a></div>`).join('')}</div>`:'';
+  }
+  function renderNewTask(contactId){
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId));if(!contact||!has('can_manage_agenda'))return `<div class="m-page">${pageHead('Nueva tarea',mobileWaReturnPath(contactId,'task'))}${empty('No disponible','No tienes permiso o el contacto no existe.')}</div>`;
+    const back=mobileWaReturnPath(contactId,'task'),files=route().query.get('fromDocument')==='1'&&documentTaskDraft?.contactId===String(contactId)?documentTaskDraft.files:[],draft=files.length?{title:'Revisar '+files[0].name,description:'',agenda_meta:{attachments:files.map(f=>({id:f.id,name:f.name,url:f.webViewLink}))}}:{title:'Llamar a '+contact.fullName};
+    return `<div class="m-page m-task-page">${pageHead('Nueva tarea',back)}<p class="m-subtitle" style="margin-bottom:10px">Tarea para ${esc(contact.fullName)} · ${esc(contact.phone||'Sin teléfono')}</p>${taskDocumentLinks('',draft.agenda_meta?.attachments||[])}${taskFields('newTask',{...draft,starts_at:defaultTaskDate()})}<div class="m-task-save"><button class="m-primary m-library-full" data-action="save-task" data-contact-id="${esc(contactId)}">Crear tarea</button><p id="mobileTaskMsg" class="m-form-msg" role="status"></p></div></div>`;
+  }
+  function ensureTaskDetail(id){if(!has('can_view_agenda')&&!has('can_manage_agenda'))return;if(taskDetail.id!==String(id))loadTaskDetail(id);}
+  async function loadTaskDetail(id){
+    if(!has('can_view_agenda')&&!has('can_manage_agenda'))return;
+    const editor={id:String(id),row:null,loading:true,error:''};taskDetail=editor;
+    try{const result=await client.from('agenda_items').select('*').eq('id',id).or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').single();if(result.error)throw result.error;editor.row=result.data;}
+    catch(error){editor.error=error?.message||'No se pudo cargar la tarea.';}
+    finally{editor.loading=false;if(taskDetail===editor&&route().parts[0]==='task'&&route().parts[1]===String(id))render();}
+  }
+  function renderTaskDetail(id){
+    const head=pageHead('Detalle de tarea','tasks');
+    if(!has('can_view_agenda')&&!has('can_manage_agenda'))return `<div class="m-page">${head}${empty('Acceso restringido','No tienes permiso para ver tareas.')}</div>`;
+    const editor=taskDetail;if(editor.id!==String(id)||editor.loading)return `<div class="m-page">${head}${skeleton()}</div>`;
+    if(!editor.row)return `<div class="m-page">${head}${empty('No disponible',editor.error||'La tarea ya no existe.')}<button class="m-secondary" data-action="reload-task" data-id="${esc(id)}">Reintentar</button></div>`;
+    const row=editor.row,canEdit=has('can_manage_agenda');
+    return `<div class="m-page">${head}<p class="m-subtitle" style="margin-bottom:16px">${esc(row.customer_name||'Sin contacto')} · ${esc(row.customer_phone||'Sin teléfono')} · ${row.status==='completed'?'Completada':row.status==='cancelled'?'Cancelada':'Pendiente'}</p><fieldset class="m-edit-fields" ${canEdit?'':'disabled'}>${taskFields('editTask',row)}</fieldset>${taskDocumentLinks(row.description,row.agenda_meta?.attachments||[])}${canEdit?`<div class="m-detail-actions"><button class="m-primary" data-action="save-task-detail" data-id="${esc(id)}">Guardar cambios</button><button class="m-secondary" data-action="task-status" data-id="${esc(id)}">${row.status==='completed'?'Reabrir tarea':'Marcar completada'}</button><button class="m-danger" data-action="delete-task" data-id="${esc(id)}">Eliminar tarea</button></div>`:''}<p id="mobileTaskDetailMsg" class="m-form-msg"></p></div>`;
+  }
+  function mergeTaskChange(id,row){
+    window.dispatchEvent(new CustomEvent('tpf:tasks-changed'));
+    if(row){const index=state.tasks.findIndex(item=>String(item.id)===String(id));if(index>=0)state.tasks[index]=row;else state.tasks.push(row);}
+    else state.tasks=state.tasks.filter(item=>String(item.id)!==String(id));
+    state.agenda.requestId++;state.agenda.loaded=false;state.agenda.loading=false;
+    updateAlertDot();
+  }
+  async function saveTaskDetail(id,statusOnly=false){
+    const editor=taskDetail;if(!has('can_manage_agenda')||editor.id!==String(id)||!editor.row||taskWrites.has(String(id)))return;
+    const msg=byId('mobileTaskDetailMsg');let patch;
+    try{patch=statusOnly?{status:editor.row.status==='completed'?'pending':'completed'}:readTaskFields('editTask');}catch(error){if(msg)msg.textContent=error.message;return;}
+    taskWrites.add(String(id));if(msg)msg.textContent='Guardando…';
+    try{const saved=await window.TPFTaskModel.save(client,patch,{id,previous:editor.row,canManage:has('can_manage_agenda')});editor.row=saved;mergeTaskChange(id,saved);if(taskDetail===editor&&route().parts[0]==='task'&&route().parts[1]===String(id)){render();toast('Tarea guardada.','success');}}
+    catch(error){if(msg)msg.textContent=error?.message||'No se pudo guardar.';}
+    finally{taskWrites.delete(String(id));}
+  }
+  async function deleteTask(id){
+    const row=(taskDetail.id===String(id)&&taskDetail.row)||state.tasks.find(item=>String(item.id)===String(id))||state.agenda.rows.find(item=>String(item.id)===String(id));
+    if(!row||row.whatsapp_enabled||!has('can_manage_agenda')||taskWrites.has(String(id))||!confirm(`¿Eliminar la tarea "${row.title||'Sin título'}"?`))return;
+    taskWrites.add(String(id));
+    try{const result=await client.from('agenda_items').delete().eq('id',id).or('whatsapp_enabled.is.null,whatsapp_enabled.eq.false').select('id').single();if(result.error)throw result.error;mergeTaskChange(id,null);if(taskDetail.id===String(id))taskDetail={id:'',row:null,loading:false,error:''};if(route().parts[0]==='task'&&route().parts[1]===String(id)){state.profileTab='tasks';go(row.related_record_id?`contact/${row.related_record_id}`:'tasks',true);}else render();toast('Tarea eliminada.','success');}
+    catch(error){toast(error?.message||'No se pudo eliminar la tarea.','error');}
+    finally{taskWrites.delete(String(id));}
+  }
+  async function saveTask(contactId){
+    const contact=state.contacts.find(row=>String(row.id)===String(contactId)),msg=byId('mobileTaskMsg');if(!contact||!has('can_manage_agenda')){if(msg)msg.textContent='No tienes permiso o el contacto ya no existe.';return;}const title=clean(byId('newTaskTitle')?.value),starts=taskDateInput('newTask','Starts');
+    if(!title||!starts){if(msg)msg.textContent='Escribe un asunto y una fecha.';return;}
+    const back=mobileWaReturnPath(contact.id,'task');
     const button=document.querySelector('[data-action="save-task"]');button.disabled=true;byId('mobileTaskMsg').textContent='Guardando…';
     try{
       const row={title,description:clean(byId('newTaskNotes').value)||null,customer_name:contact.fullName||null,customer_phone:contact.phone||null,starts_at:new Date(starts).toISOString(),reminder_at:null,assigned_to:state.user.id,related_record_id:contact.id,status:'pending',reminder_minutes:[],notify_in_app:true,notify_email:false,sync_google_calendar:false,whatsapp_enabled:false,...readTaskFields('newTask')};
