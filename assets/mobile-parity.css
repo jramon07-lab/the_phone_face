@@ -247,3 +247,29 @@ html .tpfUnifiedMobile .m-app>.m-view{padding-top:10px}
 .m-doc-dialog header strong{min-width:0;overflow-wrap:anywhere;font-size:16px}.m-doc-dialog header button{flex:none;width:44px;height:44px;border:0;background:transparent;color:#245fba;font-size:20px}
 .m-doc-dialog-body{padding:12px}.m-doc-dialog iframe{display:block;width:100%;height:52dvh;border:0;background:#f1f5f9;border-radius:8px}.m-doc-dialog .m-doc-actions button,.m-doc-dialog .m-doc-actions a{border:1px solid #dce3ef;border-radius:9px;padding:10px;font-size:14px;text-decoration:none;text-align:center;color:#245fba;background:white;cursor:pointer}.m-doc-dialog .m-doc-actions .m-primary{background:#1464df;color:white}
 @media(max-width:380px){.m-doc-row-actions{margin-left:0}.m-doc-pages{grid-template-columns:minmax(0,1fr)}}
+
+/* Compact mobile WhatsApp: independent conversation and message controls. */
+.m-wa-list-open .mrMobileEntry,.m-wa-chat-open .mrMobileEntry{display:none!important}
+.m-wa-chat-open .m-bottom-nav{display:none!important}
+.m-wa-chat-open .m-view{bottom:0!important;padding:10px 12px max(8px,env(safe-area-inset-bottom))!important}
+.tpfUnifiedMobile .m-wa-filters{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:5px;margin-bottom:10px}
+.tpfUnifiedMobile .m-wa-filter{flex:0 0 auto;min-height:40px;font-size:11px;padding:6px}
+.m-wa-extra-filter{min-width:95px;max-width:125px;min-height:40px;border:1px solid #dce4ef;border-radius:10px;background:white;color:#475467;font-size:11px}
+#mobileWaStatus{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px}
+#mobileWaStatus .m-wa-status{margin:0;font-size:11px}
+#mobileWaStatus button{min-height:36px;padding:6px 8px;font-size:11px}
+.m-wa-page .m-page-head{margin-bottom:8px}.m-wa-page .m-page-head h1{font-size:20px}
+.m-wa-page .m-back,.m-wa-chat-head .m-back{width:40px;height:40px;min-height:40px}
+.m-wa-chat-controls{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.m-wa-chat-controls button{min-height:40px;padding:7px 9px;font-size:12px}
+.m-wa-chat-controls button:first-child{flex:1}
+.m-wa-chat-head{grid-template-columns:36px 36px minmax(0,1fr) 36px;gap:6px}
+.m-wa-chat-head .m-avatar{width:36px;height:36px}
+.m-wa-chat-row{padding:9px;grid-template-columns:36px minmax(0,1fr);gap:8px}
+.m-wa-chat-row .m-avatar{width:36px;height:36px}.m-wa-chat-main{gap:2px}
+.m-wa-chat-main .m-inbox-badge{justify-self:start;margin:2px 0;font-size:10px;padding:3px 6px}
+.m-wa-result-count{margin:10px 2px 4px}
+.m-wa-sheet-contact{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.m-wa-composer .m-form-msg:empty{display:none}.m-wa-chat-page .m-wa-bubble{padding:8px 10px 5px;box-shadow:none}
+
+.m-wa-chat-page{display:flex;flex-direction:column}.m-wa-chat-page .m-wa-messages{flex:1 1 0}.m-wa-chat-page>.m-wa-chat-head,.m-wa-chat-page>.m-wa-chat-controls,.m-wa-chat-page>.m-wa-composer,.m-wa-chat-page>.m-wa-contact-link{flex-shrink:0}

@@ -77,7 +77,7 @@ async function run(){
   assert.equal(sheet.classList.contains('hidden'),false);
   assert.equal(sheet.dataset.chatId,chatId);
   assert.equal(trigger.attributes['aria-expanded'],'true');
-  for(const label of ['Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(sheet.innerHTML,new RegExp(label));
+  for(const label of ['Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(sheet.innerHTML,new RegExp(label));
 
   await api.openMobileWaTemplates();
   assert.equal(rpcCalls.at(-1).name,'wa_list_templates');

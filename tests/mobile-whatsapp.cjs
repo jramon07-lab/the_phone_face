@@ -122,7 +122,7 @@ async function run(){
   api.state.whatsapp.selectedId='34695661409@c.us';
   api.state.perms={is_admin:true};
   const actions=api.renderMobileWaActions();
-  for(const label of ['Marcar como atendido','Foto o archivo','Usar plantilla','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
+  for(const label of ['Marcar como atendido','Crear tarea','Crear oportunidad','Añadir etiqueta'])assert.match(actions,new RegExp(label));
   api.state.whatsapp.archiveStates['34695661409@c.us']={archived:true,archivedAt:100};
   assert.match(api.renderMobileWaActions(),/Reabrir conversación/);
   assert.equal(api.reopenMobileWaFromMessages('34695661409@c.us',[{type:'incoming',timestamp:99,message:'Antiguo'}]),false);
@@ -191,6 +191,12 @@ async function run(){
   assert.equal((limited.match(/class="m-wa-chat-row/g)||[]).length,60);
   assert.match(limited,/Mostrar más \(1\)/);
   assert.match(api.renderMobileWhatsAppChat('34695661409@c.us'),/maxlength="4096"/);
+  const compactChat=api.renderMobileWhatsAppChat('34695661409@c.us');
+  assert.match(compactChat,/m-wa-chat-controls.*data-action="wa-toggle-archive"/);
+  assert.match(compactChat,/data-action="wa-chat-actions"/);
+  assert.doesNotMatch(compactChat,/m-mobile-tools|m-wa-contact-link/);
+  assert.match(api.renderMobileWaFilters(),/data-wa-extra-filter/);
+  assert.doesNotMatch(api.renderMobileWaActions(),/wa-choose-file|wa-show-templates/);
   assert.match(api.renderMobileWhatsAppChat('34695661409@c.us'),/aria-haspopup="dialog" aria-controls="mobileWaActionSheet" aria-expanded="false"/);
   assert.match(api.renderMobileWhatsAppChat('123456789012345@lid'),/Contacto de WhatsApp/);
   assert.doesNotMatch(api.renderMobileWhatsAppChat('123456789012345@lid'),/Crear contacto/);
