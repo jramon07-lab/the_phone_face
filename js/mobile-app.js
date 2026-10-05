@@ -343,7 +343,7 @@
     rememberMobileDraft();
     if(!state.user||byId('mobileApp').classList.contains('hidden'))return;
     mobileContactIndexSource=null;
-    const current=route();document.body.classList.toggle('m-wa-chat-open',current.parts[0]==='whatsapp-chat');document.body.classList.toggle('m-wa-list-open',current.parts[0]==='whatsapp');if(current.parts[0]!=='contact'||state.profileTab!=='documents')window.TPFMobileDocuments?.leave();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
+    const current=route();document.body?.classList?.toggle('m-wa-chat-open',current.parts[0]==='whatsapp-chat');document.body?.classList?.toggle('m-wa-list-open',current.parts[0]==='whatsapp');if(current.parts[0]!=='contact'||state.profileTab!=='documents')window.TPFMobileDocuments?.leave();if(current.parts[0]!=='scan')stopGuidedCamera();setActiveNav(current.parts[0]);
     const view=byId('mobileView');
     try{
       switch(current.parts[0]){
