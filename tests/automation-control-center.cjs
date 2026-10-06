@@ -42,7 +42,7 @@ const nodes={ccStatus:{value:'pending'},ccSearch:{value:''},ccOperator:{value:''
 const calls=[];
 const sandbox={window:{TPFModules:{register(){}}},document:{getElementById:id=>nodes[id]||null},
 sb:{rpc:async(name,args)=>{calls.push({name,args});return {data:'paused'}}}};
-vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs,sequenceOf,sequenceWarning,relatedSends,act};window.TPFAutomationControlCenter={statusOf'),sandbox);
+vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs,followupPreview,sequenceOf,sequenceWarning,relatedSends,act};window.TPFAutomationControlCenter={statusOf'),sandbox);
 const t=sandbox.window.__test,a=sandbox.window.TPFAutomationControlCenter;
 t.state.jobs=[
 {id:'later',action_type:'send_whatsapp_now',status:'pending',run_at:'2026-11-02T10:00:00Z',context:{name:'Ejemplo automático',phone:'34000000001'},action_config:{text:'Oferta'}},
@@ -134,3 +134,11 @@ const navigation=[];sandbox.window.openContact=async id=>navigation.push(['conta
  assert.equal(calls.length,before,'navegar o escribir no envía ni modifica datos');
  console.log('PASS send navigation and sequence: exact identities, paused predecessor, no sends');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+const hiddenContext={offer_welcome:true,name:'Inmaculada',operator:'Vodafone',oferta_mensaje:'Hola Inmaculada, te envío una oferta.'};
+const reminder='Hola {nombre_seguimiento}. Vuelvo a escribirte sobre la oferta de {operador}.';
+assert.equal(t.followupPreview(reminder,hiddenContext,'reminder_5'),'Hola {nombre_seguimiento}. Vuelvo a escribirte sobre la oferta.');
+assert.equal(t.followupPreview(reminder,{...hiddenContext,offer_welcome:false},'reminder_5'),reminder);
+assert.equal(t.followupPreview(reminder,hiddenContext,'initial'),reminder,'el mensaje inicial guardado no se reescribe');
+assert.equal(t.followupPreview(reminder,{...hiddenContext,offer_welcome:undefined,oferta_mensaje:'Te envío una oferta que puede interesarte:'},'reminder_5'),reminder,'solo se infiere bienvenida cuando no hay bandera explícita');
+console.log('PASS follow-up previews: match deployed worker operator hiding, preserve visible operators and initial text');
