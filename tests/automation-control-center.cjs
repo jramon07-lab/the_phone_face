@@ -121,7 +121,7 @@ const sequence=a.makeRows(),second=sequence.find(x=>x.id==='second');
 assert.match(t.sequenceOf(second),/2.º recordatorio.*mensaje 3/);
 assert.match(t.sequenceWarning(second),/anterior pausado/);
 assert.equal(t.relatedSends(second).length,3);
-assert.match(t.actions(second),/data-cc-action="contact"/);
+assert.match(t.actions(second,false),/data-cc-action="contact"/);
 assert.match(t.actions(second),/data-cc-action="message"/);
 assert.doesNotMatch(source,/row.message.slice\(0,150\)/,'el mensaje debe conservarse completo');
 const navigation=[];sandbox.window.openContact=async id=>navigation.push(['contact',id]);sandbox.window.TPFLinkedActions={open:async(kind,contact)=>navigation.push([kind,contact])};
