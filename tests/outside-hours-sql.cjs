@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {PGlite}=require('@electric-sql/pglite');
+(async()=>{const db=new PGlite();await db.exec(`create schema auth;create schema crm_private;create role authenticated;create role service_role;
+ create function auth.uid() returns uuid language sql as $$select nullif(current_setting('test.actor',true),'')::uuid$$;
+ create function public.current_user_is_admin() returns boolean language sql as $$select coalesce(current_setting('test.permission',true),'')='yes'$$;
+ create function public.current_user_can(text) returns boolean language sql as $$select false$$;
+ create table public.crm_server_automation_jobs(id uuid primary key,action_type text,context jsonb,run_at timestamptz,status text);
+ create table public.agenda_items(id uuid,whatsapp_enabled boolean,status text,whatsapp_sent_at timestamptz,whatsapp_scheduled_at timestamptz,starts_at timestamptz);
+ select set_config('test.actor','00000000-0000-0000-0000-000000000001',false);select set_config('test.permission','yes',false);`);
+ const sql=fs.readFileSync('db/proposals/outside_hours_confirmation.sql','utf8').replace(/now\(\)/g,"timestamptz '2026-10-06T20:24:00Z'");await db.exec(sql);
+ for(const [at,expected] of [['2026-10-06T08:00:00Z',null],['2026-10-06T12:00:00Z','2026-10-06T15:30:00.000Z'],['2026-10-10T12:00:00Z','2026-10-12T08:00:00.000Z'],['2026-10-25T08:00:00Z','2026-10-26T09:00:00.000Z']]){const r=await db.query('select crm_private.outside_hours_next($1) value',[at]);assert.equal(r.rows[0].value?.toISOString()||null,expected);}
+ const headers=choice=>db.query("select set_config('request.headers',$1,false)",[JSON.stringify({'x-client-info':'supabase-js tpf-outside-hours='+choice})]);
+ const insert=async(id,action,context={},at='2026-10-06T20:24:00Z',status='pending')=>(await db.query('insert into crm_server_automation_jobs values($1,$2,$3,$4,$5) returning *',[id,action,JSON.stringify(context),at,status])).rows[0];
+ await headers('now');let row=await insert('00000000-0000-0000-0000-000000000011','__send_whatsapp');assert.equal(row.context.outside_hours_approval.job_id,row.id);assert.equal(row.run_at.toISOString(),'2026-10-06T20:24:00.000Z');
+ await headers('');let child=await insert('00000000-0000-0000-0000-000000000012','__send_whatsapp',row.context);assert.equal(child.context.outside_hours_approval,undefined);
+ await db.exec("select set_config('test.permission','no',false)");await headers('now');row=await insert('00000000-0000-0000-0000-000000000013','__send_whatsapp');assert.equal(row.context.outside_hours_approval,undefined);
+ await db.exec("select set_config('test.permission','yes',false)");await headers('next');row=await insert('00000000-0000-0000-0000-000000000014','flow_v1',{event_at:'2026-10-06T20:24:00Z'});assert.equal(row.run_at.toISOString(),'2026-10-07T08:00:00.000Z');assert.equal(new Date(row.context.event_at).toISOString(),row.run_at.toISOString());
+ row=await insert('00000000-0000-0000-0000-000000000015','__send_whatsapp',{},'2026-10-09T08:00:00Z');assert.equal(row.run_at.toISOString(),'2026-10-09T08:00:00.000Z','future unchanged');
+ row=await insert('00000000-0000-0000-0000-000000000016','__send_whatsapp',{},'2026-10-06T20:24:00Z','cancelled');assert.equal(row.status,'cancelled');assert.equal(row.context.outside_hours_choice,undefined);
+ const agenda=await db.query("insert into agenda_items values('00000000-0000-0000-0000-000000000017',true,'pending',null,'2026-10-06T20:25:00Z','2026-10-06T20:25:00Z') returning *");assert.equal(agenda.rows[0].whatsapp_scheduled_at.toISOString(),'2026-10-07T08:00:00.000Z');
+ await db.close();console.log('PASS SQL per-request consent, permission checks, child isolation, defer, future and cancelled sends');
+})().catch(e=>{console.error(e);process.exitCode=1;});

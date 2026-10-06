@@ -1,0 +1,36 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {stripTypeScriptTypes}=require('node:module');
+const source=fs.readFileSync('js/modules/outside-hours-confirm.js','utf8');
+let calls=[];const now='2026-10-06T20:24:00Z';
+class Clock extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return new Date(now).getTime();}}
+const window={fetch:async(...args)=>{calls.push(args);return Response.json({ok:true});}};
+const ctx={window,location:{origin:'https://crm.test',href:'https://crm.test/'},Date:Clock,Intl,URL,Headers,Request,Response,console,setTimeout};vm.createContext(ctx);vm.runInContext(source,ctx);
+const gate=window.TPFOutsideHours,url=n=>new URL('https://overfzbjtpjqxzbujezg.supabase.co/rest/v1/rpc/'+n);
+assert.equal(gate.nextWindow(new Date('2026-10-06T08:00:00Z')),null);
+assert.equal(gate.nextWindow(new Date('2026-10-06T12:00:00Z')).toISOString(),'2026-10-06T15:30:00.000Z');
+assert.equal(gate.nextWindow(new Date('2026-10-10T12:00:00Z')).toISOString(),'2026-10-12T08:00:00.000Z');
+assert.equal(gate.nextWindow(new Date('2026-10-25T08:00:00Z')).toISOString(),'2026-10-26T09:00:00.000Z');
+assert(gate.classify(url('crm_create_contact_guarded'),'POST',{p_welcome:true}));
+assert.equal(gate.classify(url('crm_create_contact_guarded'),'POST',{p_welcome:false}),null);
+assert.equal(gate.classify(url('crm_create_offer_composition'),'POST',{p_send_message:false}),null);
+assert(gate.classify(url('crm_create_offer_composition'),'POST',{p_send_message:true}));
+assert(gate.classify(url('crm_installation_update'),'POST',{p_patch:{send:true}}));
+assert.equal(gate.classify(url('crm_installation_update'),'POST',{p_patch:{incident:'note'}}),null);
+assert.equal(gate.classify(new URL('https://other.example/api/green?action=send'),'POST',{}),null);
+assert.equal(gate.classify(url('crm_create_offer_composition'),'POST',{p_send_message:true,p_send_at:'2026-10-07T08:30:00Z'}),null);
+const runner={Intl,Date,console};vm.createContext(runner);vm.runInContext(stripTypeScriptTypes(fs.readFileSync('supabase/functions/crm-automation-runner/business-time.ts','utf8').replace(/^export /gm,'')),runner);
+const job={id:'one',action_type:'__send_whatsapp',context:{},attempts:2};
+const approval={job_id:'one',actor_id:'user',approved_at:now,until:'2026-10-06T20:39:00Z'};
+assert.equal(runner.automaticSendWindow({...job,context:{outside_hours_approval:approval}},new Date(now)),null);
+assert(runner.automaticSendWindow({...job,id:'child',context:{outside_hours_approval:approval}},new Date(now)),'approval cannot cover child');
+assert(runner.automaticSendWindow({...job,context:{outside_hours_approval:approval}},new Date('2026-10-06T20:40:00Z')),'approval expires');
+assert(runner.automaticSendWindow({...job,context:{outside_hours_approval:{...approval,until:'2026-10-07T20:39:00Z'}}},new Date(now)),'reject excessive expiry');
+(async()=>{
+ gate.choose=async()=> 'cancel';
+ const r=await window.fetch(url('crm_create_contact_guarded'),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({p_welcome:true})});assert.equal(r.status,409);assert.equal(calls.length,0,'cancel never calls create/send');
+ gate.choose=async()=> 'now';
+ await window.fetch(url('crm_create_contact_guarded'),{method:'POST',headers:{'content-type':'application/json','x-client-info':'supabase-js'},body:JSON.stringify({p_welcome:true})});assert.equal(calls.length,1);assert.equal(calls[0][1].headers.get('x-client-info'),'supabase-js tpf-outside-hours=now');
+ assert.equal(JSON.parse(calls[0][1].body).p_welcome,true);
+ await window.fetch(url('crm_create_contact_guarded'),{method:'POST',body:JSON.stringify({p_welcome:false})});assert.equal(calls.length,2);
+ console.log('PASS outside-hours cancellation, welcome, offers, installation, scoped consent, expiry, schedules and DST');
+})().catch(e=>{console.error(e);process.exitCode=1;});

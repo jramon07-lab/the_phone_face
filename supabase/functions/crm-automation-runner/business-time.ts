@@ -4,6 +4,10 @@ const ZONE = "Europe/Madrid";
 // Initial offers are explicitly sent by a person; reminders are automatic.
 export function automaticSendWindow(job:any,now:Date):Date|null {
   if(!["__send_whatsapp","schedule_whatsapp","send_template"].includes(job.action_type))return null;
+  // Consent applies only to this job and expires; it never authorizes later reminders.
+  const consent=job.context?.outside_hours_approval;
+  const approvedAt=Date.parse(consent?.approved_at||""),until=Date.parse(consent?.until||"");
+  if(consent?.job_id===job.id&&consent?.actor_id&&Number.isFinite(approvedAt)&&approvedAt<=now.getTime()&&until>=now.getTime()&&until-approvedAt<=15*60000)return null;
   if(job.context?.trigger_type==="manual_offer"&&job.action_config?.offer_phase==="initial"&&Number(job.attempts||0)<=1)return null;
   // Replies in an active customer exchange are transactional, including provider retries.
   if(job.context?.lifecycle?.mode==='offer_response')return null;
