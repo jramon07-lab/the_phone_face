@@ -38,3 +38,14 @@ renderPriority({ opps: [{ ...opp, record_id: null, contact_id: null }], today: d
 assert.match(nodes.get('dashAlerts').innerHTML, /<div class="tdClientButton" title="Sin contacto vinculado">/);
 assert.doesNotMatch(nodes.get('dashAlerts').innerHTML, /data-type="contact"/);
 console.log('PASS: linked IDs, separate contact/opportunity actions, unlinked records remain non-clickable.');
+
+const delegated={...opp,record_id:'manager-id',client_name:'Gestor Ejemplo',contract_party:{same:false,holder_record_id:'holder-id',holder_name:'Titular Ejemplo',contact_name:'Gestor Ejemplo',recipient_contact_id:'manager-id',recipient_name:'Gestor Ejemplo'}};
+const people=opportunityRow(delegated,map,date).people;
+assert.equal(people.holder,'Titular Ejemplo');assert.equal(people.manager,'Gestor Ejemplo');assert.equal(people.recipient,'Gestor Ejemplo');
+renderPriority({opps:[delegated],today:date},map,[]);
+const delegatedHtml=nodes.get('dashAlerts').innerHTML;
+assert.match(delegatedHtml,/Titular:<\/b> Titular Ejemplo/);
+assert.match(delegatedHtml,/Gestor:<\/b> Gestor Ejemplo/);
+assert.match(delegatedHtml,/WhatsApp para:<\/b> Gestor Ejemplo/);
+assert.equal(opportunityRow(opp,map,date).people.separate,false,'no se inventan relaciones ausentes');
+console.log('PASS explicit holder manager and recipient in home rows');
