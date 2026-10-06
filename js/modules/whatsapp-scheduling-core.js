@@ -78,6 +78,7 @@ $("waQuickDrop").onclick=(e)=>{
 async function saveQuickWhatsappSchedule(date){
   if($("waQuickSend")){$("waQuickSend").disabled=true;$("waQuickSend").dataset.prevText=$("waQuickSend").textContent;$("waQuickSend").textContent="Guardando...";}
   if($("waQuickMsg"))$("waQuickMsg").textContent="Guardando...";
+  try{
   const phone=$("waQuickPhone").value.trim();
   const message=$("waQuickMessage").value.trim();
   const programId=$("waQuickProgramId").value.trim();
@@ -90,17 +91,17 @@ async function saveQuickWhatsappSchedule(date){
   const iso=date.toISOString();
 
   if(programId){
-    const {error}=await sb.from("agenda_items").update({
+    const {data,error}=await sb.from("agenda_items").update({
       customer_phone:phone,
       starts_at:iso,
       whatsapp_phone:phone,
       whatsapp_message:message||null,
       whatsapp_scheduled_at:iso,
       status:"pending"
-    }).eq("id",programId);
+    }).eq("id",programId).select('id').single();
 
-    if(error){
-      $("waQuickMsg").textContent=error.message;
+    if(error||!data?.id){
+      $("waQuickMsg").textContent=error?.message||'No se ha confirmado el guardado del WhatsApp.';
       return;
     }
     $("waQuickMsg").textContent="WhatsApp reprogramado";
@@ -119,9 +120,9 @@ async function saveQuickWhatsappSchedule(date){
       whatsapp_message:message||null,
       whatsapp_scheduled_at:iso
     };
-    const {error}=await sb.from("agenda_items").insert(row);
-    if(error){
-      $("waQuickMsg").textContent=error.message;
+    const {data,error}=await sb.from("agenda_items").insert(row).select('id').single();
+    if(error||!data?.id){
+      $("waQuickMsg").textContent=error?.message||'No se ha confirmado el guardado del WhatsApp.';
       return;
     }
     $("waQuickMsg").textContent="WhatsApp programado";
@@ -132,6 +133,11 @@ async function saveQuickWhatsappSchedule(date){
   if(typeof loadWhatsappPrograms==="function")await loadWhatsappPrograms();
   if(currentContact)await renderContactProfile();
   if($("waQuickSend")){$("waQuickSend").disabled=false;$("waQuickSend").textContent=$("waQuickSend").dataset.prevText||"Programar";}
+  }catch(error){
+    $("waQuickMsg").textContent=error?.message||'No se pudo guardar la programación.';
+  }finally{
+    if($("waQuickSend")){$("waQuickSend").disabled=false;$("waQuickSend").textContent=$("waQuickSend").dataset.prevText||"Programar";}
+  }
 }
 
 document.querySelectorAll("[data-wa-quick]").forEach(btn=>{
@@ -191,6 +197,7 @@ $("waQuickCustomSave").onclick=(e)=>{
   $("waQuickCustomBox").classList.add("hidden");
   $("waQuickCalendar").classList.add("hidden");
   $("waQuickScheduleBox").classList.add("hidden");
+
 };
 
 $("waQuickSend").onclick=async()=>{
@@ -661,6 +668,8 @@ async function loadWhatsappPrograms(options={}){
   }).join("");
 }
 $("waSave").onclick=async()=>{
+  const button=$("waSave");if(button.disabled)return;button.disabled=true;
+  try{
   const editId=$("waEditId").value;
   const phone=$("waPhone").value.trim();
   const when=$("waWhen").value;
@@ -683,22 +692,22 @@ $("waSave").onclick=async()=>{
     whatsapp_scheduled_at:iso
   };
 
-  let error=null;
+  let error=null,data=null;
 
   if(editId){
-    ({error}=await sb.from("agenda_items").update(base).eq("id",editId));
+    ({data,error}=await sb.from("agenda_items").update(base).eq("id",editId).select('id').single());
   }else{
     const {data:{user}}=await sb.auth.getUser();
-    ({error}=await sb.from("agenda_items").insert({
+    ({data,error}=await sb.from("agenda_items").insert({
       title:"WhatsApp programado",
       description:null,
       assigned_to:user?.id||null,
       ...base
-    }));
+    }).select('id').single());
   }
 
-  if(error){
-    $("waMsg").textContent=error.message;
+  if(error||!data?.id){
+    $("waMsg").textContent=error?.message||'No se ha confirmado el guardado del WhatsApp.';
     return;
   }
 
@@ -706,6 +715,9 @@ $("waSave").onclick=async()=>{
   ["waEditId","waCustomer","waPhone","waWhen","waMessage"].forEach(id=>$(id).value="");
   $("waSave").textContent="Programar WhatsApp";
   loadWhatsappPrograms();
+  }catch(error){$("waMsg").textContent=error?.message||'No se pudo guardar la programación.';}
+  finally{button.disabled=false;}
+
 };
 
 window.editProgrammedWhatsapp=async(id)=>{

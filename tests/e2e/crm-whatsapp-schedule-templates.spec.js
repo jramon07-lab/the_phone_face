@@ -36,10 +36,12 @@ async function mountFixture(page){
       auth:{getUser:async()=>({data:{user:{id:'user-1'}},error:null})},
       from(table){
         if(table!=='agenda_items')throw new Error(`Tabla inesperada: ${table}`);
-        return{
-          insert:async row=>{window.__agendaInsert=row;return{error:null}},
-          update:row=>({eq:async()=>{window.__agendaUpdate=row;return{error:null}}})
-        };
+        const query={
+          insert(row){window.__agendaInsert=row;return query},
+          update(row){window.__agendaUpdate=row;return query},
+          eq(){return query},select(){return query},
+          single:async()=>window.__agendaFailure||{data:{id:'program-1',...(window.__agendaInsert||window.__agendaUpdate)},error:null}
+        };return query;
       }
     };
   });
@@ -93,6 +95,24 @@ test('programar WhatsApp permite elegir una plantilla con filtros, favoritas y v
     status:'pending'
   });
 });
+
+for(const viewport of [{width:1440,height:900},{width:390,height:844}]){
+  test(`guardar conserva el texto cuando falla y confirma el registro antes de cerrar ${viewport.width}`,async({page})=>{
+    await page.setViewportSize(viewport);await mountFixture(page);
+    await page.evaluate(()=>window.openWaScheduleV3({phone:'676107894',name:'Fixture',contactId:'fixture-contact',message:'Mensaje de prueba'}));
+    for(const failure of [{data:null,error:null},{error:{message:'Sin conexión'}},{error:{code:'PGRST116',message:'Registro no disponible'}}]){
+      await page.evaluate(value=>window.__agendaFailure=value,failure);
+      await page.locator('#tpfS3save').click();
+      await expect(page.locator('#tpfSched3')).toBeVisible();
+      await expect(page.locator('#tpfS3msg')).toHaveValue('Mensaje de prueba');
+      await expect(page.locator('#tpfS3error')).not.toHaveText('');
+      await expect(page.locator('#tpfS3save')).toBeEnabled();
+    }
+    await page.evaluate(()=>window.__agendaFailure=null);
+    await page.locator('#tpfS3save').click();await expect(page.locator('#tpfSched3')).toHaveCount(0);
+    expect(await page.evaluate(()=>window.__agendaInsert)).toMatchObject({related_record_id:'fixture-contact',whatsapp_message:'Mensaje de prueba',whatsapp_phone:'676107894'});
+  });
+}
 
 test('cerrar elimina el selector y los datos temporales antes de abrir otro contacto',async({page})=>{
   await mountFixture(page);

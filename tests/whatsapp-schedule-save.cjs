@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const direct=fs.readFileSync('js/modules/whatsapp-schedule-direct-v3.js','utf8');
+const core=fs.readFileSync('js/modules/whatsapp-scheduling-core.js','utf8');
+const values={phone:'676107894',name:'Example',message:'Fixture only',contactId:'contact-fixture'};
+const date=new Date('2099-10-06T08:00:00Z');
+let result,written,refreshes=0;
+const client={auth:{getUser:async()=>({data:{user:{id:'fixture-user'}}})},from(table){assert.equal(table,'agenda_items');const q={insert(row){written=row;return q},update(row){written=row;return q},eq(){return q},select(){return q},single:async()=>result};return q}};
+const elements=new Map();const $=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',disabled:false,dataset:{},classList:{add(){}}});return elements.get(id)};
+const box={window:{},sb:client,$,samePhone:(a,b)=>String(a).replace(/\D/g,'').slice(-9)===String(b).replace(/\D/g,'').slice(-9),supabaseClient:()=>client,refreshAfterSave:async()=>{refreshes++},currentContact:null,loadWhatsappPrograms:async()=>{},setTimeout:()=>{},Date};
+vm.createContext(box);
+vm.runInContext(direct.slice(direct.indexOf('async function persistWithClient('),direct.indexOf('function confirmCoreSave(')),box);
+const success=()=>({data:{id:'fixture-id',whatsapp_phone:values.phone,whatsapp_message:values.message,whatsapp_scheduled_at:date.toISOString(),related_record_id:values.contactId}});
+(async()=>{
+ result=success();assert.equal(await box.persistWithClient(date,values),true);assert.equal(written.related_record_id,values.contactId);assert.equal(written.assigned_to,'fixture-user');assert.equal(written.whatsapp_enabled,true);assert.equal(refreshes,1);
+ result=success();await box.persistWithClient(date,{...values,programId:'fixture-id'});assert.equal(written.status,'pending');
+ for(const bad of [{data:null},{error:{message:'Offline'}},{data:{...success().data,whatsapp_phone:'600000000'}},{data:{...success().data,whatsapp_message:'Different text'}},{data:{...success().data,related_record_id:'other-contact'}},{data:{...success().data,whatsapp_scheduled_at:'2099-11-06T08:00:00Z'}}]){result=bad;await assert.rejects(box.persistWithClient(date,values));}
+ assert.equal(refreshes,2,'failed saves do not refresh or signal success');
+ result=success();await assert.rejects(box.persistWithClient(date,{...values,programId:'missing-record'}));
+ vm.runInContext(core.slice(core.indexOf('async function saveQuickWhatsappSchedule('),core.indexOf('document.querySelectorAll("[data-wa-quick]")')),box);
+ $('waQuickPhone').value=values.phone;$('waQuickMessage').value=values.message;
+ result={data:null};await box.saveQuickWhatsappSchedule(date);assert.match($('waQuickMsg').textContent,/No se ha confirmado/);assert.equal($('waQuickMessage').value,values.message);assert.equal($('waQuickSend').disabled,false);
+ result={error:{message:'Offline'}};await box.saveQuickWhatsappSchedule(date);assert.equal($('waQuickMsg').textContent,'Offline');assert.equal($('waQuickSend').disabled,false);
+ result={data:{id:'fixture-id'}};await box.saveQuickWhatsappSchedule(date);assert.equal($('waQuickMsg').textContent,'WhatsApp programado');
+ vm.runInContext(core.slice(core.indexOf('$("waSave").onclick=async'),core.indexOf('window.editProgrammedWhatsapp=')),box);
+ for(const id of ['waPhone','waMessage'])$(id).value=id==='waPhone'?values.phone:values.message;$('waWhen').value='2099-10-06T10:00';
+ result={data:null};await $('waSave').onclick();assert.match($('waMsg').textContent,/No se ha confirmado/);assert.equal($('waMessage').value,values.message);assert.equal($('waSave').disabled,false);
+ result={error:{message:'Permission denied'}};await $('waSave').onclick();assert.equal($('waMsg').textContent,'Permission denied');assert.equal($('waMessage').value,values.message);
+ result={data:{id:'fixture-id'}};await $('waSave').onclick();assert.equal($('waMessage').value,'');assert.equal($('waMsg').textContent,'WhatsApp programado');
+ console.log('PASS schedule persistence: insert/update acknowledgement, recipient/contact/date integrity, empty writes, offline/errors, draft preservation and retry controls; no sending');
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -335,8 +335,9 @@ async function persistWithClient(date,values){
     };
     if(values.name)changes.customer_name=values.name;
     if(values.contactId)changes.related_record_id=values.contactId;
-    const result=await client.from('agenda_items').update(changes).eq('id',values.programId);
+    const result=await client.from('agenda_items').update(changes).eq('id',values.programId).select('id,whatsapp_phone,whatsapp_message,whatsapp_scheduled_at,related_record_id').single();
     if(result?.error)throw result.error;
+    confirmScheduleRecord(result?.data,values,iso);
   }else{
     const authResult=await client.auth?.getUser?.();
     if(authResult?.error)throw authResult.error;
@@ -354,12 +355,22 @@ async function persistWithClient(date,values){
       whatsapp_message:values.message,
       whatsapp_scheduled_at:iso
     };
-    const result=await client.from('agenda_items').insert(row);
+    const result=await client.from('agenda_items').insert(row).select('id,whatsapp_phone,whatsapp_message,whatsapp_scheduled_at,related_record_id').single();
     if(result?.error)throw result.error;
+    confirmScheduleRecord(result?.data,values,iso);
   }
 
   await refreshAfterSave();
   return true;
+}
+
+function confirmScheduleRecord(record,values,iso){
+  if(!record?.id||(values.programId&&String(record.id)!==String(values.programId))||
+     !samePhone(record.whatsapp_phone,values.phone)||record.whatsapp_message!==values.message||
+     new Date(record.whatsapp_scheduled_at).getTime()!==new Date(iso).getTime()||
+     (values.contactId&&String(record.related_record_id)!==String(values.contactId))){
+    throw new Error('No se ha confirmado el guardado del WhatsApp. Conservamos el texto; revisa Programados antes de volver a intentarlo.');
+  }
 }
 
 function confirmCoreSave(){
@@ -506,6 +517,7 @@ function open(prefill={}){
   };
   $('tpfS3template').onclick=openTemplatePicker;
   $('tpfS3save').onclick=async()=>{
+    if($('tpfS3save').disabled)return;
     const savingContext=activeContext;
     const values={
       phone:$('tpfS3phone').value.trim(),
