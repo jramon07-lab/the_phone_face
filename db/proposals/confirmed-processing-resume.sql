@@ -223,8 +223,8 @@ end;$function$
 
 ;
 
-create or replace function public.crm_offer_resume_preview(p_offer_id uuid,p_mode text,p_local_at text default null) returns jsonb language plpgsql security definer set search_path='' as $$
-declare f public.crm_offer_instances%rowtype;requested timestamptz;local_stamp timestamp;due timestamptz;
+create or replace function public.crm_offer_resume_preview(p_offer_id uuid,p_mode text,p_local_at text default null) returns jsonb language plpgsql set search_path='' as $$
+declare f public.crm_offer_instances%rowtype;requested timestamptz;local_stamp timestamp;due timestamptz;d date;t time;dow integer;
 begin
  if auth.uid() is null or not(public.current_user_is_admin() or public.current_user_can('can_edit_sales')) then raise exception 'No tienes permiso';end if;
  select * into f from public.crm_offer_instances where id=p_offer_id;
@@ -237,7 +237,17 @@ begin
   if requested at time zone 'Europe/Madrid'<>local_stamp then raise exception 'Esa hora no existe por el cambio de horario';end if;
   if requested<=now() then raise exception 'Elige una fecha y hora futuras';end if;
  else raise exception 'Opción no válida';end if;
- due:=crm_private.followup_send_slot((requested at time zone 'Europe/Madrid')::date,(requested at time zone 'Europe/Madrid')::time);
+ d:=(requested at time zone 'Europe/Madrid')::date;t:=(requested at time zone 'Europe/Madrid')::time;
+ for guard in 1..8 loop
+  dow:=extract(isodow from d);
+  if dow=7 then d:=d+1;continue;end if;
+  if dow=6 and t>='14:00'::time then d:=d+2;continue;end if;
+  if t<'10:00'::time then t:='10:00';
+  elsif t>='14:00'::time and t<'17:30'::time then t:='17:30';
+  elsif t>='20:30'::time then d:=d+1;t:='10:00';continue;end if;
+  due:=(d+t) at time zone 'Europe/Madrid';exit;
+ end loop;
+ if due is null then raise exception 'No se pudo calcular el horario';end if;
  return jsonb_build_object('send_at',due,'requested_at',requested);
 end;$$;
 revoke all on function public.crm_offer_resume_preview(uuid,text,text) from public,anon;
