@@ -128,7 +128,7 @@ const navigation=[];sandbox.window.openContact=async id=>navigation.push(['conta
 (async()=>{
  const before=calls.length;
  await t.act('contact',second);await t.act('message',second);
- assert.equal(navigation[0][1],'holder','la ficha usa ID exacto, nunca coincidencia telefónica');
+ assert.equal(navigation[0][1],'manager','el nombre abre la ficha del destinatario por ID, nunca coincidencia telefónica');
  assert.equal(navigation[1][0],'message');
  assert.equal(navigation[1][1].contactId,'manager','el editor usa el destinatario, no el titular');
  assert.equal(calls.length,before,'navegar o escribir no envía ni modifica datos');
