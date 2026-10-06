@@ -42,7 +42,7 @@ const nodes={ccStatus:{value:'pending'},ccSearch:{value:''},ccOperator:{value:''
 const calls=[];
 const sandbox={window:{TPFModules:{register(){}}},document:{getElementById:id=>nodes[id]||null},
 sb:{rpc:async(name,args)=>{calls.push({name,args});return {data:'paused'}}}};
-vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs,followupPreview,sequenceOf,sequenceWarning,relatedSends,act};window.TPFAutomationControlCenter={statusOf'),sandbox);
+vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,contactName,sequenceDetail,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs,followupPreview,sequenceOf,sequenceWarning,relatedSends,act};window.TPFAutomationControlCenter={statusOf'),sandbox);
 const t=sandbox.window.__test,a=sandbox.window.TPFAutomationControlCenter;
 t.state.jobs=[
 {id:'later',action_type:'send_whatsapp_now',status:'pending',run_at:'2026-11-02T10:00:00Z',context:{name:'Ejemplo automático',phone:'34000000001'},action_config:{text:'Oferta'}},
@@ -142,3 +142,23 @@ assert.equal(t.followupPreview(reminder,{...hiddenContext,offer_welcome:false},'
 assert.equal(t.followupPreview(reminder,hiddenContext,'initial'),reminder,'el mensaje inicial guardado no se reescribe');
 assert.equal(t.followupPreview(reminder,{...hiddenContext,offer_welcome:undefined,oferta_mensaje:'Te envío una oferta que puede interesarte:'},'reminder_5'),reminder,'solo se infiere bienvenida cuando no hay bandera explícita');
 console.log('PASS follow-up previews: match deployed worker operator hiding, preserve visible operators and initial text');
+
+// Contact display resolves only the linked record; salutation and delivery text remain unchanged.
+t.state.contactNames.set('recipient-exact','Magdalena Ruiz Muñoz');
+assert.equal(t.contactName('recipient-exact','Magdalena'),'Magdalena Ruiz Muñoz');
+assert.equal(t.contactName('other-id','Otra persona'),'Otra persona');
+assert.equal(t.contactName('', 'Nombre guardado'),'Nombre guardado');
+const historyRow=t.state.rows.find(r=>r.source==='automation');
+if(historyRow){const html=t.sequenceDetail(historyRow);if(html){assert.match(html,/<details class="wide ccOfferHistory">/);assert.doesNotMatch(html,/<details[^>]*\bopen\b/);}}
+assert.match(source,/contact:contactName\(context.recipient_contact_id\|\|context.contract_party\?\.recipient_contact_id\|\|context.contact_id/);
+assert.doesNotMatch(source,/from\('records'\)[^;]*\.eq\('.*phone/);
+console.log('PASS exact linked contact names and folded offer history');
+
+t.state.contactNames.set('manager','Nombre completo del gestor');
+const named=a.makeRows().find(r=>r.id==='second');
+assert.equal(named.contact,'Nombre completo del gestor');
+assert.equal(named.contactId,'manager');
+assert.equal(named.message,'Segundo recordatorio','el nombre visible no cambia el contenido guardado');
+const folded=t.sequenceDetail(named);
+assert.match(folded,/<summary>Historial de la oferta<\/summary>/);
+assert.doesNotMatch(folded,/<details[^>]*\bopen\b/);
