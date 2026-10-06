@@ -49,3 +49,14 @@ assert.match(delegatedHtml,/Gestor:<\/b> Gestor Ejemplo/);
 assert.match(delegatedHtml,/WhatsApp para:<\/b> Gestor Ejemplo/);
 assert.equal(opportunityRow(opp,map,date).people.separate,false,'no se inventan relaciones ausentes');
 console.log('PASS explicit holder manager and recipient in home rows');
+
+
+// Canonical opportunities belong to the holder; manager must come from its own ID.
+const records=new Map([['holder-id',{data:{'NOMBRE Y APELLIDOS':'Titular Actual'}}],['manager-id',{data:{'NOMBRE Y APELLIDOS':'Gestora Actual'}}],['recipient-id',{data:{'NOMBRE Y APELLIDOS':'Destinatario Actual'}}]]);
+const canonical={...delegated,record_id:'holder-id',client_name:'Titular Actual',contract_party:{...delegated.contract_party,manager_record_id:'manager-id',recipient_contact_id:'recipient-id'}};
+const actual=opportunityRow(canonical,map,date,records).people;
+assert.equal(actual.holder,'Titular Actual');assert.equal(actual.manager,'Gestora Actual');assert.equal(actual.recipient,'Destinatario Actual');
+assert.equal(opportunityRow({...canonical,contract_party:{same:false,holder_name:'Titular',recipient_name:'Persona'}} ,map,date,records).people.manager,'','recipient and owner never imply a manager');
+const unresolved=new Map([['linked-contact',{data:{TPF_RELACIONES:{managed_contacts:[{record_id:'holder-id'}]}}}]]);
+assert.equal(opportunityRow(opp,map,date,unresolved).people.needsReview,true);
+console.log('PASS holder ownership, explicit manager, distinct recipient and unresolved historical links');
