@@ -295,7 +295,7 @@ function refreshOpportunityFollowup(){
 }
 function renderInstances(){const root=$('cpOfferInstances');if(!root)return;root.innerHTML=instances.length?instances.map(x=>`<div class="cpOfferCard"><div class="cpOfferTop"><b>${esc(x.operator)} · ${esc(x.offer_name)}</b><strong>${esc(money(x.total_price))}</strong></div><div class="cpOfferMeta">${new Date(x.created_at).toLocaleString('es-ES')}</div><span class="cpOfferStatus ${esc(x.status)}">${esc(statusLabel(x.status))}</span>${window.TPFOfferFollowup?.htmlOffer(x,true)||""}${deliveryCheck(x)}</div>`).join(''):'<div class="cpEmpty">Todavía no hay ofertas para este cliente.</div>';root.querySelectorAll('[data-offer-action]').forEach(b=>b.onclick=()=>control(b.dataset.id,b.dataset.offerAction))}
 async function control(id,action,{sidebar=false}={}){
- if(busy)return false;const label={pause:'pausar',resume:'reanudar',accept:'marcar como aceptada',cancel:'finalizar'}[action];
+ if(busy)return false;if(action==='resume'){busy=true;try{return await window.TPFOfferResume.choose(id,sb)}catch(e){alert(e.message||'No se pudo reanudar');return false}finally{busy=false}}const label={pause:'pausar',resume:'reanudar',accept:'marcar como aceptada',cancel:'finalizar'}[action];
  if(!label||!confirm(`¿Quieres ${label} esta oferta? Si comparte mensaje con otros servicios, pausar o finalizar detiene el seguimiento del grupo; aceptar solo acepta este servicio.`))return false;
  busy=true;const profileId=current()?.id;
  try{

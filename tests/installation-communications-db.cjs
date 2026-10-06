@@ -290,6 +290,29 @@ async function main(){const db=new PGlite();await db.exec(`
  await db.exec('reset role;');await db.query(`insert into wa_messages(id_message,chat_id,direction,ts,raw,text_content) values('old-confirmation-after-reset','34600000001@c.us','in',extract(epoch from now()-interval '1 hour')::bigint,jsonb_build_object('interactiveButtonsResponse',jsonb_build_object('selectedButtonId','install_done:'||$1::text)),'✓ Instalado')`,[CI]);
  assert.equal((await db.query('select installed_on from crm_installations where id=$1',[CI])).rows[0].installed_on,null,'Old provider history cannot restore an annulled confirmation');
  await db.query('update sales_opportunities set installation_date=current_date where id=$1',[CO]);await db.query('update crm_installations set installed_on=current_date where id=$1',[CI]);const locked=(await db.query('select updated_at from crm_installations where id=$1',[CI])).rows[0].updated_at;await db.exec('set role authenticated;');await stageReject(()=>db.query('select crm_installation_cancel_confirmation($1,$2,$3)',[CO,locked,'Prueba']),/Excel/);
+
+ {await db.exec('reset role;');await db.exec(fs.readFileSync('db/proposals/confirmed-processing-resume.sql','utf8'));
+ for(const [n,mode,expected] of [[101,'notice',1],[102,'return',1],[103,'none',0]]){
+  const op='20000000-0000-0000-0000-'+String(n).padStart(12,'0');
+  const prefs={workflow:'installation_v1',operator:'Vodafone',previous_operator:'Yoigo',communication_mode:mode,send:mode==='notice',text:'Aviso para {nombre}',return_text:'Router de Yoigo para {nombre}'};
+  await db.query('insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone,after_sale_preferences) values($1,$2,$3,$4,$4,$5,$6)',[op,C,U,S,'600000001',prefs]);
+  const iid=(await db.query('select crm_private.installation_sync($1) id',[op])).rows[0].id;
+  const installation=(await db.query('select * from crm_installations where id=$1',[iid])).rows[0];assert.equal(installation.installed_on,null);
+  const jobs=(await db.query("select * from crm_server_automation_jobs where context->>'installation_id'=$1 and action_type='__send_whatsapp'",[iid])).rows;assert.equal(jobs.length,expected);
+  if(mode==='return'){assert.equal(jobs[0].action_config.offer_phase,'installation_return');assert(jobs[0].action_config.text.includes('Router de Yoigo'));}
+  await db.query('update crm_installations set installed_on=current_date where id=$1',[iid]);await db.query('select crm_private.installation_schedule_return($1)',[iid]);
+  const after=(await db.query("select count(*)::int n from crm_server_automation_jobs where context->>'installation_id'=$1 and action_type='__send_whatsapp'",[iid])).rows[0].n;assert.equal(after,mode==='notice'?2:expected);
+ }
+ const RO='20000000-0000-0000-0000-000000000104',RF='40000000-0000-0000-0000-000000000104';
+ await db.query("insert into sales_opportunities(id,record_id,owner_user_id,stage_id,pipeline_id,phone) values($1,$2,$3,$4,$4,'600000001')",[RO,C,U,S]);
+ await db.query("insert into crm_offer_instances(id,opportunity_id,contact_id,operator,created_by,total_price,status,sent_at,snapshot) values($1,$2,$3,'Vodafone',$4,32,'paused',now(),'{}')",[RF,RO,C,U]);
+ const version=(await db.query('select updated_at from crm_offer_instances where id=$1',[RF])).rows[0].updated_at;await db.exec('set role authenticated;');
+ const immediate=(await db.query("select crm_offer_resume_preview($1,'now',null) v",[RF])).rows[0].v;assert(new Date(immediate.send_at).getTime()>=Date.now()-1000);
+ const future=(await db.query("select crm_offer_resume_preview($1,'custom','2030-06-02T15:00') v",[RF])).rows[0].v;assert.equal(new Date(future.send_at).toISOString(),'2030-06-03T15:30:00.000Z');
+ await stageReject(()=>db.query("select crm_offer_resume_preview($1,'custom','2030-03-31T02:30')",[RF]),/hora no existe/);
+ await stageReject(()=>db.query("select crm_resume_offer_at($1,'now',null,now()-interval '1 day')",[RF]),/cambió/);
+ const resumed=(await db.query("select crm_resume_offer_at($1,'custom','2030-06-03T12:30',$2) v",[RF,version])).rows[0].v;assert.equal(resumed.ok,true);assert.equal(new Date(resumed.send_at).toISOString(),'2030-06-03T10:30:00.000Z');
+ const job=(await db.query("select * from crm_server_automation_jobs where context->>'offer_instance_id'=$1 and status='pending'",[RF])).rows[0];assert.equal(job.action_config.steps[0].value,0);assert.equal(job.run_at.getTime(),new Date(resumed.send_at).getTime());assert.equal(job.context.phone,'600000001');}
  await db.exec('reset role;rollback;set request.jwt.claim.sub=\'\';');await assert.rejects(db.query('select crm_offer_pause_preview($1,7)',[PF]),/permiso/);
  assert.equal((await db.query("select has_function_privilege('authenticated','crm_server_claim_jobs(integer)','EXECUTE') v")).rows[0].v,false);
  console.log('PASS installation database integration: SQL, timed pause, business hours, DST, audit correction, sent history, CAS and permissions');await db.close();}

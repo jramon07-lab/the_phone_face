@@ -1077,9 +1077,8 @@
   }
   async function resumeMobilePausedOffer(id){
     if(!has('can_edit_sales')||mobilePaused.busy.has(String(id)))return;const offer=mobilePaused.rows.find(x=>String(x.id)===String(id));if(!offer)return;const p=mobilePausedIdentity(offer);
-    if(!confirm('¿Reanudar el seguimiento de '+p.holder+'? Se volverán a programar sus recordatorios. Si comparte mensaje con otros servicios, se reanuda el grupo.'))return;
     mobilePaused.busy.add(String(id));updateMobilePausedOffers();
-    try{const latest=await client.from('crm_offer_instances').select('status').eq('id',id).single();if(latest.error)throw latest.error;if(latest.data?.status!=='paused')throw Error('Esta oferta ya cambió de estado. Actualiza el listado.');const {error}=await client.rpc('crm_control_offer_composition',{p_offer_id:id,p_action:'resume'});if(error)throw error;toast('Seguimiento reanudado.','success');await window.TPFOfferFollowup?.load?.(true);window.dispatchEvent(new CustomEvent('tpf:sales-updated'));}
+    try{if(!await window.TPFOfferResume.choose(id,client))return;toast('Seguimiento reanudado.','success');await window.TPFOfferFollowup?.load?.(true);window.dispatchEvent(new CustomEvent('tpf:sales-updated'));}
     catch(e){toast(e.message||'No se pudo reanudar la oferta.','error');}
     finally{mobilePaused.busy.delete(String(id));await loadMobilePausedOffers();}
   }
