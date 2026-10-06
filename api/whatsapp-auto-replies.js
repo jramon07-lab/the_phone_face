@@ -9,6 +9,18 @@ const TOKEN=process.env.GREEN_API_TOKEN||process.env.GREEN_API_API_TOKEN||proces
 const BASE=String(process.env.GREEN_API_API_URL||'https://7107.api.greenapi.com').replace(/\/$/,'');
 async function db(path,method='GET',body,prefer){const r=await fetch(SB+'/rest/v1/'+path,{method,headers:{apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json',...(prefer?{Prefer:prefer}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(8000)});if(!r.ok){const e=Error('No se pudo acceder a la configuración ('+r.status+').');e.status=r.status;throw e;}return r.status===204?null:r.json();}
 const eq=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length>0&&x.length===y.length&&crypto.timingSafeEqual(x,y)};
+async function automaticMessageIds(chatId,since,history){
+ const ids=history.filter(m=>m.type==='outgoing').map(m=>String(m.idMessage||'')).filter(id=>/^[a-zA-Z0-9_-]{1,200}$/.test(id));
+ if(!ids.length)return new Set();
+ const [jobs,scheduled,absence]=await Promise.all([
+  db('crm_server_automation_jobs?action_config->__delivery_receipt->>chatId=eq.'+encodeURIComponent(chatId)+'&updated_at=gte.'+encodeURIComponent(since)+'&select=action_config&limit=100'),
+  db('agenda_items?whatsapp_provider_message_id=in.('+ids.join(',')+')&select=whatsapp_provider_message_id&limit=100'),
+  db('crm_whatsapp_reply_receipts?chat_id=eq.'+encodeURIComponent(chatId)+'&sent_at=gte.'+encodeURIComponent(since)+'&select=outgoing_id&limit=100')
+ ]);
+ // A bounded, full result is not proof that there are no more automatic receipts.
+ if([jobs,scheduled,absence].some(rows=>rows.length>=100))throw Error('Historial automático incompleto.');
+ return new Set([...jobs.map(j=>j.action_config?.__delivery_receipt?.idMessage),...scheduled.map(j=>j.whatsapp_provider_message_id),...absence.map(j=>j.outgoing_id)].filter(Boolean).map(String));
+}
 async function run(){
  if(process.env.VERCEL_ENV!=='production')return {skipped:'Solo producción'};
  if(!KEY)throw Error('Falta la conexión del servidor.');
@@ -45,7 +57,16 @@ async function run(){
    const history=await historyResponse.json();
    if(!Array.isArray(history)||!history.some(m=>String(m.idMessage||'')===String(row.id_message)))continue;
    if(history.some(m=>m.type==='outgoing'&&Number(m.timestamp)>=Number(row.ts)))continue;
+   const automaticIds=await automaticMessageIds(row.chat_id,new Date(Number(row.ts)*1000-7200000).toISOString(),history);
+   if(C.recentConversation(history,row,now,automaticIds))continue;
+   // A full provider page ending inside the activity window cannot rule out
+   // an earlier human reply. Do not acknowledge absence on incomplete evidence.
+   if(history.length>=20&&Math.min(...history.map(m=>Number(m.timestamp)))>=Number(row.ts)-7200)continue;
   }catch(_){continue;}
+  // Provider reads can take seconds. Recheck a reply made while we were checking.
+  const latestManual=await db('crm_whatsapp_manual_activity?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&last_sent_at=gte.'+encodeURIComponent(new Date(Number(row.ts)*1000-7200000).toISOString())+'&select=chat_id&limit=1');
+  const latestOutgoing=await db('wa_messages?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&direction=eq.out&ts=gte.'+Number(row.ts)+'&select=id&limit=1');
+  if(latestManual.length||latestOutgoing.length)continue;
   let claim;try{claim=await db('crm_whatsapp_reply_receipts?on_conflict=dedupe_key','POST',{dedupe_key:key,chat_id:row.chat_id,incoming_id:row.id_message,closure:period,status:'reserved'},'resolution=ignore-duplicates,return=representation');}catch(e){throw e;}if(!claim?.length)continue;
   // A reserved/uncertain attempt is never automatically resent: a timeout may still have delivered it.
   try{
