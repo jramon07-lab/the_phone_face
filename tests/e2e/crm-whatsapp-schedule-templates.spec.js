@@ -80,7 +80,7 @@ test('programar WhatsApp permite elegir una plantilla con filtros, favoritas y v
 
   await expect(page.locator('#tpfDirectPickerModal')).toHaveCount(0);
   await expect(page.locator('#tpfSched3')).toBeVisible();
-  await expect(page.locator('#tpfS3msg')).toHaveValue('Hola Ramón; Ramón Sánchez; 34695661409; 75564628Z');
+  await expect(page.locator('#tpfS3msg')).toHaveValue('Hola Ramón; Ramón; 34695661409; 75564628Z');
   await expect(page.locator('#tpfS3templateName')).toHaveText('Plantilla elegida: Oferta Orange');
 
   await page.locator('#tpfS3save').click();
@@ -89,7 +89,7 @@ test('programar WhatsApp permite elegir una plantilla con filtros, favoritas y v
     customer_name:'Ramón Sánchez',
     customer_phone:'+34 695 661 409',
     whatsapp_phone:'+34 695 661 409',
-    whatsapp_message:'Hola Ramón; Ramón Sánchez; 34695661409; 75564628Z',
+    whatsapp_message:'Hola Ramón; Ramón; 34695661409; 75564628Z',
     whatsapp_enabled:true,
     related_record_id:'contact-1',
     status:'pending'
