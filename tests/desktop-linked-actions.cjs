@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('js/modules/linked-contact-actions.js','utf8');
+let permission=true,composed=[],selected=[],restored=[],button,navClicks=0;
+const scroller={isConnected:true,scrollTop:240,scrollLeft:30};
+const header={prepend(el){button=el;}};
+const document={head:{appendChild(){}},createElement(){return {remove(){button=null;}}},getElementById(id){return id==='tpfLinkedReturn'?button:header;},querySelector(sel){return sel.includes('.nav')?{click(){navClicks++;scroller.scrollTop=0;}}:header;},querySelectorAll(){return [scroller];}};
+const window={__TPF_HISTORY:[1],tpfCaptureCurrentScreen(){return {mainView:'agenda'};},async tpfRestoreCapturedScreen(s){restored.push(s);},async selectWhatsAppChat(id){selected.push(id);},openWaQuick(data){composed.push(data);}};
+const ctx=vm.createContext({window,document,crmCan:()=>permission,requestAnimationFrame:fn=>fn(),setTimeout:fn=>fn(),alert:()=>{}});vm.runInContext(source,ctx);
+(async()=>{
+ await window.TPFLinkedActions.open('message',{phone:'600123456',name:'Gestor'});
+ assert.equal(composed[0].phone,'34600123456');assert.equal(composed[0].contactId,null);assert.equal(navClicks,0);assert.equal(selected.length,0);
+ await window.TPFLinkedActions.open('message',{phone:'0034600123456',name:'Contacto',contactId:'exact-id'});assert.equal(composed[1].contactId,'exact-id');
+ await window.TPFLinkedActions.open('conversation',{phone:'+34 600 123 456'});assert.equal(selected[0],'34600123456@c.us');assert.equal(navClicks,1);assert.equal(button.textContent,'← Volver a la lista');
+ await window.TPFLinkedActions.back();assert.equal(restored[0].mainView,'agenda');assert.equal(scroller.scrollTop,240);assert.equal(scroller.scrollLeft,30);assert.equal(button,null);
+ permission=false;await assert.rejects(window.TPFLinkedActions.open('message',{phone:'600123456'}),/permiso/);assert.equal(composed.length,2);
+ permission=true;await assert.rejects(window.TPFLinkedActions.open('conversation',{phone:''}),/válido/);assert.equal(selected.length,1);
+ const scheduling=fs.readFileSync('js/modules/whatsapp-scheduling-core.js','utf8');
+ vm.runInContext(scheduling.slice(scheduling.indexOf('function waProgramOrder('),scheduling.indexOf('let waProgramsSnapshot=')),ctx);
+ const rows=[{id:'older',whatsapp_scheduled_at:'2026-08-22T08:40:00Z'},{id:'newer',whatsapp_scheduled_at:'2026-10-06T08:40:00Z'},{id:'unknown'}];
+ assert.deepEqual([...rows].sort((a,b)=>ctx.waProgramOrder(a,b,true)).map(x=>x.id),['newer','older','unknown']);
+ assert.deepEqual([...rows].sort((a,b)=>ctx.waProgramOrder(a,b,false)).map(x=>x.id),['older','newer','unknown']);
+ assert(ctx.waProgramOrder({id:'a',whatsapp_sent_at:'2026-10-06T10:00:00Z',whatsapp_scheduled_at:'2026-08-22'},{id:'b',whatsapp_scheduled_at:'2026-10-05'},true)<0);
+ let ranges=[];const pages=Array.from({length:501},(_,id)=>({id}));ctx.sb={from(){return {select(){return this;},eq(){return this;},order(){return this;},async range(start,end){ranges.push([start,end]);return {data:pages.slice(start,end+1)};}};}};
+ vm.runInContext(scheduling.slice(scheduling.indexOf('async function fetchWhatsappPrograms('),scheduling.indexOf('async function loadWhatsappPrograms(')),ctx);
+ assert.equal((await ctx.fetchWhatsappPrograms()).data.length,501);assert.deepEqual(ranges,[[0,499],[500,999]]);
+ console.log('PASS: composer, exact contact ID, conversation, return position, permissions, sorting and complete pagination');
+})().catch(e=>{console.error(e);process.exitCode=1;});

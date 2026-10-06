@@ -586,17 +586,27 @@ function waIsDue(row){
   const when=row.whatsapp_scheduled_at||row.starts_at;
   return !when || new Date(when).getTime()<=Date.now();
 }
+function waProgramOrder(a,b,newestFirst){
+ const stamp=row=>{const values=newestFirst?[row.whatsapp_sent_at,row.completed_at,row.whatsapp_scheduled_at,row.starts_at]:[row.whatsapp_scheduled_at,row.starts_at];for(const value of values){const n=Date.parse(value);if(Number.isFinite(n))return n;}return newestFirst?0:Infinity;};
+ const x=stamp(a),y=stamp(b);return x===y?String(a.id).localeCompare(String(b.id)):(newestFirst?(x>y?-1:1):(x<y?-1:1));
+}
 let waProgramsSnapshot=null,waProgramsLoadRevision=0;
+async function fetchWhatsappPrograms(){
+  const rows=[];
+  for(let offset=0;;offset+=500){
+    const result=await sb.from('agenda_items').select('*').eq('whatsapp_enabled',true).order('id',{ascending:true}).range(offset,offset+499);
+    if(result.error)return {data:null,error:result.error};
+    rows.push(...(result.data||[]));
+    if((result.data||[]).length<500)return {data:rows,error:null};
+  }
+}
 async function loadWhatsappPrograms(options={}){
   if(!$("waRows"))return;
   const revision=++waProgramsLoadRevision;
   const cached=options?.searchOnly===true&&waProgramsSnapshot&&Date.now()-waProgramsSnapshot.at<30000;
   if(!cached)waProgramsSnapshot=null;
-  const {data,error}=cached?{data:waProgramsSnapshot.data}:await sb.from("agenda_items")
-    .select("*")
-    .eq("whatsapp_enabled",true)
-    .order("whatsapp_scheduled_at",{ascending:true})
-    .limit(300);
+  const newestFirst=["completed","cancelled","all","error"].includes($("waFilter")?.value);
+  const {data,error}=cached?{data:waProgramsSnapshot.data}:await fetchWhatsappPrograms();
   if(revision!==waProgramsLoadRevision)return;
   if(!error&&!cached)waProgramsSnapshot={data:data||[],at:Date.now()};
 
@@ -625,6 +635,7 @@ async function loadWhatsappPrograms(options={}){
     return true;
   });
 
+  rows.sort((a,b)=>waProgramOrder(a,b,newestFirst));
   window.__waRows=rows;
   $("waEmpty").style.display=rows.length?"none":"block";
   if($("waReload"))$("waReload").textContent=rows.length?`Actualizar (${rows.length})`:"Actualizar";

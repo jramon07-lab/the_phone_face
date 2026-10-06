@@ -20,6 +20,8 @@ function mount(){
 function scheduleInMenu(root){
  const m=root?.matches?.('.tpfMoreMenu')?root:null;if(!m||m.querySelector('[data-list-schedule]'))return;
  const id=m.dataset.ownerId;if(!id)return;const b=document.createElement('button');b.type='button';b.dataset.listSchedule=id;b.textContent='Programar WhatsApp';b.onclick=e=>{e.stopPropagation();m.remove();const row=[...document.querySelectorAll('#tpfContactsRows tr')].find(r=>r.dataset.contactId===id);row?.querySelector('[data-action="schedule"]')?.click();};m.insertBefore(b,m.querySelector('.danger'));
+ for(const [kind,label] of [['message','Escribir WhatsApp'],['conversation','Ir a conversación']]){const action=document.createElement('button');action.type='button';action.textContent=label;action.onclick=async e=>{e.stopPropagation();m.remove();try{await window.TPFContactListAction(kind,id);}catch(error){alert(error.message);}};m.insertBefore(action,b);}
+ requestAnimationFrame(()=>{if(m.isConnected){const rect=m.getBoundingClientRect();m.style.top=Math.max(8,Math.min(rect.top,innerHeight-rect.height-8))+'px';}});
 }
 function install(){mount();new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes){if(n.nodeType!==1)continue;if(n.id==='tpfContactsApp'||n.querySelector?.('#tpfContactsApp'))mount();scheduleInMenu(n);}}).observe(document.body,{childList:true,subtree:true});
  document.addEventListener('click',e=>{if(!e.target.closest?.('#tpfContactsTools,#tpfContactsMore'))closeMenu();const nav=e.target.closest?.('.nav');if(nav&&nav.dataset.view!=='database')toggleFull(false);});
@@ -27,3 +29,4 @@ function install(){mount();new MutationObserver(records=>{for(const r of records
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
+
