@@ -26,3 +26,17 @@ const many=Array.from({length:1501},(_,i)=>({id:String(i)}));let pages=0;
 const sandbox={sb:{from(){let start,end;const q={select(){return q},eq(){return q},order(){return q},range(a,b){start=a;end=b;return q},then(resolve){pages++;return Promise.resolve({data:many.slice(start,end+1)}).then(resolve)}};return q}}};
 vm.createContext(sandbox);vm.runInContext(reader,sandbox);
 sandbox.allRows('records','id,data',true).then(rows=>{assert.equal(rows.length,1501);assert.equal(rows.at(-1).id,'1500');assert.equal(pages,4);console.log('PASS: paginated reader includes contacts beyond 1000')}).catch(e=>{console.error(e);process.exitCode=1});
+
+const shared=[...contacts,{id:'second-manager',data:{NOMBRE:'Otro gestor',TPF_RELACIONES:{managed_contacts:[{record_id:'holder'}]}}},{id:'recipient',data:{NOMBRE:'Destinatario'}}];
+const canonical={id:'shared-opp',record_id:'holder',contract_party:{same:false,holder_record_id:'holder',manager_record_id:'manager',recipient_contact_id:'recipient',holder_name:'Titular',contact_name:'Gestor',recipient_name:'Destinatario'}};
+for(const id of ['holder','manager']){const result=L.related([canonical],shared,id,'opportunity');assert.equal(result.length,1);assert.equal(result[0].id,'shared-opp');assert.equal(result[0],canonical);}
+assert.equal(L.related([canonical],shared,'second-manager','opportunity').length,0,'another manager of the holder must not acquire this contract');
+assert.equal(L.related([canonical],shared,'recipient','opportunity').length,0,'recipient is a separate role, not implicitly a manager');
+assert.deepEqual([...L.opportunityContacts({...canonical,contract_party:{...canonical.contract_party,manager_record_id:'deleted'}},L.index(shared))],['holder'],'stale role does not switch to another manager');
+const green=fs.readFileSync('js/modules/whatsapp-green-core.js','utf8');
+const renderContext={window:{},esc:x=>String(x),fmtMoney:x=>String(x),fmtDateOnly:x=>String(x),oppStageName:()=>'',oppIsExpired:()=>false,salesCache:{stages:[]}};
+vm.createContext(renderContext);const cardStart=green.indexOf('function oppUnifiedCard('),cardEnd=green.indexOf('\nfunction hydrateOpportunityStageNames',cardStart);
+vm.runInContext(green.slice(cardStart,cardEnd),renderContext);
+const card=renderContext.oppUnifiedCard(canonical);
+assert.match(card,/Titular: Titular/);assert.match(card,/Gestor: Gestor/);assert.match(card,/WhatsApp para: Destinatario/);
+console.log('PASS same opportunity in both profiles, explicit roles and no unrelated manager');

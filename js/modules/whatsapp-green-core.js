@@ -835,7 +835,7 @@ function oppUnifiedCard(o,{compact=false}={}){
       <b class="oppUnifiedTitle">${title}</b>
       ${overdue?`<span class="oppUnifiedOverdue">VENCIDA</span>`:(stageName?`<span class="oppUnifiedStage">${esc(stageName)}</span>`:"")}
     </div>
-    <div class="oppUnifiedClient">👤 ${client}</div>
+    <div class="oppUnifiedClient">👤 ${client}</div>\n    ${o.contract_party?.same===false?`<div class="oppUnifiedPeople"><small>Titular: ${esc(o.contract_party.holder_name||"Sin titular registrado")}</small><br><small>Gestor: ${esc(o.contract_party.contact_name||"Sin gestor registrado")}</small><br><small>WhatsApp para: ${esc(o.contract_party.recipient_name||"Sin destinatario registrado")}</small></div>`:""}
     <div class="oppUnifiedAmount">${amount}</div>
     <div class="oppUnifiedMeta">
       <span>🗓️ Cierre esperado: <strong class="${overdue?"dangerText":""}">${date}</strong></span>

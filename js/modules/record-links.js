@@ -20,9 +20,16 @@ function owner(row,lookup,kind='task'){
 // Display associations only. Never changes record ownership or message recipients.
 function opportunityContacts(row,lookup){
  const who=owner(row,lookup,'opportunity'),ids=new Set();if(who)ids.add(who);
+ const party=row.contract_party||{};
+ const explicitRoles=['holder_record_id','manager_record_id'].some(field=>text(party[field]));
+ if(explicitRoles){
+  for(const field of ['holder_record_id','manager_record_id']){
+   const id=text(party[field]);if(id&&lookup.ids.has(id))ids.add(id);
+  }
+  return ids;
+ }
  for(const id of lookup.managers.get(who)||[])ids.add(id);
- const party=row.contract_party;
- if(party?.same===false&&who){
+ if(party.same===false&&who){
   for(const field of ['holder_dni','contact_dni']){
    const dni=text(party[field]).toUpperCase().replace(/[^A-Z0-9]/g,''),matches=dni&&lookup.dnis?.get(dni);
    if(matches?.size===1){const id=[...matches][0];ids.add(id);if(field==='holder_dni')for(const manager of lookup.managers.get(id)||[])ids.add(manager);}
