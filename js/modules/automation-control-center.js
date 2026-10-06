@@ -173,12 +173,14 @@ function render(){
   <div class="ccActions">${actions(row)}</div>
  </article>`).join('');
 }
+function canSendNow(row){return row.source==='automation'&&row.status==='pending'&&SEND_ACTIONS.has(row.actionType)&&!row.raw?.completed_at&&!row.raw?.action_config?.__delivery_receipt&&!['reminder_2','reminder_5'].includes(row.raw?.action_config?.offer_phase);}
 function actions(row,includeView=true,skipEdit=false){
  if(includeView)return `<button type="button" class="secondary" data-cc-detail="${esc(row.source)}:${esc(row.id)}">Gestionar</button>`+linkedButtons(row,true,true);
  const out=[linkedButtons(row,false)];
  if(row.phone)out.push(`<button type="button" class="secondary" data-cc-action="conversation" data-cc-row="${esc(row.source)}:${esc(row.id)}">Ir a conversación</button>`);
  if(!skipEdit&&['pending','paused'].includes(row.status)&&['program','automation'].includes(row.source))out.push('<button type="button" class="secondary" data-cc-action="edit" data-cc-row="'+esc(row.source)+':'+esc(row.id)+'">Editar texto</button>');
  if(['pending','paused'].includes(row.status)&&row.source==='automation')out.push('<button type="button" class="secondary" data-cc-action="origin" data-cc-row="'+esc(row.source)+':'+esc(row.id)+'">Gestionar origen</button>');
+ if(canSendNow(row))out.push('<button type="button" data-cc-action="now" data-cc-row="'+esc(row.source)+':'+esc(row.id)+'">Enviar ahora</button>');
  if(row.status==='pending')out.push(`<button type="button" data-cc-action="pause" data-cc-row="${esc(row.source)}:${esc(row.id)}">Pausar</button>`,`<button type="button" class="danger" data-cc-action="cancel" data-cc-row="${esc(row.source)}:${esc(row.id)}">Cancelar</button>`);
  if(row.status==='paused')out.push(`<button type="button" data-cc-action="resume" data-cc-row="${esc(row.source)}:${esc(row.id)}">Reanudar</button>`,`<button type="button" class="danger" data-cc-action="cancel" data-cc-row="${esc(row.source)}:${esc(row.id)}">Cancelar</button>`);
  if(row.status==='failed'&&(row.source==='program'||SAFE_RETRY.has(row.actionType)))out.push(`<button type="button" data-cc-action="retry" data-cc-row="${esc(row.source)}:${esc(row.id)}">Reintentar</button>`);
@@ -250,9 +252,11 @@ async function act(action,row){
  if(action==='resume'&&!confirm('¿Reanudar este envío? Si su fecha ya pasó, quedará pendiente para enviarse a partir de un minuto.'))return;
  if(action==='cancel'&&!confirm('¿Cancelar este envío? No se eliminará y seguirá visible en el historial.'))return;
  if(action==='retry'&&!confirm('¿Reintentar este envío ahora? Solo se permite cuando el envío anterior consta como fallido.'))return;
+ if(action==='now'){if(!canSendNow(row))return alert('Actualiza el envío antes de continuar.');if(!window.TPFOutsideHours)return alert('Actualiza la página para confirmar el horario.');if(!window.TPFOutsideHours.nextWindow()&&!confirm('¿Enviar ahora este mensaje a '+row.contact+'? Se adelantará el envío programado, sin duplicarlo.'))return;}
  if(action==='manual'){const phone=digits(row.phone);if(!phone)return alert('El contacto no tiene un teléfono válido.');window.open(`https://wa.me/34${phone}${row.message?'?text='+encodeURIComponent(row.message):''}`,'_blank','noopener,noreferrer');return}
  try{
   if(row.source==='automation'){
+   if(action==='now'){const {data,error}=await sb.rpc('crm_send_automation_now',{p_job_id:row.id,p_expected_at:row.updatedAt});if(error)throw error;if(data?.status!=='pending')throw Error('El envío se ha detenido. Revisa su estado.');}
    if(action==='pause'){const {error}=await sb.rpc('crm_set_automation_job_pause',{p_job_id:row.id,p_paused:true});if(error)throw error}
    if(action==='resume'){const {error}=await sb.rpc('crm_set_automation_job_pause',{p_job_id:row.id,p_paused:false});if(error)throw error}
    if(action==='cancel'){const {error}=await sb.rpc('crm_cancel_automation_job',{p_job_id:row.id});if(error)throw error}

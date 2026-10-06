@@ -24,7 +24,7 @@ function classify(url,method,body,now=new Date()){
   const patch=body?.p_patch||body?.p_preferences;
   sends=sends||['crm_installation_update','crm_installation_adopt'].includes(name)&&(patch?.send===true||patch?.communication_mode==='return'||!!patch?.confirm_installed_on);
   sends=sends||name==='crm_control_scheduled_whatsapp'&&['resume','retry'].includes(body?.p_action);
-  sends=sends||['crm_retry_automation_step','crm_retry_automation_job_safe'].includes(name);
+  sends=sends||['crm_retry_automation_step','crm_retry_automation_job_safe','crm_send_automation_now'].includes(name);
  }
  if(!sends)return null;
  const target=agenda?body.whatsapp_scheduled_at:body?.p_send_at;
