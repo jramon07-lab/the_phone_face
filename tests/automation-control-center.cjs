@@ -42,7 +42,7 @@ const nodes={ccStatus:{value:'pending'},ccSearch:{value:''},ccOperator:{value:''
 const calls=[];
 const sandbox={window:{TPFModules:{register(){}}},document:{getElementById:id=>nodes[id]||null},
 sb:{rpc:async(name,args)=>{calls.push({name,args});return {data:'paused'}}}};
-vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs};window.TPFAutomationControlCenter={statusOf'),sandbox);
+vm.runInNewContext(source.replace('window.TPFAutomationControlCenter={statusOf','window.__test={state,actions,filtered,updateProgram,reasonCategory,dateMatches,needsReview,madridBoundary,historyArgs,sequenceOf,sequenceWarning,relatedSends,act};window.TPFAutomationControlCenter={statusOf'),sandbox);
 const t=sandbox.window.__test,a=sandbox.window.TPFAutomationControlCenter;
 t.state.jobs=[
 {id:'later',action_type:'send_whatsapp_now',status:'pending',run_at:'2026-11-02T10:00:00Z',context:{name:'Ejemplo automático',phone:'34000000001'},action_config:{text:'Oferta'}},
@@ -55,7 +55,8 @@ assert.equal(rows.filter(x=>x.messageKey==='provider1').length,1);
 assert.equal(rows.find(x=>x.id==='delivered').status,'sent');
 assert.deepEqual(Array.from(t.filtered(),x=>x.id),['manual','later']);
 assert.match(t.actions(rows.find(x=>x.id==='manual')),/>Gestionar</);
-assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual')),/data-cc-action/,'la lista solo abre el detalle');
+assert.match(t.actions(rows.find(x=>x.id==='manual')),/data-cc-action="conversation"/,'la lista abre la conversación directamente');
+assert.match(t.actions(rows.find(x=>x.id==='manual')),/data-cc-action="message"/);
 assert.match(t.actions(rows.find(x=>x.id==='manual'),false),/>Editar texto</);
 assert.match(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Pausar</);
 assert.doesNotMatch(t.actions(rows.find(x=>x.id==='manual'),false,true),/>Editar texto</,'el editor no debe abrir un segundo editor');
@@ -110,3 +111,26 @@ console.log('PASS send sources and Madrid calendar month boundaries');
 assert.match(t.actions({source:'automation',id:'auto',status:'paused',phone:'600000000'},false),/Editar texto/);
 assert.doesNotMatch(t.actions({source:'automation',id:'auto',status:'sending'},false),/Editar texto/);
 assert.doesNotMatch(source.slice(source.indexOf('async function openOrigin'),source.indexOf('async function act')),/\bclose\(\)/,'origin stays on send center');
+
+t.state.history=[];t.state.programs=[];t.state.jobs=[
+{id:'initial',action_type:'__send_whatsapp',status:'done',completed_at:'2026-10-01T10:00:00Z',context:{offer_instance_id:'offer1',contact_id:'holder',recipient_contact_id:'manager',name:'Gestor',phone:'600000000'},action_config:{offer_phase:'initial',text:'Oferta',__delivery_receipt:{idMessage:'initial-receipt'}}},
+{id:'first',action_type:'__send_whatsapp',status:'paused',run_at:'2026-10-05T08:00:00Z',context:{offer_instance_id:'offer1',contact_id:'holder',phone:'600000000'},action_config:{offer_phase:'reminder_2',text:'Primer recordatorio'}},
+{id:'second',action_type:'__send_whatsapp',status:'pending',run_at:'2026-10-06T15:43:00Z',context:{offer_instance_id:'offer1',contact_id:'holder',recipient_contact_id:'manager',name:'Gestor',phone:'600000000'},action_config:{offer_phase:'reminder_5',text:'Segundo recordatorio'}}
+];
+const sequence=a.makeRows(),second=sequence.find(x=>x.id==='second');
+assert.match(t.sequenceOf(second),/2.º recordatorio.*mensaje 3/);
+assert.match(t.sequenceWarning(second),/anterior pausado/);
+assert.equal(t.relatedSends(second).length,3);
+assert.match(t.actions(second),/data-cc-action="contact"/);
+assert.match(t.actions(second),/data-cc-action="message"/);
+assert.doesNotMatch(source,/row.message.slice\(0,150\)/,'el mensaje debe conservarse completo');
+const navigation=[];sandbox.window.openContact=async id=>navigation.push(['contact',id]);sandbox.window.TPFLinkedActions={open:async(kind,contact)=>navigation.push([kind,contact])};
+(async()=>{
+ const before=calls.length;
+ await t.act('contact',second);await t.act('message',second);
+ assert.equal(navigation[0][1],'holder','la ficha usa ID exacto, nunca coincidencia telefónica');
+ assert.equal(navigation[1][0],'message');
+ assert.equal(navigation[1][1].contactId,'manager','el editor usa el destinatario, no el titular');
+ assert.equal(calls.length,before,'navegar o escribir no envía ni modifica datos');
+ console.log('PASS send navigation and sequence: exact identities, paused predecessor, no sends');
+})().catch(e=>{console.error(e);process.exitCode=1});
