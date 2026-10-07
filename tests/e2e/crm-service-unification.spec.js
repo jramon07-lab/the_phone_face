@@ -685,7 +685,7 @@ test('PC: two sessions agree and contact/opportunity navigation leaves no old la
   }));
   const signatures=async()=>Promise.all(devices.map(async({page})=>{
    const rows=await page.evaluate(async()=>{const result=await sb.rpc('sales_board');if(result.error)throw Error('No se pudo leer el panel');return(result.data?.opportunities||[]).map(o=>[o.id,o.record_id,o.stage_id,o.status,o.expected_date,o.previous_operator,o.terminal_commitment_end,o.discount_end_date,o.contract_party]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));});
-   return require('node:crypto').createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+   return require('node:crypto').hash('sha256',JSON.stringify(rows));
   }));
   await expect.poll(async()=>{const [a,b]=await signatures();return a===b;},{timeout:25000,intervals:[2000]}).toBe(true);
   const page=devices[0].page;
@@ -703,7 +703,7 @@ test('PC: two sessions agree and contact/opportunity navigation leaves no old la
    await expect(page.locator('#contactModal')).toBeVisible();
    await expect(page.locator('#cpOpportunities [data-opp-id="'+target.opportunity+'"]')).toBeVisible({timeout:20000});
    const card=page.locator('#cpOpportunities [data-opp-id="'+target.opportunity+'"]');
-   await card.getByRole('button',{name:/Ver\s*\/\s*editar/i}).click();
+   await card.getByRole('button',{name:/Ver\s*(?:\/\s*editar|ficha)/i}).click();
    await expect(page.locator('#opportunityFullPage')).toBeVisible();await expect(page.locator('#oppDetailModal')).toBeHidden();
    await page.locator('.nav[data-view="database"]').first().click();
    await expect(page.locator('#opportunityFullPage')).toBeHidden();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#view-database')).toBeVisible();
