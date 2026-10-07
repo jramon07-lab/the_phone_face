@@ -32,6 +32,14 @@ for(const viewport of [{width:1365,height:900},{width:430,height:900}])test('Con
  await page.evaluate(()=>failSave=true);await page.locator('#oppModalDiscountEnd').fill('2027-09-01');await page.locator('#oppModalSave').click();await expect(page.locator('#oppDetailModal')).toBeVisible();await expect(page.locator('#oppModalDiscountEnd')).toHaveValue('2027-09-01');
  await page.evaluate(()=>{$('oppDetailModal').classList.add('hidden');return openOpportunityFull('opportunity')});
  await expect(page.locator('.oppContractPeople')).toContainText('Titular de prueba');await expect(page.locator('.oppContractPeople')).toContainText('Gestora de prueba');await expect(page.locator('[data-opp-previous]')).toHaveText('O2');await expect(page.locator('.oppSummaryMetrics')).toContainText('01/05/2029');await expect(page.locator('.oppSummaryMetrics')).toContainText('15/08/2027');
+ const order=await page.locator('.oppFullTop').evaluate(el=>[...el.children].map(n=>n.id||n.className));
+ await page.locator('#oppFullMore summary').click();await expect(page.locator('#oppFullMore')).toHaveAttribute('open','');
+ await page.locator('#oppFullEdit').click();await expect(page.locator('#oppFullMore')).not.toHaveAttribute('open','');
+ await page.evaluate(()=>{$('oppDetailModal').classList.add('hidden');return openOpportunityFull('opportunity')});
+ expect(await page.locator('.oppFullTop').evaluate(el=>[...el.children].map(n=>n.id||n.className))).toEqual(order);
+ await expect(page.locator('#oppFullMore')).not.toHaveAttribute('open','');
+ await page.locator('#oppFullMore summary').click();await page.keyboard.press('Escape');await expect(page.locator('#oppFullMore')).not.toHaveAttribute('open','');
+
  await expect(page.locator('#oppFullManage')).toBeVisible();await page.locator('#oppFullManage').click();expect(await page.evaluate(()=>lastNav)).toEqual({manage:'opportunity'});
  const spacing=await page.evaluate(()=>({gap:parseFloat(getComputedStyle(document.getElementById('oppFullContent')).gap),padding:parseFloat(getComputedStyle(document.querySelector('.oppField')).paddingTop)}));expect(spacing.gap).toBeLessThanOrEqual(10);expect(spacing.padding).toBeLessThanOrEqual(12);
  await page.locator('[data-opp-person="holder"]').click();expect(await page.evaluate(()=>lastNav)).toEqual({contact:'holder',opp:'opportunity'});

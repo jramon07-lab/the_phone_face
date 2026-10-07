@@ -48,7 +48,7 @@ function rolesHTML(people){return '<section class="oppContractPeople" aria-label
 function compactHeader(root){
  const top=document.querySelector('#opportunityFullPage .oppFullTop'),heading=document.querySelector('#opportunityFullPage .oppFullHeading');if(!top||!heading)return;
  top.insertBefore($('oppFullTitle'),top.children[1]||null);top.appendChild(heading.querySelector('.oppFullPrimaryActions')||$('oppFullManage').parentNode);heading.hidden=true;
- let menu=$('oppFullMore');if(!menu){menu=document.createElement('details');menu.id='oppFullMore';menu.innerHTML='<summary>Más opciones</summary><div class="oppFullMoreItems"></div>';top.appendChild(menu);}
+ let menu=$('oppFullMore');if(!menu){menu=document.createElement('details');menu.id='oppFullMore';menu.innerHTML='<summary>Más opciones</summary><div class="oppFullMoreItems"></div>';menu.addEventListener('click',e=>{if(e.target.closest('.oppFullMoreItems button,.oppFullMoreItems a'))menu.open=false;});document.addEventListener('click',e=>{if(!menu.contains(e.target))menu.open=false;});document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.open=false;});}top.appendChild(menu);menu.open=false;
  $('oppFullEdit').textContent='Editar ficha completa';const row=top.querySelector('.row'),items=menu.querySelector('div');
  const collect=()=>{for(const b of [...(row?.children||[])])items.appendChild(b);};collect();
  if(row&&!row.dataset.observed){row.dataset.observed='1';new MutationObserver(collect).observe(row,{childList:true});}
