@@ -849,7 +849,7 @@ function oppUnifiedCard(o,{compact=false}={}){
       </select>
     </div>
     <div class="oppUnifiedActions">
-      <button type="button" onclick="event.stopPropagation();${compact?"openOpportunityFull":"openOpportunityCard"}('${esc(o.id||"")}')">Ver / editar</button>
+      <button type="button" onclick="event.stopPropagation();openOpportunityFull('${esc(o.id||"")}')">Ver ficha</button>
       <button type="button" class="danger" onclick="event.stopPropagation();oppUnifiedDelete('${esc(o.id||"")}')">Eliminar</button>
     </div>
   </div>`;

@@ -19,7 +19,7 @@ const sandbox = {
   returnToContactFromOpportunity:(contact,id)=>calls.push([contact,id]),
   $(id){
     if(id==='oppFullContactLink'&&!nodes.get('oppFullContent')?.innerHTML?.includes('id="oppFullContactLink"'))return null;
-    if(!nodes.has(id))nodes.set(id,{textContent:'',innerHTML:'',classList:{remove:name=>calls.push(name)}});
+    if(!nodes.has(id))nodes.set(id,{textContent:'',innerHTML:'',classList:{remove:name=>calls.push(name),add:name=>calls.push([id,name])}});
     return nodes.get(id);
   }
 };
@@ -46,4 +46,5 @@ vm.runInNewContext(source.slice(start,end),sandbox);
   assert.ok(calls.includes('hidden'),'The existing overlay is opened');
   console.log('PASS: real detail renderer, one title, full name, amounts, dates, escaped notes, contact route and edit/delete context.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
 

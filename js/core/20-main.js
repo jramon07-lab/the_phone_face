@@ -1260,6 +1260,7 @@ window.openOpportunityFull=async(id)=>{
   `;
   const contactLink=$("oppFullContactLink");
   if(contactLink)contactLink.onclick=()=>returnToContactFromOpportunity(contactId,data.id);
+  $("contactModal")?.classList.add("hidden");
   $("opportunityFullPage").classList.remove("hidden");
   window.TPFOpportunityDetails?.decorateView(data);
 };

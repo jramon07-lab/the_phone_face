@@ -55,6 +55,38 @@ for(const viewport of [{width:1365,height:900},{width:430,height:900}])test('Con
  await page.locator('[aria-label="Editar fin de descuento"]').click();await page.locator('.oppInlineForm input').fill('2029-09-01');await page.evaluate(()=>failSave=false);await page.locator('.oppInlineForm button[type=submit]').click();await expect(page.locator('.oppSummaryMetrics')).toContainText('01/09/2029');
  await page.locator('[aria-label="Editar fin de descuento"]').click();await page.locator('.oppInlineForm input').fill('2030-09-01');await page.evaluate(()=>failSave=true);await page.locator('.oppInlineForm button[type=submit]').click();await expect(page.locator('.oppInlineForm [role=status]')).toContainText('Simulated save failure');expect(await page.evaluate(()=>row.discount_end_date)).toBe('2029-09-01');expect(await page.evaluate(()=>sent)).toBe(0);
 
+ // Exercise the real contact card, not a direct call into the dossier API.
+ await page.evaluate(()=>{
+  $('oppDetailModal').classList.add('hidden');$('opportunityFullPage').classList.add('hidden');
+  window.currentContact={id:'manager'};window.__TPF_HISTORY=[];
+  window.tpfMainViewId=()=> 'sales';window.tpfWhatsappSnapshot=()=>({});window.opportunityModalOrigin=null;
+  window.oppStageName=()=> 'Seguimiento';window.oppIsExpired=()=>false;window.openedContacts=[];
+  window.openContact=async id=>{openedContacts.push(id);currentContact={id};$('contactModal').classList.remove('hidden')};
+  window.TPFModules={register(name,mod){if(name==='contact-opportunities')window.installContactCards=()=>mod.install()}};
+  window.cardOpens=[];const actualOpen=window.openOpportunityFull;window.openOpportunityFull=id=>{cardOpens.push(id);return actualOpen(id)};
+ });
+ await page.addScriptTag({content:extract('function tpfCurrentScreen(){','\n/* Desactivar los sistemas antiguos de back')});
+ const green=read('js/modules/whatsapp-green-core.js');await page.addScriptTag({content:green.slice(green.indexOf('function oppUnifiedCard('),green.indexOf('\nfunction hydrateOpportunityStageNames'))});
+ await page.addScriptTag({content:read('js/modules/contact-opportunity-actions.js')});
+ await page.addStyleTag({content:'#contactModal:not(.hidden){position:fixed;inset:0;z-index:50000!important;background:white;pointer-events:auto!important}'});
+ await page.evaluate(()=>{
+  // The unrelated first cache row catches the former index-based card binding.
+  salesCache.opportunities=[{id:'wrong-opportunity',record_id:'manager'},row];
+  $('contactModal').innerHTML='<div id="cpOpportunities">'+oppUnifiedCard(row)+'</div>';
+  $('contactModal').classList.remove('hidden');$('oppFullBack').onclick=()=>tpfBackExactly();installContactCards();
+ });
+ await page.locator('#cpOpportunities').getByRole('button',{name:'Ver ficha',exact:true}).click();
+ await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#opportunityFullPage')).toBeVisible();
+ expect(await page.evaluate(()=>cardOpens)).toEqual(['opportunity']);expect(await page.evaluate(()=>currentFullOpportunity.id)).toBe('opportunity');
+ expect(await page.evaluate(()=>__TPF_HISTORY.at(-1))).toMatchObject({type:'contact',id:'manager'});
+ await page.locator('#oppFullBack').click();await expect(page.locator('#opportunityFullPage')).toBeHidden();await expect(page.locator('#contactModal')).toBeVisible();
+ expect(await page.evaluate(()=>openedContacts)).toEqual(['manager']);
+ // Legacy cards must resolve their own ID even when cache order differs.
+ await page.locator('#cpOpportunities .oppUnifiedActions button').first().evaluate(b=>b.textContent='Ver / editar');
+ await page.locator('#cpOpportunities').getByRole('button',{name:'Ver / editar',exact:true}).click();
+ expect(await page.evaluate(()=>cardOpens)).toEqual(['opportunity','opportunity']);await expect(page.locator('#contactModal')).toBeHidden();
+ await page.locator('#oppFullBack').click();await expect(page.locator('#contactModal')).toBeVisible();
+
  await page.evaluate(()=>{document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===n));document.getElementById('view-'+n.dataset.view)?.classList.remove('hidden')})});
  await page.locator('.nav[data-view="database"]').first().dispatchEvent('click');await expect(page.locator('#opportunityFullPage')).toBeHidden();await expect(page.locator('#view-database')).toBeVisible();
  await page.evaluate(()=>{window.pendingOpen=null;sb.from=()=>({select(){return this},eq(){return this},maybeSingle:()=>new Promise(resolve=>window.resolveOpen=resolve)});window.pendingOpen=openOpportunityFull('opportunity')});
