@@ -3,6 +3,14 @@
 'use strict';
 const $=id=>document.getElementById(id),text=v=>String(v||'').trim();
 const esc=v=>text(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.addEventListener('click',e=>{
+ const nav=e.target.closest?.('.nav[data-view]');if(!nav)return;
+ window.__tpfOpportunityOpenVersion=(window.__tpfOpportunityOpenVersion||0)+1;
+ if(typeof tpfPushCurrentScreen==='function')tpfPushCurrentScreen();
+ if(typeof tpfCloseAllDetails==='function')tpfCloseAllDetails();
+ else for(const id of ['opportunityFullPage','oppDetailModal'])$(id)?.classList.add('hidden');
+ $('oppFullMore')?.removeAttribute('open');
+},true);
 const dates={terminal_commitment_end:'oppModalTerminalEnd',discount_end_date:'oppModalDiscountEnd'};
 const dateLabel=v=>v?String(v).split('T')[0].split('-').reverse().join('/'):'Sin indicar';
 function validDate(v){if(!v)return null;const d=new Date(v+'T12:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==v)throw Error('Indica una fecha válida.');return v;}
@@ -101,3 +109,4 @@ window.addEventListener?.('tpf:sales-updated',()=>{if(!$('opportunityFullPage')?
 window.TPFOpportunityDetails={fillEditor,readEditor,afterPrepare,decorateView,party,previous,operator,validDate,dateLabel};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',editorActions);else editorActions();
 })();
+

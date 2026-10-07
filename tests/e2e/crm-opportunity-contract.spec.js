@@ -55,4 +55,9 @@ for(const viewport of [{width:1365,height:900},{width:430,height:900}])test('Con
  await page.locator('[aria-label="Editar fin de descuento"]').click();await page.locator('.oppInlineForm input').fill('2029-09-01');await page.evaluate(()=>failSave=false);await page.locator('.oppInlineForm button[type=submit]').click();await expect(page.locator('.oppSummaryMetrics')).toContainText('01/09/2029');
  await page.locator('[aria-label="Editar fin de descuento"]').click();await page.locator('.oppInlineForm input').fill('2030-09-01');await page.evaluate(()=>failSave=true);await page.locator('.oppInlineForm button[type=submit]').click();await expect(page.locator('.oppInlineForm [role=status]')).toContainText('Simulated save failure');expect(await page.evaluate(()=>row.discount_end_date)).toBe('2029-09-01');expect(await page.evaluate(()=>sent)).toBe(0);
 
+ await page.evaluate(()=>{document.querySelectorAll('.nav').forEach(n=>n.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x===n));document.getElementById('view-'+n.dataset.view)?.classList.remove('hidden')})});
+ await page.locator('.nav[data-view="database"]').first().dispatchEvent('click');await expect(page.locator('#opportunityFullPage')).toBeHidden();await expect(page.locator('#view-database')).toBeVisible();
+ await page.evaluate(()=>{window.pendingOpen=null;sb.from=()=>({select(){return this},eq(){return this},maybeSingle:()=>new Promise(resolve=>window.resolveOpen=resolve)});window.pendingOpen=openOpportunityFull('opportunity')});
+ await page.locator('.nav[data-view="agenda"]').first().dispatchEvent('click');await page.evaluate(async()=>{resolveOpen({data:row});await pendingOpen});await expect(page.locator('#opportunityFullPage')).toBeHidden();
+
 });

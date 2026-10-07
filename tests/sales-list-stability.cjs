@@ -17,8 +17,9 @@ rows=[];ctx.renderSalesList();assert.match(markup,/No hay oportunidades/);assert
 const ui=fs.readFileSync('js/modules/sales-list-ui.js','utf8');let scrolled=0,hidden=false;
 const stage={dataset:{stage:'won'},classList:{toggle(){}},scrollIntoView(){scrolled++}};
 const board={querySelectorAll:()=>[stage],closest:()=>({classList:{contains:()=>hidden}})};
-const filters={activeStageId:'won',document:{getElementById:()=>board,querySelectorAll:()=>[]},requestAnimationFrame:fn=>fn()};vm.createContext(filters);vm.runInContext(ui.slice(ui.indexOf('function applyStageFilter('),ui.indexOf('\nfunction activateStage')),filters);
+const filters={window:{},activeStageId:'won',document:{getElementById:()=>board,querySelectorAll:()=>[]},requestAnimationFrame:fn=>fn()};vm.createContext(filters);vm.runInContext(ui.slice(ui.indexOf('function applyStageFilter('),ui.indexOf('\nfunction activateStage')),filters);
 filters.applyStageFilter();assert.equal(scrolled,0,'background decoration must not scroll');
 filters.applyStageFilter(true);assert.equal(scrolled,1,'explicit stage selection can scroll visible board');
 hidden=true;filters.applyStageFilter(true);assert.equal(scrolled,1,'hidden board must not move the viewport');
 console.log('PASS stable native sales rows, unchanged refresh, updated values, preserved scroll and deliberate stage navigation');
+

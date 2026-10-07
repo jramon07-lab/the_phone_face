@@ -716,11 +716,11 @@ function renderSales(){
         </div>
         <button class="stageMenu" title="Opciones" onclick="event.stopPropagation();openStageMenu(event,'${s.id}')">•••</button>
       </div>
-      ${stageOpps.length?stageOpps.map(o=>`<div class="opp" data-opp-id="${o.id}" onclick="openOpportunityCard('${o.id}')" title="Abrir ficha">
+      ${stageOpps.length?stageOpps.map(o=>`<div class="opp" data-opp-id="${o.id}" onclick="openOpportunityFull('${o.id}')" title="Abrir ficha">
         <div class="oppTop">
           <input type="checkbox" class="salesOppCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)">
-          <button type="button" class="oppTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title)}</button>
-          <button class="oppMenu" onclick="event.stopPropagation();openOpportunityCard('${o.id}')" title="Abrir ficha">•••</button>
+          <button type="button" class="oppTitle" onclick="event.stopPropagation();openOpportunityFull('${o.id}')">${esc(o.title)}</button>
+          <button class="oppMenu" onclick="event.stopPropagation();openOpportunityFull('${o.id}')" title="Abrir ficha">•••</button>
         </div>
         <div class="oppInfo">
           ${o.client_name?`<div><span class="label">Cliente:</span> <button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button></div>`:""}
@@ -854,5 +854,6 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
+
 
 

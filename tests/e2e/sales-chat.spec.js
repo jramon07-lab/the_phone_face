@@ -1,4 +1,23 @@
 const {test,expect}=require('@playwright/test'),fs=require('node:fs');
+for(const width of [1440,390])test('Select all respects stage and search scope '+width,async({page,context})=>{
+ await context.route('**/*',r=>r.abort());await page.setViewportSize({width,height:844});
+ await page.setContent('<section id="view-sales"><input id="salesSelectAll" type="checkbox"><span id="salesSelectedCount"></span><button id="salesBulkMove"></button><button id="salesBulkDelete"></button><input id="salesSearch"><select id="salesStageFilter"><option value=""></option></select><div id="salesSummaryStages"><button class="salesSummaryStageChip" data-stage-id="next">Próximo 7</button><button class="salesSummaryStageChip" data-stage-id="other">Seguimiento 7</button></div><div id="salesListView"><div class="salesListHeader"></div><div id="salesListRows"></div></div></section>');
+ await page.evaluate(()=>{
+  window.$=id=>document.getElementById(id);window.TPFModules={register:(name,m)=>window.module=m};window.updateStageSelectAllUi=()=>{};
+  window.salesCache={stages:[{id:'next',name:'Próximo'},{id:'other',name:'Seguimiento'}],opportunities:Array.from({length:14},(_,i)=>({id:String(i),stage_id:i<7?'next':'other',title:i<2?'Coincide':'Otra oferta',phone:'600000000'}))};window.esc=String;window.fmtMoney=String;window.fmtDateOnly=String;window.edits=[];window.reads=[];window.openOpportunityFull=id=>reads.push(id);window.openOpportunityCard=id=>edits.push(id);
+ });
+ const sales=fs.readFileSync('js/modules/contacts-sales-core.js','utf8'),core=fs.readFileSync('js/core/20-main.js','utf8');
+ await page.addScriptTag({content:sales.slice(sales.indexOf('function salesFilteredOpps(){'),sales.indexOf('function fmtMoney('))});
+ await page.addScriptTag({content:core.slice(core.indexOf('const selectedSalesOpportunityIds=new Set();'),core.indexOf('function refreshSalesBulkStages('))});
+ await page.addScriptTag({content:core.slice(core.indexOf('function renderSalesList(){'),core.indexOf('\nfunction setSalesView'))});
+ await page.addScriptTag({content:fs.readFileSync('js/modules/sales-list-ui.js','utf8')});await page.evaluate(()=>{renderSalesList();module.install()});
+ await page.locator('[data-stage-id=next]').click();await page.locator('#salesSelectAll').check();await expect(page.locator('#salesSelectedCount')).toHaveText('7 seleccionadas');
+ expect(await page.evaluate(()=>[...selectedSalesOpportunityIds])).toEqual(['0','1','2','3','4','5','6']);
+ await page.locator('#salesSearch').fill('Coincide');await page.evaluate(()=>renderSalesList());await expect(page.locator('#salesSelectedCount')).toHaveText('2 seleccionadas');
+ await page.locator('[data-stage-id=other]').click();await expect(page.locator('#salesSelectedCount')).toHaveText('0 seleccionadas');await page.locator('#salesSelectAll').click();await expect(page.locator('#salesSelectedCount')).toHaveText('0 seleccionadas');
+ await page.locator('#salesSearch').fill('');await page.evaluate(()=>renderSalesList());await page.locator('#salesSelectAll').check();await expect(page.locator('#salesSelectedCount')).toHaveText('7 seleccionadas');
+ await page.locator('#salesListRows .salesListTitle').last().click();expect(await page.evaluate(()=>reads)).toEqual(['13']);expect(await page.evaluate(()=>edits)).toEqual([]);
+});
 test('Sales list keeps text and actions separate and opens the communication recipient without sending',async({page,context})=>{
  await context.route('**/*',r=>r.abort());const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setContent('<body class="tpfUnified"><div id="app"></div><button class="nav" data-view="whatsapplive">WhatsApp</button><button class="nav" data-view="sales">Ventas</button><section id="view-whatsapplive"><div class="waLiveHeaderActions"></div></section><section id="view-sales"><div id="salesListView"><div class="salesListHeader" data-compact="1"><div></div><div>Cliente</div><div>Contacto</div><div>Importe</div><div>Estado</div><div>Seguimiento</div><div>Fecha</div><div>Acciones</div></div><div id="salesListRows"></div></div></section></body>');

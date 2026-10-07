@@ -666,7 +666,7 @@ $("oppModalDelete").onclick=async(e)=>{
 };
 
 /* Mantener compatibilidad: cualquier acción antigua de editar abre ahora la ficha completa */
-window.editOpp=(id)=>openOpportunityCard(id);
+window.editOpp=(id)=>openOpportunityFull(id);
 
 window.newOppInStage=async(stageId)=>{
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(stageId));
@@ -1217,9 +1217,11 @@ async function returnFromOpportunityExactly(){
 }
 
 window.openOpportunityFull=async(id)=>{
+  const openVersion=window.__tpfOpportunityOpenVersion=(window.__tpfOpportunityOpenVersion||0)+1;
   rememberOpportunityReturnContext();
   tpfRememberScreen();
   const r=await sb.from("sales_opportunities").select("*").eq("id",id).maybeSingle();
+  if(openVersion!==window.__tpfOpportunityOpenVersion)return;
   if(r.error||!r.data){alert(r.error?.message||"No se encontró la oportunidad.");return;}
   const data=r.data;
   if(salesCache?.opportunities)salesCache.opportunities=salesCache.opportunities.map(o=>String(o.id)===String(id)?data:o);
@@ -1583,13 +1585,18 @@ let salesCurrentView="board";
 function getSalesOpportunityById(id){
   return (salesCache.opportunities||[]).find(o=>String(o.id)===String(id));
 }
+function getSalesSelectionScope(){
+  const rows=salesFilteredOpps();
+  return window.TPFSalesListUI?.filterScope?.(rows)||rows;
+}
 function updateSalesBulkUi(){
+  const all=getSalesSelectionScope(),allowed=new Set(all.map(o=>String(o.id)));
+  for(const id of selectedSalesOpportunityIds)if(!allowed.has(id))selectedSalesOpportunityIds.delete(id);
   const count=selectedSalesOpportunityIds.size;
   if($("salesSelectedCount"))$("salesSelectedCount").textContent=count+" seleccionada"+(count===1?"":"s");
   if($("salesBulkMove"))$("salesBulkMove").disabled=!count;
   if($("salesBulkDelete"))$("salesBulkDelete").disabled=!count;
 
-  const all=(salesCache.opportunities||[]);
   if($("salesSelectAll")){
     $("salesSelectAll").checked=all.length>0 && count===all.length;
     $("salesSelectAll").indeterminate=count>0 && count<all.length;
@@ -1611,7 +1618,7 @@ window.toggleSalesOpportunitySelection=(id,checked)=>{
 if($("salesSelectAll"))$("salesSelectAll").onchange=()=>{
   selectedSalesOpportunityIds.clear();
   if($("salesSelectAll").checked){
-    (salesCache.opportunities||[]).forEach(o=>selectedSalesOpportunityIds.add(String(o.id)));
+    getSalesSelectionScope().forEach(o=>selectedSalesOpportunityIds.add(String(o.id)));
   }
   updateSalesBulkUi();
 };
@@ -1627,6 +1634,7 @@ function refreshSalesBulkStages(){
 async function moveSelectedSalesOpportunities(){
   const target=$("salesBulkStage")?.value;
   if(!target){alert("Selecciona una columna de destino.");return}
+  updateSalesBulkUi();
   const ids=[...selectedSalesOpportunityIds];
   if(!ids.length)return;
   if(!confirm(`¿Mover ${ids.length} oportunidad${ids.length===1?"":"es"} a la columna seleccionada?`))return;
@@ -1648,6 +1656,7 @@ async function moveSelectedSalesOpportunities(){
 }
 
 async function deleteSelectedSalesOpportunities(){
+  updateSalesBulkUi();
   const ids=[...selectedSalesOpportunityIds];
   if(!ids.length)return;
   if(!confirm(`¿Eliminar definitivamente ${ids.length} oportunidad${ids.length===1?"":"es"}?`))return;
@@ -1677,7 +1686,7 @@ function renderSalesList(){
     <div class="salesListRow" data-compact="1" data-opp-id="${esc(o.id||'')}">
       <div><input type="checkbox" class="salesListCheck" data-opp-id="${o.id}" onclick="event.stopPropagation();toggleSalesOpportunitySelection('${o.id}',this.checked)"></div>
       <div class="salesIdentity">${o.client_name?`<button type="button" class="salesClientLink" onclick="event.stopPropagation();openSalesOpportunityContact('${o.id}')">${esc(o.client_name)}</button>`:"—"}
-        <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityCard('${o.id}')">${esc(o.title||"Oportunidad")}</button>
+        <button type="button" class="salesListTitle" onclick="event.stopPropagation();openOpportunityFull('${o.id}')">${esc(o.title||"Oportunidad")}</button>
       </div>
       <div class="salesContact">
         <div class="tpfSalesPhone" style="user-select:text;-webkit-user-select:text;cursor:text">${esc(o.phone||"—")}</div>
@@ -1923,7 +1932,7 @@ setTimeout(installFinalSalesMouseNavigation,300);
 
 
 window.toggleStageSelection=(stageId,checked)=>{
-  const ids=(salesCache.opportunities||[])
+  const ids=getSalesSelectionScope()
     .filter(o=>String(o.stage_id)===String(stageId))
     .map(o=>String(o.id));
 
@@ -1939,7 +1948,7 @@ window.toggleStageSelection=(stageId,checked)=>{
 function updateStageSelectAllUi(){
   document.querySelectorAll(".stageSelectAll").forEach(cb=>{
     const stageId=String(cb.dataset.stageId||"");
-    const ids=(salesCache.opportunities||[])
+    const ids=getSalesSelectionScope()
       .filter(o=>String(o.stage_id)===stageId)
       .map(o=>String(o.id));
 
@@ -2086,7 +2095,7 @@ let __contactOpportunityReturnId=null;
 
 window.openContactOpportunityFromProfile=(oppId)=>{
   __contactOpportunityReturnId=currentContact?.id||null;
-  openOpportunityCard(oppId);
+  openOpportunityFull(oppId);
 };
 
 function restoreContactAfterOpportunity(){
@@ -3098,5 +3107,6 @@ if($("oppFullEdit"))$("oppFullEdit").onclick=()=>{
   $("opportunityFullPage")?.classList.add("hidden");
   openOpportunityCard(currentFullOpportunity.id);
 };
+
 
 
