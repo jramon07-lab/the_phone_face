@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const {PGlite}=require('@electric-sql/pglite');
 const source=fs.readFileSync('js/modules/opportunity-contract-details.js','utf8');
-const nodes=Object.fromEntries(['oppModalId','oppModalPreviousOperator','oppModalTerminalEnd','oppModalDiscountEnd','oppPreviousHint','oppPreviousManage'].map(id=>[id,{value:'',setAttribute(){},dispatchEvent(){}}]));
+const nodes=Object.fromEntries(['oppModalId','oppModalPreviousOperator','oppModalTerminalEnd','oppModalDiscountEnd','oppPreviousHint','oppPreviousManage'].map(id=>[id,{value:'',dataset:{},setAttribute(){},dispatchEvent(){}}]));
 const context={window:{},document:{getElementById:id=>nodes[id],readyState:'loading',addEventListener(){}},Event:class{}};
 vm.createContext(context);vm.runInContext(source,context);const api=context.window.TPFOpportunityDetails;
 assert.throws(()=>api.validDate('2027-02-29'),/fecha válida/);assert.equal(api.validDate('2028-02-29'),'2028-02-29');assert.equal(api.validDate(''),null);

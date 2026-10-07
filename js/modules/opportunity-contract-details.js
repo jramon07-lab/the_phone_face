@@ -18,12 +18,12 @@ let editorToken=0,viewToken=0,editorOpportunity=null;
 function fillEditor(o){
  editorOpportunity=o||null;const token=++editorToken;
  for(const [key,id]of Object.entries(dates))if($(id))$(id).value=o?.[key]||'';
- const input=$('oppModalPreviousOperator');if(input){input.value=o?previous(o)==='Sin indicar'?'':previous(o):'';input.readOnly=false;}
+ const input=$('oppModalPreviousOperator');if(input){input.value=o?previous(o)==='Sin indicar'?'':previous(o):'';input.readOnly=false;input.dataset.originalValue=input.value;}
  $('oppPreviousManage')?.setAttribute('hidden','');
  if($('oppPreviousHint'))$('oppPreviousHint').textContent='Compañía de la que viene el cliente.';
  if(o?.id)loadInstallation(o.id).then(i=>{
   if(token!==editorToken||text($('oppModalId')?.value)!==text(o.id)||!input||!i)return;
-  input.value=previous(o,i)==='Sin indicar'?'':previous(o,i);input.readOnly=true;
+  input.value=previous(o,i)==='Sin indicar'?'':previous(o,i);input.readOnly=true;input.dataset.originalValue=input.value;
   $('oppPreviousManage').hidden=false;
   $('oppPreviousHint').textContent='Operador anterior de la instalación. Usa «Editar instalación / devolución» para cambiar sus instrucciones.';
   $('oppPreviousManage').onclick=()=>window.TPFInstallations?.manage(o.id);
