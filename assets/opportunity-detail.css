@@ -9,9 +9,9 @@
 #opportunityFullPage #oppFullEdit{background:#1666db;border-color:#1666db;color:#fff}
 #opportunityFullPage #oppFullDelete{background:#fff;border-color:#ecd8d8;color:#a33838}
 #opportunityFullPage button:focus-visible{outline:3px solid #78afff;outline-offset:3px}
-#opportunityFullPage .oppFullCard{padding:32px;border:1px solid #dfe6ef;border-radius:18px;background:#fff;box-shadow:0 8px 32px #182d4908}
+#opportunityFullPage .oppFullCard{padding:24px;border:1px solid #dfe6ef;border-radius:18px;background:#fff;box-shadow:0 8px 32px #182d4908}
 #opportunityFullPage #oppFullTitle{margin:0 0 10px;color:#182d49;font-size:clamp(24px,2.3vw,34px);font-weight:750;line-height:1.25;letter-spacing:-.03em;overflow-wrap:anywhere}
-#opportunityFullPage .oppReadHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 28px;padding:0 0 24px;border-bottom:1px solid #e7edf4}
+#opportunityFullPage .oppReadHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:0 0 12px;border-bottom:1px solid #e7edf4}
 #opportunityFullPage .oppReadEyebrow{color:#61728a;font-size:12px;font-weight:700;letter-spacing:.07em}
 #opportunityFullPage .oppReadStage{padding:7px 12px;border:1px solid #c8dcf7;border-radius:8px;background:#edf4ff;color:#235fae;font-size:14px;font-weight:650}
 #opportunityFullPage .oppContactSummary{display:flex;align-items:center;gap:16px;margin-bottom:28px}
@@ -21,8 +21,8 @@
 #opportunityFullPage .oppContactLink{display:inline;padding:0;border:0;background:transparent;color:#195ebc;font-size:20px;font-weight:700;text-align:left;overflow-wrap:anywhere}
 #opportunityFullPage .oppContactLink:hover{text-decoration:underline;text-underline-offset:4px}
 #opportunityFullPage .oppContactIdentity p{margin:4px 0 0;color:#61728a;font-size:14px;overflow-wrap:anywhere}
-#opportunityFullPage .oppSummaryMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:28px}
-#opportunityFullPage .oppField{padding:20px;border:1px solid #dfe6ef;border-radius:12px;background:#f8fafc;min-width:0}
+#opportunityFullPage .oppSummaryMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+#opportunityFullPage .oppField{padding:16px;border:1px solid #dfe6ef;border-radius:12px;background:#f8fafc;min-width:0}
 #opportunityFullPage .oppField>span{display:block;color:#61728a;font-size:13px;margin-bottom:9px}
 #opportunityFullPage .oppField>strong{display:block;color:#182d49;font-size:19px;font-weight:650;overflow-wrap:anywhere}
 #opportunityFullPage .oppAmount{background:#edf4ff;border-color:#d4e3f8}
@@ -32,10 +32,23 @@
 #opportunityFullPage .oppReadNotes p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#4b617e}
 #opportunityFullPage .oppUpdated{color:#61728a;font-size:13px;padding:0 0 8px}
 #opportunityFullPage #oppFullFollowupAudit{margin-top:20px}
+.oppContractPeople{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.oppContractPerson{display:flex;flex-direction:column;gap:5px;padding:14px;border:1px solid #dfe6ef;border-radius:12px;min-width:0}
+.oppContractPerson>span,.oppContractPerson>small{color:#61728a;font-size:13px;overflow-wrap:anywhere}
+#opportunityFullPage .oppContractPerson .oppContactLink{font-size:17px;line-height:1.4}
+.oppContractActions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+.oppContractActions button{min-height:44px;padding:9px 14px;border:1px solid #cfdae9;border-radius:9px}
+.oppContractActions .primary{background:#1666db;color:#fff;border-color:#1666db}
+.oppContractNext{margin-bottom:16px}
+.oppContractNext h3{font-size:16px;margin:0 0 6px}
+.oppContractNext p{margin:0;color:#4b617e;overflow-wrap:anywhere}
+.crmOpportunitySummary dt:has(+dd [data-crm-summary="holder"]),.crmOpportunitySummary dd:has([data-crm-summary="holder"]),.crmOpportunitySummary dt:has(+dd[data-crm-summary="dni"]),.crmOpportunitySummary dd[data-crm-summary="dni"],.crmOpportunitySummary dt:has(+dd [data-crm-summary="manager"]),.crmOpportunitySummary dd:has([data-crm-summary="manager"]){display:none}
 @media(max-width:700px){
   #opportunityFullPage .oppFullShell{padding:16px 12px 88px}
   #opportunityFullPage .oppFullCard{padding:20px 16px;border-radius:14px}
   #opportunityFullPage .oppSummaryMetrics{grid-template-columns:1fr}
+  .oppContractPeople{grid-template-columns:1fr}
+  .oppContractActions button{flex:1 1 150px}
   #opportunityFullPage .oppContactLink{font-size:18px}
   #opportunityFullPage .oppFullTop{gap:10px;margin-bottom:16px}
   #opportunityFullPage .oppFullTop button{padding:9px 12px}

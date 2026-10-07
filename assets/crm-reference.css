@@ -1538,3 +1538,18 @@ body.tpfUnified #view-dashboard .ofHomeSummary{display:grid;gap:5px;font-size:12
 
 /* Daily installations and customer actions. */
 body.tpfUnified #view-dashboard .tdPulseWithInstallations{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px!important}.tdPulse.green .tdPulseIcon{background:#e9f6ef;color:#168257}.ofQuickActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.ofQuickActions button{padding:8px 10px;font-size:12px;border:1px solid #ccd8e7;border-radius:8px;background:white;color:#245fba}.tdRowMenu button{min-height:36px}@media(max-width:1000px){body.tpfUnified #view-dashboard .tdPulseWithInstallations{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){body.tpfUnified #view-dashboard .tdPulseWithInstallations{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* Contract dossier: one reading order with explicit parties and compact dates. */
+body.tpfUnified #opportunityFullPage #oppFullContent{display:flex;flex-direction:column;gap:16px}
+body.tpfUnified #opportunityFullPage #oppFullContent>*{width:100%;min-width:0}
+body.tpfUnified #opportunityFullPage .oppContractPeople{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0}
+body.tpfUnified #opportunityFullPage .oppContractPerson{background:#fff}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.tpfUnified #opportunityFullPage .oppReadNotes{min-height:0}
+body.tpfUnified #opportunityFullPage .oppReadHeader{padding-bottom:10px}
+body.tpfUnified #opportunityFullPage .oppContractActions,body.tpfUnified #opportunityFullPage .oppContractNext{margin:0}
+body.tpfUnified #oppDetailModal .crmOpportunitySummary dt:has(+dd [data-crm-summary="holder"]),body.tpfUnified #oppDetailModal .crmOpportunitySummary dd:has([data-crm-summary="holder"]),body.tpfUnified #oppDetailModal .crmOpportunitySummary dt:has(+dd[data-crm-summary="dni"]),body.tpfUnified #oppDetailModal .crmOpportunitySummary dd[data-crm-summary="dni"],body.tpfUnified #oppDetailModal .crmOpportunitySummary dt:has(+dd [data-crm-summary="manager"]),body.tpfUnified #oppDetailModal .crmOpportunitySummary dd:has([data-crm-summary="manager"]){display:none!important}
+body.tpfUnified #oppDetailModal .oppContractActions button{font-size:13px}
+body.tpfUnified #oppDetailModal #oppPreviousManage{margin-top:6px;font-size:12px;white-space:normal}
+@media(max-width:1000px){body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){body.tpfUnified #opportunityFullPage .oppContractPeople{grid-template-columns:1fr}body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:1fr}}

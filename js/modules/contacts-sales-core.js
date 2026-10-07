@@ -307,6 +307,7 @@ function openContactNewOpportunity(){
   $("oppModalSave").textContent="Crear oportunidad";
   $("oppModalDelete").classList.add("hidden");
   $("oppModalId").value="";
+  window.TPFOpportunityDetails?.fillEditor(null);
   window.TPFContactParty?.mountOpportunity(currentContact.data?.TPF_TITULAR);
   $("oppModalHeading").textContent="Nueva oportunidad";
   $("oppModalTitle").value="Oportunidad - "+name;
@@ -853,4 +854,5 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
+
 

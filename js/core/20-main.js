@@ -496,6 +496,7 @@ window.openOpportunityCard=(id)=>{
   $("oppModalSave").textContent="Guardar cambios";
   $("oppModalDelete").classList.remove("hidden");
   $("oppModalId").value=o.id||"";
+  window.TPFOpportunityDetails?.fillEditor(o);
   window.TPFContactParty?.mountOpportunity(o.contract_party);
   $("oppModalHeading").textContent=o.title||"Ficha de oportunidad";
   $("oppModalTitle").value=o.title||"";
@@ -573,11 +574,12 @@ $("oppDetailModal").onclick=async(e)=>{
   await closeOpportunityCard();
 };
 
-async function tpfCreateOpportunityGuarded(payload,pipelineId,allowDuplicate=false){
-  payload=await window.TPFRouterReturn.prepare(null,payload);if(!payload)return null;
-  const {data,error}=await sb.rpc('crm_create_opportunity_guarded_v2',{p_after_sale:payload.after_sale_preferences||null,p_pipeline_id:pipelineId,p_stage_id:payload.stage_id,p_record_id:payload.record_id||null,p_title:payload.title,p_client_name:payload.client_name||null,p_phone:payload.phone||null,p_amount:payload.amount??null,p_expected_date:payload.expected_date||null,p_notes:payload.notes||null,p_contract_party:payload.contract_party||null,p_allow_duplicate:allowDuplicate});
+async function tpfCreateOpportunityGuarded(payload,pipelineId,allowDuplicate=false,prepared=false){
+  if(!prepared){payload=await window.TPFRouterReturn.prepare(null,payload);if(!payload)return null;}
+  payload=window.TPFOpportunityDetails?.afterPrepare(payload)||payload;
+  const {data,error}=await sb.rpc('crm_create_opportunity_guarded_v3',{p_terminal_commitment_end:payload.terminal_commitment_end||null,p_discount_end_date:payload.discount_end_date||null,p_previous_operator:payload.previous_operator||null,p_after_sale:payload.after_sale_preferences||null,p_pipeline_id:pipelineId,p_stage_id:payload.stage_id,p_record_id:payload.record_id||null,p_title:payload.title,p_client_name:payload.client_name||null,p_phone:payload.phone||null,p_amount:payload.amount??null,p_expected_date:payload.expected_date||null,p_notes:payload.notes||null,p_contract_party:payload.contract_party||null,p_allow_duplicate:allowDuplicate});
   if(error&&String(error.message||'').includes('DUPLICATE_OPPORTUNITY:')){
-    if(confirm('Ya existe una oportunidad abierta con el mismo cliente y título. ¿Seguro que quieres crear otra?'))return tpfCreateOpportunityGuarded(payload,pipelineId,true);
+    if(confirm('Ya existe una oportunidad abierta con el mismo cliente y título. ¿Seguro que quieres crear otra?'))return tpfCreateOpportunityGuarded(payload,pipelineId,true,true);
     throw new Error('No se creó: abre la oportunidad existente.');
   }
   if(error)throw error;return{id:data};
@@ -605,12 +607,14 @@ $("oppModalSave").onclick=async()=>{
 
   $("oppModalSave").disabled=true;
   try{
+    payload=window.TPFOpportunityDetails?.readEditor(payload)||payload;
     payload.contract_party=window.TPFContactRelations
       ?await window.TPFContactRelations.prepareOpportunity(payload)
       :window.TPFContactParty.readOpportunity();
     payload=await window.TPFRouterReturn.prepare(id||null,payload);if(!payload)return;
+    payload=window.TPFOpportunityDetails?.afterPrepare(payload)||payload;
     if(!id){
-      const created=await tpfCreateOpportunityGuarded(payload,stage.pipeline_id);
+      const created=await tpfCreateOpportunityGuarded(payload,stage.pipeline_id,false,true);
       pendingOpportunityRecordId=null;
       await saveDetectedOperator(created?.id,title);
       await runOpportunityAutomations(created?.id);
@@ -672,6 +676,7 @@ window.newOppInStage=async(stageId)=>{
   pendingOpportunityRecordId=null;
 
   $("oppModalId").value="";
+  window.TPFOpportunityDetails?.fillEditor(null);
   window.TPFContactParty?.mountOpportunity();
   $("oppModalHeading").textContent="Nueva oportunidad";
   $("oppModalTitle").value="";
@@ -1214,13 +1219,10 @@ async function returnFromOpportunityExactly(){
 window.openOpportunityFull=async(id)=>{
   rememberOpportunityReturnContext();
   tpfRememberScreen();
-  let data=(salesCache.opportunities||[]).find(o=>String(o.id)===String(id));
-  if(!data){
-    const r=await sb.from("sales_opportunities").select("*").eq("id",id).maybeSingle();
-    if(r.error||!r.data){alert(r.error?.message||"No se encontró la oportunidad.");return;}
-    data=r.data;
-  }
-
+  const r=await sb.from("sales_opportunities").select("*").eq("id",id).maybeSingle();
+  if(r.error||!r.data){alert(r.error?.message||"No se encontró la oportunidad.");return;}
+  const data=r.data;
+  if(salesCache?.opportunities)salesCache.opportunities=salesCache.opportunities.map(o=>String(o.id)===String(id)?data:o);
   currentFullOpportunity=data;
   const stage=(salesCache.stages||[]).find(s=>String(s.id)===String(data.stage_id));
   const stageName=stage?.name||"Sin estado";
@@ -1257,6 +1259,7 @@ window.openOpportunityFull=async(id)=>{
   const contactLink=$("oppFullContactLink");
   if(contactLink)contactLink.onclick=()=>returnToContactFromOpportunity(contactId,data.id);
   $("opportunityFullPage").classList.remove("hidden");
+  window.TPFOpportunityDetails?.decorateView(data);
 };
 
 window.returnToContactFromOpportunity=async(contactId,oppId)=>{
@@ -1974,6 +1977,7 @@ function openNewOpportunityInStage(stageId){
   $("oppModalSave").textContent="Crear oportunidad";
   $("oppModalDelete").classList.add("hidden");
   $("oppModalId").value="";
+  window.TPFOpportunityDetails?.fillEditor(null);
   window.TPFContactParty?.mountOpportunity();
   $("oppModalHeading").textContent="Nueva oportunidad";
   $("oppModalTitle").value="";
@@ -3094,4 +3098,5 @@ if($("oppFullEdit"))$("oppFullEdit").onclick=()=>{
   $("opportunityFullPage")?.classList.add("hidden");
   openOpportunityCard(currentFullOpportunity.id);
 };
+
 

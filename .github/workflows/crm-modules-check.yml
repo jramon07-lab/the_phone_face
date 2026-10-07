@@ -24,6 +24,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Verify outside-hours consent on desktop and mobile with isolated fixtures
         run: npx playwright test --config=tests/e2e/outside-hours.config.cjs --reporter=line
+      - name: Verify opportunity contract metadata and permissions
+        run: node tests/opportunity-contract-details.cjs
+      - name: Verify opportunity dates and party navigation on desktop and mobile with isolated fixtures
+        run: npx playwright test --config=tests/e2e/opportunity-contract.config.cjs --reporter=line
       - name: Verify scheduled WhatsApp saving on desktop and mobile with isolated fixtures
         run: npx playwright test --config=tests/e2e/schedule-save.config.cjs --reporter=line
       - name: Verify router templates on desktop and mobile with isolated fixtures
@@ -65,3 +69,4 @@ jobs:
           grep -q "TPFAutomationFlow" js/modules/automations-flow-builder.js
           grep -q "openWhatsappProgramsView" js/modules/whatsapp-scheduling-core.js
           echo "CRM modular structure OK"
+

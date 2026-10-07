@@ -65,13 +65,13 @@
 <link id="dashboardSafeProCss" rel="stylesheet" href="/assets/dashboard-home.css?v=20261004-compact-toolbar-4">
 <link rel="stylesheet" href="/assets/app.css?v=20260908-activity-2">
 <link rel="stylesheet" href="/assets/whatsapp-loading.css?v=20261001-initial-loading-1">
-<link rel="stylesheet" href="/assets/opportunity-detail.css?v=20260920-workspace-1">
+<link rel="stylesheet" href="/assets/opportunity-detail.css?v=20261007-contract-details-1">
 <link rel="stylesheet" href="/assets/alerts-pro-v2.css?v=20260902-02">
 <link rel="stylesheet" href="/assets/agenda-pro.css?v=20260903-05">
 <link rel="stylesheet" href="/assets/agenda-detail-pro.css?v=20260903-01">
 <link rel="stylesheet" href="/assets/contact-desktop.css?v=20260912-summary-accordions-1">
 <link rel="stylesheet" href="/assets/crm-unified.css?v=20260920-suite-2">
-<link rel="stylesheet" href="/assets/crm-reference.css?v=20261003-daily-review-1">
+<link rel="stylesheet" href="/assets/crm-reference.css?v=20261007-contract-details-1">
 <link rel="stylesheet" href="/assets/whatsapp-chat-row.css?v=20260926-time-1">
 <link rel="stylesheet" href="/assets/contact-workspace-pro.css?v=20260930-viewer-close-2">
 </head>
@@ -1417,6 +1417,18 @@
         <label>Fecha prevista de cierre
           <input id="oppModalDate" type="date">
         </label>
+        <label>Operador anterior
+          <input id="oppModalPreviousOperator" maxlength="100" placeholder="Sin indicar" list="oppPreviousOperators" aria-describedby="oppPreviousHint">
+          <datalist id="oppPreviousOperators"><option>Vodafone</option><option>MásMóvil</option><option>Yoigo</option><option>O2</option><option>Movistar</option><option>Orange</option><option>Lowi</option><option>Jazztel</option><option>Digi</option><option>Pepephone</option><option>Finetwork</option><option>Ninguno</option></datalist>
+          <span id="oppPreviousHint" class="small">Compañía de la que viene el cliente.</span>
+          <button id="oppPreviousManage" type="button" class="secondary" hidden>Editar instalación / devolución</button>
+        </label>
+        <label>Fin de permanencia del terminal
+          <input id="oppModalTerminalEnd" type="date">
+        </label>
+        <label>Fin de descuento
+          <input id="oppModalDiscountEnd" type="date">
+        </label>
         <label>Fecha de activación
           <input id="oppModalActivation" type="text" readonly placeholder="Sin registrar" aria-describedby="oppActivationHelp">
           <span id="oppActivationHelp" class="small">Fecha real de instalación</span>
@@ -1573,7 +1585,7 @@
 <script src="/js/modules/contact-party.js?v=20261001-day-one-toggle-1"></script>
 <script src="/js/core/00-bootstrap.js?v=20261004-clean-control-1-20261002-reviews-1-20261001-wa-shell-visible-1"></script>
 <script src="/js/core/api-auth.js?v=20260925-download-2"></script>
-<script src="/js/modules/contacts-sales-core.js?v=20261003-stage-selector-1"></script>
+<script src="/js/modules/contacts-sales-core.js?v=20261007-contract-details-1-20261003-stage-selector-1"></script>
 <script src="/js/modules/whatsapp-scheduling-core.js?v=20261006-confirm-schedule-save-1"></script>
 <script src="/js/modules/agenda-core.js?v=20261006-linked-actions-1"></script>
 <script src="/js/modules/opportunity-notes.js?v=20260920-editor-4"></script>
@@ -1583,7 +1595,7 @@
 <script src="/js/modules/installation-settings.js?v=20261004-return-only-1"></script>
 <script src="/js/modules/installation-registry.js?v=20261003-immediate-replies-1"></script>
 <script src="/js/modules/router-return-settings.js?v=20261003-installation-1"></script>
-<script src="/js/core/20-main.js?v=20261003-stage-selector-1"></script>
+<script src="/js/core/20-main.js?v=20261007-contract-details-1"></script>
 <script src="/js/modules/whatsapp-green-core.js?v=20261006-explicit-contract-roles-1"></script>
 <script src="/js/modules/automations-core.js?v=20260928-stats-ready-1"></script>
 <script src="/js/core/30-enhancements.js"></script>
@@ -1644,7 +1656,8 @@
 <script src="/js/modules/agenda-settings-labels.js?v=20260906-consolidation-1"></script>
 <script src="/js/modules/stable-navigation-failsafe.js?v=20260930-loading-preview-1"></script>
 <script src="/js/modules/email-m365.js?v=20260920-reference-1"></script>
-<script src="/js/modules/crm-reference-layout.js?v=20260928-activation-1"></script>
+<script src="/js/modules/crm-reference-layout.js?v=20261007-contract-details-1"></script>
+<script src="/js/modules/opportunity-contract-details.js?v=20261007-contract-details-1"></script>
 <script src="/js/modules/admin-sections.js?v=20261003-installation-1"></script>
 <script src="/js/modules/copyable-data.js?v=20260928-search-scoped-1"></script>
 <script src="/js/modules/whatsapp-workspace-design.js?v=20261001-contact-before-paint-1"></script>
@@ -1658,6 +1671,7 @@
 <script src="/js/modules/crm-workspace.js?v=20261001-sale-month-fix-2"></script>
 <script src="/js/modules/whatsapp-media-recovery.js?v=20261002-diagnostic-media"></script>
 </body></html>
+
 
 
 

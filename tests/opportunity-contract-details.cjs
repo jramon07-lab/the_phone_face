@@ -1,0 +1,35 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const {PGlite}=require('@electric-sql/pglite');
+const source=fs.readFileSync('js/modules/opportunity-contract-details.js','utf8');
+const nodes=Object.fromEntries(['oppModalId','oppModalPreviousOperator','oppModalTerminalEnd','oppModalDiscountEnd','oppPreviousHint','oppPreviousManage'].map(id=>[id,{value:'',setAttribute(){},dispatchEvent(){}}]));
+const context={window:{},document:{getElementById:id=>nodes[id],readyState:'loading',addEventListener(){}},Event:class{}};
+vm.createContext(context);vm.runInContext(source,context);const api=context.window.TPFOpportunityDetails;
+assert.throws(()=>api.validDate('2027-02-29'),/fecha válida/);assert.equal(api.validDate('2028-02-29'),'2028-02-29');assert.equal(api.validDate(''),null);
+const fixture={client_name:'Titular',record_id:'manager-id',phone:'600000001',contract_party:{same:false,holder_name:'Titular',holder_record_id:'holder-id',contact_name:'Gestora',manager_record_id:'manager-id',recipient_name:'Gestora',recipient_phone:'600000002',recipient_contact_id:'manager-id'}};
+assert.equal(api.party(fixture).holder.id,'holder-id');assert.equal(api.party(fixture).manager.id,'manager-id');assert.equal(api.party(fixture).recipient.phone,'600000002');assert.equal(api.previous({previous_operator:'O2'}, {previous_operator:'Yoigo'}),'Yoigo');
+api.fillEditor({terminal_commitment_end:'2028-02-29',discount_end_date:'2027-03-01',previous_operator:'O2'});let payload=api.readEditor({notes:'Keep notes',installation_date:'2026-09-01'});assert.equal(payload.terminal_commitment_end,'2028-02-29');assert.equal(payload.discount_end_date,'2027-03-01');assert.equal(payload.installation_date,'2026-09-01');assert.equal(payload.notes,'Keep notes');api.fillEditor(null);assert.equal(nodes.oppModalTerminalEnd.value,'');assert.equal(nodes.oppModalDiscountEnd.value,'');
+(async()=>{
+ const db=new PGlite();
+ await db.exec(`create role anon; create role authenticated; create schema auth;
+ create function auth.uid() returns uuid language sql as 'select nullif(current_setting(''test.uid'',true),'''')::uuid';
+ create table public.sales_opportunities(id uuid primary key, title text);
+ create function public.crm_create_opportunity_guarded_v2(uuid,uuid,uuid,text,text,text,numeric,date,text,jsonb,boolean,jsonb) returns uuid language plpgsql security invoker as $$begin
+ if auth.uid() is null then raise exception 'Authentication required'; end if;
+ insert into public.sales_opportunities(id,title) values($3,$4); return $3;end;$$;
+ grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;
+ grant select,insert,update on public.sales_opportunities to authenticated;
+ alter table public.sales_opportunities enable row level security;
+ create policy own_opportunity on public.sales_opportunities to authenticated using(id=auth.uid()) with check(id=auth.uid());`);
+ await db.exec(fs.readFileSync('supabase/migrations/20261007062000_opportunity_contract_dates.sql','utf8').replace("notify pgrst,'reload schema';",''));
+ const id='10000000-0000-0000-0000-000000000001';
+ const call=`select public.crm_create_opportunity_guarded_v3(null,null,'${id}','Test',p_terminal_commitment_end=>'2028-02-29',p_discount_end_date=>'2027-03-01',p_previous_operator=>'O2')`;
+ assert.equal((await db.query("select has_function_privilege('anon','public.crm_create_opportunity_guarded_v3(uuid,uuid,uuid,text,text,text,numeric,date,text,jsonb,boolean,jsonb,date,date,text)','EXECUTE') as allowed")).rows[0].allowed,false);
+ await assert.rejects(db.exec(call),/Authentication required/);
+ await db.exec(`set test.uid='${id}';set role authenticated;`);await db.exec(call);
+ let row=(await db.query('select id,title,terminal_commitment_end::text,discount_end_date::text,previous_operator from public.sales_opportunities')).rows[0];assert.equal(String(row.terminal_commitment_end).slice(0,10),'2028-02-29');assert.equal(String(row.discount_end_date).slice(0,10),'2027-03-01');assert.equal(row.previous_operator,'O2');
+ await db.exec("update public.sales_opportunities set terminal_commitment_end=null,discount_end_date='2027-07-01'");row=(await db.query('select id,title,terminal_commitment_end::text,discount_end_date::text,previous_operator from public.sales_opportunities')).rows[0];assert.equal(row.terminal_commitment_end,null);assert.equal(String(row.discount_end_date).slice(0,10),'2027-07-01');
+ await db.exec("reset role;delete from public.sales_opportunities;alter table public.sales_opportunities add check(terminal_commitment_end>='2030-01-01');set role authenticated;");
+ await assert.rejects(db.exec(call),/check constraint/);assert.equal((await db.query('select count(*) as n from public.sales_opportunities')).rows[0].n,0);
+ await db.exec("set test.uid='10000000-0000-0000-0000-000000000002';");await assert.rejects(db.exec(call),/row-level security/);
+ await db.close();console.log('PASS independent dates, empty/reset values, explicit parties, creation/edit readback, RLS, anon denial and atomic rollback');
+})().catch(e=>{console.error(e);process.exit(1)});
