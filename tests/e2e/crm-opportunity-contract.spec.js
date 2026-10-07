@@ -93,3 +93,26 @@ for(const viewport of [{width:1365,height:900},{width:430,height:900}])test('Con
  await page.locator('.nav[data-view="agenda"]').first().dispatchEvent('click');await page.evaluate(async()=>{resolveOpen({data:row});await pendingOpen});await expect(page.locator('#opportunityFullPage')).toBeHidden();
 
 });
+
+for(const width of [1365,430])test('Contact opens prepared without stale cards or task layout '+width,async({page})=>{
+ await page.setViewportSize({width,height:900});await page.route('**/*',r=>r.abort());const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setContent(read('index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<link\b[^>]*>/gi,''));await page.addStyleTag({content:read('assets/app.css')+read('assets/contact-desktop.css')});
+ await page.evaluate(()=>{window.$=id=>document.getElementById(id);document.getElementById('app').classList.remove('hidden');window.currentContact={id:'old',data:{NOMBRE:'Anterior'}};window.contactOpenSequence=0;window.tpfRememberScreen=()=>{};window.contactField=(d,...keys)=>keys.map(k=>d[k]).find(Boolean)||'';window.splitContactFullName=n=>({first:n,last:''});window.contactFullNameFromData=d=>d.NOMBRE;window.applyWhatsappVisibilityForContact=()=>{};window.sb={from(){return{select(){return this},eq(){return this},async single(){return{data:{id:'new',data:{NOMBRE:'Nuevo cliente',TELEFONO:'600000001'}}}}}}};window.renderContactProfile=()=>new Promise(resolve=>window.finishProfile=resolve);document.getElementById('contactModal').classList.add('tpfTaskStandalone');document.getElementById('cpTaskPage').classList.remove('hidden');for(const id of ['cpOpportunities','cpTasks','cpWhatsappPrograms','cpTimeline'])$(id).textContent='Contenido anterior';window.preparedVisible=null;window.addEventListener('tpf:contact-prepared',()=>window.preparedVisible=!$('contactModal').classList.contains('hidden'));});
+ await page.addScriptTag({content:read('js/modules/contact-desktop-layout.js')});
+ const source=read('js/modules/contacts-sales-core.js');await page.addScriptTag({content:source.slice(source.indexOf('window.openContact=async(id)=>{'),source.indexOf('\n$("contactClose").onclick='))});
+ await page.evaluate(()=>{void openContact('new')});await expect(page.locator('#contactModal')).toBeVisible();await expect(page.locator('#cpTaskPage')).toBeHidden();await expect(page.locator('#contactModal')).not.toHaveClass(/tpfTaskStandalone/);await expect(page.locator('#cpOpportunities')).not.toContainText('Contenido anterior');expect(await page.evaluate(()=>preparedVisible)).toBe(false);
+ if(width===1365){await expect(page.locator('#contactModal')).toHaveClass(/tpfContactReference/);await expect(page.locator('#cpRefTab-resumen')).toHaveAttribute('aria-selected','true');}
+ await page.evaluate(()=>finishProfile());expect(errors).toEqual([]);
+});
+
+test('Every local asset and dynamically mounted module carries the exact deployment SHA',async({page})=>{
+ const source=read('api/final-fix.js'),vm=require('node:vm'),context={process:{env:{VERCEL_GIT_COMMIT_SHA:'a'.repeat(40)}}};vm.createContext(context);vm.runInContext(source.slice(source.indexOf('function pinBuildAssets('),source.indexOf('module.exports=async')),context);
+ const html=context.pinBuildAssets('<script src="/js/modules/runtime.js?v=old"></script><link href="/assets/app.css"><script src="https://external.test/x.js"></script>');expect(html).toContain('v=old&tpfBuild='+ 'a'.repeat(40));expect(html).toContain('/assets/app.css?tpfBuild='+ 'a'.repeat(40));expect(html).toContain('src="https://external.test/x.js"');
+ await page.route('**/*',r=>r.fulfill({contentType:'application/javascript',body:''}));await page.setContent('<script>window.loaded=[];const append=document.head.appendChild.bind(document.head);document.head.appendChild=s=>{loaded.push(s.src);return append(s)};</script>');await page.route('**/runtime.js?*',r=>r.fulfill({contentType:'application/javascript',body:read('js/modules/runtime.js')}));await page.addScriptTag({url:'https://fixture.test/js/modules/runtime.js?tpfBuild='+ 'a'.repeat(40)});expect(await page.evaluate(()=>loaded.filter(x=>x.includes('/js/modules/')).every(x=>x.includes('tpfBuild='+ 'a'.repeat(40))))).toBe(true);
+});
+
+for(const draft of [false,true])test('New production build refreshes idle pages and protects open drafts '+draft,async({page})=>{
+ let loads=0;await page.clock.install();await page.route('https://fixture.test/**',r=>{if(r.request().url().includes('/api/deployment-version'))return r.fulfill({json:{sha:'b'.repeat(40),environment:'production'}});loads++;return r.fulfill({contentType:'text/html',body:'<div id="tpfBuildBadge" data-tpf-full-commit="'+ 'a'.repeat(40)+'"></div>'+(draft?'<div id="waQuickModal"><textarea id="draft">Texto sin enviar</textarea></div>':'')});});await page.goto('https://fixture.test/');await page.addScriptTag({content:read('js/modules/deployment-refresh.js')});await page.clock.runFor(2000);
+ if(draft){expect(loads).toBe(1);await expect(page.locator('#draft')).toHaveValue('Texto sin enviar');await expect(page.locator('#tpfUpdateNotice')).toBeVisible();await page.evaluate(()=>document.getElementById('waQuickModal').hidden=true);await page.clock.runFor(2000);}
+ await expect.poll(()=>loads).toBe(2);
+});

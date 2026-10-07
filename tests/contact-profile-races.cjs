@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('js/modules/contacts-sales-core.js','utf8');
-const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',innerHTML:'',classList:{contains:()=>true,remove(){}}});return nodes.get(id)};
+const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',innerHTML:'',classList:{contains:()=>true,add(){},remove(){}}});return nodes.get(id)};
 const pending=new Map();
 const ctx={window:{},$ :node,currentContact:null,contactOpenSequence:0,tpfRememberScreen(){},alert(){throw Error('Unexpected alert')},applyWhatsappVisibilityForContact(){},contactFullNameFromData:d=>d.NOMBRE,splitContactFullName:n=>({first:n,last:''}),contactField:(d,...keys)=>keys.map(k=>d[k]).find(v=>v!=null)||'',renderContactProfile:async()=>{},sb:{from(){return{select(){return this},eq(k,id){this.id=id;return this},single(){return new Promise(resolve=>pending.set(this.id,resolve))}}}}};
 vm.createContext(ctx);

@@ -245,6 +245,14 @@ window.openContact=async(id)=>{
  $("contactNotes").value=String(d.NOTAS??d.NOTES??"");
  $("contactMeta").textContent=`Origen: ${data.source_sheet||""}${data.source_row?" · Fila "+data.source_row:""}`;
  $("contactMsg").textContent="";
+ // Prepare the new identity before making the layer visible; never flash the previous client's cards.
+ if(!sameVisible){
+  for(const pageId of ['cpTaskPage','cpTaskDetailPage','tpfWaTasksPage'])$(pageId)?.classList.add('hidden');
+  $("contactModal").classList.remove('tpfTaskStandalone','tpfListTaskModal','tpf-wa-task-mode','tpf-wa-task-flow');
+  for(const listId of ['cpOpportunities','cpTasks','cpWhatsappPrograms','cpTimeline'])if($(listId))$(listId).innerHTML='<div class="cpEmpty" role="status">Cargando información del cliente…</div>';
+  for(const countId of ['cpOppTotal','cpOppOpen','cpOppExpired'])if($(countId))$(countId).textContent='0';
+ }
+ window.dispatchEvent?.(new CustomEvent('tpf:contact-prepared',{detail:{id}}));
  $("contactModal").classList.remove("hidden");
  await renderContactProfile();
 };

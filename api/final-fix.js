@@ -66,15 +66,23 @@ function applyVideoPrivacy(html,req){
   return html.replace(/<head(?:\s[^>]*)?>/i,match=>match+privateHead);
 }
 
+function pinBuildAssets(html){
+ const sha=String(process.env.VERCEL_GIT_COMMIT_SHA||'');
+ if(!/^[a-f0-9]{40}$/i.test(sha))return html;
+ return html.replace(/(<(?:script|link)\b[^>]*?\b(?:src|href)=["'])(\/(?:js|assets)\/[^"']+)(["'])/gi,(_all,start,url,end)=>start+url+(url.includes('?')?'&':'?')+'tpfBuild='+sha+end);
+}
+
 module.exports=async function(req,res){
   try{
     const captured=await new Promise((resolve,reject)=>clean(req,captureResponse(resolve,reject)).catch(reject));
     Object.entries(captured.headers).forEach(([k,v])=>res.setHeader(k,v));
     res.setHeader('X-TPF-Final-Fix','late-modals+logout-event-driven+contact-profile-v12+whatsapp-read-safe');
-    res.status(captured.statusCode).send(applyVideoPrivacy(applyFinalFix(captured.body),req));
+    res.status(captured.statusCode).send(pinBuildAssets(applyVideoPrivacy(applyFinalFix(captured.body).replace('</body>','<script src="/js/modules/deployment-refresh.js"></script>\n</body>'),req)));
   }catch(e){res.status(500).send('No se pudo cargar The Phone Face: '+(e?.message||e));}
 };
 
 module.exports.applyFinalFix=applyFinalFix;
 module.exports.relocateLateModals=relocateLateModals;
 module.exports.applyVideoPrivacy=applyVideoPrivacy;
+
+module.exports.pinBuildAssets=pinBuildAssets;
