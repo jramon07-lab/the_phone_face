@@ -15,6 +15,13 @@ const success=()=>({data:{id:'fixture-id',whatsapp_phone:values.phone,whatsapp_m
  result=success();await box.persistWithClient(date,{...values,programId:'fixture-id'});assert.equal(written.status,'pending');
  for(const bad of [{data:null},{error:{message:'Offline'}},{data:{...success().data,whatsapp_phone:'600000000'}},{data:{...success().data,whatsapp_message:'Different text'}},{data:{...success().data,related_record_id:'other-contact'}},{data:{...success().data,whatsapp_scheduled_at:'2099-11-06T08:00:00Z'}}]){result=bad;await assert.rejects(box.persistWithClient(date,values));}
  assert.equal(refreshes,2,'failed saves do not refresh or signal success');
+ const moved='2099-10-06T09:00:00.000Z';
+ box.window.TPFOutsideHours={consumeScheduleChoice:(original,saved)=>original===date.toISOString()&&saved===moved};
+ result={data:{...success().data,whatsapp_scheduled_at:moved}};
+ await box.persistWithClient(date,values);
+ result={data:{...success().data,whatsapp_scheduled_at:moved,whatsapp_phone:'600000000'}};
+ await assert.rejects(box.persistWithClient(date,values),'choosing another hour never bypasses recipient integrity');
+ delete box.window.TPFOutsideHours;
  result=success();await assert.rejects(box.persistWithClient(date,{...values,programId:'missing-record'}));
  vm.runInContext(core.slice(core.indexOf('async function saveQuickWhatsappSchedule('),core.indexOf('document.querySelectorAll("[data-wa-quick]")')),box);
  $('waQuickPhone').value=values.phone;$('waQuickMessage').value=values.message;

@@ -365,9 +365,10 @@ async function persistWithClient(date,values){
 }
 
 function confirmScheduleRecord(record,values,iso){
+  const chosenByUser=record?.whatsapp_scheduled_at&&window.TPFOutsideHours?.consumeScheduleChoice?.(iso,record.whatsapp_scheduled_at);
   if(!record?.id||(values.programId&&String(record.id)!==String(values.programId))||
      !samePhone(record.whatsapp_phone,values.phone)||record.whatsapp_message!==values.message||
-     new Date(record.whatsapp_scheduled_at).getTime()!==new Date(iso).getTime()||
+     (!chosenByUser&&new Date(record.whatsapp_scheduled_at).getTime()!==new Date(iso).getTime())||
      (values.contactId&&String(record.related_record_id)!==String(values.contactId))){
     throw new Error('No se ha confirmado el guardado del WhatsApp. Conservamos el texto; revisa Programados antes de volver a intentarlo.');
   }

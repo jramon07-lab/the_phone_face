@@ -17,3 +17,23 @@ test('Fuera de horario pide permiso en PC y móvil sin enviar al proveedor',asyn
  await page.evaluate(()=>{window.result=null;fetch('https://overfzbjtpjqxzbujezg.supabase.co/rest/v1/rpc/crm_create_contact_guarded',{method:'POST',headers:{'content-type':'application/json','x-client-info':'test'},body:JSON.stringify({p_welcome:true})}).then(r=>window.result=r.status);});
  await page.getByRole('button',{name:'Sí, enviar ahora'}).click();await expect.poll(()=>page.evaluate(()=>window.result)).toBe(200);expect(calls).toBe(1);expect(choice).toBe('test tpf-outside-hours=now');
 });
+test('Programar a las 09:00 conserva la fecha y ofrece las 10:00 sin enviar ahora',async({page})=>{
+ await page.clock.install({time:new Date('2026-10-07T22:25:00Z')});
+ await page.route('https://fixture.test/**',route=>route.fulfill({contentType:'text/html',body:'<html><body></body></html>'}));
+ const saved=[];
+ await page.route('https://overfzbjtpjqxzbujezg.supabase.co/**',route=>{
+  if(route.request().method()!=='OPTIONS')saved.push(route.request().postDataJSON());
+  return route.fulfill({status:200,headers:{'access-control-allow-origin':'*','access-control-allow-methods':'POST, OPTIONS','access-control-allow-headers':'content-type'},contentType:'application/json',body:'{}'});
+ });
+ await page.goto('https://fixture.test/');await page.addScriptTag({content:fs.readFileSync('js/modules/outside-hours-confirm.js','utf8')});
+ const start=()=>page.evaluate(()=>{window.result=null;fetch('https://overfzbjtpjqxzbujezg.supabase.co/rest/v1/agenda_items',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({whatsapp_enabled:true,whatsapp_scheduled_at:'2026-10-08T07:00:00Z',starts_at:'2026-10-08T07:00:00Z'})}).then(r=>window.result=r.status);});
+ await start();
+ await expect(page.getByRole('button',{name:'Sí, enviar ahora'})).toHaveCount(0);
+ await page.getByRole('button',{name:/Programar para.*9:00/}).click();
+ await expect.poll(()=>page.evaluate(()=>window.result)).toBe(200);
+ expect(saved[0].whatsapp_scheduled_at).toBe('2026-10-08T07:00:00.000Z');
+ expect(saved[0].starts_at).toBe(saved[0].whatsapp_scheduled_at);
+ await start();await page.getByRole('button',{name:/Programar para.*10:00/}).click();
+ await expect.poll(()=>page.evaluate(()=>window.result)).toBe(200);
+ expect(saved[1].whatsapp_scheduled_at).toBe('2026-10-08T08:00:00.000Z');
+});
