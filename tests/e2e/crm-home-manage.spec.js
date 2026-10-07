@@ -148,3 +148,11 @@ test('Saved preferences and stale Tramitado cache still require an explicit new 
  await expect.poll(()=>page.evaluate(()=>window.preparation?.stage_id)).toBe('processed');
 });
 
+for(const status of ['processed','won'])test(`Previous operator opens installation return editor directly from ${status}`,async({page})=>{
+ await page.setViewportSize({width:1366,height:900});await fixture(page,status);
+ await page.evaluate(()=>{window.installationCalls=[];window.TPFInstallations={manage:async(id,options)=>window.installationCalls.push({id,options})};});
+ await page.getByRole('button',{name:'Editar compañía anterior'}).click();
+ await expect(page.locator('#ofManageDialog')).toHaveCount(0);
+ expect(await page.evaluate(()=>installationCalls)).toEqual([{id:'op',options:{edit:'return'}}]);
+ expect(await page.evaluate(()=>__fixture.writes)).toBe(0);
+});

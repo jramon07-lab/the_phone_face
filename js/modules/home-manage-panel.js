@@ -92,7 +92,7 @@ async function open(id){
   let routerReady=false,routerBinding=null;
   const previousForm=body.querySelector('[data-previous-form]'),previousInput=previousForm.elements.previous;
   const previousValue=()=>identity(o,x,rr.data||{}).previous;
-  body.querySelector('[data-edit-previous]').onclick=()=>{if(busy)return;if(['processed','won'].includes(x.status)&&window.TPFInstallations){d.close();void window.TPFInstallations.manage(o.id);return;}previousForm.hidden=false;body.querySelector('[data-previous-error]').hidden=true;previousInput.value=previousValue()==='Sin indicar'?'':previousValue();body.querySelector('[data-previous-status]').textContent='';previousInput.focus()};
+  body.querySelector('[data-edit-previous]').onclick=()=>{if(busy)return;if(['processed','won'].includes(x.status)&&window.TPFInstallations){d.close();void window.TPFInstallations.manage(o.id,{edit:'return'});return;}previousForm.hidden=false;body.querySelector('[data-previous-error]').hidden=true;previousInput.value=previousValue()==='Sin indicar'?'':previousValue();body.querySelector('[data-previous-status]').textContent='';previousInput.focus()};
   body.querySelector('[data-cancel-previous]').onclick=()=>{if(busy)return;previousForm.hidden=true;body.querySelector('[data-edit-previous]').focus()};
   body.querySelector('[data-previous-error]').hidden=true;
   const operators=Object.keys(window.TPFRouterReturn?.paragraphs||{Vodafone:1,'MásMóvil':1,Yoigo:1,O2:1,Orange:1,Lowi:1,Jazztel:1,Digi:1,Movistar:1,Pepephone:1}).filter(n=>!['Ninguno','Otro'].includes(n));

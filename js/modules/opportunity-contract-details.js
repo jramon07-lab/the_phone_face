@@ -17,7 +17,7 @@ function validDate(v){if(!v)return null;const d=new Date(v+'T12:00:00Z');if(!/^\
 function party(o){
  const p=o.contract_party||{},same=p.same!==false,holder={id:p.holder_record_id||p.holder_contact_id||(same?o.record_id:null),name:p.holder_name||o.client_name||'Sin titular',phone:p.holder_phone||(same?o.phone:'')||''};
  const manager={id:p.manager_record_id||p.manager_contact_id||o.record_id,name:p.contact_name||(same?holder.name:'Sin gestor indicado'),phone:p.contact_phone||(same?holder.phone:o.phone)||''};
- const recipient={id:p.recipient_contact_id||(p.recipient==='holder'?holder.id:manager.id),name:p.recipient_name||(p.recipient==='holder'?holder.name:manager.name),phone:p.recipient_phone||(p.recipient==='holder'?holder.phone:manager.phone)||o.phone||''};
+ const recipient={id:p.recipient_contact_id||(p.recipient==='holder'?holder.id:manager.id),name:p.recipient_name||(p.recipient==='holder'?holder.name:manager.name),phone:Object.hasOwn(p,'recipient_phone')?text(p.recipient_phone):(p.recipient==='holder'?holder.phone:manager.phone)||o.phone||''};
  return {holder,manager,recipient};
 }
 function operator(o){return text(o.installation_operator)||text((o.title||'').match(/vodafone|másmóvil|masmovil|orange|movistar|jazztel|yoigo|digi|o2|finetwork/i)?.[0])||'Sin indicar';}

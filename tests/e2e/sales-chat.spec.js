@@ -32,6 +32,13 @@ test('Sales list keeps text and actions separate and opens the communication rec
   expect(await page.locator('#salesListRows .salesListRow').first().evaluate(row=>{const text=row.querySelector('.salesFollowup').getBoundingClientRect(),actions=row.querySelector('.salesListAction').getBoundingClientRect();return text.right<=actions.left&&[...row.querySelectorAll('.ofSalesActions button')].every(b=>{const r=b.getBoundingClientRect();return r.left>=actions.left&&r.right<=actions.right+1})})).toBe(true);
   await expect(page.locator('[data-of-chat="a"]')).toBeVisible();
  }
+ await page.evaluate(()=>{window.composed=[];window.scheduled=0;window.openWaQuick=data=>composed.push(data);const drop=document.createElement('button');drop.id='waQuickDrop';drop.onclick=()=>scheduled++;document.body.appendChild(drop)});
+ await page.addScriptTag({content:fs.readFileSync('js/modules/linked-contact-actions.js','utf8')});
+ await page.locator('[data-opp-id="a"] .tpfListMenuBtn').click();await page.getByRole('button',{name:'Programar WhatsApp',exact:true}).click();
+ expect(await page.evaluate(()=>composed.map(x=>x.phone))).toEqual(['34600000002']);expect(await page.evaluate(()=>scheduled)).toBe(1);
+ const noPhoneDialog=page.waitForEvent('dialog').then(async d=>{expect(d.message()).toContain('teléfono válido');await d.accept()});
+ await page.locator('[data-opp-id="c"] .tpfListMenuBtn').click();await page.locator('.tpfListMenu').getByRole('button',{name:'WhatsApp',exact:true}).click();await noPhoneDialog;
+ expect(await page.evaluate(()=>composed.length)).toBe(1);expect(await page.evaluate(()=>scheduled)).toBe(1);await page.evaluate(()=>delete window.TPFLinkedActions);
  await page.locator('[data-of-chat="a"]').click();expect(await page.evaluate(()=>chats)).toEqual(['34600000002@c.us']);
  await page.locator('[data-of-chat="b"]').click();expect(await page.evaluate(()=>chats)).toEqual(['34600000002@c.us','34600000005@c.us']);
  await expect(page.locator('[data-of-chat="c"]')).toBeDisabled();expect(await page.evaluate(()=>navCalls)).toBe(2);expect(await page.evaluate(()=>controls)).toEqual([]);

@@ -19,7 +19,9 @@ jobs:
       - name: Install test dependencies
         run: npm install --no-audit --no-fund
       - name: Run offline regression suite
-        run: npm run verify
+        run: |
+          npm run verify
+          node tests/desktop-action-parity.cjs
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Verify outside-hours consent on desktop and mobile with isolated fixtures

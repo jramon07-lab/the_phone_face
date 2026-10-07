@@ -61,7 +61,17 @@ function installMenuLifecycle(){
  window.addEventListener('resize',close);document.addEventListener('scroll',close,true);window.addEventListener('tpf:sales-updated',close);
  const view=document.getElementById('view-sales');if(view)new MutationObserver(()=>{if(view.classList.contains('hidden'))close()}).observe(view,{attributes:true,attributeFilter:['class','hidden']});
 }
-function wa(o,schedule){const p=String(o?.phone||'').trim();if(!p)return alert('Esta oportunidad no tiene teléfono.');if(typeof openWaQuick==='function'){openWaQuick({phone:p,name:String(o?.client_name||''),message:''});if(schedule)setTimeout(()=>document.getElementById('waScheduleBtn')?.click(),20);return}if(document.getElementById('waQuickPhone'))document.getElementById('waQuickPhone').value=p;document.getElementById('waQuickModal')?.classList.remove('hidden');if(schedule)document.getElementById('waQuickSend')?.click()}
+async function wa(o,schedule){
+ try{
+  if(!o)throw Error('La oportunidad ya no está disponible. Actualiza el listado.');
+  const recipient=window.TPFOpportunityDetails?.party?.(o)?.recipient;
+  const phone=window.TPFOfferFollowup?.conversationPhone?window.TPFOfferFollowup.conversationPhone(o):recipient?recipient.phone:o.phone;
+  if(!window.TPFLinkedActions)throw Error('El editor de WhatsApp no está disponible. Actualiza la página.');
+  if(schedule&&!document.getElementById('waQuickDrop'))throw Error('La programación de WhatsApp no está disponible. Actualiza la página.');
+  await window.TPFLinkedActions.open('message',{phone,name:recipient?.name||o.client_name,contactId:recipient?.id||o.record_id});
+  if(schedule)document.getElementById('waQuickDrop').click();
+ }catch(error){alert(error.message);}
+}
 function menu(ev,id){ev.preventDefault();ev.stopPropagation();close();ev.currentTarget.setAttribute('aria-expanded','true');const o=opp(id),m=document.createElement('div');m.className='tpfListMenu';const add=(t,f,c='')=>{const b=document.createElement('button');b.textContent=t;b.className=c;b.onclick=e=>{e.preventDefault();e.stopPropagation();close();f()};m.appendChild(b)};add('Ver ficha',()=>open(id));add('Editar ficha completa',()=>window.openOpportunityCard?.(id));add('Mover de estado',()=>document.querySelector(`#salesListRows .salesListCheck[data-opp-id="${CSS.escape(String(id))}"]`)?.closest('.salesListRow')?.querySelector('select')?.focus());add('Crear tarea',()=>window.openSalesTaskForOpportunity?.(id));add('Enviar oferta',()=>window.openSalesOfferForOpportunity?.(id));add('WhatsApp',()=>wa(o,false));add('Programar WhatsApp',()=>wa(o,true));add('Eliminar',()=>window.deleteOpp?.(id),'danger');document.body.appendChild(m);const r=ev.currentTarget.getBoundingClientRect();m.style.left=Math.max(8,Math.min(innerWidth-223,r.right-215))+'px';m.style.top=Math.max(8,Math.min(innerHeight-m.offsetHeight-8,r.bottom+4))+'px'}
 function enableListScroll(){const view=document.getElementById('salesListView'),rows=view;if(!view||!rows||view.dataset.tpfListScroll)return;view.dataset.tpfListScroll='1';view.addEventListener('wheel',e=>{if(e.target.closest('select'))return;const max=Math.max(0,rows.scrollHeight-rows.clientHeight);if(!max)return;const next=Math.max(0,Math.min(max,rows.scrollTop+e.deltaY));if(next!==rows.scrollTop){e.preventDefault();rows.scrollTop=next;}},{passive:false});rows.tabIndex=0;}
 

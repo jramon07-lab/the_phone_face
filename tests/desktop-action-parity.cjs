@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const details=fs.readFileSync('js/modules/opportunity-contract-details.js','utf8');
+const list=fs.readFileSync('js/modules/sales-list-ui.js','utf8');
+let composed=[],alerts=[],scheduled=0,sent=0;
+const document={head:{appendChild(){}},createElement(){return {};},getElementById(id){return id==='waQuickDrop'?{click(){scheduled++;}}:id==='waQuickSend'?{click(){sent++;}}:null;}};
+const window={openWaQuick(data){composed.push(data);}};
+const ctx=vm.createContext({window,document,crmCan:()=>true,alert:m=>alerts.push(m)});
+vm.runInContext("const text=v=>String(v||'').trim();"+details.slice(details.indexOf('function party('),details.indexOf('\nfunction operator(')),ctx);
+window.TPFOpportunityDetails={party:ctx.party};
+vm.runInContext(fs.readFileSync('js/modules/linked-contact-actions.js','utf8'),ctx);
+vm.runInContext(list.slice(list.indexOf('async function wa('),list.indexOf('\nfunction menu(')),ctx);
+const o={id:'opportunity',record_id:'manager',client_name:'Titular',phone:'600111111',contract_party:{same:false,holder_name:'Titular',holder_phone:'600111111',contact_name:'Gestora',contact_phone:'600222222',recipient_contact_id:'manager',recipient_name:'Gestora',recipient_phone:'600222222'}};
+(async()=>{
+ await ctx.wa(o,false);assert.equal(composed[0].phone,'34600222222');assert.equal(composed[0].name,'Gestora');assert.equal(composed[0].contactId,'manager');
+ await ctx.wa(o,true);assert.equal(scheduled,1);assert.equal(sent,0);
+ const missing={...o,contract_party:{...o.contract_party,recipient_phone:''}};
+ assert.equal(ctx.party(missing).recipient.phone,'');await ctx.wa(missing,true);assert.equal(composed.length,2);assert.equal(scheduled,1);assert.match(alerts.at(-1),/válido/);
+ window.TPFOfferFollowup={conversationPhone:()=> '600333333'};await ctx.wa(o,false);assert.equal(composed.at(-1).phone,'34600333333','saved recipient used consistently with main chat action');
+ window.openWaQuick=null;await ctx.wa(o,true);assert.match(alerts.at(-1),/no está disponible/);assert.equal(sent,0);assert.equal(scheduled,1);
+ console.log('PASS: sales menu recipient, explicit missing phone, shared composer, scheduling without sending and unavailable composer');
+})().catch(e=>{console.error(e);process.exitCode=1;});
