@@ -71,7 +71,7 @@ function mountOpportunity(p){
   el('tpfOpportunityParty').dataset.snapshot=JSON.stringify(p?.recipient_name!==undefined?p:null);
 }
 function readOpportunity(){const p=read('tpfOpportunityParty'),previous=JSON.parse(el('tpfOpportunityParty').dataset.snapshot||'null'),c={name:el('oppModalClient')?.value,phone:el('oppModalPhone')?.value,dni:previous?.contact_dni??el('oppModalDni')?.value};if(previous&&JSON.stringify(normalize(previous))===JSON.stringify(p)&&clean(c.name)===clean(previous.contact_name)&&clean(c.phone)===clean(previous.contact_phone))return previous;return snapshot(p,c);}
-W.TPFContactParty={normalize,validate,snapshot,search,hint,opportunityIdentity,opportunityHint,html,read,fillContact,summary,renderProfile,mountOpportunity,readOpportunity,validPhone,displayPhone};
+W.TPFContactParty={normalize,validate,snapshot,search,hint,opportunityIdentity,opportunityHint,html,read,fillContact,summary,renderProfile,mountOpportunity,readOpportunity,validPhone,displayPhone,contactValues};
 if(typeof document==='undefined')return;
 const style=document.createElement('style');style.id='tpfContactPartyStyles';style.textContent=`
 .tpf-party{box-sizing:border-box;grid-column:1/-1;background:#fff;border:1px solid #ddd6fe;border-top:3px solid #8b5cf6;border-radius:12px;padding:16px;margin:12px 0;color:#17243b;min-width:0}
@@ -87,3 +87,4 @@ document.addEventListener('change',e=>{
   const select=root.querySelector('[data-party="recipient"]');select.querySelector('[value="holder"]').disabled=same;if(same)select.value='contact';
 });
 })();
+

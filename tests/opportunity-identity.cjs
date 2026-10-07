@@ -17,3 +17,16 @@ const follow=fs.readFileSync('js/modules/offer-followup-ui.js','utf8');vm.runInC
 ctx.window.TPFOfferFollowup={state:{byOpportunity:new Map([['sale',saved]])}};vm.runInContext('F.byOpportunity.set("sale",window.TPFOfferFollowup.state.byOpportunity.get("sale"));',ctx);
 for(const o of [base,empty,legacy])assert.equal(ctx.party(o).recipient.phone,ctx.conversationPhone(o));
 console.log('PASS: common opportunity identity, explicit parties, missing IDs, cleared phones, latest saved recipient, installation context and presentation/communication parity');
+// Contract details may read missing legacy data only from the confirmed party ID.
+(async()=>{
+ const src=fs.readFileSync('js/modules/opportunity-contract-details.js','utf8');
+ const fragment=src.slice(src.indexOf('async function completePersonData('),src.indexOf('function compactHeader('));
+ const reads=[];const isolated={window:{TPFContactParty:{contactValues:r=>r.data}},sb:{from:()=>{let id;const q={select:()=>q,eq:(key,value)=>{if(key==='id')id=value;return q;},maybeSingle:async()=>{reads.push(id);return{data:{id,data:{dni:id==='holder'?'HOLDER-DNI':'MANAGER-DNI',phone:id==='holder'?'600333333':'600222222'}}};}};return q;}}};
+ vm.runInNewContext(fragment,isolated);
+ const row={record_id:'manager',client_name:'Holder',contract_party:{same:false,holder_record_id:'holder',manager_record_id:'manager'}};
+ const people=api.resolve(row);await isolated.completePersonData(people,row);assert.equal(people.holder.dni,'HOLDER-DNI');assert.equal(people.holder.phone,'600333333');assert.equal(people.manager.phone,'600222222');
+ const cleared={...row,contract_party:{...row.contract_party,holder_dni:'',holder_phone:'',contact_phone:''}};reads.length=0;const empty=api.resolve(cleared);await isolated.completePersonData(empty,cleared);assert.equal(reads.length,0);assert.equal(empty.holder.dni,'');assert.equal(empty.holder.phone,'');
+ const unlinked={record_id:'manager',contract_party:{same:false,holder_name:'Holder',holder_dni:'SNAPSHOT-DNI'}};const separate=api.resolve(unlinked);await isolated.completePersonData(separate,unlinked);assert.equal(separate.holder.dni,'SNAPSHOT-DNI');assert.equal(separate.holder.phone,'');
+ assert.equal(api.resolve({record_id:'self',client_name:'Self',dni:'SELF-DNI',phone:'600111111'}).holder.dni,'SELF-DNI');
+ console.log('PASS: holder DNI and phones stay separate, exact record fallback and explicit cleared snapshot values preserved');
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -53,3 +53,9 @@
   #opportunityFullPage .oppFullTop{gap:10px;margin-bottom:16px}
   #opportunityFullPage .oppFullTop button{padding:9px 12px}
 }
+
+/* Compact, explicit contract identity data. */
+.oppContractPerson .oppPersonData{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:2px 0;min-width:0;line-height:1.4}
+.oppPersonData span{overflow-wrap:anywhere}.oppPersonData strong{font-size:inherit;font-weight:600}
+.oppContractPerson .oppCopyData{flex:0 0 auto;min-height:24px;padding:2px 5px;border:0;background:transparent;color:#315d99;font-size:11px;cursor:pointer}
+.oppCopyData:focus-visible{outline:2px solid #315d99;outline-offset:2px}

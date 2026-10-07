@@ -4,8 +4,8 @@
 const str=value=>String(value??'').trim();
 function resolve(o={},offers=[]){
  const p=o.contract_party||{},same=p.same!==false;
- const holder={id:p.holder_record_id||p.holder_contact_id||(same?o.record_id:null),name:p.holder_name||o.client_name||'Sin titular',phone:str(p.holder_phone||(same?o.phone:''))};
- const manager={id:p.manager_record_id||p.manager_contact_id||o.record_id,name:p.contact_name||(same?holder.name:'Sin gestor indicado'),phone:str(p.contact_phone||(same?holder.phone:o.phone))};
+ const holder={id:p.holder_record_id||p.holder_contact_id||(same?o.record_id:null),name:p.holder_name||o.client_name||'Sin titular',dni:str(Object.hasOwn(p,'holder_dni')?p.holder_dni:same?o.dni:''),phone:str(Object.hasOwn(p,'holder_phone')?p.holder_phone:same?o.phone:'')};
+ const manager={id:p.manager_record_id||p.manager_contact_id||o.record_id,name:p.contact_name||(same?holder.name:'Sin gestor indicado'),phone:str(Object.hasOwn(p,'contact_phone')?p.contact_phone:same?holder.phone:o.phone)};
  const target=p.recipient==='holder'?holder:manager;
  const recipient={id:p.recipient_contact_id||(same?target.id:p.recipient==='holder'?p.holder_record_id||p.holder_contact_id||null:p.manager_record_id||p.manager_contact_id||null),name:p.recipient_name||target.name,phone:target.phone};
  if(Object.hasOwn(p,'recipient_phone'))recipient.phone=str(p.recipient_phone);
