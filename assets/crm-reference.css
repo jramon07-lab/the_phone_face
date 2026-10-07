@@ -1553,3 +1553,29 @@ body.tpfUnified #oppDetailModal .oppContractActions button{font-size:13px}
 body.tpfUnified #oppDetailModal #oppPreviousManage{margin-top:6px;font-size:12px;white-space:normal}
 @media(max-width:1000px){body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){body.tpfUnified #opportunityFullPage .oppContractPeople{grid-template-columns:1fr}body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:1fr}}
+
+/* Compact opportunity dossier, with management beside the saved offer. */
+body.tpfUnified #opportunityFullPage .oppFullShell{padding:16px 18px 32px}
+body.tpfUnified #opportunityFullPage .oppFullTop{margin-bottom:12px;gap:10px}
+body.tpfUnified #opportunityFullPage .oppFullTop button{min-height:36px;padding:7px 12px}
+body.tpfUnified #opportunityFullPage .oppFullHeading{gap:10px;margin-bottom:10px}
+body.tpfUnified #opportunityFullPage #oppFullTitle{font-size:clamp(23px,2vw,30px)}
+body.tpfUnified #opportunityFullPage .oppFullPrimaryActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+body.tpfUnified #opportunityFullPage #oppFullManage{min-height:38px;padding:8px 14px;border:1px solid #1666db;border-radius:8px;background:#1666db;color:white;font-weight:600}
+body.tpfUnified #opportunityFullPage #oppFullOfferAccess .ofOpportunityAccess{padding:0}
+body.tpfUnified #opportunityFullPage #oppFullContent{gap:10px}
+body.tpfUnified #opportunityFullPage .oppReadHeader{margin:0;padding:0 0 8px}
+body.tpfUnified #opportunityFullPage .oppReadStage{padding:4px 9px}
+body.tpfUnified #opportunityFullPage .oppContractPeople{gap:8px}
+body.tpfUnified #opportunityFullPage .oppContractPerson{padding:10px 12px;gap:3px}
+body.tpfUnified #opportunityFullPage .oppContractActions{gap:8px}
+body.tpfUnified #opportunityFullPage .oppContractActions button{min-height:38px;padding:7px 12px}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics{gap:8px;margin:0}
+body.tpfUnified #opportunityFullPage .oppField{padding:11px 12px}
+body.tpfUnified #opportunityFullPage .oppField>span{font-size:12px;margin-bottom:4px}
+body.tpfUnified #opportunityFullPage .oppField>strong{font-size:17px}
+body.tpfUnified #opportunityFullPage .oppAmount>strong{font-size:23px}
+body.tpfUnified #opportunityFullPage .oppReadNotes{margin:0}
+body.tpfUnified #opportunityFullPage .oppReadNotes h3{margin-bottom:6px}
+body.tpfUnified #opportunityFullPage #oppFullFollowupAudit{margin-top:0}
+@media(max-width:700px){body.tpfUnified #opportunityFullPage .oppFullShell{padding:12px 10px 80px}body.tpfUnified #opportunityFullPage .oppFullPrimaryActions{width:100%}body.tpfUnified #opportunityFullPage .oppFullTop button,body.tpfUnified #opportunityFullPage #oppFullManage,body.tpfUnified #opportunityFullPage .oppContractActions button{min-height:44px}body.tpfUnified #opportunityFullPage .oppContractPerson{padding:9px 12px}}
