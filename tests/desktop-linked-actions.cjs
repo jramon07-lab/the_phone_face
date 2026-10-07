@@ -3,15 +3,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync('js/modules/linked-contact-actions.js','utf8');
 let permission=true,composed=[],selected=[],restored=[],button,navClicks=0;
 const scroller={isConnected:true,scrollTop:240,scrollLeft:30};
-const header={prepend(el){button=el;}};
-const document={head:{appendChild(){}},createElement(){return {remove(){button=null;}}},getElementById(id){return id==='tpfLinkedReturn'?button:header;},querySelector(sel){return sel.includes('.nav')?{click(){navClicks++;scroller.scrollTop=0;}}:header;},querySelectorAll(){return [scroller];}};
+const header={prepend(el){button=el;}};let overlayHidden=false;const overlay={classList:{add(name){if(name==='hidden')overlayHidden=true;}}};
+const document={head:{appendChild(){}},createElement(){return {remove(){button=null;}}},getElementById(id){return id==='tpfLinkedReturn'?button:id==='opportunityFullPage'?overlay:header;},querySelector(sel){return sel.includes('.nav')?{click(){navClicks++;scroller.scrollTop=0;}}:header;},querySelectorAll(){return [scroller];}};
 const window={__TPF_HISTORY:[1],tpfCaptureCurrentScreen(){return {mainView:'agenda'};},async tpfRestoreCapturedScreen(s){restored.push(s);},async selectWhatsAppChat(id){selected.push(id);},openWaQuick(data){composed.push(data);}};
 const ctx=vm.createContext({window,document,crmCan:()=>permission,requestAnimationFrame:fn=>fn(),setTimeout:fn=>fn(),alert:()=>{}});vm.runInContext(source,ctx);
 (async()=>{
  await window.TPFLinkedActions.open('message',{phone:'600123456',name:'Gestor'});
  assert.equal(composed[0].phone,'34600123456');assert.equal(composed[0].contactId,null);assert.equal(navClicks,0);assert.equal(selected.length,0);
  await window.TPFLinkedActions.open('message',{phone:'0034600123456',name:'Contacto',contactId:'exact-id'});assert.equal(composed[1].contactId,'exact-id');
- await window.TPFLinkedActions.open('conversation',{phone:'+34 600 123 456'});assert.equal(selected[0],'34600123456@c.us');assert.equal(navClicks,1);assert.equal(button.textContent,'← Volver a la lista');
+ await window.TPFLinkedActions.open('conversation',{phone:'+34 600 123 456'});assert.equal(selected[0],'34600123456@c.us');assert.equal(navClicks,1);assert.equal(overlayHidden,true,'the opportunity overlay must not cover WhatsApp');assert.equal(button.textContent,'← Volver a la lista');
  await window.TPFLinkedActions.back();assert.equal(restored[0].mainView,'agenda');assert.equal(scroller.scrollTop,240);assert.equal(scroller.scrollLeft,30);assert.equal(button,null);
  permission=false;await assert.rejects(window.TPFLinkedActions.open('message',{phone:'600123456'}),/permiso/);assert.equal(composed.length,2);
  permission=true;await assert.rejects(window.TPFLinkedActions.open('conversation',{phone:''}),/válido/);assert.equal(selected.length,1);

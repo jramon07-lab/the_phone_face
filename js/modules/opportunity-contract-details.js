@@ -49,7 +49,7 @@ function compactHeader(root){
  const top=document.querySelector('#opportunityFullPage .oppFullTop'),heading=document.querySelector('#opportunityFullPage .oppFullHeading');if(!top||!heading)return;
  top.insertBefore($('oppFullTitle'),top.children[1]||null);top.appendChild(heading.querySelector('.oppFullPrimaryActions')||$('oppFullManage').parentNode);heading.hidden=true;
  let menu=$('oppFullMore');if(!menu){menu=document.createElement('details');menu.id='oppFullMore';menu.innerHTML='<summary>Más opciones</summary><div class="oppFullMoreItems"></div>';top.appendChild(menu);}
- const row=top.querySelector('.row'),items=menu.querySelector('div');
+ $('oppFullEdit').textContent='Editar ficha completa';const row=top.querySelector('.row'),items=menu.querySelector('div');
  const collect=()=>{for(const b of [...(row?.children||[])])items.appendChild(b);};collect();
  if(row&&!row.dataset.observed){row.dataset.observed='1';new MutationObserver(collect).observe(row,{childList:true});}
  const stage=root.querySelector('.oppReadStage');$('oppFullHeaderStage')?.remove();if(stage){stage.id='oppFullHeaderStage';$('oppFullTitle').after(stage);}root.querySelector('.oppReadHeader')?.remove();
