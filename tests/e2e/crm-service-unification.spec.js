@@ -701,6 +701,7 @@ test('PC: two sessions agree and contact/opportunity navigation leaves no old la
   for(const {page} of devices){
    await page.evaluate(async target=>{await loadSales();salesCache.opportunities=[{id:'stale-synthetic-local',record_id:'unrelated-synthetic-local'}];await window.openContact(target.contact);},target);
    await expect(page.locator('#contactModal')).toBeVisible();
+   await page.locator('#cpRefTab-oportunidades').click();
    await expect(page.locator('#cpOpportunities [data-opp-id="'+target.opportunity+'"]')).toBeVisible({timeout:20000});
    const card=page.locator('#cpOpportunities [data-opp-id="'+target.opportunity+'"]');
    await card.getByRole('button',{name:/Ver\s*(?:\/\s*editar|ficha)/i}).click();
