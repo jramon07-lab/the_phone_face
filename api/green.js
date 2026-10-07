@@ -603,18 +603,21 @@ export default async function handler(req, res) {
         return res.status(403).json({ ok: false, error: "CRM DE PRUEBAS: solo se permiten envíos al 695 661 409." });
       }
 
+      const noticeId=body.replyReminder?await require('../lib/whatsapp-reply-reminder').prepare(req,body,chatId):null;
       const data = await greenFetch("sendMessage", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ chatId, message })
       });
 
+      const replyReminder=noticeId?await require('../lib/whatsapp-reply-reminder').finish(req,noticeId,data):null;
       await require('../lib/green-manual-read')({manualReply:body.manualReply,data,chatId,base,id,token});
       return res.status(200).json({
         ok: true,
         chatId,
         idMessage: data?.idMessage || null,
-        data
+        data,
+        replyReminder
       });
     }
 

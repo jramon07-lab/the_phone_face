@@ -14,6 +14,7 @@ export default async function handler(req,res){
     const quotedMessageId=String(body.quotedMessageId||"").trim();
     if(!chatId||!message||!quotedMessageId)return res.status(400).json({ok:false,error:"Faltan chatId, message o quotedMessageId."});
     if(String(process.env.VERCEL_ENV||"development")!=="production"&&String(chatId).replace(/\D/g,"").slice(-9)!=="695661409")return res.status(403).json({ok:false,error:"CRM DE PRUEBAS: solo se permiten envíos al 695 661 409."});
+    const noticeId=body.replyReminder?await require('../lib/whatsapp-reply-reminder').prepare(req,body,chatId):null;
     const r=await fetch(`${base}/waInstance${id}/sendMessage/${token}`,{
       method:"POST",
       headers:{"Content-Type":"application/json; charset=utf-8"},
@@ -22,8 +23,9 @@ export default async function handler(req,res){
     const text=await r.text();
     let data;try{data=text?JSON.parse(text):null}catch{data=text}
     if(!r.ok)return res.status(r.status).json({ok:false,error:data?.message||data?.error||String(data||r.statusText)});
+    const replyReminder=noticeId?await require('../lib/whatsapp-reply-reminder').finish(req,noticeId,data):null;
     await require('../lib/green-manual-read')({manualReply:true,data,chatId,base,id,token});
-    return res.status(200).json({ok:true,chatId,idMessage:data?.idMessage||null,data});
+    return res.status(200).json({ok:true,chatId,idMessage:data?.idMessage||null,data,replyReminder});
   }catch(e){
     console.error("GREEN_REPLY_ERROR",e?.message||e);
     return res.status(502).json({ok:false,error:e?.message||String(e)});

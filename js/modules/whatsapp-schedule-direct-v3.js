@@ -234,6 +234,7 @@ function clearScheduledDraft(context,values){
   if(state.drafts?.[chatId]===original)delete state.drafts[chatId];
   const composer=$('waComposerText');
   if(state.selected?.id===chatId&&composer?.value===original){
+    window.TPFReplyReminders?.reset('waComposerText');
     composer.value='';
     composer.dispatchEvent(new Event('input',{bubbles:true}));
   }
@@ -331,7 +332,8 @@ async function persistWithClient(date,values){
       whatsapp_phone:values.phone,
       whatsapp_message:values.message,
       whatsapp_scheduled_at:iso,
-      status:'pending'
+      status:'pending',
+      whatsapp_reply_reminder:window.TPFReplyReminders?.get('tpfS3msg')||null
     };
     if(values.name)changes.customer_name=values.name;
     if(values.contactId)changes.related_record_id=values.contactId;
@@ -353,7 +355,8 @@ async function persistWithClient(date,values){
       whatsapp_enabled:true,
       whatsapp_phone:values.phone,
       whatsapp_message:values.message,
-      whatsapp_scheduled_at:iso
+      whatsapp_scheduled_at:iso,
+      whatsapp_reply_reminder:window.TPFReplyReminders?.get("tpfS3msg")||null
     };
     const result=await client.from('agenda_items').insert(row).select('id,whatsapp_phone,whatsapp_message,whatsapp_scheduled_at,related_record_id').single();
     if(result?.error)throw result.error;
@@ -475,6 +478,7 @@ function open(prefill={}){
 
   $('tpfS3phone').value=activeContext.phone;
   $('tpfS3msg').value=activeContext.message;
+  window.TPFReplyReminders?.mount('tpfS3msg',hasOwn(prefill,'replyReminder')?prefill.replyReminder:window.TPFReplyReminders?.get(prefill.source==='chat'?'waComposerText':'waQuickMessage'));
   const savedDate=scheduledDate(activeContext.scheduledAt);
   // Al editar conservamos la fecha existente si aún es futura. Si ya venció,
   // se propone la primera hora futura: nunca se guarda una fecha pasada.
@@ -602,6 +606,7 @@ async function openExistingProgram(id){
     message:row.whatsapp_message||'',
     scheduledAt:row.whatsapp_scheduled_at||row.starts_at||'',
     contactId:row.related_record_id||null,
+    replyReminder:window.TPFReplyReminders?await window.TPFReplyReminders.forSchedule(row.id):row.whatsapp_reply_reminder||null,
     source:'programmed-edit'
   });
 }

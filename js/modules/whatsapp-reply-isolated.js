@@ -59,8 +59,9 @@ M.register('whatsapp-reply-isolated',{install(){
     const quote=selected;
     busy=true;const btn=document.getElementById('waComposerSend'),msg=document.getElementById('waComposerMsg');if(btn)btn.disabled=true;if(msg)msg.textContent='Enviando…';
     try{
-      const r=await fetch('/api/green-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId:chat.id,message:text,quotedMessageId:selected.idMessage})});
+      const r=await fetch('/api/green-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId:chat.id,message:text,quotedMessageId:selected.idMessage,replyReminder:window.TPFReplyReminders?.get("waComposerText")})});
       const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw new Error(j.error||`Error ${r.status}`);
+      window.TPFReplyReminders?.sent("waComposerText",j,chat.id);
       const sameChat=waLiveState.selected?.id===chat.id;
       if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
       if(sameChat){if(document.getElementById('waComposerText').value.trim()===text)document.getElementById('waComposerText').value='';if(msg)msg.textContent='Enviado'}

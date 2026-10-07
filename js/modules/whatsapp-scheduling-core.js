@@ -97,6 +97,7 @@ async function saveQuickWhatsappSchedule(date){
       whatsapp_phone:phone,
       whatsapp_message:message||null,
       whatsapp_scheduled_at:iso,
+      whatsapp_reply_reminder:window.TPFReplyReminders?.get("waQuickMessage")||null,
       status:"pending"
     }).eq("id",programId).select('id').single();
 
@@ -118,7 +119,8 @@ async function saveQuickWhatsappSchedule(date){
       whatsapp_enabled:true,
       whatsapp_phone:phone,
       whatsapp_message:message||null,
-      whatsapp_scheduled_at:iso
+      whatsapp_scheduled_at:iso,
+      whatsapp_reply_reminder:window.TPFReplyReminders?.get("waQuickMessage")||null
     };
     const {data,error}=await sb.from("agenda_items").insert(row).select('id').single();
     if(error||!data?.id){
@@ -689,6 +691,7 @@ $("waSave").onclick=async()=>{
     whatsapp_enabled:true,
     whatsapp_phone:phone,
     whatsapp_message:message,
+    whatsapp_reply_reminder:window.TPFReplyReminders?.get("waMessage")||null,
     whatsapp_scheduled_at:iso
   };
 
@@ -712,6 +715,7 @@ $("waSave").onclick=async()=>{
   }
 
   $("waMsg").textContent=editId?"WhatsApp actualizado":"WhatsApp programado";
+  window.TPFReplyReminders?.reset("waMessage");
   ["waEditId","waCustomer","waPhone","waWhen","waMessage"].forEach(id=>$(id).value="");
   $("waSave").textContent="Programar WhatsApp";
   loadWhatsappPrograms();

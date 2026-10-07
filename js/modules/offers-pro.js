@@ -449,7 +449,9 @@ async function submitOffer(allowDuplicate=false){
     const selections=Object.entries(quantities).filter(([,quantity])=>Number(quantity)>0).map(([option_id,quantity])=>({option_id,quantity,show_in_message:visibility[option_id]!==false}));
     if(Object.keys(baseVisible).length)selections.push({base_lines_visible:baseVisible});
     // crm_create_offer_execution_v13 remains the validated per-offer operation inside the batch.
-    const {data,error}=await sb.rpc('crm_create_offer_composition',{p_contact_id:contactId,p_manager_contact_id:offerContext?.managerId||contactId,p_recipient_contact_id:offerContext?.recipientId||contactId,p_request_key:offerRequestKey||crypto.randomUUID(),p_items:offerDrafts.map(d=>({catalog_offer_id:d.offerId,request_key:d.requestKey,selections:d.selections,extra_text:d.extra,final_price:d.price,message_text:d.message,previous_operator:d.previousOperator,shop_gift:d.shopGift,permanence_refund:d.permanenceRefund,permanence_amount:d.permanenceAmount,permanence_visible:d.permanenceVisible,after_sale:d.afterSale||null})),p_composition:composition,p_group_message:composition==='group'?$('opPreview').value:null,p_mode:mode,p_send_message:sendMessage,p_processing_date:processingDate,p_test_mode:CRM_TEST_MODE,p_allow_duplicate:allowDuplicate,p_send_at:sendAt,p_welcome:welcomeOffer,p_after_sale:afterSale});
+    const offerArgs={p_contact_id:contactId,p_manager_contact_id:offerContext?.managerId||contactId,p_recipient_contact_id:offerContext?.recipientId||contactId,p_request_key:offerRequestKey||crypto.randomUUID(),p_items:offerDrafts.map(d=>({catalog_offer_id:d.offerId,request_key:d.requestKey,selections:d.selections,extra_text:d.extra,final_price:d.price,message_text:d.message,previous_operator:d.previousOperator,shop_gift:d.shopGift,permanence_refund:d.permanenceRefund,permanence_amount:d.permanenceAmount,permanence_visible:d.permanenceVisible,after_sale:d.afterSale||null})),p_composition:composition,p_group_message:composition==='group'?$('opPreview').value:null,p_mode:mode,p_send_message:sendMessage,p_processing_date:processingDate,p_test_mode:CRM_TEST_MODE,p_allow_duplicate:allowDuplicate,p_send_at:sendAt,p_welcome:welcomeOffer,p_after_sale:afterSale};
+    const notice=sendMessage?window.TPFReplyReminders?.get('opPreview'):null;
+    const {data,error}=notice?await sb.rpc('crm_create_offer_with_reply_reminder',{p_args:offerArgs,p_reminder:notice}):await sb.rpc('crm_create_offer_composition',offerArgs);
     if(error){
       if(String(error.message||'').includes('DUPLICATE_OFFER:')){
         busy=false;$('opSubmit').disabled=false;$('opMsg').textContent='Ya existe una oferta igual reciente para este cliente.';
@@ -459,6 +461,8 @@ async function submitOffer(allowDuplicate=false){
       throw error;
     }
     if(!data?.composition_verified||!data?.safety_verified||sendMessage&&!data?.delivery_job_verified||mode==='followup'&&(!data?.reply_buttons_configured||!data?.scheduled_send_verified))throw new Error('No se pudo verificar toda la operación. No continúes con esta oferta.');
+    if(notice&&!data?.reply_reminder_verified)throw Error('No se confirmó el aviso de la oferta.');
+    window.TPFReplyReminders?.reset('opPreview');
     const replay=data.idempotent_replay?' La petición repetida se detectó y no se duplicó.':'';
     const openedFromOpportunity=!!offerContext;
     $('opOfferModal').classList.add('hidden');if(!openedFromOpportunity){await loadInstances(contactId);if(typeof renderContactProfile==='function')renderContactProfile();}

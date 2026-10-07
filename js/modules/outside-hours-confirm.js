@@ -14,12 +14,13 @@ function nextWindow(at=new Date()){
 function classify(url,method,body,now=new Date()){
  if(method!=='POST'&&method!=='PATCH')return null;
  const rpc=url.hostname==='overfzbjtpjqxzbujezg.supabase.co'&&url.pathname.startsWith('/rest/v1/rpc/'),name=rpc?url.pathname.split('/').pop():'';
+ if(name==='crm_create_offer_with_reply_reminder')body=body?.p_args;
  const direct=url.origin===location.origin&&['/api/green','/api/mobile-green','/api/green-reply','/api/green-file-safe'].includes(url.pathname)&&(['send','sendbuttons','sendfile'].includes(url.searchParams.get('action'))||url.pathname==='/api/green-reply'||url.pathname==='/api/green-file-safe');
  const agenda=url.hostname==='overfzbjtpjqxzbujezg.supabase.co'&&url.pathname==='/rest/v1/agenda_items'&&body?.whatsapp_enabled===true;
  let sends=direct||agenda;
  if(rpc){
   sends=/^crm_create_contact_(?:with_welcome(?:_variant)?|guarded)$/.test(name)&&body?.p_welcome===true;
-  sends=sends||/^crm_create_(?:offer_(?:composition|execution_v\d+)|direct_sale(?:_v\d+)?)$/.test(name)&&body?.p_send_message===true;
+  sends=sends||/^crm_create_(?:offer_(?:composition|with_reply_reminder|execution_v\d+)|direct_sale(?:_v\d+)?)$/.test(name)&&body?.p_send_message===true;
   sends=sends||['crm_change_offer_stage','crm_set_opportunity_stage_guarded','crm_create_opportunity_guarded_v2'].includes(name)&&(['Tramitado'].includes(body?.p_stage)||!!body?.p_after_sale)&&((body?.p_preferences||body?.p_after_sale)?.send===true||(body?.p_preferences||body?.p_after_sale)?.communication_mode==='return');
   const patch=body?.p_patch||body?.p_preferences;
   sends=sends||['crm_installation_update','crm_installation_adopt'].includes(name)&&(patch?.send===true||patch?.communication_mode==='return'||!!patch?.confirm_installed_on);
@@ -67,7 +68,7 @@ window.fetch=async function(input,init){
  const decision=await api.choose(info);
  if(decision==='cancel')return new Response(JSON.stringify({ok:false,code:'TPF_SEND_CANCELLED',error:'Envío cancelado. No se ha guardado ni enviado.',message:'Envío cancelado. No se ha guardado ni enviado.'}),{status:409,headers:{'content-type':'application/json'}});
  const headers=new Headers(init?.headers||request?.headers);if(info.rpc)headers.set(HEADER,(headers.get(HEADER)||'')+' tpf-outside-hours='+decision);
- if(info.scheduled||info.agenda){const key=info.agenda?'whatsapp_scheduled_at':'p_send_at';body[key]=decision==='next'?info.next:info.at;if(info.agenda)body.starts_at=body[key];raw=JSON.stringify(body);}
+ if(info.scheduled||info.agenda){const target=info.name==='crm_create_offer_with_reply_reminder'?body.p_args:body,key=info.agenda?'whatsapp_scheduled_at':'p_send_at';target[key]=decision==='next'?info.next:info.at;if(info.agenda)target.starts_at=target[key];raw=JSON.stringify(body);}
  const options={...init,method,headers,...(raw!==undefined?{body:raw}:{})};
  const result=await nativeFetch(request?new Request(request,options):input,request?undefined:options);
  if(result.ok&&info.agenda&&info.scheduled){

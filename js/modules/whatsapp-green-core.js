@@ -987,7 +987,8 @@ async function sendWaLiveMessage(){
   $("waComposerSend").disabled=true;
   $("waComposerMsg").textContent="Enviando…";
   try{
-    const r=await waApi("send",{chatId:chat.id,message:text,manualReply:true});
+    const r=await waApi("send",{chatId:chat.id,message:text,manualReply:true,replyReminder:globalThis.TPFReplyReminders?.get("waComposerText")});
+    globalThis.TPFReplyReminders?.sent("waComposerText",r,chat.id);
     if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
     if(waLiveState.selected?.id===chat.id){
       if($("waComposerText").value.trim()===text)$("waComposerText").value="";

@@ -370,8 +370,9 @@
     const chatId=(phone.length===9?'34'+phone:phone)+'@c.us';
     internalSendBusy=true;if(btn)btn.disabled=true;if(msg)msg.textContent='Enviando por WhatsApp…';
     try{
-      const r=await fetch('/api/green?action=send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId,message})});
+      const r=await fetch('/api/green?action=send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId,message,replyReminder:window.TPFReplyReminders?.get("waQuickMessage")})});
       const d=await r.json().catch(()=>null);if(!r.ok||d?.ok===false)throw new Error(d?.error||d?.message||('HTTP '+r.status));
+      window.TPFReplyReminders?.sent('waQuickMessage',d);
       if(msg)msg.textContent='WhatsApp enviado desde el CRM';
       setTimeout(()=>byId('waQuickModal')?.classList.add('hidden'),500);
       try{if(typeof loadWhatsappPrograms==='function')loadWhatsappPrograms();}catch(_){}
