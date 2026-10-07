@@ -54,6 +54,8 @@ function classify(request, origin) {
     if (['/api/green', '/api/mobile-green'].includes(url.pathname)) {
       return GREEN_READ.get(action) === method ? 'read' : 'blocked-unknown';
     }
+    // Reviewed endpoint: process deployment metadata only; no database, providers or runners.
+    if (url.pathname === '/api/deployment-version' && method === 'GET' && action === '') return 'read';
     if (url.pathname === '/api/whatsapp-auto-replies' && method === 'GET') return 'read';
     if (['/api/health', '/api/green-health'].includes(url.pathname) && method === 'GET') return 'read';
     if (['/api/google-contacts', '/api/crm-backup', '/api/crm-documents'].includes(url.pathname) &&
