@@ -1519,49 +1519,40 @@
     );
   }
   const savedSyncChecks = new Map();
-  function watchSavedContactSync(row, chat) {
-    const expected = verificationSignature(row),
-      account = fold(googleAccountEmail()),
-      resource = safe(row.data?.TPF_GOOGLE_CONTACT?.resource_name),
-      key = safe(row.id), token = {};
-    savedSyncChecks.set(key, token);
-    let attempts = 0;
-    const check = async () => {
-      if (savedSyncChecks.get(key) !== token) return;
-      if (account !== fold(googleAccountEmail())) {
-        savedSyncChecks.delete(key);
-        return;
-      }
-      try {
-        const result = await sb.from("records").select("id,data")
-          .eq("id", key).single();
-        const fresh = result.data;
-        if (!result.error && fresh) {
-          if (verificationSignature(fresh) !== expected ||
-              safe(fresh.data?.TPF_GOOGLE_CONTACT?.resource_name) !== resource ||
-              fold(fresh.data?.TPF_GOOGLE_CONTACT?.google_account) !== account) {
-            savedSyncChecks.delete(key);
-            return;
-          }
-          const status = safe(fresh.data?.TPF_CONTACT_SYNC?.status);
-          if (status === "verified" || status === "review") {
-            row.data = fresh.data;
-            for (const active of [current(), matchedWa()]) {
-              if (safe(active?.id) === key && verificationSignature(active) === expected)
-                active.data = fresh.data;
+  function watchSavedContactSync(row) {
+    const key=safe(row?.id),expected=verificationSignature(row);
+    if(!key)return;
+    const previous=savedSyncChecks.get(key);
+    if(previous?.expected===expected)return;
+    const token={expected};savedSyncChecks.set(key,token);
+    const check=async()=>{
+      if(savedSyncChecks.get(key)!==token)return;
+      const active=[current(),matchedWa()].filter(r=>safe(r?.id)===key);
+      const profileVisible=safe(current()?.id)===key&&!$("contactModal")?.classList.contains("hidden");
+      const waVisible=safe(matchedWa()?.id)===key&&!$("view-whatsapplive")?.classList.contains("hidden");
+      if(document.hidden||(!profileVisible&&!waVisible)||!active.some(r=>verificationSignature(r)===expected)){savedSyncChecks.delete(key);return;}
+      try{
+        const result=await sb.from("records").select("id,data").eq("id",key).single(),fresh=result.data;
+        if(savedSyncChecks.get(key)!==token)return;
+        if(!result.error&&fresh){
+          if(verificationSignature(fresh)!==expected){savedSyncChecks.delete(key);return;}
+          const status=safe(fresh.data?.TPF_CONTACT_SYNC?.status);
+          if(status==="verified"||status==="review"){
+            // Only server-owned sync metadata; never replace edits or reopen the form.
+            for(const target of [row,current(),matchedWa()]){
+              if(safe(target?.id)!==key||verificationSignature(target)!==expected)continue;
+              for(const field of ["TPF_CONTACT_SYNC","TPF_CONTACT_VERIFIED","TPF_GOOGLE_CONTACT","TPF_WHATSAPP_CHAT_ID","TPF_WHATSAPP_NAME_CONFIRMED"])
+                if(Object.hasOwn(fresh.data,field))target.data[field]=fresh.data[field];
             }
             savedSyncChecks.delete(key);
-            window.dispatchEvent(new CustomEvent("tpf:contact-updated", {
-              detail: { id: key },
-            }));
+            window.dispatchEvent(new CustomEvent("tpf:contact-updated",{detail:{id:key,syncOnly:true}}));
             return;
           }
         }
-      } catch (_) { /* El guardado confirmado sigue en la cola del servidor. */ }
-      if (++attempts < 24) setTimeout(check, 5000);
-      else savedSyncChecks.delete(key);
+      }catch(_){}
+      setTimeout(check,5000);
     };
-    setTimeout(check, 2500);
+    setTimeout(check,2500);
   }
   async function writeCrm(
     row,
@@ -2257,6 +2248,7 @@
       root = document.querySelector("#contactModal .cpRight");
     if (!row || !root || $("contactModal")?.classList.contains("hidden"))
       return;
+    if(row.data?.TPF_CONTACT_SYNC && !['verified','review'].includes(row.data.TPF_CONTACT_SYNC.status))watchSavedContactSync(row);
     await normalizeStoredNickname(row);
     if (safe(current()?.id) !== safe(row.id)) return;
     activeId = String(row.id);
@@ -2275,6 +2267,11 @@
     if ($("contactName")) $("contactName").value = visible;
     renderProfileIdentity(c);
     if (connected && renderVerifiedCard(card, row, null)) return;
+    if(row.data?.TPF_CONTACT_SYNC && row.data.TPF_CONTACT_SYNC.status!=="verified"){
+      const pendingState=syncState(row,null,[],connected,"",wa);
+      card.innerHTML='<h4>CRM, Google y WhatsApp</h4><span class="tpfGoogleInlineStatus warn">'+esc(pendingState.status)+'</span>';
+      return;
+    }
     delete card.dataset.verification;
     card.innerHTML = `<h4>Google y WhatsApp</h4><span class="tpfGoogleInlineStatus">Comprobando…</span><p>${wa ? `WhatsApp muestra: <b>${esc(wa)}</b>` : "Abre su conversación para detectar el nombre actual de WhatsApp."}</p>`;
     if (!connected) {
@@ -2814,7 +2811,7 @@
         refreshProfile();
         refreshEditedWhatsappContact(event.detail?.id);
       }, 80);
-      syncEditedContact(event.detail);
+      if(!event.detail?.syncOnly)syncEditedContact(event.detail);
     });
     window.addEventListener("tpf:google-contacts-changed", () => {
       clearGoogleCache();
@@ -2837,6 +2834,7 @@
       if (!document.hidden && view && !view.classList.contains("hidden"))
         scheduleWhatsappRefresh(0, false);
     }, 60000);
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)refreshProfile();});
     window.tpfWhatsappDisplayIdentity = whatsappDisplayIdentity;
     window.TPFContactGoogleInline = {
       refreshProfile,
