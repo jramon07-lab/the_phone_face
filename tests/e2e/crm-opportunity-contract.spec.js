@@ -5,7 +5,7 @@ for(const viewport of [{width:1365,height:900},{width:430,height:900}])test('Con
  await page.setContent(read('index.html').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<link\b[^>]*>/gi,''));
  await page.addStyleTag({content:read('assets/app.css')+'\n'+read('assets/opportunity-detail.css')+'\n'+read('assets/crm-reference.css')});
  await page.evaluate(()=>{
-  document.body.classList.add('tpfUnified');window.$=id=>document.getElementById(id);window.__oppKeepPreparedOrigin=false;window.pendingOpportunityRecordId=null;
+  document.body.classList.add('tpfUnified');document.getElementById('app').classList.remove('hidden');window.$=id=>document.getElementById(id);window.__oppKeepPreparedOrigin=false;window.pendingOpportunityRecordId=null;
   window.row={id:'opportunity',record_id:'manager',title:'CAMBIO VODAFONE',client_name:'Titular de prueba',phone:'600000001',amount:33,stage_id:'followup',notes:'Nota conservada',previous_operator:'O2',terminal_commitment_end:'2028-02-29',discount_end_date:'2027-03-01',contract_party:{same:false,holder_name:'Titular de prueba',holder_record_id:'holder',contact_name:'Gestora de prueba',manager_record_id:'manager',recipient_name:'Gestora de prueba',recipient_phone:'600000002',recipient_contact_id:'manager'}};
   window.salesCache={opportunities:[row],stages:[{id:'followup',name:'Seguimiento',pipeline_id:'pipeline'}],fields:[]};window.failSave=false;window.closeCount=0;window.lastNav=null;window.alerts=[];window.sent=0;
   window.sb={from:table=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:table==='sales_opportunities'?row:null})})}),update:payload=>({eq:()=>({select:()=>({single:async()=>{if(failSave)return{error:{message:'Simulated save failure'}};row={...row,...payload};return{data:row};}})})})})};
