@@ -41,8 +41,9 @@ async function checkWatcher(values, options={}) {
  let reads=0, selectedAccount=account;
  const ctx={Map, safe:v=>String(v??"").trim(),fold:v=>String(v??"").toLowerCase(),verificationSignature:signature,
   googleAccountEmail:()=>selectedAccount,current:()=>active,matchedWa:()=>null,
+  document:{hidden:false},$:()=>({classList:{contains:()=>false}}),
   setTimeout:fn=>timers.push(fn), CustomEvent:function(type,init){return {type,...init};},window:{dispatchEvent:event=>events.push(event)},
-  sb:{from:()=>{const q={select:()=>q,eq:()=>q,single:async()=>{reads++;return values.shift()||{error:{message:"temporarily unavailable"}};}};return q;}}
+  sb:{from:()=>{const q={select:()=>q,eq:()=>q,single:async()=>{reads++;if(reads===26)ctx.document.hidden=true;return values.shift()||{error:{message:"temporarily unavailable"}};}};return q;}}
  };
  vm.createContext(ctx);
  vm.runInContext(source.slice(source.indexOf("  const savedSyncChecks = new Map();"),start)+"\nthis.watch=watchSavedContactSync;",ctx);
@@ -94,7 +95,8 @@ async function checkWatcher(values, options={}) {
  watched=await checkWatcher([{data:{...base,data:{...base.data,NOMBRE:"Someone else",TPF_CONTACT_SYNC:{status:"verified"}}}}]);
  assert.equal(watched.events.length,0);assert.equal(watched.active.data.NOMBRE,"Antonio");
  watched=await checkWatcher([],{changeAccount:true});assert.equal(watched.reads,0);
- watched=await checkWatcher([]);assert.equal(watched.reads,24);assert.equal(watched.events.length,0);
+ watched=await checkWatcher([]);assert.equal(watched.reads,26);assert.equal(watched.events.length,0);
  console.log("PASS: server pending status and exact saved identity/bindings;  metadata refresh, immutable baseline, unrelated edits, identity conflicts, binding conflicts, invalid signatures and second-write race");
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
 

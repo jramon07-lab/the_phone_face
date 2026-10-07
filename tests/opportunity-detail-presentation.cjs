@@ -1,5 +1,5 @@
 'use strict';
-// Run the actual read-only detail renderer, never connect to a database.
+// Run the actual read-only detail renderer against an isolated database response.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -14,7 +14,7 @@ const opportunity = {id:'demo-opportunity',record_id:'demo-contact',client_name:
 const sandbox = {
   window:{}, salesCache:{opportunities:[opportunity],stages:[{id:'follow',name:'Seguimiento'}]},
   currentFullOpportunity:null, rememberOpportunityReturnContext(){calls.push('remember');},tpfRememberScreen(){},
-  sb:{from(){throw new Error('Unexpected database access');}}, alert(){throw new Error('Unexpected alert');},
+  sb:{from(table){assert.equal(table,'sales_opportunities');return {select:()=>({eq:(key,id)=>{assert.equal(key,'id');assert.equal(id,opportunity.id);return {maybeSingle:async()=>({data:opportunity})};}})};}}, alert(){throw new Error('Unexpected alert');},
   oppVal:v=>v===null||v===undefined||v===''?'—':escape(v), fmtMoney:v=>`${v.toFixed(2)} €`,fmtDateOnly:v=>v,
   returnToContactFromOpportunity:(contact,id)=>calls.push([contact,id]),
   $(id){
@@ -46,3 +46,4 @@ vm.runInNewContext(source.slice(start,end),sandbox);
   assert.ok(calls.includes('hidden'),'The existing overlay is opened');
   console.log('PASS: real detail renderer, one title, full name, amounts, dates, escaped notes, contact route and edit/delete context.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+

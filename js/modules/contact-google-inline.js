@@ -1524,9 +1524,11 @@
     if(!key)return;
     const previous=savedSyncChecks.get(key);
     if(previous?.expected===expected)return;
-    const token={expected};savedSyncChecks.set(key,token);
+    const watchAccount=()=>typeof googleAccountEmail==='function'?safe(googleAccountEmail()).toLowerCase():'';
+    const token={expected,account:watchAccount()};savedSyncChecks.set(key,token);
     const check=async()=>{
       if(savedSyncChecks.get(key)!==token)return;
+      if(token.account&&token.account!==watchAccount()){savedSyncChecks.delete(key);return;}
       const active=[current(),matchedWa()].filter(r=>safe(r?.id)===key);
       const profileVisible=safe(current()?.id)===key&&!$("contactModal")?.classList.contains("hidden");
       const waVisible=safe(matchedWa()?.id)===key&&!$("view-whatsapplive")?.classList.contains("hidden");
@@ -1534,6 +1536,7 @@
       try{
         const result=await sb.from("records").select("id,data").eq("id",key).single(),fresh=result.data;
         if(savedSyncChecks.get(key)!==token)return;
+      if(token.account&&token.account!==watchAccount()){savedSyncChecks.delete(key);return;}
         if(!result.error&&fresh){
           if(verificationSignature(fresh)!==expected){savedSyncChecks.delete(key);return;}
           const status=safe(fresh.data?.TPF_CONTACT_SYNC?.status);
@@ -2860,4 +2863,5 @@
   }
   M.register("contact-google-inline", { install });
 })();
+
 
