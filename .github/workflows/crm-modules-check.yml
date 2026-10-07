@@ -23,6 +23,7 @@ jobs:
           npm run verify
           node tests/desktop-action-parity.cjs
           node tests/opportunity-identity.cjs
+          node tests/contact-opportunity-freshness.cjs
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Verify outside-hours consent on desktop and mobile with isolated fixtures

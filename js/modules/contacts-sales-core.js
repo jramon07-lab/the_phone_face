@@ -15,6 +15,12 @@ function contactFullNameFromData(d){
  return String(contactField(d,"NOMBRE Y APELLIDOS","CLIENTE","CLIENTE FINAL")||"").trim();
 }
 function contactField(d,...names){for(const n of names){if(d[n]!==undefined&&d[n]!==null)return d[n]}return ""}
+async function readContactSales(){
+ const result=await sb.rpc('sales_board');
+ if(result.error)throw result.error;
+ if(!Array.isArray(result.data?.opportunities))throw Error('El servidor no confirmó el listado de oportunidades.');
+ return result.data;
+}
 async function renderContactProfile(){
  if(!currentContact)return;
  const profileContact=currentContact;
@@ -23,8 +29,10 @@ async function renderContactProfile(){
  const phone=contactField(d,"TELÉFONO","TELEFONO","PHONE","MOVIL");
  // Independent reads start together; a slow sales request must not hold up
  // the agenda and history requests for this same profile.
- const peopleRead=window.TPFRecordLinks.load(sb).catch(()=>[]);
- const salesRead=(async()=>{if(!(salesCache.opportunities||[]).length)await loadSales();})().catch(()=>{});
+ const peopleRead=window.TPFRecordLinks.load(sb).catch(error=>({error}));
+ // Opening a profile must read current associations, even when another PC
+ // changed them after this tab populated its sales cache.
+ const salesRead=readContactSales().catch(error=>({error}));
  const agendaRead=async(programs)=>{
    const rows=[];
    for(let from=0;;from+=500){
@@ -43,20 +51,22 @@ async function renderContactProfile(){
  $("cpAvatar").textContent=name.trim().split(/\s+/).slice(0,2).map(x=>x[0]||"").join("").toUpperCase()||"C";
  $("cpInfo").innerHTML=`Origen: <b>${esc(currentContact.source_sheet||"")}</b>${currentContact.source_row?`<br>Fila: ${esc(currentContact.source_row)}`:""}`;
 
- let opps=[];
+ let opps=[],opportunityReadFailed=false;
  try{
-   const [people]=await Promise.all([peopleRead,salesRead]);
-   opps=window.TPFRecordLinks.related(salesCache.opportunities||[],people,profileContact.id,'opportunity');
- }catch(e){}
+   const [people,board]=await Promise.all([peopleRead,salesRead]);
+   if(people.error)throw people.error;
+   if(board.error)throw board.error;
+   opps=window.TPFRecordLinks.related(board.opportunities||[],people,profileContact.id,'opportunity');
+ }catch(e){opportunityReadFailed=true;}
  if(currentContact!==profileContact)return;
  const hydratedOpps=hydrateOpportunityStageNames(opps);
-if($("cpOppTotal"))$("cpOppTotal").textContent=String(opps.length);
-if($("cpOppOpen"))$("cpOppOpen").textContent=String(hydratedOpps.filter(o=>!oppIsClosed(o)).length);
-if($("cpOppExpired"))$("cpOppExpired").textContent=String(hydratedOpps.filter(oppIsExpired).length);
+if($("cpOppTotal"))$("cpOppTotal").textContent=opportunityReadFailed?"—":String(opps.length);
+if($("cpOppOpen"))$("cpOppOpen").textContent=opportunityReadFailed?"—":String(hydratedOpps.filter(o=>!oppIsClosed(o)).length);
+if($("cpOppExpired"))$("cpOppExpired").textContent=opportunityReadFailed?"—":String(hydratedOpps.filter(oppIsExpired).length);
 
 $("cpOpportunities").innerHTML=opps.length
  ? hydratedOpps.map(o=>oppUnifiedCard(o)).join("")
- : '<div class="cpEmpty">No hay oportunidades.</div>';
+ : opportunityReadFailed?'<div class="cpEmpty" role="alert">No se pudieron comprobar las oportunidades. Vuelve a abrir la ficha para reintentar.</div>':'<div class="cpEmpty">No hay oportunidades.</div>';
 
  let tasks=[];
  try{
@@ -862,6 +872,5 @@ $("runImport").onclick=async()=>{
  }
  $("importInfo").textContent=`Importación terminada: ${done} registros.`;importRows=[];$("runImport").disabled=true;
 };
-
 
 

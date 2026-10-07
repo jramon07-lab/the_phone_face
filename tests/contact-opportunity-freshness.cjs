@@ -1,0 +1,24 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('js/modules/contacts-sales-core.js','utf8');
+const actions=fs.readFileSync('js/modules/contact-opportunity-actions.js','utf8');
+let board={opportunities:[]},failure=null,reads=0;
+const holder={id:'holder',data:{NOMBRE:'Titular',TELEFONO:'600000001'}},manager={id:'manager',data:{NOMBRE:'Gestora',TELEFONO:'600000002'}};
+const links=require('../js/modules/record-links.js');
+const ctx=vm.createContext({window:{TPFRecordLinks:{...links,load:async()=>[holder,manager]}},sb:{rpc:async name=>{assert.equal(name,'sales_board');reads++;return failure?{error:failure}:{data:structuredClone(board)}}},salesCache:{opportunities:[{id:'stale',record_id:'manager'}]}});
+vm.runInContext(source.slice(source.indexOf('async function readContactSales('),source.indexOf('async function renderContactProfile(')),ctx);
+vm.runInContext(actions.slice(actions.indexOf('async function opps('),actions.indexOf('\nfunction openOpp(')),ctx);
+(async()=>{
+ const opportunity={id:'shared',record_id:'holder',phone:'600000001',contract_party:{same:false,holder_record_id:'holder',manager_record_id:'manager'}};
+ board.opportunities=[opportunity];
+ assert.equal((await ctx.opps(holder))[0].id,'shared');assert.equal((await ctx.opps(manager))[0].id,'shared');
+ board.opportunities[0].contract_party.manager_record_id='another-manager';
+ assert.equal((await ctx.opps(manager)).length,0,'a cached opportunity must disappear after reassignment in another session');
+ board.opportunities.push({id:'unrelated',record_id:'someone-else',phone:'600000002',client_name:'Gestora'});
+ assert.equal((await ctx.opps(manager)).length,0,'an explicit foreign owner cannot be reassigned by a matching phone/name');
+ board.opportunities=[];assert.equal((await ctx.opps(holder)).length,0,'confirmed deletion does not resurrect cache');
+ failure=new Error('Offline');await assert.rejects(ctx.opps(holder),/Offline/);
+ assert.equal(ctx.salesCache.opportunities[0].id,'stale','read-only profile reads do not overwrite shared cache');assert.equal(reads,6);
+ assert.match(source,/const salesRead=readContactSales\(\)/);assert.match(source,/No se pudieron comprobar las oportunidades/);
+ console.log('PASS fresh profile and shortcut associations across session reassignment, deletion, foreign identity and failed reads');
+})().catch(error=>{console.error(error);process.exitCode=1});

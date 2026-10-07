@@ -667,3 +667,56 @@ test('PC: remaining sections, send filters and all system tabs, strictly read-on
   }
  }finally{reportScope(report,'PC all remaining sections');}
 });
+
+
+// Two real independent PC sessions. Customer reads stay private and every
+// business write/provider side effect remains blocked by the same strict guard.
+test('PC: two sessions agree and contact/opportunity navigation leaves no old layers',async({browser},info)=>{
+ test.setTimeout(210000);
+ const origin=crmOrigin(process.env.VERCEL_PREVIEW_URL||process.env.PLAYWRIGHT_BASE_URL),devices=[];
+ try{
+  for(const width of [1366,1920]){
+   const context=await browser.newContext({baseURL:origin,viewport:{width,height:900},serviceWorkers:'block',extraHTTPHeaders:{}});
+   const page=await context.newPage(),report=await installReadOnlyGuard(context,page,origin);devices.push({context,page,report});
+  }
+  await Promise.all(devices.map(async({page})=>{
+   await page.goto('/',{waitUntil:'domcontentloaded'});await page.locator('#email').fill(process.env.CRM_TEST_EMAIL);await page.locator('#password').fill(process.env.CRM_TEST_PASSWORD);await page.locator('#signin').click();await expect(page.locator('#app')).toBeVisible({timeout:35000});
+   await page.waitForFunction(()=>typeof window.openContact==='function'&&typeof window.openOpportunityFull==='function'&&window.TPFRecordLinks&&window.TPFOpportunityDetails&&window.TPFModules?.status().some(m=>m.name==='contact-opportunities'&&m.state==='ready'));
+  }));
+  const signatures=async()=>Promise.all(devices.map(async({page})=>{
+   const rows=await page.evaluate(async()=>{const result=await sb.rpc('sales_board');if(result.error)throw Error('No se pudo leer el panel');return(result.data?.opportunities||[]).map(o=>[o.id,o.record_id,o.stage_id,o.status,o.expected_date,o.previous_operator,o.terminal_commitment_end,o.discount_end_date,o.contract_party]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));});
+   return require('node:crypto').createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+  }));
+  await expect.poll(async()=>{const [a,b]=await signatures();return a===b;},{timeout:25000,intervals:[2000]}).toBe(true);
+  const page=devices[0].page;
+  const target=await page.evaluate(async()=>{
+   const board=await sb.rpc('sales_board');if(board.error)throw Error('No se pudo leer el panel');
+   const records=await TPFRecordLinks.load(sb),lookup=TPFRecordLinks.index(records);
+   for(const o of board.data?.opportunities||[]){const id=[...TPFRecordLinks.opportunityContacts(o,lookup)][0];if(id)return{opportunity:o.id,contact:id};}
+   return null;
+  });
+  expect(target,'The demo account must expose a linked opportunity to verify the real detail journey').toBeTruthy();
+  // Populate then deliberately poison this tab's local cache. Reopening the
+  // contact must recover the server's association without reloading the page.
+  for(const {page} of devices){
+   await page.evaluate(async target=>{await loadSales();salesCache.opportunities=[{id:'stale-synthetic-local',record_id:'unrelated-synthetic-local'}];await window.openContact(target.contact);},target);
+   await expect(page.locator('#contactModal')).toBeVisible();
+   await expect(page.locator('#cpOpportunities [data-opp-id="'+target.opportunity+'"]')).toBeVisible({timeout:20000});
+   const card=page.locator('#cpOpportunities [data-opp-id="'+target.opportunity+'"]');
+   await card.getByRole('button',{name:/Ver\s*\/\s*editar/i}).click();
+   await expect(page.locator('#opportunityFullPage')).toBeVisible();await expect(page.locator('#oppDetailModal')).toBeHidden();
+   await page.locator('.nav[data-view="database"]').first().click();
+   await expect(page.locator('#opportunityFullPage')).toBeHidden();await expect(page.locator('#contactModal')).toBeHidden();await expect(page.locator('#view-database')).toBeVisible();
+  }
+  for(const view of ['dashboard','sales','reviews','agenda','whatsapplive','labels','settings','sendcontrol']){
+   await page.evaluate(id=>window.openOpportunityFull(id),target.opportunity);await expect(page.locator('#opportunityFullPage')).toBeVisible();
+   await page.locator('.nav[data-view="'+view+'"]').first().click();
+   await expect(page.locator(view==='sendcontrol'?'#ccPanel':'#view-'+view)).toBeVisible({timeout:15000});
+   for(const id of ['opportunityFullPage','oppDetailModal','contactModal','cpTaskPage','cpTaskDetailPage'])await expect(page.locator('#'+id)).toBeHidden();
+   await page.evaluate(id=>window.openContact(id),target.contact);await expect(page.locator('#contactModal')).toBeVisible();
+   await page.locator('.nav[data-view="'+view+'"]').first().click();await expect(page.locator('#contactModal')).toBeHidden();
+  }
+  for(const {report} of devices){await expect.poll(()=>report.pendingReads.length,{timeout:25000}).toBe(0);assertReadHealth(report);}
+  console.log('PC_TWO_SESSION_JOURNEYS_VERIFIED: independent authenticated reads agree; fresh contact associations after stale cache; contact card opens read view; 8 destinations close old detail layers; no page reload, business writes or messages.');
+ }finally{for(const {context,report}of devices){reportScope(report,'PC independent session');await context.close();}}
+});
