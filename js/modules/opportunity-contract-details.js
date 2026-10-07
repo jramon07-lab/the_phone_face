@@ -34,7 +34,7 @@ function fillEditor(o){
   input.value=previous(o,i)==='Sin indicar'?'':previous(o,i);input.readOnly=true;input.dataset.originalValue=input.value;
   $('oppPreviousManage').hidden=false;
   $('oppPreviousHint').textContent='Operador anterior de la instalación. Usa «Editar instalación / devolución» para cambiar sus instrucciones.';
-  $('oppPreviousManage').onclick=()=>window.TPFInstallations?.manage(o.id);
+  $('oppPreviousManage').onclick=()=>window.TPFInstallations?.manage(o.id,{edit:'return'});
   input.dispatchEvent(new Event('change',{bubbles:true}));
  }).catch(()=>{if(token===editorToken&&$('oppPreviousHint'))$('oppPreviousHint').textContent='No se pudo comprobar la instalación. Reabre la oportunidad antes de cambiar el operador anterior.';if(token===editorToken&&input)input.readOnly=true;});
 }
@@ -74,7 +74,7 @@ function inlineFields(root,o,context){
    if(root.querySelector('.oppInlineForm')){root.querySelector('.oppInlineForm input')?.focus();return;}
    if(typeof crmCan==='function'&&!crmCan('can_edit_sales')){alert('No tienes permiso para editar oportunidades.');return;}
    if(key==='previous_operator'&&(!context.ready||context.error)){alert('Espera a que termine la comprobación, o reabre la ficha.');return;}
-   if(key==='previous_operator'&&context.installation){window.TPFInstallations?.manage(o.id);return;}
+   if(key==='previous_operator'&&context.installation){window.TPFInstallations?.manage(o.id,{edit:'return'});return;}
    const form=document.createElement('form');form.className='oppInlineForm';form.innerHTML='<label>'+esc(label)+'<input aria-label="'+esc(label)+'" type="'+type+'" '+(type==='number'?'min="0" step="0.01"':'')+'></label><div><button class="primary" type="submit">Guardar</button><button class="secondary" type="button" data-cancel>Cancelar</button></div><p role="status"></p>';
    const input=form.querySelector('input');input.value=key==='previous_operator'?(previous(o,context.installation,context.offer)==='Sin indicar'?'':previous(o,context.installation,context.offer)):o[key]??'';cell.append(form);edit.hidden=true;input.focus();
    const close=()=>{form.remove();edit.hidden=false;edit.focus();};form.querySelector('[data-cancel]').onclick=close;
@@ -109,4 +109,3 @@ window.addEventListener?.('tpf:sales-updated',()=>{if(!$('opportunityFullPage')?
 window.TPFOpportunityDetails={fillEditor,readEditor,afterPrepare,decorateView,party,previous,operator,validDate,dateLabel};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',editorActions);else editorActions();
 })();
-
