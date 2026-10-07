@@ -11,3 +11,12 @@ assert.equal(pick(rows,'all','missing','date',stages).length,0);
 assert.equal(rows[0].id,1,'sorting does not mutate original data');
 console.log('Opportunity picker filters, accent search, real stage search, missing dates and sorting pass.');
 
+vm.runInContext(fs.readFileSync('js/modules/record-links.js','utf8'),context);
+const linked=context.window.TPFContactOpportunityList.linkedRows;
+const assigned={id:'linked',record_id:'holder',contract_party:{same:false,holder_record_id:'holder',manager_record_id:'manager'}};
+const newRows=[assigned,{id:'unrelated',record_id:'another'}];
+assert.equal(linked(newRows,{id:'manager'}).map(x=>x.id).join(','),'linked','new opportunity must appear for manager');
+assert.equal(linked(newRows,{id:'holder'}).map(x=>x.id).join(','),'linked','one opportunity is visible for holder');
+assert.equal(linked([{...assigned,contract_party:{...assigned.contract_party,manager_record_id:'another'}}],{id:'manager'}).length,0,'reassigned opportunity must leave former manager list');
+assert.equal(linked([],{id:'holder'}).length,0,'deletion removes old rows');
+console.log('PASS: picker refresh uses common associations for new links, reassignment and deletion');

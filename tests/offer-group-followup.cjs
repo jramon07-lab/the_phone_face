@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-const ctx={window:{},Intl,Date};vm.createContext(ctx);vm.runInContext(fs.readFileSync('js/modules/offer-followup-ui.js','utf8'),ctx);
+const ctx={window:{},Intl,Date};vm.createContext(ctx);vm.runInContext(fs.readFileSync('js/modules/opportunity-identity.js','utf8')+'\n'+fs.readFileSync('js/modules/offer-followup-ui.js','utf8'),ctx);
 const api=ctx.window.TPFOfferFollowup,leader={id:'leader',status:'following',sent_at:'2026-10-03T08:00:00Z'},child={id:'child',status:'following',sent_at:leader.sent_at,snapshot:{group_leader_offer_id:'leader'}};
 api.state.offers=[leader,child];api.state.jobs=[{context:{offer_instance_id:'leader'},run_at:'2026-10-05T08:00:00Z'}];
 assert.equal(api.summary(child).next,api.summary(leader).next,'each service shows the same shared reminder');

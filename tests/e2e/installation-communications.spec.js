@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test'),path=require('node:path');
+test.beforeEach(async({page})=>{await page.addScriptTag({content:require('node:fs').readFileSync('js/modules/opportunity-identity.js','utf8')});});
 test('Sales floating menu closes across stopped clicks, view changes, Escape and scroll',async({page})=>{
  await page.route('**/*',r=>r.abort());await page.setContent('<div id="view-sales"><button class="tpfListMenuBtn">Acciones</button></div><button id="nav-home">Inicio</button>');await page.evaluate(()=>{window.TPFModules={register(){}};window.salesCache={opportunities:[{id:'op',phone:'600000001'}]};document.getElementById('nav-home').onclick=e=>e.stopPropagation()});
  const fs=require('node:fs'),source=fs.readFileSync(path.resolve('js/modules/sales-list-ui.js'),'utf8').replace("M.register('sales-list-ui'","window.salesMenuFixture={installMenuLifecycle,menu};M.register('sales-list-ui'");await page.addScriptTag({content:source});await page.evaluate(()=>{salesMenuFixture.installMenuLifecycle();document.querySelector('.tpfListMenuBtn').onclick=e=>salesMenuFixture.menu(e,'op')});

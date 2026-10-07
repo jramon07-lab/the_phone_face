@@ -54,14 +54,8 @@ function homeSummary(id){
  return `<div class="ofHomeSummary">${window.TPFOfferWorkPlan?.summary(x)||`<small><b>Próxima acción:</b> ${esc(action)}</small>`}<small>${esc(summary(x).age)}</small></div>`;
 }
 function listHtml(id,summaryOnly=false){if(F.error)return '<small class="ofError">Seguimiento no disponible · Actualiza para reintentar</small>';const rows=F.byOpportunity.get(String(id))||[];if(summaryOnly)return rows.map(x=>htmlOffer(x,false)).join('');return rows.map(x=>htmlOffer(x,false)+(x.id?`<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">Gestionar</button>`:'')).join('')+(rows.some(x=>x.sent_at)?opportunityButton(id):'');}
-function conversationPhone(o={}){
- const party=o.contract_party;
- if(party&&Object.hasOwn(party,'recipient_phone'))return String(party.recipient_phone||'').trim();
- if(party?.same===false)return String(party.recipient==='holder'?party.holder_phone||'':party.contact_phone||'').trim();
- const offers=F.byOpportunity.get(String(o.id))||[];
- const saved=offers.slice().sort((a,b)=>time(b.created_at)-time(a.created_at)).find(x=>Object.hasOwn(x.snapshot||{},'recipient_phone'));
- return String(saved?saved.snapshot.recipient_phone||'':o.phone||'').trim();
-}
+function identity(o={}){return window.TPFOpportunityIdentity.resolve(o,F.byOpportunity.get(String(o.id))||[]);}
+function conversationPhone(o={}){return identity(o).recipient.phone;}
 function listActions(o={}){
  const rows=F.byOpportunity.get(String(o.id))||[],phone=conversationPhone(o);
  return `<div class="ofSalesActions">${rows.some(x=>x.sent_at)?opportunityButton(o.id):''}<button type="button" class="ofChat" data-of-chat="${esc(o.id)}" ${phone?'':'disabled'} title="${phone?'Abrir la conversación del destinatario':'No hay teléfono del destinatario registrado'}">Abrir conversación</button>${rows.filter(x=>x.id).map(x=>`<button type="button" class="ofManage" data-of-manage="${esc(x.id)}">${rows.length>1?'Gestionar · '+esc(x.offer_name||x.operator||'Oferta'):'Gestionar'}</button>`).join('')}</div>`;
@@ -69,7 +63,7 @@ function listActions(o={}){
 function opportunityFor(id,supplied){const o=supplied||((typeof salesCache!=='undefined'?salesCache.opportunities:[])||[]).find(o=>String(o.id)===String(id));if(!o||String(o.id)!==String(id))throw Error('La oportunidad ya no está disponible. Actualiza el listado.');return o;}
 function quickActions(id){return `<button type="button" data-of-quick="conversation" data-opportunity-id="${esc(id)}">Abrir conversación</button><button type="button" data-of-quick="message" data-opportunity-id="${esc(id)}">Enviar WhatsApp</button><button type="button" data-of-quick="task" data-opportunity-id="${esc(id)}">Crear tarea</button>`;}
 async function quickAction(kind,id,supplied){
- const o=opportunityFor(id,supplied),party=o.contract_party||{},saved=homeOffer(id)?.snapshot||{},phone=conversationPhone(o),name=party.recipient_name||saved.recipient_name||o.client_name||'Cliente';
+ const o=opportunityFor(id,supplied),recipient=identity(o).recipient,phone=recipient.phone,name=recipient.name;
  if(kind==='conversation')return openConversation(id,o);
  if(kind==='task'){
   if(typeof crmCan==='function'&&!crmCan('can_manage_agenda'))throw Error('No tienes permiso para crear tareas.');
@@ -80,7 +74,7 @@ async function quickAction(kind,id,supplied){
  if(typeof crmCan==='function'&&!crmCan('can_use_whatsapp'))throw Error('No tienes permiso para enviar WhatsApp.');
  if(!/^[1-9][0-9]{7,14}$/.test(phone.replace(/\D/g,'')))throw Error('Revisa el teléfono del destinatario en la ficha.');
  const fn=window.openWaQuick||(typeof openWaQuick==='function'?openWaQuick:null);if(!fn)throw Error('El editor de WhatsApp no está disponible. Actualiza la página.');
- const contactId=party.recipient_contact_id||saved.recipient_contact_id||(party.same===false?null:o.record_id||o.contact_id||null);
+ const contactId=recipient.id||null;
  return fn({phone,name,contactId});
 }
 let salesConversationOrigin=null;

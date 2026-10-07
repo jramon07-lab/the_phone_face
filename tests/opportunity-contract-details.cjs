@@ -3,7 +3,7 @@ const {PGlite}=require('@electric-sql/pglite');
 const source=fs.readFileSync('js/modules/opportunity-contract-details.js','utf8');
 const nodes=Object.fromEntries(['oppModalId','oppModalPreviousOperator','oppModalTerminalEnd','oppModalDiscountEnd','oppPreviousHint','oppPreviousManage'].map(id=>[id,{value:'',dataset:{},setAttribute(){},dispatchEvent(){}}]));
 const context={window:{},document:{getElementById:id=>nodes[id],readyState:'loading',addEventListener(){}},Event:class{}};
-vm.createContext(context);vm.runInContext(source,context);const api=context.window.TPFOpportunityDetails;
+vm.createContext(context);vm.runInContext(fs.readFileSync('js/modules/opportunity-identity.js','utf8'),context);vm.runInContext(source,context);const api=context.window.TPFOpportunityDetails;
 assert.throws(()=>api.validDate('2027-02-29'),/fecha válida/);assert.equal(api.validDate('2028-02-29'),'2028-02-29');assert.equal(api.validDate(''),null);
 const fixture={client_name:'Titular',record_id:'manager-id',phone:'600000001',contract_party:{same:false,holder_name:'Titular',holder_record_id:'holder-id',contact_name:'Gestora',manager_record_id:'manager-id',recipient_name:'Gestora',recipient_phone:'600000002',recipient_contact_id:'manager-id'}};
 assert.equal(api.party(fixture).holder.id,'holder-id');assert.equal(api.party(fixture).manager.id,'manager-id');assert.equal(api.party(fixture).recipient.phone,'600000002');assert.equal(api.previous({previous_operator:'O2'}, {previous_operator:'Yoigo'}),'Yoigo');

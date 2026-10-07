@@ -6,6 +6,7 @@ let composed=[],alerts=[],scheduled=0,sent=0;
 const document={head:{appendChild(){}},createElement(){return {};},getElementById(id){return id==='waQuickDrop'?{click(){scheduled++;}}:id==='waQuickSend'?{click(){sent++;}}:null;}};
 const window={openWaQuick(data){composed.push(data);}};
 const ctx=vm.createContext({window,document,crmCan:()=>true,alert:m=>alerts.push(m)});
+vm.runInContext(fs.readFileSync('js/modules/opportunity-identity.js','utf8'),ctx);
 vm.runInContext("const text=v=>String(v||'').trim();"+details.slice(details.indexOf('function party('),details.indexOf('\nfunction operator(')),ctx);
 window.TPFOpportunityDetails={party:ctx.party};
 vm.runInContext(fs.readFileSync('js/modules/linked-contact-actions.js','utf8'),ctx);

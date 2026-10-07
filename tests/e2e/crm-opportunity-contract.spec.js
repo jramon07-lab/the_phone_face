@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test'),fs=require('fs');
+test.beforeEach(async({page})=>{await page.addScriptTag({content:require('node:fs').readFileSync('js/modules/opportunity-identity.js','utf8')});});
 const read=p=>fs.readFileSync(p,'utf8');
 for(const viewport of [{width:1365,height:900},{width:430,height:900}])test('Contract fields, parties and navigation '+viewport.width,async({page})=>{
  await page.setViewportSize(viewport);const errors=[];page.on('pageerror',e=>errors.push(e.message));

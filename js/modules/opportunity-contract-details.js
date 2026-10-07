@@ -14,12 +14,7 @@ document.addEventListener('click',e=>{
 const dates={terminal_commitment_end:'oppModalTerminalEnd',discount_end_date:'oppModalDiscountEnd'};
 const dateLabel=v=>v?String(v).split('T')[0].split('-').reverse().join('/'):'Sin indicar';
 function validDate(v){if(!v)return null;const d=new Date(v+'T12:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(v)||!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==v)throw Error('Indica una fecha válida.');return v;}
-function party(o){
- const p=o.contract_party||{},same=p.same!==false,holder={id:p.holder_record_id||p.holder_contact_id||(same?o.record_id:null),name:p.holder_name||o.client_name||'Sin titular',phone:p.holder_phone||(same?o.phone:'')||''};
- const manager={id:p.manager_record_id||p.manager_contact_id||o.record_id,name:p.contact_name||(same?holder.name:'Sin gestor indicado'),phone:p.contact_phone||(same?holder.phone:o.phone)||''};
- const recipient={id:p.recipient_contact_id||(p.recipient==='holder'?holder.id:manager.id),name:p.recipient_name||(p.recipient==='holder'?holder.name:manager.name),phone:Object.hasOwn(p,'recipient_phone')?String(p.recipient_phone||'').trim():(p.recipient==='holder'?holder.phone:manager.phone)||o.phone||''};
- return {holder,manager,recipient};
-}
+function party(o){return window.TPFOpportunityIdentity.resolve(o,window.TPFOfferFollowup?.state?.byOpportunity?.get(String(o.id))||[]);}
 function operator(o){return text(o.installation_operator)||text((o.title||'').match(/vodafone|másmóvil|masmovil|orange|movistar|jazztel|yoigo|digi|o2|finetwork/i)?.[0])||'Sin indicar';}
 function previous(o,i,x){if(i)return text(i.previous_operator)||'Sin indicar';if(o.after_sale_preferences?.previous_operator_saved===true)return text(o.after_sale_preferences.previous_operator)||'Sin indicar';if(o.previous_operator!=null)return text(o.previous_operator)||'Sin indicar';if(Object.hasOwn(x?.snapshot||{},'previous_operator_override'))return text(x.snapshot.previous_operator_override)||'Sin indicar';return text(o.after_sale_preferences?.previous_operator)||text(x?.snapshot?.previous_operator)||'Sin indicar';}
 let editorToken=0,viewToken=0,editorOpportunity=null;

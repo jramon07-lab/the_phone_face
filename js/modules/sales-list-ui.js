@@ -68,7 +68,7 @@ async function wa(o,schedule){
   const phone=window.TPFOfferFollowup?.conversationPhone?window.TPFOfferFollowup.conversationPhone(o):recipient?recipient.phone:o.phone;
   if(!window.TPFLinkedActions)throw Error('El editor de WhatsApp no está disponible. Actualiza la página.');
   if(schedule&&!document.getElementById('waQuickDrop'))throw Error('La programación de WhatsApp no está disponible. Actualiza la página.');
-  await window.TPFLinkedActions.open('message',{phone,name:recipient?.name||o.client_name,contactId:recipient?.id||o.record_id});
+  await window.TPFLinkedActions.open('message',{phone,name:recipient?.name||o.client_name,contactId:recipient?recipient.id||null:o.record_id||null});
   if(schedule)document.getElementById('waQuickDrop').click();
  }catch(error){alert(error.message);}
 }

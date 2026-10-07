@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test'),fs=require('node:fs');
+test.beforeEach(async({page})=>{await page.addScriptTag({content:require('node:fs').readFileSync('js/modules/opportunity-identity.js','utf8')});});
 for(const width of [1440,390])test('Select all respects stage and search scope '+width,async({page,context})=>{
  await context.route('**/*',r=>r.abort());await page.setViewportSize({width,height:844});
  await page.setContent('<section id="view-sales"><input id="salesSelectAll" type="checkbox"><span id="salesSelectedCount"></span><button id="salesBulkMove"></button><button id="salesBulkDelete"></button><input id="salesSearch"><select id="salesStageFilter"><option value=""></option></select><div id="salesSummaryStages"><button class="salesSummaryStageChip" data-stage-id="next">Próximo 7</button><button class="salesSummaryStageChip" data-stage-id="other">Seguimiento 7</button></div><div id="salesListView"><div class="salesListHeader"></div><div id="salesListRows"></div></div></section>');
@@ -88,3 +89,12 @@ test('Conversation opened from send control returns to send control instead of t
  expect(await page.evaluate(()=>chats)).toEqual(['34600000001@c.us']);
 });
 
+test('Contact opportunities refresh new manager links and remove reassigned or deleted links without reloading',async({page})=>{
+ await page.setViewportSize({width:1366,height:900});await page.setContent('<button id="origin">Oportunidades</button><div id="opportunityFullPage" class="hidden"></div><div id="oppDetailModal" class="hidden"></div>');
+ await page.evaluate(()=>{window.salesCache={stages:[{id:'stage',name:'Seguimiento'}]};window.contact={id:'manager',fullName:'Gestora'};window.opportunity={id:'a',record_id:'holder',stage_id:'stage',title:'CAMBIO VODAFONE',contract_party:{same:false,holder_record_id:'holder',manager_record_id:'manager'}};});
+ await page.addScriptTag({content:fs.readFileSync('js/modules/record-links.js','utf8')});await page.addScriptTag({content:fs.readFileSync('js/modules/contact-opportunity-list.js','utf8')});
+ await page.evaluate(()=>TPFContactOpportunityList.open(contact,[opportunity]));await expect(page.locator('.tpfOpportunityPicker tbody tr')).toHaveCount(1);
+ await page.evaluate(()=>{window.second={...opportunity,id:'b',title:'CAMBIO O2'};dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:[opportunity,second]}}))});await expect(page.locator('.tpfOpportunityPicker tbody tr')).toHaveCount(2);
+ await page.evaluate(()=>dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:[{...opportunity,contract_party:{...opportunity.contract_party,manager_record_id:'another'}},second]}})));await expect(page.locator('.tpfOpportunityPicker tbody tr')).toHaveCount(1);await expect(page.locator('.tpfOpportunityPicker tbody')).toContainText('CAMBIO O2');
+ await page.evaluate(()=>dispatchEvent(new CustomEvent('tpf:sales-updated',{detail:{opportunities:[]}})));await expect(page.locator('.tpfOpportunityPicker tbody tr')).toHaveCount(0);await expect(page.locator('.tpfPickerEmpty')).toBeVisible();
+});
