@@ -3,7 +3,15 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 
 const cards=fs.readFileSync('js/modules/whatsapp-green-core.js','utf8');
-assert.match(cards,/compact\?"openOpportunityFull":"openOpportunityCard"/,'La ficha del contacto debe abrir el editor de la oportunidad');
+const vm=require('node:vm');
+const cardSource=cards.slice(cards.indexOf('function oppUnifiedCard('),cards.indexOf('\nfunction hydrateOpportunityStageNames'));
+const cardContext={esc:String,fmtMoney:String,fmtDateOnly:String,oppStageName:()=>'',oppIsExpired:()=>false,salesCache:{stages:[]},window:{}};
+vm.createContext(cardContext);vm.runInContext(cardSource,cardContext);
+for(const compact of [false,true]){
+ const html=cardContext.oppUnifiedCard({id:'sale',title:'Oferta'},{compact});
+ assert.match(html,/openOpportunityFull\('sale'\)/,'La tarjeta debe abrir la ficha de la oportunidad');
+ assert.doesNotMatch(html,/openOpportunityCard/,'Editar debe ser una acción explícita dentro de la ficha');
+}
 assert.match(cards,/WA_SHARED_SYNC_MS=15000/,'Los dos equipos deben actualizar sin depender de la cola de avisos');
 assert.match(cards,/if\(waSharedSyncBusy\)return/,'La sincronización no debe solapar peticiones');
 
