@@ -11,7 +11,7 @@ async function fixture(page,status='accepted',realRouter=false,processing=true){
   window.TPFOfferFollowup={state:{offers:[x]},summary(){return{label:'Sin envíos pendientes',age:'Enviada hace 19 días',next:'Sin recordatorio pendiente'}},htmlOffer(){return '<p>Seguimiento registrado</p>'},async load(){return this.state}};
   window.TPFControlWhatsappOffer=async()=>true;
   window.TPFRouterReturn={async preview(){return{available:true}},bind(root,data,opts){window.__fixture.send=opts.preferences.send;root.innerHTML='<label>Compañía anterior<select data-previous><option>Orange</option></select></label><label>Mensaje<textarea data-text>Hola Ana, avísanos cuando te instalen la fibra.</textarea></label><label><input type="checkbox" checked>Enviar al cliente</label>';return{get(){return{send:true,text:root.querySelector('textarea').value,previous_operator:'Orange'}},async saveTemplate(){}}}};
-  window.sb.rpc=async(name,args)=>{window.__fixture.rpc={name,args};return{data:name==='crm_offer_pause_preview'?{resume_at:'2026-10-12T10:45:00Z'}:{available:true,text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos.',recipient:'Ana',phone:'600000000',operator:'Vodafone'}}};
+  window.sb.rpc=async(name,args)=>{window.__fixture.rpc={name,args};if(name==='crm_set_previous_operator'){if(window.__fixture.conflict)return{error:{message:'La oferta cambió en otro dispositivo'}};window.__fixture.writes++;Object.assign(o,{previous_operator:args.p_previous_operator||null,after_sale_preferences:{...o.after_sale_preferences,previous_operator:args.p_previous_operator},updated_at:'saved-op-version'});Object.assign(x,{snapshot:{...x.snapshot,previous_operator_override:args.p_previous_operator},updated_at:'saved-offer-version'});return{data:{opportunity:o,offer:x}};}return{data:name==='crm_offer_pause_preview'?{resume_at:'2026-10-12T10:45:00Z'}:{available:true,text:'Hola Ana 👋\n\nCuando te instalen la fibra, avísanos.',recipient:'Ana',phone:'600000000',operator:'Vodafone'}}};
   window.openContact=()=>{};window.openOpportunityFull=()=>{};
   document.addEventListener('click',e=>{if(e.target.closest('[data-of-close]'))e.target.closest('dialog').close()});
  },status);
@@ -59,7 +59,7 @@ test('custom and indefinite pauses preserve the form when calculation or save fa
 
 test('editing the previous company preserves the sent offer and supports clearing and reopen',async({page})=>{
  await fixture(page,'following');await page.getByRole('button',{name:'Editar compañía anterior'}).click();await page.locator('#ofPreviousInput').fill('Lowi');await page.getByRole('button',{name:'Guardar compañía',exact:true}).click();await expect(page.locator('[data-previous-label]')).toHaveText('Lowi');await expect(page.locator('[data-previous-status]')).toHaveText('Compañía guardada');
- expect(await page.evaluate(()=>window.__fixture.x.message_text)).toBe('Oferta enviada original');expect(await page.evaluate(()=>window.__fixture.o.after_sale_preferences.previous_operator)).toBe('Orange');
+ expect(await page.evaluate(()=>window.__fixture.x.message_text)).toBe('Oferta enviada original');expect(await page.evaluate(()=>window.__fixture.o.after_sale_preferences.previous_operator)).toBe('Lowi');
  await page.getByRole('button',{name:'Volver al listado'}).click();await expect(page.locator('dialog')).toHaveCount(0);await page.evaluate(()=>window.TPFHomeManage.open('offer'));await expect(page.locator('[data-previous-label]')).toHaveText('Lowi');await page.getByRole('button',{name:'Editar compañía anterior'}).click();await page.locator('#ofPreviousInput').fill('');await page.getByRole('button',{name:'Guardar compañía',exact:true}).click();await expect(page.locator('[data-previous-label]')).toHaveText('Sin indicar');
  await page.getByRole('button',{name:'Pausar seguimiento',exact:true}).click();await page.locator('[name=reason]').fill('Revisar después');await page.getByRole('button',{name:'Guardar pausa',exact:true}).click();expect(await page.evaluate(()=>window.__fixture.rpc.args.p_expected_at)).toBe('saved-version');
 });
@@ -147,3 +147,4 @@ test('Saved preferences and stale Tramitado cache still require an explicit new 
  await page.getByRole('button',{name:'Confirmar tramitación',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>window.preparation?.stage_id)).toBe('processed');
 });
+

@@ -1580,3 +1580,29 @@ body.tpfUnified #opportunityFullPage .oppReadNotes h3{margin-bottom:6px}
 body.tpfUnified #opportunityFullPage #oppFullFollowupAudit{margin-top:0}
 @media(max-width:700px){body.tpfUnified #opportunityFullPage .oppFullShell{padding:12px 10px 80px}body.tpfUnified #opportunityFullPage .oppFullPrimaryActions{width:100%}body.tpfUnified #opportunityFullPage .oppFullTop button,body.tpfUnified #opportunityFullPage #oppFullManage,body.tpfUnified #opportunityFullPage .oppContractActions button{min-height:44px}body.tpfUnified #opportunityFullPage .oppContractPerson{padding:9px 12px}}
 @media(max-width:800px){body.tpfUnified #opportunityFullPage{z-index:1001}}
+
+/* Opportunity: compact header, one editable facts block, secondary actions in a menu. */
+body.tpfUnified #opportunityFullPage .oppFullTop{display:flex!important;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px!important}
+body.tpfUnified #opportunityFullPage #oppFullTitle{font-size:24px;line-height:1.2;margin:0!important;flex:1;min-width:160px}
+body.tpfUnified #opportunityFullPage .oppFullTop>.row:empty{display:none}
+body.tpfUnified #opportunityFullPage .oppFullHeading[hidden]{display:none!important}
+body.tpfUnified #opportunityFullPage .oppReadStage{white-space:nowrap;padding:5px 9px;font-size:12px}
+body.tpfUnified #oppFullMore{position:relative;flex:none}
+body.tpfUnified #oppFullMore>summary{cursor:pointer;list-style:none;padding:9px 12px;border:1px solid #d9e1eb;border-radius:8px;font-size:13px;background:white}
+body.tpfUnified .oppFullMoreItems{position:absolute;right:0;top:100%;z-index:5;display:flex;flex-direction:column;gap:4px;background:white;border:1px solid #d9e1eb;border-radius:8px;padding:8px;min-width:220px;box-shadow:0 8px 20px #14284320}
+body.tpfUnified #oppFullMore:not([open]) .oppFullMoreItems{display:none}
+body.tpfUnified .oppFullMoreItems button{width:100%;text-align:left;margin:0!important}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics{border:1px solid #dce3ed;background:#fff;border-radius:10px;gap:0!important;overflow:visible}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics .oppField{position:relative;border:0;border-radius:0!important;box-shadow:none;background:transparent!important;padding:10px 30px 10px 12px!important;min-height:66px;border-bottom:1px solid #eef1f6}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics .oppField>span{font-size:11px;letter-spacing:.02em}
+body.tpfUnified #opportunityFullPage .oppSummaryMetrics .oppField>strong{font-size:16px;line-height:1.35}
+body.tpfUnified .oppInlineEdit{position:absolute;right:4px;top:8px;padding:4px 6px;min-width:26px;min-height:30px;border:0;background:transparent;color:#3766a4;cursor:pointer}
+body.tpfUnified .oppInlineForm{position:relative;grid-column:1/-1;margin-top:8px}
+body.tpfUnified .oppInlineForm label{display:block;font-size:12px}
+body.tpfUnified .oppInlineForm input{display:block;max-width:100%;width:100%;padding:7px;margin:4px 0 8px}
+body.tpfUnified .oppInlineForm>div{display:flex;flex-wrap:wrap;gap:5px}
+body.tpfUnified .oppInlineForm button{font-size:12px;padding:6px 9px}
+body.tpfUnified .oppInlineForm p{font-size:12px;margin:6px 0;color:#9f341e}
+body.tpfUnified #opportunityFullPage .oppReadOrigin>summary{cursor:pointer;font-weight:600}
+@media(max-width:800px){body.tpfUnified #opportunityFullPage .oppFullTop>#oppFullTitle{order:-2;flex-basis:100%}body.tpfUnified #opportunityFullPage .oppInlineEdit{min-height:44px;min-width:36px;top:2px}body.tpfUnified #opportunityFullPage .oppFullPrimaryActions{flex:1}body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+body.tpfUnified #waQuickModal{z-index:1003!important}

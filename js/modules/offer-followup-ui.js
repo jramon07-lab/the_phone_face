@@ -108,10 +108,11 @@ async function openConversation(id,supplied){
  if(!opportunity)throw Error('La oportunidad ya no está disponible. Actualiza el panel.');
  let phone=conversationPhone(opportunity).replace(/\D/g,'');if(phone.startsWith('00'))phone=phone.slice(2);if(phone.length===9)phone='34'+phone;
  if(!/^[1-9][0-9]{7,14}$/.test(phone))throw Error('El destinatario no tiene un teléfono válido.');
+ if(window.TPFLinkedActions?.open)return window.TPFLinkedActions.open('conversation',{phone,name:opportunity.contract_party?.recipient_name||opportunity.client_name,contactId:opportunity.contract_party?.recipient_contact_id||opportunity.record_id});
  const nav=document.querySelector('.nav[data-view="whatsapplive"]');
  if(!nav||typeof window.selectWhatsAppChat!=='function')throw Error('WhatsApp no está disponible. Actualiza y vuelve a intentarlo.');
  if(!salesConversationOrigin){salesConversationOrigin={view:document.querySelector('.nav[data-view="sendcontrol"].active')?'sendcontrol':document.getElementById('view-dashboard')&&!document.getElementById('view-dashboard').classList.contains('hidden')?'dashboard':'sales',screen:window.tpfCaptureCurrentScreen?.()||null,historyLength:Array.isArray(window.__TPF_HISTORY)?window.__TPF_HISTORY.length:null,scroll:Object.fromEntries(['salesListView','salesListRows','salesScroll','view-sales','view-dashboard','ccPanel'].map(id=>{const el=document.getElementById(id);return [id,{top:el?.scrollTop||0,left:el?.scrollLeft||0}]}))};}
- nav.click();showConversationReturn();
+ document.getElementById('opportunityFullPage')?.classList.add('hidden');nav.click();showConversationReturn();
  await window.selectWhatsAppChat(phone+'@c.us');
 }
 
@@ -141,3 +142,4 @@ window.TPFOfferFollowup={quickActions,quickAction,homeOffer,homeActions,homeSumm
 if(typeof sb!=='undefined')sb.auth?.onAuthStateChange?.(event=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){F.revision++;if(event==='SIGNED_OUT'){try{window.sessionStorage?.removeItem('tpf-followup-filters')}catch(_){}F.filter='all';F.homeFilter='all';F.order=''}F.offers=[];F.jobs=[];F.responses=[];F.byOpportunity=new Map();F.loaded=false;F.error='';F.at=0;}});
 if(window.TPFModules)window.TPFModules.register('offer-followup-ui',{install});
 })();
+

@@ -1,0 +1,27 @@
+const fs=require('fs'),assert=require('assert/strict');
+const {PGlite}=require('@electric-sql/pglite');
+(async()=>{
+ const db=new PGlite();await db.exec(`create role anon;create role authenticated;create schema auth;
+ create function auth.uid() returns uuid language sql as 'select nullif(current_setting(''test.uid'',true),'''')::uuid';
+ create function public.current_user_is_admin() returns boolean language sql as 'select false';
+ create function public.current_user_can(text) returns boolean language sql as 'select coalesce(current_setting(''test.can'',true),'''')=''yes''';
+ create table sales_opportunities(id uuid primary key,previous_operator text,after_sale_preferences jsonb,updated_at timestamptz);
+ create table crm_offer_instances(id uuid primary key,opportunity_id uuid,snapshot jsonb,updated_at timestamptz);
+ create table crm_installations(opportunity_id uuid);
+ grant usage on schema auth to authenticated;grant select,update on sales_opportunities,crm_offer_instances to authenticated;grant select on crm_installations to authenticated;
+ alter table sales_opportunities enable row level security;alter table crm_offer_instances enable row level security;
+ create policy opportunity_access on sales_opportunities to authenticated using(id=auth.uid()) with check(id=auth.uid());
+ create policy offer_access on crm_offer_instances to authenticated using(opportunity_id=auth.uid()) with check(opportunity_id=auth.uid());
+ insert into sales_opportunities values('10000000-0000-0000-0000-000000000001',null,'{"keep":"yes"}','2026-10-07');
+ insert into crm_offer_instances values('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000001','{"message":"unchanged","previous_operator_override":"O2"}','2026-10-07');`);
+ await db.exec(fs.readFileSync('supabase/migrations/20261007100000_previous_operator_consistency.sql','utf8').replace("notify pgrst,'reload schema';",''));
+ const call="select crm_set_previous_operator('10000000-0000-0000-0000-000000000001','2026-10-07','MásMóvil','20000000-0000-0000-0000-000000000001','2026-10-07') as saved";
+ assert.equal((await db.query("select has_function_privilege('anon','crm_set_previous_operator(uuid,timestamptz,text,uuid,timestamptz)','execute') as allowed")).rows[0].allowed,false);
+ await assert.rejects(db.exec(call),/permiso/);await db.exec("set role authenticated;set test.uid='10000000-0000-0000-0000-000000000001';set test.can='yes'");
+ await assert.rejects(db.exec(call.replace("'2026-10-07')","'2026-10-06')")),/oferta cambió/);
+ assert.equal((await db.query('select previous_operator from sales_opportunities')).rows[0].previous_operator,null);
+ const saved=(await db.query(call)).rows[0].saved;assert.equal(saved.opportunity.previous_operator,'MásMóvil');assert.equal(saved.opportunity.after_sale_preferences.keep,'yes');assert.equal(saved.offer.snapshot.previous_operator_override,'MásMóvil');assert.equal(saved.offer.snapshot.message,'unchanged');
+ await assert.rejects(db.exec(call),/oportunidad cambió/);
+ await db.exec("reset role;update sales_opportunities set updated_at='2026-10-07';update crm_offer_instances set updated_at='2026-10-07';insert into crm_installations values('10000000-0000-0000-0000-000000000001');set role authenticated;");await assert.rejects(db.exec(call),/instalación/);
+ await db.close();console.log('PASS atomic previous operator consistency, stale versions, installation guard, RLS, permissions and preserved messages');
+})().catch(e=>{console.error(e);process.exit(1)});
