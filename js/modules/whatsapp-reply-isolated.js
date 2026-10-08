@@ -54,22 +54,24 @@ M.register('whatsapp-reply-isolated',{install(){
   function clearReply(){selected=null;document.getElementById('tpfReplyBar')?.remove()}
   window.addEventListener('tpf:wa-chat-changing',clearReply);
   async function sendQuoted(){
-    if(!selected||busy)return false;
+    if(!selected)return false;
+    if(busy||waLiveState?.composerSending)return true;
     const chat=waLiveState?.selected,text=document.getElementById('waComposerText')?.value.trim();if(!chat||!text)return false;
     const quote=selected;
-    busy=true;const btn=document.getElementById('waComposerSend'),msg=document.getElementById('waComposerMsg');if(btn)btn.disabled=true;if(msg)msg.textContent='Enviando…';
+    busy=true;waLiveState.composerSending=true;let accepted=false;const btn=document.getElementById('waComposerSend'),msg=document.getElementById('waComposerMsg');if(btn)btn.disabled=true;if(msg)msg.textContent='Enviando…';
     try{
       const r=await fetch('/api/green-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chatId:chat.id,message:text,quotedMessageId:selected.idMessage,replyReminder:window.TPFReplyReminders?.get("waComposerText")})});
       const j=await r.json().catch(()=>({}));if(!r.ok||j.ok===false)throw new Error(j.error||`Error ${r.status}`);
-      window.TPFReplyReminders?.sent("waComposerText",j,chat.id);
+      accepted=true;
       const sameChat=waLiveState.selected?.id===chat.id;
       if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
       if(sameChat){if(document.getElementById('waComposerText').value.trim()===text)document.getElementById('waComposerText').value='';if(msg)msg.textContent='Enviado'}
+      try{window.TPFReplyReminders?.sent('waComposerText',j,chat.id);}catch(error){console.warn('El mensaje se confirmó; no se pudo actualizar el aviso.',error);}
       const localMsg={type:'outgoing',outgoing:true,idMessage:j.idMessage||('local-'+Date.now()),timestamp:Math.floor(Date.now()/1000),typeMessage:'quotedMessage',extendedTextMessage:{text,stanzaId:quote.idMessage,participant:chat.id},messageData:{typeMessage:'quotedMessage',extendedTextMessageData:{text,stanzaId:quote.idMessage,participant:chat.id}},statusMessage:'sent',sendByApi:true};
       try{if(sameChat)waPushLiveMessage(localMsg,true);waRememberLivePreview(chat.id,localMsg);renderWhatsAppChats()}catch(_){}
       if(selected===quote)clearReply();setTimeout(()=>{if(msg&&waLiveState.selected?.id===chat.id)msg.textContent=''},1800);return true;
-    }catch(e){if(msg&&waLiveState.selected?.id===chat.id)msg.textContent=e.message||'No se pudo enviar.';return true}
-    finally{busy=false;if(btn)btn.disabled=false}
+    }catch(e){if(msg&&waLiveState.selected?.id===chat.id)msg.textContent=accepted?'Envío confirmado. Actualiza la conversación; no repitas el envío.':e.message||'No se pudo enviar.';return true}
+    finally{busy=false;waLiveState.composerSending=false;if(btn)btn.disabled=false}
   }
   window.tpfWhatsAppQuotedReply=()=>selected;
   document.addEventListener('click',e=>{if(e.target?.id==='waComposerSend'&&selected){e.preventDefault();e.stopImmediatePropagation();sendQuoted()}},true);

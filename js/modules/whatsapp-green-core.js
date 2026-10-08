@@ -981,19 +981,23 @@ function waPushLiveMessage(msg,scrollBottom=true){
 }
 
 async function sendWaLiveMessage(){
+  if(waLiveState.composerSending)return;
   const chat=waLiveState.selected;
   const text=$("waComposerText").value.trim();
   if(!chat||!text)return;
+  waLiveState.composerSending=true;
+  let accepted=false;
   $("waComposerSend").disabled=true;
   $("waComposerMsg").textContent="Enviando…";
   try{
     const r=await waApi("send",{chatId:chat.id,message:text,manualReply:true,replyReminder:globalThis.TPFReplyReminders?.get("waComposerText")});
-    globalThis.TPFReplyReminders?.sent("waComposerText",r,chat.id);
+    accepted=true;
     if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
     if(waLiveState.selected?.id===chat.id){
       if($("waComposerText").value.trim()===text)$("waComposerText").value="";
       $("waComposerMsg").textContent=r.scheduled?"Programado para "+new Date(r.scheduledAt).toLocaleString("es-ES",{timeZone:"Europe/Madrid"}):"Enviado";
     }
+    try{globalThis.TPFReplyReminders?.sent("waComposerText",r,chat.id);}catch(error){console.warn('El mensaje se confirmó; no se pudo actualizar el aviso.',error);}
     if(r.scheduled)return;
     const localMsg={
       type:"outgoing",
@@ -1009,8 +1013,8 @@ async function sendWaLiveMessage(){
     renderWhatsAppChats();
     setTimeout(()=>{if(waLiveState.selected?.id===chat.id)$("waComposerMsg").textContent=""},1800);
   }catch(e){
-    if(waLiveState.selected?.id===chat.id)$("waComposerMsg").textContent=e.message||"No se pudo enviar.";
-  }finally{$("waComposerSend").disabled=false}
+    if(waLiveState.selected?.id===chat.id)$("waComposerMsg").textContent=accepted?"Envío confirmado. Actualiza la conversación; no repitas el envío.":e.message||"No se pudo enviar.";
+  }finally{waLiveState.composerSending=false;$("waComposerSend").disabled=false}
 }
 
 let waLastHistoryFallback=0;
