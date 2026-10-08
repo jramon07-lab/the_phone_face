@@ -234,7 +234,7 @@ function clearScheduledDraft(context,values){
   if(state.drafts?.[chatId]===original)delete state.drafts[chatId];
   const composer=$('waComposerText');
   if(state.selected?.id===chatId&&composer?.value===original){
-    window.TPFReplyReminders?.reset('waComposerText');
+    globalThis.TPFReplyReminders?.reset('waComposerText');
     composer.value='';
     composer.dispatchEvent(new Event('input',{bubbles:true}));
   }

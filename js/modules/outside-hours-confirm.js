@@ -31,7 +31,8 @@ function classify(url,method,body,now=new Date()){
  const target=agenda?body.whatsapp_scheduled_at:body?.p_send_at;
  const date=target&&Number.isFinite(Date.parse(target))?new Date(target):now,next=nextWindow(date);
  if(!next)return null;
- return {direct,rpc,agenda,name,next:next.toISOString(),at:date.toISOString(),scheduled:!!target,label:body?.p_welcome?'Bienvenida':direct?'WhatsApp':'Mensaje al cliente',message:body?.message||body?.p_message_text||body?.p_group_message||body?.whatsapp_message||body?.p_patch?.text||''};
+ const queueable=direct&&url.pathname==='/api/green'&&url.searchParams.get('action')==='send'&&typeof body?.message==='string'&&body.message.trim()&&/^\d+@c\.us$/.test(body?.chatId||'')&&!body?.quotedMessageId;
+ return {direct,queueable:!!queueable,rpc,agenda,name,next:next.toISOString(),at:date.toISOString(),scheduled:!!target,label:body?.p_welcome?'Bienvenida':direct?'WhatsApp':'Mensaje al cliente',message:body?.message||body?.p_message_text||body?.p_group_message||body?.whatsapp_message||body?.p_patch?.text||''};
 }
 let dialogQueue=Promise.resolve();
 function choose(info){const pending=dialogQueue.then(()=>new Promise(resolve=>{
@@ -46,12 +47,29 @@ function choose(info){const pending=dialogQueue.then(()=>new Promise(resolve=>{
   d.querySelector('[data-choice=next]').textContent='Programar para '+format(info.next);
  }
  if(info.message){d.querySelector('pre').hidden=false;d.querySelector('pre').textContent=info.message;}
- // Direct provider requests have no durable queue. Never pretend they were scheduled.
- d.querySelector('[data-choice=next]').hidden=info.direct;
+ d.querySelector('[data-choice=next]').hidden=info.direct&&!info.queueable;
+ if(info.direct&&info.queueable)d.querySelector('[data-choice=next]').textContent='Programar para '+format(info.next);
  let finished=false;const finish=value=>{if(finished)return;finished=true;d.close();d.remove();resolve(value);};
  d.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>finish(b.dataset.choice));d.addEventListener('cancel',e=>{e.preventDefault();finish('cancel');});
  document.body.appendChild(d);d.showModal();d.querySelector('[data-choice=cancel]').focus();
  }));dialogQueue=pending.catch(()=>{});return pending;}
+async function queueDirect(body,info){
+ try{
+  const client=typeof sb!=='undefined'?sb:window.sb;
+  if(!client?.from)throw new Error('No hay conexión para guardar el programado.');
+  const auth=await client.auth.getUser();if(auth.error)throw auth.error;
+  if(!auth.data?.user?.id)throw new Error('Inicia sesión para programar el WhatsApp.');
+  if(body.replyReminder?.at&&Date.parse(body.replyReminder.at)<=Date.parse(info.next))throw new Error('El aviso debe ser posterior al envío programado. Cambia la fecha del aviso.');
+  const phone=body.chatId.replace('@c.us','');
+  const row={title:'WhatsApp programado',customer_phone:phone,starts_at:info.next,assigned_to:auth.data.user.id,status:'pending',whatsapp_enabled:true,whatsapp_phone:phone,whatsapp_message:body.message,whatsapp_scheduled_at:info.next,whatsapp_reply_reminder:body.replyReminder||null};
+  const saved=await client.from('agenda_items').insert(row).select('id,whatsapp_phone,whatsapp_message,whatsapp_scheduled_at').single();
+  if(saved.error)throw saved.error;
+  const record=saved.data;
+  if(!record?.id||record.whatsapp_phone!==phone||record.whatsapp_message!==body.message||Date.parse(record.whatsapp_scheduled_at)!==Date.parse(info.next))throw new Error('No se ha confirmado el guardado. Revisa Programados antes de intentarlo otra vez.');
+  try{if(typeof loadWhatsappPrograms==='function')loadWhatsappPrograms();}catch(_){}
+  return Response.json({ok:true,scheduled:true,scheduleId:record.id,scheduledAt:record.whatsapp_scheduled_at});
+ }catch(e){return Response.json({ok:false,error:(e.message||'No se pudo confirmar el programado.')+' Revisa Programados antes de intentarlo otra vez.'},{status:409});}
+}
 const scheduleChoices=new Map();
 const api={nextWindow,classify,choose,consumeScheduleChoice(original,saved){
  const key=new Date(original).toISOString(),chosen=scheduleChoices.get(key);
@@ -67,6 +85,10 @@ window.fetch=async function(input,init){
  const info=classify(url,method,body);if(!info)return nativeFetch(input,init);
  const decision=await api.choose(info);
  if(decision==='cancel')return new Response(JSON.stringify({ok:false,code:'TPF_SEND_CANCELLED',error:'Envío cancelado. No se ha guardado ni enviado.',message:'Envío cancelado. No se ha guardado ni enviado.'}),{status:409,headers:{'content-type':'application/json'}});
+ if(info.direct&&decision==='next'){
+  if(!info.queueable)return Response.json({ok:false,error:'Este tipo de mensaje no admite programación desde aquí.'},{status:409});
+  return queueDirect(body,info);
+ }
  const headers=new Headers(init?.headers||request?.headers);if(info.rpc)headers.set(HEADER,(headers.get(HEADER)||'')+' tpf-outside-hours='+decision);
  if(info.scheduled||info.agenda){const target=info.name==='crm_create_offer_with_reply_reminder'?body.p_args:body,key=info.agenda?'whatsapp_scheduled_at':'p_send_at';target[key]=decision==='next'?info.next:info.at;if(info.agenda)target.starts_at=target[key];raw=JSON.stringify(body);}
  const options={...init,method,headers,...(raw!==undefined?{body:raw}:{})};

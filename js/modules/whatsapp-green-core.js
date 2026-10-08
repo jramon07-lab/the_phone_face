@@ -992,8 +992,9 @@ async function sendWaLiveMessage(){
     if(waLiveState.drafts?.[chat.id]?.trim()===text)delete waLiveState.drafts[chat.id];
     if(waLiveState.selected?.id===chat.id){
       if($("waComposerText").value.trim()===text)$("waComposerText").value="";
-      $("waComposerMsg").textContent="Enviado";
+      $("waComposerMsg").textContent=r.scheduled?"Programado para "+new Date(r.scheduledAt).toLocaleString("es-ES",{timeZone:"Europe/Madrid"}):"Enviado";
     }
+    if(r.scheduled)return;
     const localMsg={
       type:"outgoing",
       outgoing:true,
