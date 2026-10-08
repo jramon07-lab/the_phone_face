@@ -14,12 +14,19 @@ async function automaticMessageIds(chatId,since,history){
  if(!ids.length)return new Set();
  const [jobs,scheduled,absence]=await Promise.all([
   db('crm_server_automation_jobs?action_config->__delivery_receipt->>chatId=eq.'+encodeURIComponent(chatId)+'&updated_at=gte.'+encodeURIComponent(since)+'&select=action_config&limit=100'),
-  db('agenda_items?whatsapp_provider_message_id=in.('+ids.join(',')+')&select=whatsapp_provider_message_id&limit=100'),
+  db('agenda_items?whatsapp_provider_message_id=in.('+ids.join(',')+')&select=whatsapp_provider_message_id,title,agenda_meta,crm_actor_kind,crm_created_by,created_by&limit=100'),
   db('crm_whatsapp_reply_receipts?chat_id=eq.'+encodeURIComponent(chatId)+'&sent_at=gte.'+encodeURIComponent(since)+'&select=outgoing_id&limit=100')
  ]);
  // A bounded, full result is not proof that there are no more automatic receipts.
  if([jobs,scheduled,absence].some(rows=>rows.length>=100))throw Error('Historial automático incompleto.');
- return new Set([...jobs.map(j=>j.action_config?.__delivery_receipt?.idMessage),...scheduled.map(j=>j.whatsapp_provider_message_id),...absence.map(j=>j.outgoing_id)].filter(Boolean).map(String));
+ return new Set([...jobs.map(j=>j.action_config?.__delivery_receipt?.idMessage),...scheduled.filter(j=>!C.humanSchedule(j)).map(j=>j.whatsapp_provider_message_id),...absence.map(j=>j.outgoing_id)].filter(Boolean).map(String));
+}
+async function recentHumanSchedule(row,now){
+ const phone=String(row.chat_id).split('@')[0],phones=phone.startsWith('34')&&phone.length===11?[phone,phone.slice(2)]:[phone];
+ const rows=await db('agenda_items?whatsapp_enabled=eq.true&whatsapp_phone=in.('+phones.join(',')+')&whatsapp_delivery_status=eq.sent&whatsapp_sent_at=gte.'+encodeURIComponent(new Date(Number(row.ts)*1000-7200000).toISOString())+'&whatsapp_sent_at=lte.'+encodeURIComponent(now.toISOString())+'&select=title,agenda_meta,crm_actor_kind,crm_created_by,created_by&limit=100');
+ // Incomplete evidence must never trigger a competing absence response.
+ if(rows.length>=100)throw Error('Historial de programados incompleto.');
+ return rows.some(C.humanSchedule);
 }
 async function run(){
  if(process.env.VERCEL_ENV!=='production')return {skipped:'Solo producción'};
@@ -43,7 +50,7 @@ async function run(){
   // Don't send a stale acknowledgement after the team has already answered.
   const outgoing=await db('wa_messages?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&direction=eq.out&ts=gte.'+Number(row.ts)+'&select=id&limit=1');if(outgoing.length)continue;
   // Keep a human conversation open for two hours after an accepted manual send.
-  const recentManual=await db('crm_whatsapp_manual_activity?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&last_sent_at=gte.'+encodeURIComponent(new Date(Number(row.ts)*1000-7200000).toISOString())+'&last_sent_at=lte.'+encodeURIComponent(now.toISOString())+'&select=chat_id&limit=1');if(recentManual.length)continue;
+  const recentManual=await db('crm_whatsapp_manual_activity?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&last_sent_at=gte.'+encodeURIComponent(new Date(Number(row.ts)*1000-7200000).toISOString())+'&last_sent_at=lte.'+encodeURIComponent(now.toISOString())+'&select=chat_id&limit=1');if(recentManual.length||await recentHumanSchedule(row,now))continue;
   // Check disabled/edited state again before every claim.
   const [fresh]=await db('crm_whatsapp_reply_settings?id=eq.1&select=enabled,updated_at');if(!fresh?.enabled||fresh.updated_at!==config.updated_at)break;
   const key=crypto.createHash('sha256').update(row.chat_id+'|'+period).digest('hex');
@@ -66,7 +73,7 @@ async function run(){
   // Provider reads can take seconds. Recheck a reply made while we were checking.
   const latestManual=await db('crm_whatsapp_manual_activity?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&last_sent_at=gte.'+encodeURIComponent(new Date(Number(row.ts)*1000-7200000).toISOString())+'&select=chat_id&limit=1');
   const latestOutgoing=await db('wa_messages?chat_id=eq.'+encodeURIComponent(row.chat_id)+'&direction=eq.out&ts=gte.'+Number(row.ts)+'&select=id&limit=1');
-  if(latestManual.length||latestOutgoing.length)continue;
+  if(latestManual.length||latestOutgoing.length||await recentHumanSchedule(row,new Date()))continue;
   let claim;try{claim=await db('crm_whatsapp_reply_receipts?on_conflict=dedupe_key','POST',{dedupe_key:key,chat_id:row.chat_id,incoming_id:row.id_message,closure:period,status:'reserved'},'resolution=ignore-duplicates,return=representation');}catch(e){throw e;}if(!claim?.length)continue;
   // A reserved/uncertain attempt is never automatically resent: a timeout may still have delivered it.
   try{

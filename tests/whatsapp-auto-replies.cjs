@@ -16,13 +16,14 @@ assert(C.eligible(row,date,'2026-09-26T20:00:00Z'));
 for(const patch of [{direction:'out'},{type_message:'audioMessage'},{chat_id:'1@g.us'},{ts:date/1000-600},{text_content:'Me interesa'}])assert(!C.eligible({...row,...patch},date,'2026-09-26T20:00:00Z'));
 const RealDate=Date;global.Date=class extends RealDate{constructor(...args){super(...(args.length?args:['2026-09-26T21:20:00Z']))}static now(){return date.getTime()}};
 Object.assign(process.env,{SUPABASE_SERVICE_ROLE_KEY:'test-service',GREEN_API_INSTANCE_ID:'test',GREEN_API_TOKEN:'test-token',CRON_SECRET:'test-cron',VERCEL_ENV:'production'});
-const handler=require('../api/whatsapp-auto-replies');let records=new Map(),sends=0,fail=false,answered=false,phoneAnswered=false,historyFails=false,historyMissing=false,transactional=false,rpcFails=false,recentManual=false,previousReply=false,automatic=false,classificationFails=false;
+const handler=require('../api/whatsapp-auto-replies');let records=new Map(),sends=0,fail=false,answered=false,phoneAnswered=false,historyFails=false,historyMissing=false,transactional=false,rpcFails=false,recentManual=false,previousReply=false,automatic=false,classificationFails=false,scheduledHuman=false,scheduleFails=false,scheduledAuto=false,scheduledLate=false,scheduleReads=0;
 global.fetch=async(url,opts={})=>{let value=[];const path=url.split('/rest/v1/')[1];
  if(path?.startsWith('crm_whatsapp_reply_settings'))value=[{...C.DEFAULTS,enabled:true,enabled_since:'2026-09-26T20:00:00Z',updated_at:'v1'}];
  else if(path==='rpc/crm_whatsapp_transactional_replies'){if(rpcFails)throw Error('classification unavailable');value=transactional?[{incoming_id:row.id_message}]:[];}
  else if(path?.startsWith('crm_whatsapp_manual_activity'))value=recentManual?[{chat_id:row.chat_id}]:[];
  else if(path?.startsWith('crm_server_automation_jobs?')){if(classificationFails)throw Error('automatic receipts unavailable');value=automatic?[{action_config:{__delivery_receipt:{idMessage:'previous-outgoing'}}}]:[];}
- else if(path?.startsWith('agenda_items?whatsapp_provider_message_id'))value=[];
+ else if(path?.startsWith('agenda_items?whatsapp_provider_message_id'))value=scheduledHuman?[{whatsapp_provider_message_id:'previous-outgoing',crm_actor_kind:'user'}]:[];
+ else if(path?.startsWith('agenda_items?whatsapp_enabled')){if(scheduleFails)throw Error('schedule history unavailable');scheduleReads++;value=scheduledHuman||(scheduledLate&&scheduleReads>=2)?[{crm_actor_kind:'user',agenda_meta:{}}]:scheduledAuto?[{crm_actor_kind:'system',agenda_meta:{source:'automation'}}]:[];assert(path.includes('whatsapp_delivery_status=eq.sent'));assert(path.includes('whatsapp_sent_at=gte.'+encodeURIComponent(new Date(row.ts*1000-7200000).toISOString())));assert(path.includes('whatsapp_sent_at=lte.'+encodeURIComponent(date.toISOString())));assert(path.includes('whatsapp_phone=in.(34600000001,600000001)'));}
  else if(path?.startsWith('crm_whatsapp_reply_receipts?chat_id'))value=[];
  else if(path?.startsWith('wa_messages?direction'))value=[row];
  else if(path?.startsWith('wa_messages?chat_id'))value=answered?[{id:1}]:[];
@@ -50,6 +51,15 @@ const call=async(secret='test-cron')=>{const result={setHeader(){},status(n){thi
  records.clear();previousReply=true;await call();assert.equal(sends,5,'quoted reply BEFORE incoming still suppresses absence when the manual activity receipt is missing');assert.equal(records.size,0);
  classificationFails=true;await call();assert.equal(sends,5,'unavailable automatic classification fails closed without sending');classificationFails=false;
  automatic=true;await call();assert.equal(sends,6,'positively identified automatic traffic does not open a human conversation');
+ records.clear();automatic=false;previousReply=false;scheduledHuman=true;await call();assert.equal(sends,6,'sent human schedule before incoming prevents absence even when provider history lacks it');assert.equal(records.size,0);
+ scheduledHuman=false;scheduleFails=true;await call();assert.equal(sends,6,'missing schedule classification never sends absence');scheduleFails=false;
+ scheduledLate=true;scheduleReads=0;await call();assert.equal(sends,6,'schedule delivered while history is checked suppresses absence at final recheck');scheduledLate=false;
+ scheduledAuto=true;await call();assert.equal(sends,7,'system-created schedule does not suppress ordinary absence');scheduledAuto=false;
+ assert(C.humanSchedule({crm_actor_kind:'user',agenda_meta:{}}));
+ assert(C.humanSchedule({crm_created_by:'fixture-user'}));
+ assert(C.humanSchedule({created_by:'fixture-user',title:'WhatsApp programado'}),'legacy personal schedule');
+ assert(!C.humanSchedule({crm_actor_kind:'system',created_by:'fixture-user',title:'WhatsApp programado'}));
+ assert(!C.humanSchedule({crm_actor_kind:'user',agenda_meta:{source:'automation'}}));
  const history=[{idMessage:'human',type:'outgoing',timestamp:row.ts-65,sendByApi:false,statusMessage:'read'}];
  assert(C.recentConversation(history,row,date),'native-phone manual answer before incoming suppresses absence');
  assert(C.recentConversation([{...history[0],sendByApi:true,typeMessage:'textMessage'}],row,date),'manual CRM text is protected even without its database receipt');
