@@ -31,7 +31,7 @@ state.filters.labelMode='any';check(['a','b'],['both','only-a','only-b','extra']
 state.filters.labelMode='none';check([],['neither','manager']);
 state.filters.labelMode='all';check(['a','b'],['both','extra']);
 assert.match(source,/<option value="exact">Solo tiene las etiquetas marcadas<\/option>/);
-assert.match(source,/<option value="all">Tiene las etiquetas marcadas<\/option>/);
+assert.match(source,/<option value="all">Tiene todas las marcadas<\/option>/);
 assert.match(source,/<option value="none">Sin etiquetas<\/option>/);
-assert.doesNotMatch(source,/data-mode="any"/);
+assert.match(source,/<option value="any">Tiene al menos una de las marcadas<\/option>/);
 console.log('Exact labels exclude extra labels, ignore order/duplicates, respect exclusions and preserve all/any/none.');
