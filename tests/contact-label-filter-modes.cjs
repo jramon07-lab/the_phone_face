@@ -15,12 +15,14 @@ const run=(mode,labels)=>{s.filters=api.copyFilters({labelMode:mode,labels});api
  assert.deepEqual(run('exact',['a','b']),['both']);
  assert.deepEqual(run('none',[]),['empty'],'missing catalogue entry still counts as an assigned label');
  assert.equal(run('all',[]).length,5,'no selection leaves label filtering off');
- assert.equal(api.copyFilters({labelMode:'any',labels:['a','b']}).labelMode,'all','old saved searches migrate to the agreed three modes');
+ assert.equal(api.copyFilters({labelMode:'any',labels:['a','b']}).labelMode,'any','saved searches preserve the union of selected labels');
+ assert.deepEqual(run('any',['a','b']),['both','only','other'],'one or the other includes either label, even with extras');
+ assert.deepEqual(run('any',['a']),['both','only']);
  assert.equal(api.matchesLabels([{id:'a'},{id:'b'}],{labelMode:'all',labels:['a'],excludeLabels:['b']}),false);
  // Applying again must see an assignment added since the previous full read.
  assignments.push({contact_id:'empty',label_id:'a'});await api.loadAllContactLabels(true);
  assert.deepEqual(run('exact',['a']),['only','empty']);assert.equal(reads,2);
  fail=true;await assert.rejects(api.loadAllContactLabels(true),/No se pudo leer/);
  assert.deepEqual(run('exact',['a']),['only','empty'],'failed refresh keeps last successful label snapshot');
- console.log('PASS contact labels: one/all/exact/none, unknown assignments, saved modes, exclusions and refreshed reads');
+ console.log('PASS contact labels: one/all/exact/none, unknown assignments, any/all saved modes, exclusions and refreshed reads');
 })().catch(e=>{console.error(e);process.exitCode=1;});
