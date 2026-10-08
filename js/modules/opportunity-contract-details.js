@@ -21,6 +21,8 @@ let editorToken=0,viewToken=0,editorOpportunity=null;
 function fillEditor(o){
  editorOpportunity=o||null;const token=++editorToken;
  for(const [key,id]of Object.entries(dates))if($(id))$(id).value=o?.[key]||'';
+ if($('oppModalActivation'))$('oppModalActivation').value=dateLabel(o?.installation_date||o?.contract_activation_date);
+ if($('oppActivationHelp'))$('oppActivationHelp').textContent=o?.contract_activation_date&&!o?.installation_date?'Activación del contrato indicada en el contacto':'Fecha real de instalación';
  const input=$('oppModalPreviousOperator');if(input){input.value=o?previous(o)==='Sin indicar'?'':previous(o):'';input.readOnly=false;input.dataset.originalValue=input.value;}
  $('oppPreviousManage')?.setAttribute('hidden','');
  if($('oppPreviousHint'))$('oppPreviousHint').textContent='Compañía de la que viene el cliente.';
@@ -100,6 +102,7 @@ async function decorateView(o){
  const manage=$('oppFullManage');if(manage){manage.disabled=false;manage.onclick=async()=>{manage.disabled=true;try{if(typeof window.TPFHomeManage?.openOpportunity!=='function')throw Error('La gestión no está disponible. Actualiza la página.');await window.TPFHomeManage.openOpportunity(o.id);}catch(e){alert(e.message||'No se pudo abrir la gestión.');}finally{manage.disabled=false;}};}
  const context={ready:false,installation:null,offer:null,error:false};compactHeader(root);const people=party(o),old=root.querySelector('.oppContactSummary');if(old)old.outerHTML=rolesHTML(people);
  const metrics=root.querySelector('.oppSummaryMetrics');
+ if(metrics&&o.contract_activation_date&&!o.installation_date)metrics.insertAdjacentHTML('beforeend','<div class="oppField"><span>Activación del contrato actual</span><strong>'+esc(dateLabel(o.contract_activation_date))+'</strong></div>');
  if(metrics)metrics.insertAdjacentHTML('beforeend','<div class="oppField"><span>Operador de la oferta</span><strong>'+esc(operator(o))+'</strong></div><div class="oppField"><span>Operador anterior</span><strong data-opp-previous>'+esc(previous(o))+'</strong></div><div class="oppField"><span>Fin de permanencia del terminal</span><strong>'+esc(dateLabel(o.terminal_commitment_end))+'</strong></div><div class="oppField"><span>Fin de descuento</span><strong>'+esc(dateLabel(o.discount_end_date))+'</strong></div>');
  bindActions(root,o,people);inlineFields(root,o,context);
  void completePersonData(people,o).then(()=>{if(token!==viewToken||root.dataset.opportunityId!==String(o.id))return;const roles=root.querySelector('.oppContractPeople');if(roles){const template=document.createElement('template');template.innerHTML=rolesHTML(people);roles.replaceWith(template.content.firstElementChild);bindActions(root,o,people);}}).catch(()=>{if(token===viewToken&&root.dataset.opportunityId===String(o.id)){const roles=root.querySelector('.oppContractPeople');if(roles){const warning=document.createElement('small');warning.setAttribute('role','status');warning.textContent='No se pudieron comprobar los datos que faltan en la ficha del contacto.';roles.append(warning);}}});

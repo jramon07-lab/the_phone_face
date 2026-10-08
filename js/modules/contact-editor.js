@@ -16,7 +16,7 @@ function open(){return !!session&&root()===session.root&&!session.root.classList
 function fingerprint(){
  const party=$('tpfContactParty');
  let legacy=null;try{legacy=window.TPFContactParty?.read('tpfContactParty')||null;}catch(_){}
- return JSON.stringify([inputs.map(id=>$(id)?.value||''),[...($('tpfCreateLabels')?.querySelectorAll('input:checked')||[])].map(x=>x.value).sort(),window.TPFContactRelations?.contactFingerprint?.(party)||'',legacy,$('tpfCreateWelcome')?.checked||false,$('tpfCreateWelcomeVariant')?.value||'']);
+ return JSON.stringify([inputs.map(id=>$(id)?.value||''),[...($('tpfCreateLabels')?.querySelectorAll('input:checked')||[])].map(x=>x.value).sort(),window.TPFContactRelations?.contactFingerprint?.(party)||'',legacy,window.TPFContactContract?.fingerprint?.()||'', $('tpfCreateWelcome')?.checked||false,$('tpfCreateWelcomeVariant')?.value||'']);
 }
 function isDirty(){return open()&&fingerprint()!==session.baseline;}
 function status(){
@@ -51,11 +51,13 @@ function enhance(back){
   head.querySelector('[data-note-restore]').onclick=e=>{e.preventDefault();if(session?.notes[id]==null)return;field.value=session.notes[id];field.readOnly=true;syncNote(id);};
  }
  const labels=$('tpfCompactLabels')||$('tpfCreateLabels')?.closest('label');if(labels){group.after(labels);const party=$('tpfContactParty');if(party)labels.after(party);}
+ const extra=document.createElement('details');extra.id='tpfContactExtraData';extra.innerHTML='<summary>Más datos del contacto · DNI, correo y banco</summary><div class="tpfContactExtraGrid"></div>';grid.after(extra);for(const id of ['tpfCreateDni','tpfCreateEmail','tpfCreateBank']){const label=$(id)?.closest('label');if(label)extra.querySelector('div').append(label);}
  const actions=back.querySelector('.tpfContactsModalActions'),state=document.createElement('span');state.id='tpfEditorSaveState';state.setAttribute('role','status');actions.prepend(state);
  back.addEventListener('input',status);back.addEventListener('change',status);
 }
-function begin({editing=false}={}){
+function begin({editing=false,data={},recordId=''}={}){
  const back=root();if(!back)return;enhance(back);
+ window.TPFContactContract?.fill(data,recordId);
  back.querySelector('.tpfEditorLeaveNotice')?.remove();
  session={root:back,editing,notes:{},baseline:''};
  for(const [id] of noteFields){const field=$(id);session.notes[id]=field.value;field.readOnly=editing;syncNote(id);}
