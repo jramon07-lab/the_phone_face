@@ -126,6 +126,7 @@
       d.TPF_TITULAR=window.TPFContactParty.read('tpfContactParty');
       window.TPFContactRelations?.applyContactData(d,s.id);
       await window.TPFContactRelations?.validateContactRelations(d,s.id);
+      window.TPFContactContract?.apply(d,q.data?.data||{});
       const u=await sb.from('records').update({data:d}).eq('id',s.id);if(u.error)throw u.error;
       const ids=[...byId('tpfCreateLabels')?.querySelectorAll('input:checked')||[]].map(x=>x.value);
       const lr=await sb.rpc('crm_set_contact_labels',{p_contact_id:String(s.id),p_label_ids:ids});if(lr.error)throw lr.error;
@@ -186,7 +187,7 @@
     setTimeout(()=>window.TPFContactLabelPicker?.sync(),0);
     if(title)title.textContent='Editar contacto';
     if(subtitle)subtitle.textContent='Modifica los datos del contacto.';
-    window.TPFContactEditor?.begin({editing:true});
+    window.TPFContactEditor?.begin({editing:true,data:d,recordId:id});
     if(save){save.textContent='Guardar cambios';save.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();saveCreateModalEdit();};}
     if(closeBtn)closeBtn.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
     if(cancel)cancel.onclick=e=>{e?.preventDefault?.();e?.stopPropagation?.();returnFromCreateEdit();};
