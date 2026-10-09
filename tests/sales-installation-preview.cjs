@@ -76,3 +76,29 @@ renderContext.window.testRender([ready,noPrice,unresolved],[]);
 assert.match(nodes.installedSelection.textContent,/1 seleccionada para importar/);
 assert.equal(nodes.runImport.textContent,'Confirmar 1 venta');
 console.log('Compact import rendering, original action indices, selection counts and review filters OK');
+
+// Legacy opportunities stored on a linked manager must be offered for review,
+// never silently assigned to one of that manager's holders.
+const managerLegacy={id:'legacy-manager-opportunity',record_id:'m',title:'CAMBIO O2',amount:37.95,expected_date:'2027-09-18',updated_at:'2026-10-09T00:00:00Z',contract_party:{same:true,holder_name:'Gestor',holder_dni:'',recipient_name:'Gestor'}};
+let legacyRow=api.analyse([sale],[contact,manager],[managerLegacy])[0];
+assert.equal(legacyRow.managers[0].id,'m');assert.equal(legacyRow.candidates[0].id,managerLegacy.id);assert.equal(legacyRow.choice,'');assert.equal(legacyRow.selected,false);
+legacyRow.ledgerId='ledger';legacyRow.choice=managerLegacy.id;
+assert.equal(api.eligible(legacyRow),false);
+legacyRow.recipientId='m';assert.equal(api.eligible(legacyRow),false);
+legacyRow.managerOpportunityConfirmed=true;assert.equal(api.eligible(legacyRow),true);
+legacyRow.recipientId='';assert.equal(api.eligible(legacyRow),false);
+for(const party of [{same:false,holder_name:'Otro'},{same:true,holder_dni:'87654321X'},{same:true,holder_record_id:'another-holder'}]){
+ assert.equal(api.analyse([sale],[contact,manager],[{...managerLegacy,contract_party:party}])[0].candidates.length,0);
+}
+assert.equal(api.analyse([sale],[contact],[managerLegacy])[0].candidates.length,0,'unlinked manager opportunities are not offered');
+legacyRow.recipientId='m';legacyRow.detailsOpen=true;
+renderContext.window.testRender([legacyRow],[managerLegacy]);
+assert.match(nodes.previewRows.innerHTML,/Gestionado por Gestor/);
+assert.match(nodes.previewRows.innerHTML,/Gestor: Gestor · Revisar titular/);
+assert.match(nodes.previewRows.innerHTML,/data-installed-manager-confirm="0"/);
+assert.match(nodes.previewRows.innerHTML,/Esta oportunidad corresponde a Cliente y la gestiona Gestor/);
+assert.match(nodes.previewRows.innerHTML,/data-installed-recipient="0"/);
+assert.match(nodes.previewRows.innerHTML,/2027/);
+console.log('Linked manager legacy opportunities require explicit holder reconciliation and recipient selection');
+
+legacyRow.imported=true;assert.equal(api.isManagerChoice(legacyRow),false,'completed rows no longer offer identity correction');
