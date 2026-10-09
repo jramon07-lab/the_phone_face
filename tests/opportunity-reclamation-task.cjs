@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+let draft=null,open=false;
+const ctx={window:{TPFAgendaComposer:{open:(prefill,context)=>{draft={prefill,context};return true;}}},document:{readyState:'loading',addEventListener(){},getElementById:id=>id==='agendaCreateCard'?{classList:{contains:()=>open}}:null}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('js/modules/opportunity-identity.js','utf8'),ctx);vm.runInContext(fs.readFileSync('js/modules/opportunity-contract-details.js','utf8'),ctx);vm.runInContext(fs.readFileSync('js/modules/sales-installation-preview.js','utf8'),ctx);
+const api=ctx.window.TPFOpportunityDetails,preview=ctx.window.TPFInstallationPreview;
+const opportunity={id:'11111111-0000-0000-0000-000000000001',record_id:'holder',title:'CAMBIO VODAFONE',amount:27,created_at:'2026-09-19T06:57:14Z',contract_party:{same:false,holder_record_id:'holder',holder_name:'Andrés',manager_record_id:'manager',contact_name:'Pilar',contact_phone:'600000001',recipient_contact_id:'manager',recipient_name:'Pilar',recipient_phone:'600000001'}};
+assert.equal(api.createTask(opportunity),true);assert.equal(draft.context.opportunityId,opportunity.id);assert.equal(draft.prefill.contactId,'holder');assert.equal(draft.prefill.customerName,'Andrés');assert.equal(draft.prefill.phone,'600000001');assert.equal(draft.prefill.type,'Tarea');assert.equal(draft.prefill.notifyEmail,false);assert.equal(draft.prefill.overlay,true);assert.match(draft.prefill.description,/Gestor: Pilar/);assert.match(draft.prefill.description,/11111111/);
+const other={...opportunity,id:'22222222-0000-0000-0000-000000000002',created_at:'2026-09-19T06:57:36Z'};assert.notEqual(preview.opportunityLabel(opportunity),preview.opportunityLabel(other));assert.match(preview.opportunityLabel(other),/22222222/);
+api.createTask(other);assert.equal(draft.context.opportunityId,other.id);assert.match(draft.prefill.description,/22222222/);
+open=true;assert.throws(()=>api.createTask(opportunity),/tarea abierta/);assert.equal(draft.context.opportunityId,other.id);assert.throws(()=>api.createTask({}),/Selecciona/);
+console.log('PASS reclamation tasks: exact opportunity, holder/manager/recipient separation, distinct references, internal task draft and existing draft protection');
