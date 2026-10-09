@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modules/whatsapp-reply-reminders.js','utf8');
+const context={window:{},document:{readyState:'loading',addEventListener(){},getElementById(){}},Intl,Date,Map,Set,setTimeout,setInterval,console};
+vm.runInNewContext(source.replace('window.TPFReplyReminders={','window.testList={items:listItems,name:chatName,set:(list,cache)=>{rows=list;for(const [id,name] of cache||[])names.set(id,name);}};window.TPFReplyReminders={'),context);
+const api=context.window.testList;
+const list=[{id:'a',chat_id:'34600000001@c.us',status:'pending',due_at:'2020-01-01',message_text:'Revisar router'},{id:'b',chat_id:'34600000002@c.us',status:'pending',due_at:'2099-01-01',message_text:'Oferta'},{id:'c',chat_id:'34600000003@c.us',status:'answered',updated_at:'2026-10-09',message_text:'Mensaje respondido'},{id:'d',chat_id:'34600000004@c.us',status:'waiting',message_text:'Mensaje programado'}];
+api.set(list,[['34600000001@c.us','Cliente Prueba']]);
+const ids=(filter,q)=>Array.from(api.items(filter,q),x=>x.id);
+assert.deepEqual(ids('active'),['a','b','d']);assert.deepEqual(ids('due'),['a']);assert.deepEqual(ids('waiting'),['d']);assert.deepEqual(ids('closed'),['c']);assert.equal(ids('all').length,4);
+assert.deepEqual(ids('all','cliente prueba'),['a']);assert.deepEqual(ids('all','router'),['a']);assert.deepEqual(ids('all','600000002'),['b']);assert.deepEqual(ids('all','inexistente'),[]);
+assert.equal(api.name(list[0]),'Cliente Prueba');assert.equal(api.name(list[1]),'34600000002');
+assert.ok(source.includes('data-tpf-navigation-filter'));assert.ok(source.includes('if(!nav.dispatchEvent(event))'),'cancelled navigation must not open a hidden conversation');
+console.log('Reply reminder list: active/history/due filters, name/phone/message search and safe navigation passed');

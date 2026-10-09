@@ -18,6 +18,7 @@ function fixture(earlyClose=false){
 }
 (async()=>{
  const typing=fixture();const message=typing.node('waQuickMessage');let captures=0,layerReads=0;typing.window.tpfCaptureCurrentScreen=()=>{captures++;return {type:'main',mainView:'contacts'}};const closest=message.closest;message.closest=s=>{layerReads++;return closest(s)};await typing.emit('focusin',{target:message});const beforeReads=layerReads;for(let i=0;i<200;i++){await typing.emit('keydown',{target:message});await typing.emit('beforeinput',{target:message});message.value+='a';await typing.emit('input',{target:message});}await tick();assert.equal(layerReads,beforeReads,'typing must not recalculate modal visibility per keystroke');assert.equal(captures,0,'typing must not recapture screen navigation');let protectedDraft=false;await typing.emit('beforeunload',{preventDefault(){protectedDraft=true}});assert.equal(protectedDraft,true,'the message draft remains protected');
+ const filtering=fixture(),filter=filtering.node('listFilter');filter.matches=s=>s==='[data-tpf-navigation-filter]'||s==='input,textarea,select';await filtering.emit('focusin',{target:filter});filter.value='closed';let filterWarning=false;await filtering.emit('beforeunload',{preventDefault(){filterWarning=true;}});assert.equal(filterWarning,false,'View filters are not unsaved edits');
  const f=fixture();assert.equal(f.cursor,0);
  await f.navigate({type:'main',mainView:'contacts'});
  await f.navigate({type:'contact',id:'a',mainView:'contacts'});
