@@ -74,6 +74,40 @@ function compactHeader(root){
  const origin=root.querySelector('.oppReadOrigin');if(origin){const box=document.createElement('details');box.className='oppReadOrigin oppField';box.innerHTML='<summary>Origen</summary>';origin.querySelector('h3')?.remove();box.append(...origin.childNodes);origin.replaceWith(box);}
 }
 async function loadOffer(id){const r=await sb.from('crm_offer_instances').select('id,opportunity_id,snapshot,status,created_at,updated_at').eq('opportunity_id',id).order('created_at',{ascending:false}).limit(50);if(r.error)throw r.error;return (r.data||[]).slice().sort((a,b)=>Number(['archived','cancelled','lost'].includes(a.status))-Number(['archived','cancelled','lost'].includes(b.status))||new Date(b.created_at)-new Date(a.created_at))[0]||null;}
+function operatorChoices(value=''){
+ const choices=[...new Set([...(window.TPFContactContract?.operators||['Vodafone','MásMóvil','Yoigo','O2','Movistar','Orange','Lowi','Jazztel','Digi','Pepephone','Finetwork']),...Object.keys(window.TPFRouterReturn?.paragraphs||{}).filter(x=>!['Ninguno','Otro'].includes(x))])];
+ return '<option value="">Sin indicar</option>'+choices.map(x=>'<option value="'+esc(x)+'"'+(x===value?' selected':'')+'>'+esc(x)+'</option>').join('')+'<option value="__other"'+(value&&!choices.includes(value)?' selected':'')+'>Otra compañía…</option>';
+}
+async function changeColumn(o,stage,context){
+ if(!stage?.id)throw Error('Selecciona una columna disponible.');
+ if(String(stage.id)===String(o.stage_id))return false;
+ if(!context.ready||context.error)throw Error('Espera a que termine la comprobación, o reabre la ficha.');
+ if(o.installation_date||context.offer?.status==='won')throw Error('La activación está registrada en el Excel mensual.');
+ const name=text(stage.name).toLowerCase();
+ if(context.offer&&name==='ganado')throw Error('«Ganado» se confirma desde el Excel mensual.');
+ const fresh=await sb.from('sales_opportunities').select('id,updated_at').eq('id',o.id).single();if(fresh.error)throw fresh.error;
+ if(!o.updated_at||fresh.data?.updated_at!==o.updated_at)throw Error('La oportunidad ha cambiado en otro dispositivo. Reabre la ficha.');
+ if(context.offer&&['seguimiento','pendiente de tramitar','tramitado','perdido'].includes(name)){
+  if(typeof window.TPFHomeManage?.openOpportunity!=='function')throw Error('Actualiza la página para abrir Gestionar.');
+  await window.TPFHomeManage.openOpportunity(o.id,{stage:name});return false;
+ }
+ if(typeof window.moveOpp!=='function')throw Error('Actualiza la página para cambiar la columna.');
+ return await window.moveOpp(o.id,stage.id);
+}
+function inlineColumn(root,o,context){
+ const cell=[...(root.querySelector('.oppSummaryMetrics')?.children||[])].find(el=>el.querySelector('span')?.textContent==='Estado / columna');if(!cell)return;
+ const edit=document.createElement('button');edit.type='button';edit.className='oppInlineEdit';edit.setAttribute('aria-label','Cambiar estado o columna');edit.textContent='✎';cell.append(edit);
+ edit.onclick=async()=>{
+  if(root.querySelector('.oppInlineForm')){root.querySelector('.oppInlineForm input,.oppInlineForm select')?.focus();return;}
+  if(typeof crmCan==='function'&&!crmCan('can_edit_sales')){alert('No tienes permiso para editar oportunidades.');return;}
+  edit.disabled=true;
+  try{const r=await sb.from('sales_stages').select('id,name,position').eq('pipeline_id',o.pipeline_id).eq('active',true).order('position');if(r.error)throw r.error;if(!edit.isConnected)return;
+   const stages=r.data||[],form=document.createElement('form');form.className='oppInlineForm';form.innerHTML='<label>Estado / columna<select aria-label="Estado / columna">'+stages.map(x=>'<option value="'+esc(x.id)+'"'+(String(x.id)===String(o.stage_id)?' selected':'')+'>'+esc(x.name)+'</option>').join('')+'</select></label><div><button class="primary" type="submit">Continuar</button><button class="secondary" type="button" data-cancel>Cancelar</button></div><p role="status"></p>';
+   cell.append(form);edit.hidden=true;const select=form.querySelector('select');select.focus();const close=()=>{form.remove();edit.hidden=false;edit.focus();};form.querySelector('[data-cancel]').onclick=close;
+   form.onsubmit=async e=>{e.preventDefault();for(const b of form.querySelectorAll('button,select'))b.disabled=true;try{const changed=await changeColumn(o,stages.find(x=>String(x.id)===select.value),context);close();if(changed)await window.openOpportunityFull(o.id);}catch(error){form.querySelector('[role=status]').textContent=error.message;for(const b of form.querySelectorAll('button,select'))b.disabled=false;}};
+  }catch(error){alert(error.message||'No se pudieron cargar las columnas.');}finally{edit.disabled=false;}
+ };
+}
 function inlineFields(root,o,context){
  const fields=[['amount','Importe de la oportunidad','number'],['expected_date','Fecha prevista de cierre','date'],['previous_operator','Operador anterior','text'],['terminal_commitment_end','Fin de permanencia del terminal','date'],['discount_end_date','Fin de descuento','date']];
  const metrics=root.querySelector('.oppSummaryMetrics');if(!metrics)return;
@@ -81,19 +115,20 @@ function inlineFields(root,o,context){
   const cell=[...metrics.children].find(el=>el.querySelector('span')?.textContent===label);if(!cell)continue;
   const edit=document.createElement('button');edit.type='button';edit.className='oppInlineEdit';edit.setAttribute('aria-label','Editar '+label.toLowerCase());edit.textContent='✎';cell.append(edit);
   edit.onclick=()=>{
-   if(root.querySelector('.oppInlineForm')){root.querySelector('.oppInlineForm input')?.focus();return;}
+   if(root.querySelector('.oppInlineForm')){root.querySelector('.oppInlineForm input,.oppInlineForm select')?.focus();return;}
    if(typeof crmCan==='function'&&!crmCan('can_edit_sales')){alert('No tienes permiso para editar oportunidades.');return;}
    if(key==='previous_operator'&&(!context.ready||context.error)){alert('Espera a que termine la comprobación, o reabre la ficha.');return;}
    if(key==='previous_operator'&&context.installation){window.TPFInstallations?.manage(o.id,{edit:'return'});return;}
    const form=document.createElement('form');form.className='oppInlineForm';form.innerHTML='<label>'+esc(label)+'<input aria-label="'+esc(label)+'" type="'+type+'" '+(type==='number'?'min="0" step="0.01"':'')+'></label><div><button class="primary" type="submit">Guardar</button><button class="secondary" type="button" data-cancel>Cancelar</button></div><p role="status"></p>';
-   const input=form.querySelector('input');input.value=key==='previous_operator'?(previous(o,context.installation,context.offer)==='Sin indicar'?'':previous(o,context.installation,context.offer)):o[key]??'';cell.append(form);edit.hidden=true;input.focus();
+   if(key==='previous_operator'){const current=previous(o,context.installation,context.offer),value=current==='Sin indicar'?'':current;form.querySelector('label').innerHTML=esc(label)+'<select aria-label="'+esc(label)+'">'+operatorChoices(value)+'</select><input data-other-operator maxlength="80" aria-label="Otra compañía" placeholder="Nombre de la compañía" hidden>';const select=form.querySelector('select'),other=form.querySelector('[data-other-operator]');other.value=value;const toggle=()=>{other.hidden=select.value!=='__other';};select.onchange=()=>{toggle();if(!other.hidden)other.focus();};toggle();}
+   const input=form.querySelector(key==='previous_operator'?'select':'input');if(key!=='previous_operator')input.value=o[key]??'';cell.append(form);edit.hidden=true;input.focus();
    const close=()=>{form.remove();edit.hidden=false;edit.focus();};form.querySelector('[data-cancel]').onclick=close;
-   form.onsubmit=async e=>{e.preventDefault();let value;try{value=type==='date'?validDate(input.value):type==='number'?(input.value===''?null:Number(input.value)):text(input.value);if(type==='number'&&value!==null&&(!Number.isFinite(value)||value<0))throw Error('Indica un importe válido.');for(const b of form.querySelectorAll('button,input'))b.disabled=true;
+   form.onsubmit=async e=>{e.preventDefault();let value;try{value=type==='date'?validDate(input.value):type==='number'?(input.value===''?null:Number(input.value)):text(input.value==='__other'?form.querySelector('[data-other-operator]')?.value:input.value);if(type==='number'&&value!==null&&(!Number.isFinite(value)||value<0))throw Error('Indica un importe válido.');for(const b of form.querySelectorAll('button,input,select'))b.disabled=true;
     let saved;
     if(key==='previous_operator'){const r=await sb.rpc('crm_set_previous_operator',{p_opportunity_id:o.id,p_expected_updated_at:o.updated_at,p_previous_operator:value,p_offer_id:context.offer?.id||null,p_expected_offer_updated_at:context.offer?.updated_at||null});if(r.error)throw r.error;saved=r.data?.opportunity;}
     else{if(!o.updated_at)throw Error('Reabre la ficha para comprobar su versión.');const r=await sb.from('sales_opportunities').update({[key]:value}).eq('id',o.id).eq('updated_at',o.updated_at).select('*').single();if(r.error)throw r.error;saved=r.data;}
     if(!saved)throw Error('No se confirmó el guardado. Reabre la ficha.');Object.assign(o,saved);close();await window.openOpportunityFull(o.id);window.dispatchEvent(new CustomEvent('tpf:sales-updated'));
-   }catch(error){form.querySelector('[role=status]').textContent=error.message||'No se pudo guardar.';for(const b of form.querySelectorAll('button,input'))b.disabled=false;}}
+   }catch(error){form.querySelector('[role=status]').textContent=error.message||'No se pudo guardar.';for(const b of form.querySelectorAll('button,input,select'))b.disabled=false;}}
   };
  }
 }
@@ -104,7 +139,7 @@ async function decorateView(o){
  const metrics=root.querySelector('.oppSummaryMetrics');
  if(metrics&&o.contract_activation_date&&!o.installation_date)metrics.insertAdjacentHTML('beforeend','<div class="oppField"><span>Activación del contrato actual</span><strong>'+esc(dateLabel(o.contract_activation_date))+'</strong></div>');
  if(metrics)metrics.insertAdjacentHTML('beforeend','<div class="oppField"><span>Operador de la oferta</span><strong>'+esc(operator(o))+'</strong></div><div class="oppField"><span>Operador anterior</span><strong data-opp-previous>'+esc(previous(o))+'</strong></div><div class="oppField"><span>Fin de permanencia del terminal</span><strong>'+esc(dateLabel(o.terminal_commitment_end))+'</strong></div><div class="oppField"><span>Fin de descuento</span><strong>'+esc(dateLabel(o.discount_end_date))+'</strong></div>');
- bindActions(root,o,people);inlineFields(root,o,context);
+ bindActions(root,o,people);inlineFields(root,o,context);inlineColumn(root,o,context);
  void completePersonData(people,o).then(()=>{if(token!==viewToken||root.dataset.opportunityId!==String(o.id))return;const roles=root.querySelector('.oppContractPeople');if(roles){const template=document.createElement('template');template.innerHTML=rolesHTML(people);roles.replaceWith(template.content.firstElementChild);bindActions(root,o,people);}}).catch(()=>{if(token===viewToken&&root.dataset.opportunityId===String(o.id)){const roles=root.querySelector('.oppContractPeople');if(roles){const warning=document.createElement('small');warning.setAttribute('role','status');warning.textContent='No se pudieron comprobar los datos que faltan en la ficha del contacto.';roles.append(warning);}}});
  const next=document.createElement('section');next.className='oppField oppContractNext';next.innerHTML='<h3>Instalación y devolución</h3><p data-opp-installation>Comprobando la instalación…</p>';metrics?.after(next);
  try{const [i,x]=await Promise.all([loadInstallation(o.id),loadOffer(o.id)]);context.ready=true;context.installation=i;context.offer=x;if(token!==viewToken||!root.contains(next))return;root.querySelector('[data-opp-previous]').textContent=previous(o,i,x);next.querySelector('p').textContent=i?.installed_on?'Instalada: '+dateLabel(i.installed_on):i?.appointment_date?'Cita de instalación: '+dateLabel(i.appointment_date):'Sin cita de instalación registrada.';
@@ -118,6 +153,6 @@ function editorActions(){
  window.addEventListener('tpf:opportunity-party-preview',refresh);$('oppDetailModal').addEventListener('change',refresh);new MutationObserver(refresh).observe($('oppDetailModal'),{attributes:true,attributeFilter:['class']});refresh();
 }
 window.addEventListener?.('tpf:sales-updated',()=>{if(!$('opportunityFullPage')?.classList.contains('hidden')&&!$('oppFullContent')?.querySelector('.oppInlineForm')&&typeof window.openOpportunityFull==='function'){const id=$('oppFullContent')?.dataset.opportunityId;if(id)void window.openOpportunityFull(id);}});
-window.TPFOpportunityDetails={fillEditor,readEditor,afterPrepare,decorateView,party,previous,operator,validDate,dateLabel};
+window.TPFOpportunityDetails={fillEditor,readEditor,afterPrepare,decorateView,party,previous,operator,validDate,dateLabel,operatorChoices,changeColumn};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',editorActions);else editorActions();
 })();

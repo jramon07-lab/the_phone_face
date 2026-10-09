@@ -60,10 +60,10 @@ async function chooseProcessing(options,data){
   d.querySelector('[data-save-choice]').onclick=async()=>{if(busy||!d.open)return;const error=fields.querySelector('[data-error]');try{busy=true;d.querySelectorAll('footer button').forEach(b=>b.disabled=true);const preferences=binding.get();await binding.saveTemplate();if(!d.open)return;d._result=preferences;d.close('confirm');}catch(e){fields.hidden=false;error.textContent=e.message||'No se pudo continuar.';error.scrollIntoView({block:'nearest'});}finally{busy=false;d.querySelectorAll('footer button').forEach(b=>b.disabled=false)}};d.showModal();
  });
 }
-async function openOpportunity(id){
- const f=window.TPFOfferFollowup;await f.load();const offer=f.homeOffer(id);if(offer)return open(offer.id);return window.TPFInstallations?.manage(id);
+async function openOpportunity(id,options={}){
+ const f=window.TPFOfferFollowup;await f.load();const offer=f.homeOffer(id);if(offer)return open(offer.id,options);return window.TPFInstallations?.manage(id);
 }
-async function open(id){
+async function open(id,options={}){
  const f=window.TPFOfferFollowup;
  let x=f?.state.offers.find(v=>String(v.id)===String(id));if(!x)return;
  document.getElementById('ofManageDialog')?.close();
@@ -117,6 +117,7 @@ async function open(id){
   const statePanel=body.querySelector('[data-state-panel]'),stateSelect=body.querySelector('[data-new-state]'),stateButton=body.querySelector('[data-change-state]');
   stateButton.disabled=x.status==='won'||!!o.installation_date;if(stateButton.disabled)stateButton.title='Activación registrada en el Excel mensual';
   stateButton.onclick=()=>{statePanel.hidden=!statePanel.hidden;stateButton.setAttribute('aria-expanded',String(!statePanel.hidden));stateSelect.value=({accepted:'pendiente de tramitar',processed:'tramitado',lost:'perdido'})[x.status]||'seguimiento';stateSelect.focus();};
+  if(options.stage&&!stateButton.disabled&&[...stateSelect.options].some(x=>x.value===options.stage)){stateButton.click();stateSelect.value=options.stage;}
   body.querySelector('[data-cancel-state]').onclick=()=>{statePanel.hidden=true;stateButton.setAttribute('aria-expanded','false');};
   body.querySelector('[data-save-state]').onclick=async()=>{if(busy)return;const err=body.querySelector('[data-state-error]');err.hidden=true;if(stateSelect.value==='tramitado'){statePanel.hidden=true;if(x.status==='processed'&&window.TPFInstallations){d.close();void window.TPFInstallations.manage(o.id);}else await prepare();return;}setBusy(true);try{await changeState(o,x,stateSelect.value);await f.load(true);d.close();void open(x.id);}catch(error){err.textContent=error.message;err.hidden=false;}finally{setBusy(false);}};
   async function prepare(){
