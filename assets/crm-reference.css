@@ -1599,7 +1599,7 @@ body.tpfUnified #opportunityFullPage .oppSummaryMetrics .oppField>strong{font-si
 body.tpfUnified .oppInlineEdit{position:absolute;right:4px;top:8px;padding:4px 6px;min-width:26px;min-height:30px;border:0;background:transparent;color:#3766a4;cursor:pointer}
 body.tpfUnified .oppInlineForm{position:relative;grid-column:1/-1;margin-top:8px}
 body.tpfUnified .oppInlineForm label{display:block;font-size:12px}
-body.tpfUnified .oppInlineForm input{display:block;max-width:100%;width:100%;padding:7px;margin:4px 0 8px}
+body.tpfUnified .oppInlineForm :is(input,select){display:block;max-width:100%;width:100%;padding:7px;margin:4px 0 8px}
 body.tpfUnified .oppInlineForm>div{display:flex;flex-wrap:wrap;gap:5px}
 body.tpfUnified .oppInlineForm button{font-size:12px;padding:6px 9px}
 body.tpfUnified .oppInlineForm p{font-size:12px;margin:6px 0;color:#9f341e}
