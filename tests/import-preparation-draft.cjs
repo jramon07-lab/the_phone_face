@@ -1,0 +1,14 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const cache=new Map(),window={sessionStorage:{getItem:k=>cache.get(k)||null,setItem:(k,v)=>cache.set(k,v)}};
+const ctx={window,document:{readyState:'loading',addEventListener(){}},Date};vm.createContext(ctx);
+const source=fs.readFileSync('js/modules/sales-installation-preview.js','utf8').replace('window.TPFInstallationPreview={',"window.setFixture=(r,owner)=>{rows=r;draftOwner=owner;};window.TPFInstallationPreview={");vm.runInContext(source,ctx);
+const api=window.TPFInstallationPreview;
+const base=()=>({ledgerId:'row',key:'shop:order',dni:'DNI',operator:'Yoigo',installed:'2026-09-01',payload:{cancelled:''},choice:'new',amount:'',contactId:'holder',managerId:'',recipientId:'',managers:[{id:'manager'}],candidates:[{id:'op'}],imported:false,issue:'',selected:false});
+const edited={...base(),choice:'op',amount:'45',managerId:'manager',recipientId:'manager',selected:true,detailsOpen:true};window.setFixture([edited],'account-a');assert.equal(api.saveDraft(),true);
+let fresh=base();window.setFixture([fresh],'account-a');api.restoreDraft();assert.equal(fresh.amount,'45');assert.equal(fresh.choice,'op');assert.equal(fresh.managerId,'manager');assert.equal(fresh.recipientId,'manager');assert.equal(fresh.selected,true);
+fresh=base();window.setFixture([fresh],'account-b');api.restoreDraft();assert.equal(fresh.amount,'');
+fresh={...base(),installed:'2026-09-02'};window.setFixture([fresh],'account-a');api.restoreDraft();assert.equal(fresh.amount,'');
+fresh={...base(),imported:true};window.setFixture([fresh],'account-a');api.restoreDraft();assert.equal(fresh.amount,'');api.saveDraft();assert.equal(Object.keys(api.readDraft()).length,0);
+window.setFixture([edited],'account-a');api.saveDraft();fresh={...base(),candidates:[],managers:[]};window.setFixture([fresh],'account-a');api.restoreDraft();assert.equal(fresh.choice,'new');assert.equal(fresh.managerId,'');assert.equal(fresh.recipientId,'');assert.equal(fresh.selected,false);
+cache.set('tpf-installed-preparation-v1:account-a',JSON.stringify({version:1,savedAt:Date.now()-86400001,rows:{row:{}}}));assert.equal(Object.keys(api.readDraft()).length,0);
+console.log('PASS import preparation survives reload, isolates accounts, validates row/party/choice, clears imported rows and expires');
