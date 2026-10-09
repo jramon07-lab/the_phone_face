@@ -14,9 +14,9 @@ assert.match(archive,/Deshacer/);
 assert.doesNotMatch(waFixes,/b\.textContent=done\?'✓ Atendida':'✓ Marcar atendida'/);
 
 assert.match(offers,/id="directSaleNetflix"/);
-assert.match(offers,/crm_create_direct_sale_v8/);
+assert.match(offers,/crm_create_direct_sale_v9/);
 assert.match(offers,/p_netflix_followup/);
-assert.match(offers,/Se programará el WhatsApp del día siguiente/);
+assert.match(offers,/Se enviará el aviso de tramitación/);
 
 assert.match(sql,/Vodafone · Instalación y devolución de router/);
 assert.match(sql,/netflix_template_id/);
