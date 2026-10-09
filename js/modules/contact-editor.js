@@ -51,7 +51,9 @@ function enhance(back){
   head.querySelector('[data-note-restore]').onclick=e=>{e.preventDefault();if(session?.notes[id]==null)return;field.value=session.notes[id];field.readOnly=true;syncNote(id);};
  }
  const labels=$('tpfCompactLabels')||$('tpfCreateLabels')?.closest('label');if(labels){group.after(labels);const party=$('tpfContactParty');if(party)labels.after(party);}
- const extra=document.createElement('details');extra.id='tpfContactExtraData';extra.innerHTML='<summary>Más datos del contacto · DNI, correo y banco</summary><div class="tpfContactExtraGrid"></div>';grid.after(extra);for(const id of ['tpfCreateDni','tpfCreateEmail','tpfCreateBank']){const label=$(id)?.closest('label');if(label)extra.querySelector('div').append(label);}
+ const nickname=$('tpfCreateNickname')?.closest('label');if(nickname)nickname.classList.add('full');
+ const phone=$('tpfCreatePhone')?.closest('label'),dni=$('tpfCreateDni')?.closest('label');if(phone&&dni)phone.after(dni);
+ const extra=document.createElement('details');extra.id='tpfContactExtraData';extra.innerHTML='<summary>Más datos del contacto · correo y banco</summary><div class="tpfContactExtraGrid"></div>';grid.after(extra);for(const id of ['tpfCreateEmail','tpfCreateBank']){const label=$(id)?.closest('label');if(label)extra.querySelector('div').append(label);}
  const actions=back.querySelector('.tpfContactsModalActions'),state=document.createElement('span');state.id='tpfEditorSaveState';state.setAttribute('role','status');actions.prepend(state);
  back.addEventListener('input',status);back.addEventListener('change',status);
 }
@@ -64,6 +66,7 @@ function begin({editing=false,data={},recordId=''}={}){
  const name=[$('tpfCreateFirst')?.value,$('tpfCreateLast')?.value].filter(Boolean).join(' '),nickname=$('tpfCreateNickname')?.value;
  $('tpfEditorAvatar').textContent=(name.trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('')||'+').toLocaleUpperCase('es');
  back.querySelector('.tpfContactsModalHead .small').textContent=editing?[name,nickname].filter(Boolean).join(' · '):'Crea el contacto con sus datos y etiquetas.';
+ const extra=$('tpfContactExtraData');if(extra)extra.open=false;
  back.querySelector('.tpfContactsModalBody').scrollTop=0;
  const toggle=$('tpfPickToggle');if(toggle&&toggle.getAttribute('aria-expanded')!=='true')toggle.textContent='Editar etiquetas';
  session.baseline=fingerprint();window.dispatchEvent(new CustomEvent('tpf:editor-baseline',{detail:{root:back}}));status();

@@ -18,7 +18,7 @@ function update(){if(current){const s=capture();if(s.key===current.key){current=
 function dirty(){if(window.TPFContactEditor?.isDirty())return true;for(const [el,value] of edited){if(window.TPFContactEditor?.owns(el)){edited.delete(el);continue;}if(!visible(el)){if(!el.closest('[data-tpf-suspended]'))edited.delete(el);continue;}if(fieldValue(el)!==value)return true;}return false;}
 function fieldValue(el){return el.type==='checkbox'||el.type==='radio'?String(el.checked):el.type==='file'?[...(el.files||[])].map(f=>f.name+':'+f.size).join('|'):el.value;}
 function editorFor(el){const layer=topLayer();if(layer?.el.contains(el))return layer.el;return el.closest?.('#contactModal.tpf-contact-editing,#cpNoteForm');}
-function remember(e){const el=e.target;if(!el||edited.has(el)||!el.matches?.('input,textarea,select')||el.disabled||el.readOnly||window.TPFContactEditor?.owns(el)||!editorFor(el))return;if(!edited.has(el))edited.set(el,fieldValue(el));}
+function remember(e){const el=e.target;if(!el||el.matches?.('[data-tpf-navigation-filter]')||edited.has(el)||!el.matches?.('input,textarea,select')||el.disabled||el.readOnly||window.TPFContactEditor?.owns(el)||!editorFor(el))return;if(!edited.has(el))edited.set(el,fieldValue(el));}
 function approve(){return !dirty()||window.confirm('Tienes cambios sin guardar. ¿Quieres salir y descartarlos?');}
 function schedule(){clearTimeout(timer);timer=setTimeout(sync,100);}
 function sync(){

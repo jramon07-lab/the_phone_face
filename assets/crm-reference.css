@@ -1606,3 +1606,14 @@ body.tpfUnified .oppInlineForm p{font-size:12px;margin:6px 0;color:#9f341e}
 body.tpfUnified #opportunityFullPage .oppReadOrigin>summary{cursor:pointer;font-weight:600}
 @media(max-width:800px){body.tpfUnified #opportunityFullPage .oppFullTop>#oppFullTitle{order:-2;flex-basis:100%}body.tpfUnified #opportunityFullPage .oppInlineEdit{min-height:44px;min-width:36px;top:2px}body.tpfUnified #opportunityFullPage .oppFullPrimaryActions{flex:1}body.tpfUnified #opportunityFullPage .oppSummaryMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 body.tpfUnified #waQuickModal{z-index:1003!important}
+
+/* Shared contact editor: one scrollable body, persistent actions. */
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModal{min-height:0;overflow:hidden!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalBody{flex:1 1 auto;min-height:0!important;max-height:calc(100dvh - 190px);overflow-y:auto!important;padding-bottom:20px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactsModalActions{position:static!important;flex-shrink:0!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfEditorNotes{margin-top:10px!important;padding-top:10px!important}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor #tpfContactExtraData{margin:10px 0}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactExtraGrid{margin-top:10px}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactExtraGrid>label{font-size:12px;min-width:0}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfContactExtraGrid input{height:34px;min-height:34px;padding:6px 9px;margin-top:4px}
+body.tpfUnified #tpfContactsCreateBack.tpfContactEditor .tpfWelcomeChoice>label:first-child{margin-bottom:8px}
