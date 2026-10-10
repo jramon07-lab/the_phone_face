@@ -23,3 +23,12 @@ body{font-family:Arial,sans-serif}
 #oppFullContent .oppContractNext{padding:14px 18px!important;border-radius:10px!important}
 #oppFullContent .oppContractNext h3{font-size:14px!important;margin:0 0 8px}
 #oppFullContent .oppContractNext p{font-size:13px!important;margin:0}
+#oppFullContent .proposalContext{padding:14px 18px!important;margin:0 0 10px!important}
+#oppFullContent .proposalContext h2{font-size:20px!important;margin:6px 0!important;line-height:1.3!important}
+#oppFullContent .proposalContext p{margin:0!important}
+#oppFullContent .proposalNext{padding:12px 18px!important;margin:0 0 14px!important}
+#oppFullContent .proposalNext h3{font-size:16px!important;margin:3px 0!important}
+#oppFullContent .proposalNext p{margin:0!important}
+#oppFullContent .proposalSectionTitle{margin:8px 0!important}
+#oppFullContent .oppContractPeople{margin:0!important}
+#oppFullContent .oppContractActions{margin:10px 0 14px!important}
