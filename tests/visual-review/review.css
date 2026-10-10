@@ -21,3 +21,9 @@ body{font-family:Inter,"Segoe UI",Arial,sans-serif!important;font-variant-numeri
 dialog #reviewStamp{bottom:auto;top:78px;right:25px;font-size:9px;padding:3px 6px}
 #agendaCreateCard[data-agenda-overlay=true]{width:min(900px,calc(100vw - 60px))!important;inset:30px auto auto 50%!important;transform:translateX(-50%);max-height:940px!important;box-shadow:0 12px 80px #10244744!important}
 #agendaCreateCard textarea{min-height:140px!important}
+
+#contactModal .oppUnifiedPeople{grid-column:1 / -1!important;line-height:1.6!important;font-size:12px!important}
+#agendaCreateCard[data-agenda-overlay=true]{padding:20px 24px!important}
+#agendaCreateCard[data-agenda-overlay=true] label{margin-top:9px!important;margin-bottom:5px!important}
+#agendaCreateCard[data-agenda-overlay=true] textarea{min-height:125px!important;height:125px!important}
+#agendaCreateCard[data-agenda-overlay=true] input,#agendaCreateCard[data-agenda-overlay=true] select{padding:9px 12px!important}

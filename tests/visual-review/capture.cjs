@@ -32,7 +32,7 @@ async function oppFixture(page){
  await page.addScriptTag({content:read('js/modules/contact-desktop-layout.js')});
  await page.addScriptTag({content:read('js/modules/contact-inline-edit.js')});
  await page.evaluate(()=>openContact('manager'));await expect(page.locator('#contactModal')).toBeVisible();
- await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewServiceContext';n.innerHTML='<div><b>María gestiona los contratos de Carlos</b><small>Titular: Carlos Ejemplo · WhatsApp: María · 600 000 002</small></div>';document.getElementById('cpRefPanel').prepend(n);document.querySelector('[data-tpf-summary-group="opportunities"] .tpfSummaryTrigger')?.click();document.querySelectorAll('.oppUnifiedCard').forEach((card,i)=>{const c=document.createElement('p');c.className='reviewServiceContext';c.textContent=i?'Segunda vivienda · Solo fibra · Ref. DEMO-002':'Vivienda principal · Fibra + 2 móviles · Ref. DEMO-001';card.prepend(c)});});
+ await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewServiceContext';n.innerHTML='<div><b>María gestiona los contratos de Carlos</b><small>Titular: Carlos Ejemplo · WhatsApp: María · 600 000 002</small></div>';document.getElementById('cpRefPanel').prepend(n);document.querySelector('[data-tpf-summary-group="opportunities"] .tpfSummaryTrigger')?.click();});
  await shot(page,'03-contacto');
  });
  await run('gestionar',async page=>{
