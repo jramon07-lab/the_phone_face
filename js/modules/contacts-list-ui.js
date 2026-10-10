@@ -198,11 +198,32 @@ async function fetchOpportunities(){
 }
 function renderSources(){const el=byId('tpfFilterSource');if(!el)return;const cur=state.filters.source;const values=[...new Set(state.rows.map(x=>x.source).filter(Boolean))].sort();el.innerHTML='<option value="">Todos</option>'+values.map(x=>`<option value="${esc(x)}">${esc(x==='BASE DE DATOS'?'Contactos':x)}</option>`).join('');el.value=cur;}
 function renderLabelOptions(){renderFilterLabels();const box=byId('tpfCreateLabels');const checked=new Set([...(box?.querySelectorAll('input:checked')||[])].map(x=>x.value));if(box)box.innerHTML=state.labels.length?state.labels.map((x,i)=>`<label class="tpfContactsLabelChoice"><input type="checkbox" value="${esc(labelId(x))}"><span class="tpfLabelChip ${labelColor(i)}">${esc(labelName(x))}</span></label>`).join(''):'<span class="small">No hay etiquetas creadas.</span>';box?.querySelectorAll('input').forEach(x=>x.checked=checked.has(x.value));byId('tpfContactsLabelsCount')&&(byId('tpfContactsLabelsCount').textContent=String(state.labels.length));window.TPFContactLabelPicker?.install(state.labels);}
+let relatedContactSearchCache=null;
+function relatedContactSearch(){
+ const links=window.TPFRecordLinks;
+ if(!links?.index||!links?.opportunityContacts)return new Map();
+ if(relatedContactSearchCache?.rows===state.rows&&relatedContactSearchCache.opportunities===state.opportunities&&relatedContactSearchCache.revision===state.salesRevision&&relatedContactSearchCache.links===links)return relatedContactSearchCache.search;
+ const lookup=links.index(state.rows),termsByContact=new Map();
+ function addGroup(values){
+  const ids=[...new Set([...values].map(String))].filter(id=>lookup.ids?.has(id));
+  if(ids.length<2)return;
+  const terms=norm(ids.map(id=>{const r=lookup.ids.get(id);return [r.fullName,r.nickname,r.dni,r.phone].filter(Boolean).join(' ');}).join(' '));
+  for(const id of ids){if(!termsByContact.has(id))termsByContact.set(id,new Set());termsByContact.get(id).add(terms);}
+ }
+ // Only known holder/manager links are searchable; this never changes ownership
+ // or recipients and does not expand a group through another holder's contract.
+ for(const [holder,managers] of lookup.managers||[])for(const manager of managers)addGroup([holder,manager]);
+ for(const opportunity of state.opportunities)addGroup(links.opportunityContacts(opportunity,lookup)||[]);
+ const search=new Map([...termsByContact].map(([id,terms])=>[id,[...terms].join(' ')]));
+ relatedContactSearchCache={rows:state.rows,opportunities:state.opportunities,revision:state.salesRevision,links,search};
+ return search;
+}
 function applyFilters(){
  const f=state.filters,q=norm(f.q),name=norm(f.name),dni=norm(f.dni),phone=digits(f.phone),links=window.TPFRecordLinks,needsOpportunities=!!(f.oppStatus||f.closeFrom||f.closeTo),matchingContacts=new Set();
+ const relatedSearch=q?relatedContactSearch():null;
  if(needsOpportunities){const lookup=links?.index?.(state.rows);for(const o of state.opportunities){if(!opportunityMatchesFilters(o,f))continue;for(const id of links?.opportunityContacts?.(o,lookup)||[])matchingContacts.add(String(id));}}
  state.filtered=state.rows.filter(r=>{
-  if(q&&!norm([r.fullName,r.nickname,r.dni,r.phone,r.email,r.bank,r.source,window.TPFContactParty?.search(r),window.TPFContactContract?.listInfo(r.data).search].join(' ')).includes(q))return false;if(name&&!norm([r.fullName,r.nickname,r.data?.TPF_TITULAR?.holder_name].join(' ')).includes(name))return false;if(dni&&!norm([r.dni,r.data?.TPF_TITULAR?.holder_dni].join(' ')).includes(dni))return false;if(phone&&![r.phone,r.data?.TPF_TITULAR?.holder_phone].some(value=>digits(value).includes(phone)))return false;if(f.source&&r.source!==f.source)return false;if(!matchesLabels(state.labelsByContact.get(r.id)||[],f))return false;
+  if(q&&!norm([r.fullName,r.nickname,r.dni,r.phone,r.email,r.bank,r.source,window.TPFContactParty?.search(r),window.TPFContactContract?.listInfo(r.data).search,relatedSearch?.get(String(r.id))].join(' ')).includes(q))return false;if(name&&!norm([r.fullName,r.nickname,r.data?.TPF_TITULAR?.holder_name].join(' ')).includes(name))return false;if(dni&&!norm([r.dni,r.data?.TPF_TITULAR?.holder_dni].join(' ')).includes(dni))return false;if(phone&&![r.phone,r.data?.TPF_TITULAR?.holder_phone].some(value=>digits(value).includes(phone)))return false;if(f.source&&r.source!==f.source)return false;if(!matchesLabels(state.labelsByContact.get(r.id)||[],f))return false;
   if(window.TPFContactContract&&!window.TPFContactContract.matchesList(r.data,f))return false;
   if(needsOpportunities&&!matchingContacts.has(String(r.id)))return false;
   return true;
