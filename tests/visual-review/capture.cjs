@@ -8,6 +8,7 @@ async function stamp(page){await page.addStyleTag({content:read('tests/visual-re
 async function shot(page,name){await stamp(page);await page.screenshot({path:path.join(out,name+'.png'),fullPage:false});report.screens.push(name);console.log('CAPTURED',name);}
 async function run(name,fn){const page=await browser.newPage({viewport:{width:1440,height:1000},locale:'es-ES',timezoneId:'Europe/Madrid'});await page.route('**/*',route=>{const url=new URL(route.request().url());if(url.hostname==='127.0.0.1')return route.continue();return route.abort()});try{await fn(page)}catch(e){report.errors.push({name,error:e.message});console.log('REVIEW_ERROR',name,e.stack);await page.screenshot({path:path.join(out,'error-'+name+'.png')});}finally{await page.close()}}
 async function oppFixture(page){
+ await page.addScriptTag({content:read('js/modules/opportunity-identity.js')});
  const src=read('tests/e2e/crm-opportunity-contract.spec.js');
  const start=src.indexOf(' await page.setViewportSize(viewport)'),end=src.indexOf(" await expect(page.locator('#oppModalTerminalEnd'))",start);
  await new AsyncFunction('page','expect','read','viewport',src.slice(start,end))(page,expect,read,{width:1440,height:1000});
@@ -25,13 +26,17 @@ async function oppFixture(page){
  const green=read('js/modules/whatsapp-green-core.js');await page.addScriptTag({content:green.slice(green.indexOf('function oppUnifiedCard('),green.indexOf('\nfunction hydrateOpportunityStageNames'))});
  const source=read('js/modules/contacts-sales-core.js');await page.addScriptTag({content:source.slice(0,source.indexOf('window.deleteContactProgrammedWhatsapp'))+'\n'+source.slice(source.indexOf('window.openContact=async(id)=>{'),source.indexOf('\n$("contactClose").onclick='))});
  for(const f of ['assets/contact-desktop.css','assets/contact-workspace-pro.css'])await page.addStyleTag({content:read(f)});
+ await page.evaluate(()=>{window.TPFModules={register(n,m){m.install()},wrapGlobals(){}};window.perms={is_admin:true};document.getElementById('contactModal').classList.add('tpfContactDesktop')});
+ await page.addScriptTag({content:read('js/modules/contact-profile.js')});
+ await page.addScriptTag({content:read('js/modules/contact-bank-native.js')});
  await page.addScriptTag({content:read('js/modules/contact-desktop-layout.js')});
+ await page.addScriptTag({content:read('js/modules/contact-inline-edit.js')});
  await page.evaluate(()=>openContact('manager'));await expect(page.locator('#contactModal')).toBeVisible();
- await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewServiceContext';n.innerHTML='<div><b>María gestiona los contratos de Carlos</b><small>Titular: Carlos Ejemplo · WhatsApp: María · 600 000 002</small></div>';document.getElementById('cpRefPanel').prepend(n);document.querySelector('[data-tpf-summary-group="opportunities"] .tpfSummaryTrigger')?.click();document.querySelectorAll('.oppUnified').forEach((card,i)=>{const c=document.createElement('p');c.className='reviewServiceContext';c.textContent=i?'Segunda vivienda · Solo fibra · Ref. DEMO-002':'Vivienda principal · Fibra + 2 móviles · Ref. DEMO-001';card.prepend(c)});});
+ await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewServiceContext';n.innerHTML='<div><b>María gestiona los contratos de Carlos</b><small>Titular: Carlos Ejemplo · WhatsApp: María · 600 000 002</small></div>';document.getElementById('cpRefPanel').prepend(n);document.querySelector('[data-tpf-summary-group="opportunities"] .tpfSummaryTrigger')?.click();document.querySelectorAll('.oppUnifiedCard').forEach((card,i)=>{const c=document.createElement('p');c.className='reviewServiceContext';c.textContent=i?'Segunda vivienda · Solo fibra · Ref. DEMO-002':'Vivienda principal · Fibra + 2 móviles · Ref. DEMO-001';card.prepend(c)});});
  await shot(page,'03-contacto');
  });
  await run('gestionar',async page=>{
- const src=read('tests/e2e/crm-home-manage.spec.js');const code=src.slice(src.indexOf('async function fixture('),src.indexOf("test('Gestionar"));const fixture=await new AsyncFunction('require','expect',code+';return fixture;')(require,expect);
+ const src=read('tests/e2e/crm-home-manage.spec.js');const code=src.slice(src.indexOf('async function fixture('),src.indexOf("test('Gestionar"));const fixture=await new AsyncFunction('require','expect','path',code+';return fixture;')(require,expect,path);
  await fixture(page,'accepted',true,false);await page.evaluate(()=>{document.body.classList.add('tpfUnified');document.getElementById('view-dashboard').innerHTML='<h1>Tu trabajo de hoy</h1><p>Tramitaciones pendientes · Ordenadas por aceptación</p>';});await shot(page,'04-gestionar');
  await page.getByRole('button',{name:'Preparar tramitación',exact:true}).click();await expect(page.locator('[data-confirm-processing]')).toBeEnabled();await shot(page,'05-mensaje-tramitacion');
  });
