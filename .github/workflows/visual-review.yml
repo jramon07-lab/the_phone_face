@@ -1,0 +1,26 @@
+name: Capturas propuesta sobre estable
+on:
+  push:
+    branches: [codex/visual-review-stable-20261010]
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Capturar componentes reales con datos sintéticos
+        run: node tests/visual-review/capture.cjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: crm-propuesta-base-a97ec75
+          path: browser-evidence/visual-review
