@@ -114,6 +114,10 @@ test('Direct sale edits router inline and uses creation time with 00/30 minutes'
  await page.addScriptTag({content:fs.readFileSync('js/modules/offers-pro.js','utf8').replace("M.register('offers-pro',{install});","window.fixtureOpen=async()=>{css();await openDirectSale()};window.fixtureResult=()=>directRouter.get();")});
  await page.evaluate(()=>document.getElementById('open').onclick=window.fixtureOpen);
  await page.locator('#open').click();const root=page.locator('#directSaleRouterFields');
+ await expect(page.locator('#directSaleStatus')).toHaveValue('accepted');
+ await expect(root).toBeHidden();
+ expect(await page.evaluate(()=>window.calls)).toHaveLength(0);
+ await page.locator('#directSaleStatus').selectOption('processed');
  await expect(root.locator('[data-previous]')).toBeVisible();
  await expect(root.locator('[data-text]')).not.toHaveValue(/instrucciones antiguas/);
  await root.locator('[data-previous]').selectOption('MásMóvil');
