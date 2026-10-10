@@ -12,3 +12,12 @@ body{font-family:Inter,"Segoe UI",Arial,sans-serif!important;font-variant-numeri
 #contactModal .oppUnifiedCard{display:flex!important;flex-direction:column!important;gap:10px!important}
 #contactModal #tpfContactWhatsappMain,#contactModal #cpNameSplit{display:none!important}
 #contactModal .reviewServiceContext{width:100%;box-sizing:border-box;margin-top:0}
+
+#contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedCard{display:flex!important;flex-direction:column!important;gap:10px!important}
+#contactModal .cpNameSplit{display:none!important}
+#contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedCard>.reviewServiceContext{order:-2!important;width:100%!important;display:block!important}
+#contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedPeople{order:0!important}
+#contactModal.tpfContactDesktop.tpfContactReference .oppUnifiedActions{order:10!important}
+dialog #reviewStamp{bottom:auto;top:78px;right:25px;font-size:9px;padding:3px 6px}
+#agendaCreateCard[data-agenda-overlay=true]{width:min(900px,calc(100vw - 60px))!important;inset:30px auto auto 50%!important;transform:translateX(-50%);max-height:940px!important;box-shadow:0 12px 80px #10244744!important}
+#agendaCreateCard textarea{min-height:140px!important}
