@@ -223,11 +223,11 @@ test('PC: demo, nueve pantallas y conexión real de WhatsApp y Google, solo lect
           await page.locator('#tpfContactsFiltersToggle').click();
           const filters=page.locator('#tpfContactsFilters');
           await expect(filters).toHaveClass(/open/);
-          await filters.getByRole('button',{name:'Solo las seleccionadas',exact:true}).click();
-          await expect(filters.locator('[data-mode="exact"]')).toHaveAttribute('aria-pressed','true');
+          await filters.getByRole('combobox',{name:'Mostrar contactos',exact:true}).selectOption('exact');
+          await expect(filters.locator('#tpfFilterLabelMode')).toHaveValue('exact');
           await expect(page.locator('#tpfFilterHint')).toContainText('ninguna más');
           await page.locator('#tpfApplyFilters').click();
-          await expect(page.locator('#tpfFilterError')).toContainText('Selecciona al menos una etiqueta');
+          await expect(page.locator('#tpfFilterError')).toContainText('Marca al menos una etiqueta');
           await expect(filters).toHaveClass(/open/);
           await page.locator('#tpfContactsFiltersClose').click();
           await expect(filters).not.toHaveClass(/open/);
