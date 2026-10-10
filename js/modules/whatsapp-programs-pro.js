@@ -11,7 +11,8 @@ function isDue(row){return !stamp(row?.whatsapp_scheduled_at||row?.starts_at)||s
 function group(row){
  const d=delivery(row),status=String(row?.status||'').toLowerCase();
  if(status==='cancelled'||d==='cancelled')return'cancelled';
- if(status==='completed'||d==='sent')return'completed';
+ if(d==='sent')return'completed';
+ if(status==='completed')return'error';
  if(d==='paused')return'paused';
  if(d==='error'||d==='failed'||d==='uncertain')return'error';
  if(status==='pending')return isDue(row)?'due':'future';

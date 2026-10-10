@@ -40,7 +40,8 @@
   function scheduledStatus(row){
     if(row?.status==='cancelled') return {key:'cancelled',label:'Cancelado'};
     const raw=String(row?.whatsapp_delivery_status||'').toLowerCase();
-    if(raw==='sent'||row?.status==='completed') return {key:'sent',label:'✅ Enviado'};
+    if(raw==='sent') return {key:'sent',label:'✅ Enviado'};
+    if(row?.status==='completed') return {key:'uncertain',label:'Completada · envío no confirmado'};
     if(raw==='sending') return {key:'sending',label:'⏳ Enviando'};
     if(raw==='error') return {key:'error',label:'❌ Error'};
     if(raw==='uncertain') return {key:'uncertain',label:'⚠️ Resultado incierto'};
