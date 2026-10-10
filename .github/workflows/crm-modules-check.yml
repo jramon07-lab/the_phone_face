@@ -37,6 +37,8 @@ jobs:
         run: npx playwright test --config=tests/e2e/opportunity-contract.config.cjs --reporter=line
       - name: Verify scheduled WhatsApp saving on desktop and mobile with isolated fixtures
         run: npx playwright test --config=tests/e2e/schedule-save.config.cjs --reporter=line
+      - name: Verify agenda row actions with isolated fixtures
+        run: npx playwright test --config=tests/e2e/agenda-actions.config.cjs --reporter=line
       - name: Verify router templates on desktop and mobile with isolated fixtures
         run: npx playwright test --config=tests/e2e/router-return.config.js --workers=2 --retries=0 --reporter=line
       - name: Verify home management drawer with isolated fixtures
