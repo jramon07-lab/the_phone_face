@@ -99,21 +99,24 @@
 
   async function awaitPostpone(id){await window.openContactTaskDetail(id);$id("agendaStarts")?.focus();}
   function closeMenu(){document.querySelector(".agendaPopMenu")?.remove();openMenuId=null}
-  const list=$id("agendaList");
-  if(list)list.onclick=e=>{
-    const person=e.target.closest("[data-agenda-contact]");if(person)return window.openContact?.(person.dataset.agendaContact);
-    const postpone=e.target.closest("[data-postpone-agenda]");if(postpone){awaitPostpone(postpone.dataset.postponeAgenda);return;}
+  const list=$id("agendaList"),coreListClick=list?.onclick;
+  if(list)list.onclick=async e=>{
+    try{
+    if(e.target.closest("[data-agenda-linked]")){closeMenu();return await coreListClick?.call(list,e);}
+    const person=e.target.closest("[data-agenda-contact]");if(person)return await window.openContact?.(person.dataset.agendaContact);
+    const postpone=e.target.closest("[data-postpone-agenda]");if(postpone){await awaitPostpone(postpone.dataset.postponeAgenda);return;}
     const a=e.target.closest("[data-open-agenda]"),c=e.target.closest("[data-complete-agenda]"),m=e.target.closest("[data-more-agenda]");
-    if(a){closeMenu();return window.openContactTaskDetail(a.dataset.openAgenda)}
-    if(c){closeMenu();return window.completeAgenda(c.dataset.completeAgenda)}
+    if(a){closeMenu();return await window.openContactTaskDetail(a.dataset.openAgenda)}
+    if(c){closeMenu();return await window.completeAgenda(c.dataset.completeAgenda)}
     if(!m)return;
     const id=m.dataset.moreAgenda;
     if(openMenuId===id){closeMenu();return}
     closeMenu();openMenuId=id;
     const menu=document.createElement("div");menu.className="agendaPopMenu";menu.innerHTML='<button data-agenda-edit>Editar</button><button data-agenda-cancel>Cancelar recordatorio</button><button class="danger" data-agenda-delete>Eliminar</button>';
     document.body.appendChild(menu);const b=m.getBoundingClientRect();menu.style.left=Math.min(b.left,innerWidth-215)+"px";menu.style.top=Math.min(b.bottom+5,innerHeight-menu.offsetHeight-8)+"px";
-    menu.onclick=ev=>{if(ev.target.closest("[data-agenda-edit]"))window.editAgendaItem(id);else if(ev.target.closest("[data-agenda-cancel]"))window.cancelAgenda(id);else if(ev.target.closest("[data-agenda-delete]"))window.deleteAgenda(id);closeMenu()};
+    menu.onclick=async ev=>{try{if(ev.target.closest("[data-agenda-edit]"))await window.editAgendaItem(id);else if(ev.target.closest("[data-agenda-cancel]"))await window.cancelAgenda(id);else if(ev.target.closest("[data-agenda-delete]"))await window.deleteAgenda(id);}catch(error){alert(error?.message||"No se pudo completar la acción.");}finally{closeMenu()}};
     setTimeout(()=>document.addEventListener("click",ev=>{if(!menu.contains(ev.target)&&ev.target!==m)closeMenu()},{once:true}),0);
+    }catch(error){alert(error?.message||"No se pudo abrir la acción de la tarea.");}
   };
 })();
 
