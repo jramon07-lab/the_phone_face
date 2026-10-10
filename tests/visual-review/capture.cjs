@@ -19,31 +19,30 @@ async function oppFixture(page){
 (async()=>{
  server=http.createServer((req,res)=>{let p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(p.includes('..')){res.writeHead(403).end();return}p=path.join(process.cwd(),p);if(!fs.existsSync(p)||fs.statSync(p).isDirectory()){res.writeHead(404).end();return}res.setHeader('Content-Type',p.endsWith('.css')?'text/css':p.endsWith('.js')?'application/javascript':'text/html');res.end(fs.readFileSync(p))}).listen(3009,'127.0.0.1');
  browser=await chromium.launch();
- await run('inicio',async page=>{await page.addInitScript(()=>{window.TPFOfferFollowup={load:async()=>({jobs:[]}),forOpportunity:()=>null,html:()=>'',controls:()=>'',filterRows:x=>x};});await page.goto('http://127.0.0.1:3009/tests/fixtures/dashboard-home.html');await expect(page.locator('#tdPulseCalls')).not.toHaveText('—');await page.addStyleTag({content:read('assets/crm-reference.css')});await page.evaluate(()=>{document.body.classList.add('tpfUnified');document.querySelector('.fixtureBanner').textContent='Revisión visual · Código de estable a97ec75 · Datos de ejemplo';document.querySelector('.fixtureNote').textContent='PHONE HOUSE ALBOLOTE';});await shot(page,'01-inicio');});
- await run('oportunidad',async page=>{await oppFixture(page);await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewServiceContext';n.innerHTML='<div><b>Vivienda principal · Fibra 600 Mb + 2 móviles</b><small>Servicio de ejemplo · Identificación del contrato</small></div><div>Ref. DEMO-001<small>Aceptada el 08/10/2026</small></div>';document.querySelector('.oppContractPeople').before(n);});await shot(page,'02-oportunidad');});
- await run('contacto',async page=>{
- await oppFixture(page);await page.evaluate(()=>{$('opportunityFullPage').classList.add('hidden');window.contactCanUseWhatsapp=()=>true;window.hydrateOpportunityStageNames=x=>x;window.oppIsClosed=()=>false;window.oppIsExpired=()=>false;window.oppStageName=()=> 'Pendiente de tramitar';window.fmtAgendaDate=v=>v;window.waIsDue=()=>false;window.applyWhatsappVisibilityForContact=()=>{};window.tpfRememberScreen=()=>{};window.TPFRecordLinks={load:async()=>[],related:(rows)=>rows};window.demoContact={id:'manager',source_sheet:'BASE DE DATOS',data:{NOMBRE:'María',APELLIDOS:'Ejemplo','TELÉFONO':'600000002',DNI:'12345678Z',EMAIL:'maria@example.test',NOTAS:'Documentación revisada en tienda.',OBSERVACIONES:'Gestiona los contratos de Carlos. Llamar por la tarde.'}};window.sb={rpc:async()=>({data:{opportunities:[row,{...row,id:'demo-002',title:'CAMBIO O2',amount:27,expected_date:'2027-09-18',notes:'Segunda vivienda · Solo fibra',installation_date:'2026-09-18'}]}}),from(table){const q={select(){return q},eq(){return q},or(){return q},order(){return q},range:async()=>({data:[]}),single:async()=>({data:demoContact}),maybeSingle:async()=>({data:demoContact}),then(resolve){resolve({data:[]})}};return q}};});
- const green=read('js/modules/whatsapp-green-core.js');await page.addScriptTag({content:green.slice(green.indexOf('function oppUnifiedCard('),green.indexOf('\nfunction hydrateOpportunityStageNames'))});
- const source=read('js/modules/contacts-sales-core.js');await page.addScriptTag({content:source.slice(0,source.indexOf('window.deleteContactProgrammedWhatsapp'))+'\n'+source.slice(source.indexOf('window.openContact=async(id)=>{'),source.indexOf('\n$("contactClose").onclick='))});
- for(const f of ['assets/contact-desktop.css','assets/contact-workspace-pro.css'])await page.addStyleTag({content:read(f)});
- await page.evaluate(()=>{window.TPFModules={register(n,m){m.install()},wrapGlobals(){}};window.perms={is_admin:true};document.getElementById('contactModal').classList.add('tpfContactDesktop')});
- await page.addScriptTag({content:read('js/modules/contact-profile.js')});
- await page.addScriptTag({content:read('js/modules/contact-bank-native.js')});
- await page.addScriptTag({content:read('js/modules/contact-desktop-layout.js')});
- await page.addScriptTag({content:read('js/modules/contact-inline-edit.js')});
- await page.evaluate(()=>openContact('manager'));await expect(page.locator('#contactModal')).toBeVisible();
- await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewServiceContext';n.innerHTML='<div><b>María gestiona los contratos de Carlos</b><small>Titular: Carlos Ejemplo · WhatsApp: María · 600 000 002</small></div>';document.getElementById('cpRefPanel').prepend(n);document.querySelector('[data-tpf-summary-group="opportunities"] .tpfSummaryTrigger')?.click();});
- await shot(page,'03-contacto');
+
+ await run('comparacion',async page=>{
+ await oppFixture(page);
+ await page.addStyleTag({content:'[hidden]{display:none!important}.reviewVersion{position:fixed;bottom:10px;right:14px;background:#fff;border:1px solid #cbd5e1;padding:7px 12px;border-radius:6px;font:11px Arial;color:#475569;z-index:999999}'});
+ await page.evaluate(()=>{const n=document.createElement('div');n.className='reviewVersion';n.textContent='ANTES · Componente de estable a97ec75 · Datos de prueba';document.body.append(n);});
+ const controls=await page.locator('#opportunityFullPage button').evaluateAll(nodes=>nodes.map(n=>n.textContent.trim()).sort());
+ await page.screenshot({path:path.join(out,'01-antes-oportunidad.png')});report.screens.push('01-antes-oportunidad');
+ await page.evaluate(()=>{
+ const root=document.getElementById('oppFullContent');
+ const context=document.createElement('section');context.className='proposalContext';
+ context.innerHTML='<div><span class="proposalEyebrow">CONTRATO QUE ESTÁS GESTIONANDO</span><h2>Vivienda principal · Fibra 600 Mb + 2 móviles</h2><p>Carlos Ejemplo <span>·</span> Referencia DEMO-001</p></div><div class="proposalPrice">35,50 €<small>al mes</small></div>';
+ root.prepend(context);
+ const action=document.createElement('section');action.className='proposalNext';
+ action.innerHTML='<div><span class="proposalEyebrow">SIGUIENTE PASO</span><h3>Preparar la tramitación</h3><p>La activación todavía no está registrada.</p></div>';
+ action.append(document.getElementById('oppFullManage'));context.after(action);
+ const metrics=root.querySelector('.oppSummaryMetrics');metrics.classList.add('proposalDates');
+ const datesTitle=document.createElement('h3');datesTitle.className='proposalSectionTitle';datesTitle.textContent='Importe, estado y fechas del contrato';metrics.before(datesTitle);
+ const actions=root.querySelector('.oppContractActions');actions.classList.add('proposalQuick');
+ document.querySelector('.reviewVersion').textContent='DESPUÉS · Propuesta visual · Mismos datos y controles · Sin publicar';
  });
- await run('gestionar',async page=>{
- const src=read('tests/e2e/crm-home-manage.spec.js');const code=src.slice(src.indexOf('async function fixture('),src.indexOf("test('Gestionar"));const fixture=await new AsyncFunction('require','expect','path',code+';return fixture;')(require,expect,path);
- await fixture(page,'accepted',true,false);await page.evaluate(()=>{document.body.classList.add('tpfUnified');document.getElementById('view-dashboard').innerHTML='<h1>Tu trabajo de hoy</h1><p>Tramitaciones pendientes · Ordenadas por aceptación</p>';});await shot(page,'04-gestionar');
- await page.evaluate(()=>{sb.rpc=async()=>({data:{workflow:'installation_v1',available:true,operator:'Vodafone',recipient:'Ana Ejemplo',phone:'600000000',installation_config:{slots:[{from:'10:00',to:'12:00'}],no_appointment_text:'Hola {nombre} 👋\n\nHemos tramitado tu contrato con {operador}. Estamos pendientes de que el operador confirme la cita. Estate pendiente del teléfono por si el técnico te llama para concertar la visita.\n\nSi tienes algún problema, {ayuda}.'}}});});await page.addScriptTag({content:read('js/modules/installation-communications.js')});await page.getByRole('button',{name:'Preparar tramitación',exact:true}).click();await expect(page.locator('[data-confirm-processing]')).toBeEnabled();await shot(page,'05-mensaje-tramitacion');
- });
- await run('reclamacion',async page=>{
- await oppFixture(page);await page.evaluate(()=>{window.agendaEditingRow=null;window.toLocalInput=()=> '2026-10-13T10:00';window.agendaDefaultStart=()=> '2026-10-13T10:00';window.syncAgendaEditor=()=>{};window.currentUser={id:'demo'};window.crmCan=()=>true;});
- const core=read('js/modules/agenda-core.js');await page.addScriptTag({content:core.slice(0,core.indexOf('$("agendaOpenCreate").onclick='))});
- await page.evaluate(()=>TPFOpportunityDetails.createTask(row));await expect(page.locator('#agendaCreateCard')).toBeVisible();await shot(page,'06-reclamacion');
+ await page.addStyleTag({content:read('tests/visual-review/comparison.css')});
+ const after=await page.locator('#opportunityFullPage button').evaluateAll(nodes=>nodes.map(n=>n.textContent.trim()).sort());
+ expect(after).toEqual(controls);
+ await page.screenshot({path:path.join(out,'02-despues-oportunidad.png')});report.screens.push('02-despues-oportunidad');report.preservedControls=controls.length;
  });
  await browser.close();server.close();fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify(report,null,2));if(report.errors.length)process.exitCode=1;
 })().catch(e=>{console.error(e);process.exit(1)});

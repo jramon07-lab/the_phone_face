@@ -1,0 +1,25 @@
+
+body{font-family:Arial,sans-serif}
+#opportunityFullPage .oppFullTop{margin-bottom:18px!important}
+#oppFullContent .proposalContext{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 24px;background:#fff;border:1px solid #dbe4ef;border-radius:12px;margin-bottom:12px;border-left:4px solid #1760db}
+.proposalEyebrow{font-size:10px!important;font-weight:700;letter-spacing:1px;color:#526782}
+.proposalContext h2{font-size:21px;color:#12243b;margin:8px 0}
+.proposalContext p{margin:0;font-size:13px;color:#526782}.proposalContext p span{padding:0 8px}
+.proposalPrice{font-size:27px;font-weight:700;color:#0f52bf;white-space:nowrap}.proposalPrice small{display:block;text-align:right;font-size:12px;font-weight:400;color:#64748b;margin-top:5px}
+#oppFullContent .proposalNext{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;background:#eef5ff;border:1px solid #cfdef5;border-radius:10px;margin-bottom:18px}
+.proposalNext h3{margin:5px 0;font-size:17px;color:#153a70}.proposalNext p{margin:0;font-size:12px;color:#526782}
+.proposalNext #oppFullManage{min-width:130px;padding:12px 22px!important}
+#oppFullContent .oppContractPeople{gap:12px!important}
+#oppFullContent .oppContractPerson{padding:15px 18px!important;background:#fff;border:1px solid #dce5f1!important;border-radius:9px!important}
+#oppFullContent .oppContractPerson>span{color:#526782;font-size:10px;letter-spacing:.7px;text-transform:uppercase}
+#oppFullContent .oppContactLink{font-size:17px!important;margin-top:7px!important}
+#oppFullContent .oppPersonData{font-size:12px!important;margin-top:8px!important}
+#oppFullContent .proposalQuick{margin:12px 0 20px!important}
+.proposalSectionTitle{font-size:13px;font-weight:700;color:#334155;margin:0 0 10px}
+#oppFullContent .proposalDates{border:1px solid #dce5f1!important;border-radius:10px!important;overflow:hidden}
+#oppFullContent .proposalDates .oppField{padding:13px 15px!important}
+#oppFullContent .proposalDates .oppField>span{font-size:10px!important;letter-spacing:.25px}
+#oppFullContent .proposalDates strong{font-size:15px!important}
+#oppFullContent .oppContractNext{padding:14px 18px!important;border-radius:10px!important}
+#oppFullContent .oppContractNext h3{font-size:14px!important;margin:0 0 8px}
+#oppFullContent .oppContractNext p{font-size:13px!important;margin:0}
