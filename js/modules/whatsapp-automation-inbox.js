@@ -207,7 +207,15 @@
     return freshIncoming||p.at<=Date.now()/1000?'unanswered':'snoozed';
   }
   function describe(chat){
-    const p=workPlan(chat);if(!p)return window.TPFInboxManual?.describe(chat)||'';
+    const p=workPlan(chat);if(!p){
+      const kinds=facets(chat);
+      if(kinds.includes('archived'))return '';
+      const manual=window.TPFInboxManual?.describe?.(chat)||'';
+      if(manual)return manual;
+      if(kinds.includes('unanswered'))return 'Mensaje del cliente sin responder';
+      if(kinds.includes('waiting'))return 'Esperando respuesta del cliente';
+      return '';
+    }
     if(planCategory(chat)==='unanswered'&&p.at>Date.now()/1000)return 'Revisar mensaje del cliente';
     return (p.at<=Date.now()/1000?'Próxima acción vencida: ':'Próxima acción: ')+p.title+' · '+new Date(p.at*1000).toLocaleString('es-ES',{timeZone:'Europe/Madrid',dateStyle:'short',timeStyle:'short'});
   }
@@ -244,6 +252,7 @@
     if(filter==='reviews')return (window.TPFReviews?.activeForPhone(chat.id)||[]).length>0;
     if(filter==='aftercare')return followups(chat).length>0;
     const kinds=facets(chat),archived=kinds.includes('archived');
+    if(filter==='all')return true;
     if(filter==='archived')return archived;
     if(archived)return false;
     if(['automatic','processing','declined','waiting','unanswered','snoozed'].includes(filter))return kinds.includes(filter);
@@ -260,8 +269,8 @@
     for(const c of rows){
       if(followups(c).length)counts.aftercare++;
       const kinds=facets(c),key=kinds[0],m=window.waMeta?.(c.id)||{};
-      if(key==='archived'){counts.archived++;continue;}
       counts.all++;
+      if(key==='archived'){counts.archived++;continue;}
       for(const kind of ['automatic','processing','declined','unanswered','waiting','snoozed'])if(kinds.includes(kind))counts[kind]++;
       if(String(c.id).includes('@c.us'))counts.contacts++;
       if(String(c.id).includes('@g.us'))counts.groups++;
@@ -296,7 +305,7 @@
     if(page&&body&&tabs.parentElement!==page)page.insertBefore(tabs,body);
     let info=document.getElementById('waInboxHelp');
     if(!info){info=document.createElement('div');info.id='waInboxHelp';info.setAttribute('role','status');document.getElementById('waLiveSearch')?.parentElement.after(info);}
-    const messages={reviews:'Revisiones activas. Si el cliente escribe, también aparece en Pendientes. Completar la revisión la retira de esta carpeta.',aftercare:'WhatsApp de los 3 meses programados o con error. Incluye conversaciones archivadas; no cambia su estado.',declined:'Clientes que pulsaron No me interesa. Atender conserva esta lista; Archivar los retira.',unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas y próximas acciones. Al llegar la fecha vuelven a Pendientes.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones sin archivar.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
+    const messages={reviews:'Revisiones activas. Si el cliente escribe, también aparece en Pendientes. Completar la revisión la retira de esta carpeta.',aftercare:'WhatsApp de los 3 meses programados o con error. Incluye conversaciones archivadas; no cambia su estado.',declined:'Clientes que pulsaron No me interesa. Atender conserva esta lista; Archivar los retira.',unanswered:'Clientes que necesitan atención. Leer no resuelve.',waiting:'Conversaciones que has marcado expresamente en espera.',snoozed:'Conversaciones aplazadas y próximas acciones. Al llegar la fecha vuelven a Pendientes.',automatic:'Ofertas sin aceptar. Si el cliente escribe, también aparece en Pendientes.',processing:'Ofertas aceptadas o tramitadas, pendientes de cerrar como Ganadas.',all:'Todas las conversaciones, incluidas las archivadas.',archived:'Conversaciones resueltas y ventas ganadas sin atención pendiente.'};
     info.textContent=messages[liveState()?.filter||'all']||'Filtra tus conversaciones.';
     updateAutomaticCount();decorateHeader();
   }

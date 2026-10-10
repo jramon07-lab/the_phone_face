@@ -114,7 +114,7 @@ async function run(){
   ];
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'favorites',''),x=>x.id),['pinned','favorite']);
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'archived',''),x=>x.id),['archived']);
-  assert.ok(!Array.from(api.waPerformanceFilterRows(filters,'all',''),x=>x.id).includes('archived'));
+  assert.ok(Array.from(api.waPerformanceFilterRows(filters,'all',''),x=>x.id).includes('archived'),'Todos includes archived even before the inbox wrapper loads');
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'unanswered',''),x=>x.id),['waiting']);
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'groups',''),x=>x.id),['group@g.us']);
   assert.deepEqual(Array.from(api.waPerformanceFilterRows(filters,'contacts',''),x=>x.id),['contact@c.us']);
@@ -151,6 +151,14 @@ async function run(){
   pendingSearchTimers[0].fn();flushFrames();
   assert.equal(rowCount(),1);
   assert.match(list.innerHTML,/Cliente 125/);
+
+  search.value='';context.renderWhatsAppChats();flushFrames();
+  assert.equal(rowCount(),80,'returning from a search restores the loaded pages');
+  assert.equal(list.scrollTop,800,'returning from a search restores the list position');
+  state.filter='archived';context.renderWhatsAppChats();flushFrames();
+  state.filter='all';context.renderWhatsAppChats();flushFrames();
+  assert.equal(rowCount(),80,'switching filters retains progressive pagination');
+  assert.equal(list.scrollTop,800,'switching filters restores the prior position');
 
   const makeAvatar=(id,top)=>({dataset:{waAvatarId:id,waInitials:'CL'},getBoundingClientRect(){return{top,bottom:top+40}}});
   for(let index=0;index<20;index++)avatarNodes.push(makeAvatar(`avatar-${index}`,index*50));
