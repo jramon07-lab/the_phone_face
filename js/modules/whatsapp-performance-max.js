@@ -6,6 +6,7 @@ const CHAT_PAGE_SIZE=40;
 const AVATAR_BATCH_SIZE=12;
 const AVATAR_MAX_RETRIES=3;
 const waPerformancePage={key:'',limit:CHAT_PAGE_SIZE,total:0,loadingMore:false,scrollFrame:0,avatarFrame:0};
+const waListPositions=new Map();
 const waAvatarQueue=[];
 const waAvatarQueued=new Set();
 const waAvatarRetry=new Map();
@@ -72,7 +73,7 @@ function waPerformanceFilterRows(chats,filter,query){
   });
   if(f==='unanswered')rows=rows.filter(c=>waPerformanceUnanswered(c));
   if(f==='archived')rows=rows.filter(c=>!!waPerformanceMeta(c?.id).archived);
-  else rows=rows.filter(c=>!waPerformanceMeta(c?.id).archived);
+  else if(f!=='all')rows=rows.filter(c=>!waPerformanceMeta(c?.id).archived);
   if(String(query||'').trim())rows=rows.filter(c=>waPerformanceMatches(c,query));
   rows.sort((a,b)=>Number(!!waPerformanceMeta(b?.id).pinned)-Number(!!waPerformanceMeta(a?.id).pinned));
   return rows;
@@ -256,7 +257,7 @@ function waPerformanceBindList(box){
 }
 
 function install(){
- if(typeof sb!=='undefined')sb.auth?.onAuthStateChange?.((event)=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){waCrmSearchVersion++;waCrmSearchByPhone.clear();waSearchIndex.clear();waCrmSearchAt=0;}});
+ if(typeof sb!=='undefined')sb.auth?.onAuthStateChange?.((event)=>{if(event==='SIGNED_OUT'||event==='SIGNED_IN'){waCrmSearchVersion++;waCrmSearchByPhone.clear();waSearchIndex.clear();waCrmSearchAt=0;waListPositions.clear();waPerformancePage.key='';}});
   try{
     // Las funciones del CRM se publican en window. Consultarlas ahí evita
     // depender de la resolución implícita de nombres globales de cada navegador.
@@ -309,14 +310,19 @@ function install(){
         const query=String(search?.value||'').trim();
         const filter=String(waLiveState.__inboxFilter||waLiveState.filter||'all');
         const key=`${query?'search':filter}\u0000${waPerformanceText(query)}`;
+        const box=document.getElementById('waLiveChats');if(!box)return;
         const keyChanged=key!==waPerformancePage.key;
-        if(keyChanged){waPerformancePage.key=key;waPerformancePage.limit=CHAT_PAGE_SIZE}
+        if(keyChanged&&waPerformancePage.key){
+          waListPositions.set(waPerformancePage.key,{top:Number(box.scrollTop||0),limit:waPerformancePage.limit});
+          if(waListPositions.size>40)waListPositions.delete(waListPositions.keys().next().value);
+        }
+        const savedPosition=keyChanged?waListPositions.get(key):null;
+        if(keyChanged){waPerformancePage.key=key;waPerformancePage.limit=savedPosition?.limit||CHAT_PAGE_SIZE}
         const rows=waPerformanceFilterRows(waLiveState.chats,filter,query);
         waPerformancePage.total=rows.length;
         const status=document.getElementById('waGlobalSearchStatus');if(status){status.hidden=!query;status.textContent=waCrmSearchLoading?'Buscando también por apodo…':waCrmSearchFailed?'Apodos CRM no disponibles · vuelve a intentar':rows.length+' resultados · todos los filtros';}
         if(query)waLoadCrmSearch();
         const visible=rows.slice(0,waPerformancePage.limit);
-        const box=document.getElementById('waLiveChats');if(!box)return;
         waPerformanceBindList(box);
         const waiting=waLiveState.loading&&!waLiveState.chats?.length;
         let html=visible.map(waPerformanceRenderRow).join('')||(waiting?'<div class="waLiveEmpty" role="status">Cargando conversaciones…</div>':'<div class="waLiveEmpty">No hay conversaciones en este filtro.</div>');
@@ -331,7 +337,7 @@ function install(){
           const anchor=!keyChanged&&oldTop>0&&bounds?[...box.querySelectorAll('.waChatRow')].find(row=>row.getBoundingClientRect().bottom>bounds.top):null;
           const anchorId=anchor?.dataset.waChatId,anchorTop=anchor?.getBoundingClientRect().top;
           box.innerHTML=html;box.__tpfListHtml=html;
-          box.scrollTop=keyChanged?0:oldTop;
+          box.scrollTop=keyChanged?(savedPosition?.top||0):oldTop;
           const restore=()=>{
             const row=anchorId?[...box.querySelectorAll('.waChatRow')].find(row=>row.dataset.waChatId===anchorId):null;
             if(row)box.scrollTop+=row.getBoundingClientRect().top-anchorTop;
@@ -339,7 +345,7 @@ function install(){
           restore();
           // Inbox badges are added by the outer renderer in a microtask.
           if(anchorId){const expected=box.scrollTop;queueMicrotask(()=>queueMicrotask(()=>{if(box.__tpfListHtml===html&&box.scrollTop===expected)restore()}));}
-        }else if(keyChanged)box.scrollTop=0;
+        }else if(keyChanged)box.scrollTop=savedPosition?.top||0;
         waPerformanceScheduleVisibleAvatars(visible.map(c=>c.id));
       };
       enhancedRender.__tpfPerformanceMax=true;

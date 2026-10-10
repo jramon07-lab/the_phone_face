@@ -106,6 +106,13 @@ for(const status of ['following','accepted','processed']){
 }
 inbox.ingestBusiness([],[]);chatMeta={archived:true,archivedAt:now+300};
 assert.deepEqual(kinds(),['archived'],'attended chat without active offer is archived');
+assert.equal(inbox.matchesFilter(sample,'all'),true,'Todos includes an archived chat');
+assert.equal(inbox.matchesFilter(sample,'unanswered'),false,'archived chats do not enter Pendientes');
+assert.equal(inbox.describe(sample),'','archived chats do not show a pending reason');
+sample._lastIncomingAt=now+301;sample._lastMessage={timestamp:now+301,direction:'in'};
+assert.equal(inbox.matchesFilter(sample,'unanswered'),true,'new customer reply reopens Pendientes');
+assert.equal(inbox.describe(sample),'Mensaje del cliente sin responder');
+sample._lastIncomingAt=now;sample._lastMessage={timestamp:now,direction:'out'};
 
 // Only actual customer declines enter this inbox; attending and archiving are distinct.
 chatMeta={};sample._lastMessage={timestamp:now+400,direction:'in'};
