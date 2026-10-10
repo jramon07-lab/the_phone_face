@@ -19,7 +19,8 @@ function statusOf(source,row){
  }
  const delivery=norm(row.whatsapp_delivery_status),status=norm(row.status);
  if(status==='cancelled'||delivery==='cancelled')return'cancelled';
- if(status==='completed'||delivery==='sent')return'sent';
+ if(delivery==='sent')return'sent';
+ if(status==='completed')return'uncertain';
  if(delivery==='sending')return'sending';
  if(delivery==='paused')return'paused';
  if(delivery==='uncertain')return'uncertain';

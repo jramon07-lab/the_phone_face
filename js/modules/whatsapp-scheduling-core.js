@@ -255,7 +255,7 @@ $("waQuickSend").onclick=async()=>{
   if(programId){
     setTimeout(async()=>{
       if(confirm("¿Quieres marcar este WhatsApp programado como completado?")){
-        const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",programId);
+        const {error}=await sb.from("agenda_items").update({status:"completed",whatsapp_delivery_status:"uncertain",whatsapp_delivery_error:"Completada manualmente. Envío no confirmado por el proveedor."}).eq("id",programId).eq("status","pending").eq("whatsapp_delivery_status","pending");
         if(error)alert(error.message);
         else{
           if(typeof loadWhatsappPrograms==="function")loadWhatsappPrograms();
@@ -650,7 +650,8 @@ async function loadWhatsappPrograms(options={}){
   if($("waReload"))$("waReload").textContent=rows.length?`Actualizar (${rows.length})`:"Actualizar";
   $("waRows").innerHTML=rows.map(a=>{
     const due=waIsDue(a);
-    const status=a.status==="completed"?"Enviado / completado":
+    const status=a.whatsapp_delivery_status==="sent"?"Enviado":
+      a.status==="completed"?"Completada · envío no confirmado":
       a.status==="cancelled"?"Cancelado":
       due?"Listo para enviar":"Programado";
 
@@ -738,7 +739,7 @@ window.sendProgrammedWhatsapp=(id)=>{
 
   setTimeout(async()=>{
     if(confirm("¿Quieres marcar este WhatsApp como completado después de enviarlo?")){
-      const {error}=await sb.from("agenda_items").update({status:"completed"}).eq("id",id);
+      const {error}=await sb.from("agenda_items").update({status:"completed",whatsapp_delivery_status:"uncertain",whatsapp_delivery_error:"Completada manualmente. Envío no confirmado por el proveedor."}).eq("id",id).eq("status","pending").eq("whatsapp_delivery_status","pending");
       if(error)alert(error.message); else loadWhatsappPrograms();
     }
   },500);
