@@ -7,3 +7,8 @@ body{font-family:Inter,"Segoe UI",Arial,sans-serif!important;font-variant-numeri
 #opportunityFullPage .oppContractPerson{border:1px solid #dfe7f0!important;background:#fff!important;border-radius:9px!important;padding:18px!important}#opportunityFullPage .oppContractPerson>span{font-size:11px!important;text-transform:uppercase;letter-spacing:.5px;color:#657791}#opportunityFullPage .oppPersonData{margin-top:9px!important}#opportunityFullPage .oppSummaryMetrics{gap:12px!important}#opportunityFullPage .oppField{padding:17px!important;border:1px solid #dfe7f0!important;border-radius:9px!important}
 #ofManageDialog.ofManageDrawer{width:min(690px,100vw)}#ofManageDialog .ofDrawerHead{padding:20px 25px}#ofManageDialog .ofDrawerBody{padding:22px 25px}#ofManageDialog .ofClientIdentity h2{font-size:25px;letter-spacing:-.5px}#ofManageDialog .ofFollowSection{background:#f1f6fd;border-color:#dbe6f5;padding:17px;margin-top:20px}#ofManageDialog .ofIdentityGrid>div{background:white;border:1px solid #dfe7f0;padding:13px}#ofManageDialog .ofPrimaryActions{gap:9px}#ofManageDialog .ofDrawerSection{padding-top:18px;margin-top:18px}#ofManageDialog [data-process-error]{color:#b42318}#ofManageDialog [data-text]{min-height:200px;line-height:1.6}
 #agendaCreateCard{border-radius:12px!important}#agendaCreateCard input,#agendaCreateCard select,#agendaCreateCard textarea{border-color:#d2deed!important;border-radius:7px!important}#agendaCreateCard textarea{line-height:1.5}
+
+[hidden]{display:none!important}
+#contactModal .oppUnifiedCard{display:flex!important;flex-direction:column!important;gap:10px!important}
+#contactModal #tpfContactWhatsappMain,#contactModal #cpNameSplit{display:none!important}
+#contactModal .reviewServiceContext{width:100%;box-sizing:border-box;margin-top:0}
